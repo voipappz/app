@@ -1,0 +1,38 @@
+# Kamal DESTINATION override for the "pbx20" server.
+#
+# Deep-merged on top of config/deploy.yml by Kamal. Only the host-specific
+# bits live here — image, builder, env, registry, and the two roles all come
+# from the base file. Deploy with:
+#
+#     kamal deploy -d pbx20
+#     kamal app logs -d pbx20
+#
+# Runtime secrets still live out-of-band on the host at
+# /etc/voipappz/secrets.env (see servers.web.options.env-file in deploy.yml),
+# so scp that file to pbx20.itd-pbx.com before the first deploy.
+
+servers:
+  web:
+    hosts:
+      - pbx20.itd-pbx.com
+
+proxy:
+  # Automatic HTTPS via kamal-proxy's built-in Let's Encrypt. DNS for the host
+  # resolves to the box's public IP (199.203.162.92) and :80/:443 are open, so
+  # the ACME HTTP-01 challenge succeeds. HTTP is auto-redirected to HTTPS.
+  ssl: true
+  hosts:
+    - pbx20.itd-pbx.com
+  app_port: 3000
+  healthcheck:
+    # Pbx20 has no AMQP broker, so /health reports 503 (amqp down). Gate on /
+    # (the app serves index.html = 200) until AMQP is removed from the code.
+    path: /
+    interval: 3
+    timeout: 5
+
+ssh:
+  user: itdroot
+  # Pbx20 uses the standard SSH port (base deploy.yml uses 2228, overridden here).
+  port: 22
+  keys: ["~/.ssh/kamal_deploy"]

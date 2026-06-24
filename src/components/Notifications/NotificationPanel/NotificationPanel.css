@@ -1,0 +1,81 @@
+.notification-panel {
+  background-color: #fafafa;
+}
+
+.panel-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.panel-header .MuiAvatar-root {
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.panel-content {
+  background: linear-gradient(to bottom, #fafafa 0%, #f0f2f5 100%);
+}
+
+.panel-content .MuiPaper-root {
+  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.panel-content .MuiPaper-root:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Stack trace styling */
+.MuiAccordion-root {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.MuiAccordionSummary-root {
+  background-color: rgba(25, 118, 210, 0.05);
+}
+
+.MuiAccordionDetails-root {
+  background-color: #f8f9fa;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Timeline styling */
+.timeline-item {
+  position: relative;
+  padding-inline-start: 40px;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 19px;
+  top: 30px;
+  width: 2px;
+  height: calc(100% - 30px);
+  background-color: rgba(25, 118, 210, 0.2);
+}
+
+.timeline-item:last-child::before {
+  display: none;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .panel-header {
+    padding: 12px;
+  }
+  
+  .panel-content {
+    padding: 12px;
+  }
+  
+  .notification-panel .MuiTypography-h6 {
+    font-size: 1.1rem;
+  }
+}

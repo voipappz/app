@@ -1,0 +1,716 @@
+{
+  "common": {
+    "buttons": {
+      "next": "הבא",
+      "previous": "הקודם",
+      "submit": "שלח",
+      "save": "שמור",
+      "cancel": "ביטול",
+      "send": "שלח סיכום",
+      "back": "חזרה",
+      "viewAll": "הצג הכל",
+      "start": "התחל"
+    },
+    "status": {
+      "loading": "טוען...",
+      "sending": "שולח..."
+    },
+    "messages": {
+      "noMoreToLoad": "אין עוד פריטים לטעינה",
+      "noItemsFound": "לא נמצאו פריטים"
+    }
+  },
+  "header": {
+    "title": "פלטפורמת ניהול עסקי",
+    "greeting": "שלום, {{name}}",
+    "logout": "יציאה"
+  },
+  "roles": {
+    "admin": "מנהל",
+    "super_admin": "מנהל מערכת",
+    "general_sales_manager": "מנהל מכירות כללי",
+    "sales_manager": "מנהל מכירות",
+    "marketing_manager": "מנהל שיווק",
+    "sales_agent_smb": "סוכן מכירות SMB",
+    "sales_agent_sme": "סוכן מכירות SME",
+    "sales_agent_readonly": "סוכן מכירות (קריאה בלבד)",
+    "back_office_manager": "מנהל בק אופיס",
+    "technician": "טכנאי",
+    "technician_readonly": "טכנאי (קריאה בלבד)",
+    "default": "משתמש"
+  },
+  "dashboard": {
+    "welcome": "ברוך הבא, {{name}}",
+    "roleAndPermissions": "תפקיד: {{role}} | הרשאות: {{count}}",
+    "upcomingInstallations": "ההתקנות הקרובות",
+    "noInstallationsToday": "אין התקנות מתוכננות להיום",
+    "actions": {
+      "orders": "הזמנות",
+      "newOrder": "הזמנה חדשה",
+      "newCompany": "לקוח חדש",
+      "products": "מוצרים"
+    },
+    "recentCustomers": "לקוחות אחרונים",
+    "noCustomers": "אין לקוחות עדיין"
+  },
+  "installations": {
+    "pageTitle": "התקנות",
+    "steps": {
+      "items": "פריטים",
+      "photos": "תמונות",
+      "signature": "חתימה",
+      "final": "הערות וסיום"
+    },
+    "labels": {
+      "notes": "הערות",
+      "photos": "תמונות",
+      "optional": "אופציונלי",
+      "customerSignature": "חתימת לקוח",
+      "signatureRequired": "יש לחתום כדי להמשיך",
+      "completionStatus": "סטטוס סיום",
+      "itemsInInstallation": "פריטים בהתקנה",
+      "markInstalledItems": "סמן את הפריטים שהותקנו בהצלחה",
+      "takePhotos": "צלם תמונות של ההתקנה לתיעוד",
+      "askCustomerSign": "בקש מהלקוח לחתום על אישור ההתקנה",
+      "notesPlaceholder": "הערות להתקנה...",
+      "branch": "סניף",
+      "created": "נוצר",
+      "total": "סה״כ",
+      "installationNumber": "מספר התקנה",
+      "address": "כתובת",
+      "addressNotAvailable": "כתובת לא זמינה"
+    },
+    "actions": {
+      "startInstallation": "התחל התקנה",
+      "navigate": "ניווט",
+      "call": "התקשר",
+      "closeTask": "סגור משימה",
+      "viewDetails": "צפה בפרטים"
+    },
+    "status": {
+      "all": "כל הסטטוסים",
+      "new": "חדש",
+      "pending": "ממתין",
+      "in_progress": "בתהליך",
+      "on_site": "באתר",
+      "completed": "הושלם",
+      "partial": "הושלם חלקית",
+      "cancelled": "בוטל",
+      "rescheduled": "נדחה"
+    },
+    "dateTabs": {
+      "all": "הכל",
+      "today": "היום",
+      "tomorrow": "מחר",
+      "thisWeek": "השבוע",
+      "selectDate": "בחר תאריך"
+    },
+    "table": {
+      "date": "תאריך",
+      "installationNumber": "מספר התקנה",
+      "company": "חברה",
+      "branch": "סניף",
+      "amount": "סכום",
+      "status": "סטטוס",
+      "actions": "פעולות",
+      "columns": "עמודות",
+      "showAll": "הצג הכל"
+    },
+    "footer": {
+      "showingCount": "מציג {{count}} התקנה",
+      "showingCount_other": "מציג {{count}} התקנות",
+      "loadingMore": "טוען עוד התקנות...",
+      "loadMore": "טען עוד",
+      "allLoaded": "כל ההתקנות נטענו"
+    },
+    "filters": {
+      "status": "סטטוס"
+    },
+    "messages": {
+      "noMoreToLoad": "אין עוד התקנות לטעינה",
+      "noInstallationsFound": "לא נמצאו התקנות",
+      "alreadyActiveInstallation": "יש לך כבר התקנה פעילה. סיים אותה קודם.",
+      "errorUpdatingStatus": "שגיאה בעדכון סטטוס"
+    },
+    "details": {
+      "loadingDetails": "טוען פרטי התקנה...",
+      "installationNotFound": "התקנה לא נמצאה",
+      "backToList": "חזרה לרשימת התקנות",
+      "title": "פרטי התקנה",
+      "installationNumber": "התקנה מספר:",
+      "closeTask": "סגור את המשימה",
+      "close": "סגור",
+      "startTask": "התחל משימה",
+      "start": "התחל",
+      "hasActiveInstallation": "יש לך התקנה פעילה",
+      "inProgress": "בביצוע",
+      "returnToActive": "חזור להתקנה הפעילה",
+      "notes": "הערות",
+      "notesPlaceholder": "הזן הערות...",
+      "noNotes": "אין הערות"
+    },
+    "summary": {
+      "loadingData": "טוען נתונים...",
+      "installationNotFound": "התקנה לא נמצאה",
+      "backToList": "חזרה לרשימת התקנות",
+      "title": "סיכום התקנה",
+      "installationNumber": "התקנה מספר:",
+      "contactPerson": "איש קשר:",
+      "itemsTitle": "פריטים בהתקנה",
+      "markInstalled": "סמן את הפריטים שהותקנו בהצלחה",
+      "photosTitle": "תמונות",
+      "photosOptional": "(אופציונלי)",
+      "photosDescription": "צלם תמונות של ההתקנה לתיעוד",
+      "signatureTitle": "חתימת לקוח",
+      "signatureDescription": "בקש מהלקוח לחתום על אישור ההתקנה",
+      "signatureRequired": "יש לחתום כדי להמשיך",
+      "notesTitle": "הערות",
+      "notesPlaceholder": "הערות להתקנה...",
+      "completionStatus": "סטטוס סיום",
+      "sending": "שולח...",
+      "submitSummary": "שלח סיכום"
+    }
+  },
+  "customers": {
+    "pageTitle": "לקוח חדש",
+    "subtitle": "הוסף לקוח חדש למערכת",
+    "stepProgress": "שלב {{current}} מתוך {{total}}",
+    "successMessage": "לקוח נוצר בהצלחה!",
+    "steps": {
+      "businessInfo": "פרטי העסק",
+      "signatory": "מורשה חתימה",
+      "contactPerson": "איש קשר",
+      "branches": "סניפים",
+      "technicalInfo": "מידע טכני",
+      "additionalInfo": "מידע נוסף"
+    },
+    "businessInfo": {
+      "title": "פרטי העסק",
+      "businessName": "שם העסק",
+      "businessNameRequired": "שם העסק הוא שדה חובה",
+      "businessNameMinLength": "שם העסק חייב להכיל לפחות 2 תווים",
+      "businessType": "סוג עסק",
+      "businessTypeRequired": "סוג העסק הוא שדה חובה",
+      "businessTypeOptions": {
+        "licensed": "עוסק מורשה",
+        "company": "חברה בע״מ",
+        "association": "עמותה",
+        "passport": "דרכון"
+      },
+      "businessId": "ח.פ. או ע.מ",
+      "businessIdRequired": "ח.פ. או ע.מ הוא שדה חובה",
+      "businessIdMinLength": "ח.פ. או ע.מ חייב להכיל לפחות 8 ספרות",
+      "businessIdMaxLength": "ח.פ. או ע.מ יכול להכיל עד 9 ספרות",
+      "businessIdPattern": "ח.פ. או ע.מ חייב להכיל ספרות בלבד",
+      "businessIdExists": "ח.פ. או ע.מ {{id}} כבר קיים במערכת",
+      "businessIdPlaceholder": "8-9 ספרות",
+      "businessPhone": "טלפון בית העסק",
+      "businessPhoneRequired": "טלפון בית העסק הוא שדה חובה",
+      "phonePattern": "מספר טלפון לא תקין",
+      "businessAddress": "כתובת בית העסק",
+      "businessAddressRequired": "כתובת בית העסק היא שדה חובה",
+      "businessAddressMinLength": "כתובת חייבת להכיל לפחות 5 תווים",
+      "businessAddressPlaceholder": "רחוב, מספר, עיר",
+      "businessEmail": "כתובת מייל בית העסק - לשליחת חשבוניות",
+      "businessEmailRequired": "כתובת מייל היא שדה חובה",
+      "emailPattern": "כתובת מייל לא תקינה",
+      "checking": "בודק..."
+    },
+    "signatory": {
+      "title": "מורשה חתימה",
+      "name": "שם מלא מורשה חתימה",
+      "nameRequired": "שם מורשה חתימה הוא שדה חובה",
+      "nameMinLength": "שם חייב להכיל לפחות 2 תווים",
+      "namePlaceholder": "שם מלא",
+      "id": "ת.ז. מורשה חתימה",
+      "idRequired": "ת.ז. מורשה חתימה היא שדה חובה",
+      "idLength": "ת.ז. חייבת להכיל 9 ספרות",
+      "idPattern": "ת.ז. חייבת להכיל ספרות בלבד",
+      "idPlaceholder": "9 ספרות",
+      "email": "מייל מורשה חתימה",
+      "emailRequired": "מייל מורשה חתימה הוא שדה חובה",
+      "phone": "מספר נייד מורשה חתימה",
+      "phoneRequired": "מספר נייד מורשה חתימה הוא שדה חובה"
+    },
+    "contactPerson": {
+      "title": "איש קשר",
+      "toggleLabel": "הוספת איש קשר (אם שונה ממורשה חתימה)",
+      "toggleDescription": "אופציונאלי - רק אם יש איש קשר נוסף",
+      "name": "שם איש קשר",
+      "nameRequired": "שם איש קשר הוא שדה חובה",
+      "namePlaceholder": "שם מלא",
+      "phone": "נייד איש קשר",
+      "phoneRequired": "נייד איש קשר הוא שדה חובה",
+      "email": "מייל איש קשר",
+      "emailRequired": "מייל איש קשר הוא שדה חובה"
+    },
+    "branches": {
+      "title": "הוספת סניפים",
+      "sectionTitle": "סניפים",
+      "branchName": "שם הסניף",
+      "branchNamePlaceholder": "שם הסניף",
+      "branchAddress": "כתובת הסניף",
+      "branchAddressPlaceholder": "כתובת הסניף",
+      "branchContact": "איש קשר",
+      "branchContactPlaceholder": "איש קשר בסניף",
+      "branchPhone": "טלפון",
+      "branchPhonePlaceholder": "טלפון הסניף",
+      "isMainBranch": "סניף ראשי",
+      "addBranch": "הוסף סניף",
+      "addedBranches": "סניפים שנוספו ({{count}})",
+      "mainBranchLabel": "ראשי"
+    },
+    "orders": {
+      "sectionTitle": "הזמנות",
+      "viewAll": "הצג את כל ההזמנות",
+      "noOrders": "אין הזמנות",
+      "orderNumber": "הזמנה"
+    },
+    "technicalInfo": {
+      "title": "מידע טכני",
+      "internetProvider": "ספק אינטרנט",
+      "internetProviderRequired": "ספק אינטרנט הוא שדה חובה",
+      "hasSecureRouter": "נתב מאובטח",
+      "hasSecureRouterDescription": "האם קיים נתב אבטחה במערכת",
+      "secureRouterType": "סוג נתב מאובטח",
+      "secureRouterTypeRequired": "סוג נתב מאובטח הוא שדה חובה",
+      "providers": {
+        "bezeq": "בזק",
+        "cellcom": "סלקום",
+        "partner": "פרטנר",
+        "hot": "HOT",
+        "netvision": "013 נטוויז'ן",
+        "other": "אחר"
+      }
+    },
+    "additionalInfo": {
+      "title": "מידע נוסף",
+      "hasClientDevices": "מכשירים של הלקוח",
+      "hasClientDevicesDescription": "האם יש מכשירים קיימים שצריך לתעד",
+      "deviceImagesTitle": "תמונות מכשירים לקוח",
+      "deviceImagesDescription": "צלם או העלה תמונות של המכשירים הקיימים",
+      "takePhoto": "צלם תמונה",
+      "uploadPhoto": "העלה תמונה",
+      "documentsTitle": "מסמכים רלוונטיים",
+      "documentsDescription": "העלה מסמכים רלוונטיים ללקוח (אופציונאלי)",
+      "uploadDocuments": "העלה מסמכים",
+      "notes": "הערות ללקוח",
+      "notesPlaceholder": "הערות נוספות ללקוח...",
+      "createCustomer": "צור לקוח",
+      "creatingCustomer": "יוצר לקוח..."
+    },
+    "list": {
+      "pageTitle": "לקוחות",
+      "search": "חיפוש לקוח...",
+      "noResults": "לא נמצאו לקוחות",
+      "newCustomer": "לקוח חדש",
+      "table": {
+        "businessName": "שם העסק",
+        "businessId": "ח.פ.",
+        "phone": "טלפון",
+        "email": "מייל",
+        "address": "כתובת",
+        "createdAt": "תאריך יצירה"
+      }
+    },
+    "footer": {
+      "showingCount": "מציג {{count}} לקוח",
+      "showingCount_other": "מציג {{count}} לקוחות",
+      "allLoaded": "כל הלקוחות נטענו"
+    },
+    "details": {
+      "title": "פרטי חברה",
+      "loading": "טוען פרטי חברה...",
+      "back": "חזרה",
+      "editCompany": "עריכה",
+      "saving": "שומר...",
+      "save": "שמור",
+      "cancel": "ביטול",
+      "saveSuccess": "החברה עודכנה בהצלחה",
+      "saveError": "שגיאה בעדכון החברה",
+      "companyNotFound": "חברה לא נמצאה",
+      "viewCompany": "צפה בפרטי חברה",
+      "createOrder": "צור הזמנה"
+    },
+    "toast": {
+      "creatingCustomer": "יוצר לקוח...",
+      "customerCreated": "לקוח נוצר בהצלחה!",
+      "createError": "שגיאה ביצירת לקוח. נסה שוב.",
+      "savingCompany": "שומר שינויים...",
+      "companyUpdated": "החברה עודכנה בהצלחה",
+      "updateError": "שגיאה בעדכון החברה. נסה שוב."
+    }
+  },
+  "login": {
+    "title": "התחברות לחשבון",
+    "email": "אימייל/שם משתמש",
+    "password": "סיסמה",
+    "requiredField": "שדה חובה",
+    "forgotPassword": "שכחתי סיסמה",
+    "loginButton": "התחבר",
+    "loggingIn": "מתחבר...",
+    "welcome": "ברוכים הבאים ל-{{brand}}",
+    "subtitle": "התחבר כדי לגשת ללוח הבקרה שלך",
+    "footer": {
+      "privacy": "פרטיות",
+      "legal": "תנאים משפטיים",
+      "contact": "צור קשר"
+    }
+  },
+  "menu": {
+    "dashboard": "לוח בקרה",
+    "calls": "שיחות",
+    "reports": "דוחות",
+    "switchToLTR": "מעבר ל-LTR",
+    "switchToRTL": "מעבר ל-RTL",
+    "logout": "יציאה",
+    "notifications": "התראות",
+    "status": "סטטוס"
+  },
+  "callDashboard": {
+    "subtitle": "פעילות השיחות",
+    "callsToday": "שיחות היום",
+    "callsTotal": "סה״כ שיחות",
+    "answerRate": "אחוז מענה",
+    "avgDuration": "משך ממוצע",
+    "inbound": "שיחות נכנסות",
+    "outbound": "שיחות יוצאות",
+    "failed": "נכשלו / לא נענו",
+    "recentCalls": "שיחות אחרונות",
+    "noCalls": "אין שיחות עדיין — אירועים יופיעו כאן עם הגעתם.",
+    "liveEvents": "אירועים בזמן אמת",
+    "callsPerHour": "שיחות לפי שעה",
+    "live": "חי",
+    "mock": "נתוני דמו",
+    "timeRange": {
+      "lastHour": "שעה אחרונה",
+      "last3Hours": "3 שעות אחרונות",
+      "last9Hours": "9 שעות אחרונות",
+      "last12Hours": "12 שעות אחרונות",
+      "last24Hours": "24 שעות אחרונות",
+      "custom": "מותאם אישית",
+      "from": "מתאריך",
+      "to": "עד תאריך"
+    }
+  },
+  "usageReports": {
+    "subtitle": "ניתוח שימוש בשיחות",
+    "period": {
+      "today": "היום",
+      "d7": "7 ימים",
+      "d30": "30 יום",
+      "all": "הכל"
+    },
+    "totalCalls": "סך השיחות",
+    "answerRate": "אחוז מענה",
+    "avgDuration": "משך ממוצע",
+    "talkTime": "זמן שיחה כולל",
+    "inbound": "נכנסות",
+    "outbound": "יוצאות",
+    "callsOverTime": "שיחות לאורך זמן",
+    "byStatus": "התפלגות לפי סטטוס",
+    "busiestHours": "שעות עומס",
+    "topDestinations": "יעדים מובילים",
+    "noData": "אין נתונים לתקופה זו",
+    "calls": "שיחות",
+    "status": {
+      "completed": "הושלמו",
+      "failed": "נכשלו",
+      "no_answer": "לא נענו",
+      "busy": "תפוס",
+      "ringing": "מצלצל",
+      "in_progress": "בשיחה"
+    }
+  },
+  "calls": {
+    "subtitle_one": "שיחה אחת",
+    "subtitle_other": "{{count}} שיחות",
+    "live": "חי",
+    "mock": "נתוני דמו",
+    "total": "סך הכל",
+    "answered": "נענו",
+    "missed": "לא נענו",
+    "avgDuration": "משך ממוצע",
+    "inbound": "נכנסות",
+    "outbound": "יוצאות",
+    "group": {
+      "timeStatus": "זמן ← סטטוס",
+      "status": "סטטוס",
+      "flat": "רשימה"
+    },
+    "col": {
+      "from": "מאת",
+      "to": "אל",
+      "duration": "משך",
+      "status": "סטטוס",
+      "started": "התחלה",
+      "legs": "מקטעים",
+      "events": "אירועים",
+      "transcript": "תמלול"
+    },
+    "bucket": {
+      "Today": "היום",
+      "Yesterday": "אתמול",
+      "This week": "השבוע",
+      "Older": "ישן יותר"
+    },
+    "noCalls": "אין שיחות עדיין — ממתין לאירועים מהאפיק.",
+    "timeline": "ציר זמן של השיחה",
+    "transcriptLabel": "תמלול",
+    "eventTimeline": "ציר אירועים",
+    "noEvents": "אין אירועים.",
+    "legsLabel": "מקטעים",
+    "eventsLabel": "אירועים",
+    "tx": {
+      "transcript": "תמלול",
+      "transcribing": "בתהליך תמלול",
+      "queued": "בתור",
+      "failed": "תמלול נכשל",
+      "none": "אין תמלול לשיחה זו.",
+      "processingMsg": "מתמלל…",
+      "queuedMsg": "ממתין בתור לתמלול…",
+      "failedMsg": "התמלול נכשל",
+      "transcribed": "תומלל",
+      "confidence": "רמת ביטחון",
+      "caller": "מתקשר",
+      "agent": "נציג",
+      "transcribeNow": "תמלל עכשיו",
+      "retranscribe": "תמלל מחדש",
+      "triggering": "שולח לתמלול…",
+      "disabled": "תמלול אינו מופעל בשרת (חסר GEMINI_API_KEY)."
+    }
+  },
+  "scheduling": {
+    "dashboard": {
+      "title": "תיאום התקנות",
+      "subtitle": "ניהול הקצאות התקנות ותזמון טכנאים",
+      "viewQueue": "צפה בתור",
+      "manageTechnicians": "נהל טכנאים",
+      "quickActions": "פעולות מהירות"
+    },
+    "stats": {
+      "pendingScheduling": "ממתינות לתיאום",
+      "assignedToday": "הוקצו היום",
+      "availableTechnicians": "טכנאים זמינים",
+      "urgentPriority": "עדיפות דחופה"
+    },
+    "actions": {
+      "viewPendingOrders": "צפה בהזמנות ממתינות",
+      "assignTechnician": "הקצה טכנאי",
+      "manageAvailability": "נהל זמינות"
+    },
+    "queue": {
+      "title": "תור התקנות",
+      "subtitle": "הזמנות הממתינות להקצאת טכנאי",
+      "orderNumber": "הזמנה מס'",
+      "customer": "לקוח",
+      "priority": "עדיפות",
+      "preferredDate": "תאריך מועדף",
+      "requirements": "דרישות",
+      "created": "נוצר",
+      "actions": "פעולות",
+      "empty": "אין הזמנות בתור"
+    },
+    "priority": {
+      "urgent": "דחוף",
+      "high": "גבוה",
+      "medium": "בינוני",
+      "low": "נמוך"
+    },
+    "assignDialog": {
+      "title": "הקצה טכנאי",
+      "technician": "טכנאי",
+      "scheduledDate": "תאריך מתוזמן",
+      "notes": "הערות",
+      "assign": "הקצה"
+    },
+    "technicians": {
+      "title": "ניהול טכנאים",
+      "subtitle": "מעקב אחר עומס עבודה וניהול הקצאות טכנאים",
+      "list": "טכנאים",
+      "assignments": "הקצאות אחרונות",
+      "noAssignments": "אין הקצאות אחרונות",
+      "selectTechnician": "בחר טכנאי",
+      "selectToView": "לחץ על טכנאי כדי לצפות בהקצאות שלו"
+    },
+    "availability": {
+      "available": "זמין",
+      "busy": "עסוק",
+      "unavailable": "לא זמין",
+      "unknown": "לא ידוע"
+    },
+    "workload": {
+      "today": "היום",
+      "upcoming": "הקרובות"
+    }
+  },
+  "orders": {
+    "pageTitle": "הזמנות",
+    "newOrder": "הזמנה חדשה",
+    "searchPlaceholder": "חפש לפי שם חברה...",
+    "loadingData": "טוען נתונים...",
+    "loadingOrderDetails": "טוען פרטי הזמנה...",
+    "orderNotFound": "הזמנה לא נמצאה",
+    "backToOrders": "חזרה לרשימת הזמנות",
+    "orderDetails": "פרטי הזמנה",
+    "orderNumber": "הזמנה מספר:",
+    "editOrder": "ערוך הזמנה",
+    "saving": "שומר...",
+    "save": "שמור",
+    "cancel": "ביטול",
+    "selectOrderType": "בחר סוג הזמנה",
+    "generic": "גנרי",
+    "calculator": "מחשבון",
+    "creatingOrderFor": "יצירת הזמנה עבור {{name}}",
+    "orderSentSuccess": "ההזמנה נשלחה לחתימה בהצלחה!",
+    "underConstruction": "בבניה...",
+    "toast": {
+      "creatingOrder": "יוצר הזמנה...",
+      "sendingForSignature": "שולח לחתימה...",
+      "sentForSignature": "ההזמנה נשלחה לחתימה בהצלחה",
+      "draftSaved": "ההזמנה נשמרה כטיוטה",
+      "createError": "שגיאה ביצירת ההזמנה. נסה שוב.",
+      "pdfError": "ההזמנה נוצרה אך השליחה לחתימה נכשלה",
+      "savingOrder": "שומר שינויים...",
+      "orderUpdated": "ההזמנה עודכנה בהצלחה",
+      "updateError": "שגיאה בעדכון ההזמנה. נסה שוב."
+    },
+    "table": {
+      "created": "תאריך",
+      "orderNumber": "מספר הזמנה",
+      "company": "חברה",
+      "branch": "סניף",
+      "totalAmount": "סכום",
+      "status": "סטטוס",
+      "actions": "פעולות",
+      "viewDetails": "צפה בפרטים",
+      "editOrder": "ערוך הזמנה",
+      "deleteOrder": "מחק הזמנה",
+      "columns": "עמודות",
+      "showAll": "הצג הכל"
+    },
+    "customerSelection": {
+      "title": "בחירת לקוח",
+      "subtitle": "בחר לקוח קיים כדי להתחיל הזמנה חדשה.",
+      "customerList": "רשימת לקוחות",
+      "newCustomer": "לקוח חדש",
+      "searchPlaceholder": "חפש לפי שם עסק או ח.פ.",
+      "businessId": "ח.פ.",
+      "noCustomersFound": "לא נמצאו לקוחות מתאימים",
+      "notFound": "לא מצאת את \"{{search}}\"?",
+      "createNewCustomer": "צור לקוח חדש"
+    },
+    "summary": {
+      "title": "סיכום הזמנה",
+      "emptyCart": "העגלה ריקה",
+      "paymentTerms": "תנאי תשלום",
+      "singlePayment": "תשלום אחד",
+      "payments36": "36 תשלומים",
+      "payments48": "48 תשלומים",
+      "companyNotes": "הערות לקוח",
+      "notInContract": "לא מופיע בחוזה",
+      "orderNotes": "הערות להזמנה",
+      "inContract": "מופיע בחוזה",
+      "notesPlaceholder": "הערות...",
+      "total": "סה\"כ:",
+      "perMonth": "/חודש",
+      "sending": "שולח...",
+      "sendForSignature": "שלח לחתימה",
+      "saveAsDraft": "שמור כטיוטה",
+      "savingDraft": "שומר...",
+      "priceBelowMinimum": "מינימום ₪{{min}}"
+    },
+    "status": {
+      "all": "כל הסטטוסים",
+      "new": "חדש",
+      "draft": "הצעת מחיר",
+      "awaiting_customer_signature": "ממתין לחתימת לקוח",
+      "pending": "ממתין",
+      "in_progress": "בתהליך",
+      "prep_for_scheduling": "הכנה לתיאום התקנה",
+      "ready_for_scheduling": "לתיאום התקנה",
+      "pending_installation": "ממתינה לסיום התקנה",
+      "signed": "נחתם",
+      "customer_signed": "נחתם ע\"י לקוח",
+      "completed": "הושלם",
+      "failed": "נכשלה",
+      "cancelled": "בוטל"
+    },
+    "footer": {
+      "showingCount": "מציג {{count}} הזמנה",
+      "showingCount_other": "מציג {{count}} הזמנות",
+      "loadingMore": "טוען עוד הזמנות...",
+      "loadMore": "טען עוד",
+      "allLoaded": "כל ההזמנות נטענו"
+    },
+    "paymentDetails": {
+      "title": "פרטי תשלום",
+      "oneTimePayment": "תשלום אחד",
+      "equipmentInstallments": "ציוד בתשלומים",
+      "monthlyServices": "שירותים חודשיים",
+      "ipPhone": "IP Phone",
+      "totalMonthly": "סכום חודשי כולל"
+    }
+  },
+  "health": {
+    "live": "פעיל",
+    "idle": "אין אירועים עדיין",
+    "stale": "אין אירועי שיחה כבר {{mins}} דק׳",
+    "offline": "סטטוס לא זמין",
+    "lastEvent": "אירוע אחרון: {{at}}"
+  },
+  "phone": {
+    "ready": "מחובר",
+    "offline": "מנותק",
+    "connecting": "מתחבר…",
+    "failed": "החיבור נכשל",
+    "connect": "התחבר",
+    "disconnect": "התנתק",
+    "reconnect": "התחבר מחדש",
+    "extension": "שלוחה",
+    "password": "סיסמה",
+    "domain": "דומיין SIP",
+    "server": "שרת WebSocket",
+    "displayName": "שם תצוגה",
+    "autoConnect": "התחבר אוטומטית",
+    "dialpad": "חיוג",
+    "history": "היסטוריה",
+    "settings": "הגדרות",
+    "enterNumber": "הזן מספר",
+    "call": "חייג",
+    "hangup": "נתק",
+    "answer": "ענה",
+    "decline": "דחה",
+    "inbound": "שיחה נכנסת",
+    "outbound": "מחייג",
+    "ringing": "מצלצל…",
+    "notConnected": "לא מחובר — ראה הגדרות",
+    "noHistory": "אין שיחות אחרונות"
+  },
+  "status": {
+    "title": "סטטוס מערכת",
+    "allOk": "כל המערכות תקינות",
+    "degraded": "מצב מופחת",
+    "unreachable": "לא זמין",
+    "healthUnreachable": "לא ניתן להגיע לנקודת הבריאות.",
+    "lastEvent": "אירוע אחרון לפני {{age}}",
+    "updated": "עודכן",
+    "checks": {
+      "cable": "כבל (זמן אמת)",
+      "events": "זרם אירועים",
+      "engine": "מנוע (אם)",
+      "supabase": "משתמשים (Supabase)",
+      "duckdb": "אחסון מקומי"
+    },
+    "state": {
+      "up": "תקין",
+      "down": "נפל",
+      "stale": "מיושן",
+      "idle": "ממתין",
+      "disabled": "מושבת",
+      "registered": "תקין",
+      "unregistered": "נפל",
+      "failed": "נכשל"
+    }
+  }
+}

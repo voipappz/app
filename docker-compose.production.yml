@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  admin_new:
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "udp://${VA_APP_ADDRESS}:6514"
+        syslog-format: "rfc5424"
+        tag: "portal"
+    profiles: ["app"]
+    restart: unless-stopped
+    image: nirlevi/va-admin:latest
+    ports:
+      - "9443:443"
+    extra_hosts:
+      - "api:${VA_APP_ADDRESS}"
+      - "cable:${VA_APP_ADDRESS}"
+    environment:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-https://your-project-ref.supabase.co}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=${VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY}
+      - VITE_API_TARGET=${VITE_API_TARGET}
+    volumes:
+      - ./certs:/opt/va/certs

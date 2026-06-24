@@ -1,0 +1,50 @@
+# Multistage build: React frontend + Deno backend in a single image.
+# Stage 1 builds the React bundle. Stage 2 runs Deno, which both serves the
+# built assets from /app/dist and dispatches API routes under /apps/*.
+
+# Stage 1: Build React app
+FROM node:24-alpine AS frontend-builder
+WORKDIR /build
+
+ARG VITE_APP_VERSION
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# Stage 2: Deno runtime serving React + API
+FROM denoland/deno:2.5.3
+WORKDIR /app
+
+COPY api/deno.json api/deno.lock ./
+COPY api/*.ts ./
+# The DuckDB schema migration is read at runtime by store.ts (relative to the
+# module), so it must be present in the image — not just the .ts files.
+COPY api/migrations ./migrations
+# The mock seed fixture (calls + transcription jobs) is also read at runtime by
+# store.ts → seedMock(), so it must ship in the image when MOCK_SEED=1.
+COPY api/mock ./mock
+RUN deno cache supabase.ts
+
+COPY --from=frontend-builder /build/dist ./dist
+
+# DuckDB event-store file. /app/data must be writable by the non-root `deno`
+# user (store.ts mkdir's it, but the parent dir needs the right owner).
+ENV DUCKDB_PATH=/app/data/events.duckdb
+RUN mkdir -p /app/data && chown -R deno /app/data
+
+ENV STATIC_DIR=/app/dist
+ENV PORT=3000
+EXPOSE 3000
+
+# Healthcheck handled by kamal-proxy (proxy.healthcheck.path: /test in
+# config/deploy.yml). Avoiding a Dockerfile HEALTHCHECK because Deno 2.5's
+# `deno eval` does not accept --allow-* flags.
+
+USER deno
+
+# --allow-write (DuckDB file) + --allow-ffi/--allow-sys (DuckDB native addon).
+CMD ["deno", "run", "--allow-net", "--allow-env", "--allow-read", "--allow-write", "--allow-ffi", "--allow-sys", "supabase.ts"]

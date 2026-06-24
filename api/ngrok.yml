@@ -1,0 +1,9 @@
+version: 3
+
+agent:
+  authtoken: REDACTED-ROTATE-ME 
+
+tunnels:
+  deno:
+    proto: http
+    addr: deno-app:3000

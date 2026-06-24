@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="title desc">
+  <title id="title">Product Placeholder</title>
+  <desc id="desc">Fallback image for products without an uploaded picture.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f3f4f6"/>
+      <stop offset="100%" stop-color="#e5e7eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="240" rx="24" fill="url(#bg)"/>
+  <rect x="52" y="46" width="216" height="148" rx="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="8"/>
+  <circle cx="112" cy="102" r="22" fill="#94a3b8"/>
+  <path d="M80 170l42-40 28 26 34-36 56 50H80z" fill="#cbd5e1"/>
+  <path d="M110 88h100" stroke="#94a3b8" stroke-width="12" stroke-linecap="round"/>
+  <path d="M110 116h74" stroke="#cbd5e1" stroke-width="12" stroke-linecap="round"/>
+  <path d="M110 144h58" stroke="#e2e8f0" stroke-width="12" stroke-linecap="round"/>
+</svg>

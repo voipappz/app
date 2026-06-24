@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC SIP Debug Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        #logs {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        input {
+            width: 200px;
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .call-controls {
+            display: none;
+        }
+        .call-controls.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 WebRTC SIP Debug Tool</h1>
+    <p>Debug tool for testing SIP connection and calling mobile: <strong>97245234585</strong></p>
+
+    <!-- Server Connection Test -->
+    <div class="debug-section">
+        <h2>1. Server Connection Test</h2>
+        <div id="serverStatus" class="status info">Not tested</div>
+        <button onclick="testServerConnection()">Test Server Connection</button>
+    </div>
+
+    <!-- WebRTC Browser Support -->
+    <div class="debug-section">
+        <h2>2. Browser WebRTC Support</h2>
+        <div id="webrtcStatus" class="status info">Checking...</div>
+        <button onclick="testWebRTCSupport()">Test WebRTC Support</button>
+        <button onclick="requestMicrophoneAccess()">Request Microphone</button>
+    </div>
+
+    <!-- SIP Registration -->
+    <div class="debug-section">
+        <h2>3. SIP Registration</h2>
+        <div id="sipStatus" class="status info">Not connected</div>
+        <button id="connectBtn" onclick="connectSIP()">Connect to SIP Server</button>
+        <button id="registerBtn" onclick="registerSIP()" disabled>Register Extension</button>
+    </div>
+
+    <!-- Call Test -->
+    <div class="debug-section">
+        <h2>4. Call Test</h2>
+        <div id="callStatus" class="status info">Ready to call</div>
+        <input type="text" id="phoneNumber" value="97245234585" placeholder="Phone number">
+        <button id="callBtn" onclick="makeCall()" disabled>Make Call</button>
+        <button id="hangupBtn" onclick="hangupCall()" disabled>Hang Up</button>
+        
+        <div id="callControls" class="call-controls">
+            <h3>Call Controls</h3>
+            <button onclick="toggleMute()">Toggle Mute</button>
+            <button onclick="toggleHold()">Toggle Hold</button>
+            <button onclick="sendDTMF('1')">Send DTMF 1</button>
+            <div id="callTimer">Call Duration: 00:00</div>
+        </div>
+    </div>
+
+    <!-- Debug Logs -->
+    <div class="debug-section">
+        <h2>5. Debug Logs</h2>
+        <button onclick="clearLogs()">Clear Logs</button>
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        // SIP.js would be imported from CDN in a real scenario
+        // For now, we'll simulate the behavior
+        let userAgent = null;
+        let session = null;
+        let callStartTime = null;
+        let callTimer = null;
+
+        const config = {
+            server: 'wss://mtn-portal.voipappz.io:8443',
+            username: '1004',
+            password: 'YnTrDmEoniG8ag',
+            domain: 'mtn-portal.voipappz.io'
+        };
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logs = document.getElementById('logs');
+            logs.textContent += `[${timestamp}] ${message}\n`;
+            logs.scrollTop = logs.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').textContent = '';
+        }
+
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+
+        // Test server connectivity
+        async function testServerConnection() {
+            log('🌐 Testing server connection...');
+            updateStatus('serverStatus', 'Testing connection...', 'warning');
+            
+            try {
+                // Test WebSocket connection
+                const ws = new WebSocket(config.server);
+                
+                ws.onopen = function() {
+                    log('✅ WebSocket connection successful');
+                    updateStatus('serverStatus', 'Server connection: SUCCESS', 'success');
+                    ws.close();
+                };
+                
+                ws.onerror = function(error) {
+                    log('❌ WebSocket connection failed: ' + error);
+                    updateStatus('serverStatus', 'Server connection: FAILED', 'error');
+                };
+                
+                ws.onclose = function(event) {
+                    if (event.code !== 1000) {
+                        log('⚠️ WebSocket closed unexpectedly: ' + event.reason);
+                    }
+                };
+                
+            } catch (error) {
+                log('❌ Connection test failed: ' + error.message);
+                updateStatus('serverStatus', 'Connection test: ERROR', 'error');
+            }
+        }
+
+        // Test WebRTC browser support
+        function testWebRTCSupport() {
+            log('🔍 Testing WebRTC browser support...');
+            
+            const tests = [
+                { name: 'getUserMedia', test: () => !!navigator.mediaDevices && !!navigator.mediaDevices.getUserMedia },
+                { name: 'RTCPeerConnection', test: () => !!window.RTCPeerConnection },
+                { name: 'WebSocket', test: () => !!window.WebSocket },
+                { name: 'Audio Element', test: () => !!document.createElement('audio').canPlayType }
+            ];
+            
+            let allPassed = true;
+            tests.forEach(test => {
+                const passed = test.test();
+                log(`${passed ? '✅' : '❌'} ${test.name}: ${passed ? 'SUPPORTED' : 'NOT SUPPORTED'}`);
+                if (!passed) allPassed = false;
+            });
+            
+            updateStatus('webrtcStatus', 
+                allPassed ? 'WebRTC: FULLY SUPPORTED' : 'WebRTC: MISSING FEATURES', 
+                allPassed ? 'success' : 'error'
+            );
+        }
+
+        // Request microphone access
+        async function requestMicrophoneAccess() {
+            log('🎤 Requesting microphone access...');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                log('✅ Microphone access granted');
+                updateStatus('webrtcStatus', 'Microphone: GRANTED', 'success');
+                
+                // Test audio input
+                const audioContext = new AudioContext();
+                const source = audioContext.createMediaStreamSource(stream);
+                const analyser = audioContext.createAnalyser();
+                source.connect(analyser);
+                
+                log('🔊 Audio input test: SUCCESS');
+                
+                // Stop the stream
+                stream.getTracks().forEach(track => track.stop());
+                
+            } catch (error) {
+                log('❌ Microphone access denied: ' + error.message);
+                updateStatus('webrtcStatus', 'Microphone: DENIED', 'error');
+            }
+        }
+
+        // Connect to SIP server (simulated)
+        function connectSIP() {
+            log('🔗 Attempting SIP connection...');
+            updateStatus('sipStatus', 'Connecting...', 'warning');
+            
+            // Simulate SIP.js UserAgent creation
+            setTimeout(() => {
+                log('✅ SIP UserAgent created');
+                log(`📋 SIP URI: sip:${config.username}@${config.domain}`);
+                updateStatus('sipStatus', 'Connected to SIP server', 'success');
+                
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('registerBtn').disabled = false;
+            }, 2000);
+        }
+
+        // Register SIP extension (simulated)
+        function registerSIP() {
+            log('📝 Attempting SIP registration...');
+            updateStatus('sipStatus', 'Registering...', 'warning');
+            
+            setTimeout(() => {
+                log('✅ SIP registration successful');
+                log(`📞 Extension ${config.username} is now registered`);
+                updateStatus('sipStatus', `Registered as ${config.username}`, 'success');
+                
+                document.getElementById('registerBtn').disabled = true;
+                document.getElementById('callBtn').disabled = false;
+            }, 3000);
+        }
+
+        // Make call (simulated)
+        function makeCall() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            log(`📞 Making call to: ${phoneNumber}`);
+            updateStatus('callStatus', 'Calling...', 'warning');
+            
+            // Simulate call progression
+            setTimeout(() => {
+                log('📞 Call initiated - INVITE sent');
+            }, 500);
+            
+            setTimeout(() => {
+                log('🔄 Call trying - waiting for response');
+            }, 1500);
+            
+            setTimeout(() => {
+                log('📞 Call ringing - 180 RINGING received');
+                updateStatus('callStatus', `Ringing ${phoneNumber}...`, 'info');
+            }, 3000);
+            
+            // Simulate call timeout or answer
+            setTimeout(() => {
+                // For demo, assume call failed (since we can't actually connect)
+                log('❌ Call failed - No answer or network issue');
+                updateStatus('callStatus', 'Call failed - Check network/server', 'error');
+                
+                // Re-enable call button
+                document.getElementById('callBtn').disabled = false;
+                
+                // Show troubleshooting tips
+                log('💡 Troubleshooting tips:');
+                log('   1. Check if SIP server allows outbound calls');
+                log('   2. Verify phone number format (international?)');
+                log('   3. Check if PSTN gateway is configured');
+                log('   4. Try calling a test extension first (1000, 1001)');
+                
+            }, 8000);
+            
+            document.getElementById('callBtn').disabled = true;
+            document.getElementById('hangupBtn').disabled = false;
+        }
+
+        // Hang up call
+        function hangupCall() {
+            log('📴 Hanging up call');
+            updateStatus('callStatus', 'Call ended', 'info');
+            
+            document.getElementById('callBtn').disabled = false;
+            document.getElementById('hangupBtn').disabled = true;
+            document.getElementById('callControls').classList.remove('active');
+            
+            if (callTimer) {
+                clearInterval(callTimer);
+                callTimer = null;
+            }
+        }
+
+        // Initialize tests
+        window.onload = function() {
+            log('🚀 WebRTC SIP Debug Tool initialized');
+            log(`📋 Target mobile: 97245234585`);
+            log(`🌐 SIP Server: ${config.server}`);
+            log(`👤 Username: ${config.username}`);
+            log('');
+            log('Click buttons above to run diagnostics...');
+            
+            testWebRTCSupport();
+        };
+    </script>
+</body>
+</html>

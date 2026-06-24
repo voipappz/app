@@ -1,0 +1,12 @@
+app:
+  id: b8d3a98b-f986-4b95-b994-852e126e97be
+  name: VoipAppz
+  description: VoipAppz embedded app for Fireberry
+components:
+  - id: c92a9d07-9364-4eb4-91c3-56cc51796bd8
+    name: voipappz-main
+    title: VoipAppz
+    type: global-menu
+    path: dist
+    settings:
+      displayName: VoipAppz

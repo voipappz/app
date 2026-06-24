@@ -1,0 +1,196 @@
+version: "3.8"
+
+# Core services (react-app-tichman + deno-api) have NO profile, so a plain
+#   docker compose up -d        (or: make up)
+# starts ONLY them. Everything else is behind a profile and is never built or
+# started by a default `up`/`build` — so a heavy/optional build (e.g. the
+# `production` image) failing can never break the core dev stack. Opt in with:
+#   docker compose --profile tools up -d claude
+#   docker compose --profile test  run --rm deno-tests
+#   docker compose --profile prod  build production
+services:
+  # Claude AI CLI (dev shell). Opt-in: --profile tools
+  claude:
+    profiles: ["tools"]
+    build: .
+    env_file:
+    - .env
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules_cache:/app/node_modules
+      - ~/.gitconfig:/root/.gitconfig:ro
+      - ~/.ssh:/root/.ssh:ro
+    environment:
+      NODE_ENV: development
+      TERM: xterm
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}  # each dev sets their own key
+    security_opt:
+      - "seccomp=unconfined"
+    command: sleep infinity
+
+  # React + Vite development server (CORE — always started by `up`)
+  react-app-tichman:
+    security_opt:
+      - "seccomp=unconfined"
+    image: node:24.10.0
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules_cache:/app/node_modules
+      - ~/.gitconfig:/root/.gitconfig:ro
+      - ~/.ssh:/root/.ssh:ro
+    ports:
+      - "4200:4200"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      TERM: xterm
+      # deno-api runs network_mode: host (listens on the host at :4001). react-app-tichman
+      # is on the bridge network, so the Vite proxy reaches deno-api via the host
+      # gateway (extra_hosts below). One upstream now — calls/events + WS + app.
+      VITE_DENO_API_TARGET: ${VITE_DENO_API_TARGET:-http://host.docker.internal:4001}
+      # # PostgREST is reached via KONG (host-networked :8000), which owns/strips the
+      # # /rest/v1 route. PostgREST itself is loopback-only, so go through the gateway
+      # # to Kong. The browser only ever sees /rest/v1 (proxied).
+      # VITE_POSTGREST_TARGET: ${VITE_POSTGREST_TARGET:-http://host.docker.internal:8000}
+
+      # PostgREST is reached via a gateway (Kong) that owns/strips the /rest/v1
+      # route. The Vite /rest/v1 proxy does NO rewrite, so this MUST be an ORIGIN
+      # only (no /rest/v1 suffix) — the request path /rest/v1/* is appended as-is.
+      # Local Kong: http://host.docker.internal:8000 · Cloud: https://cloud.voipappz.io
+      # NB: do NOT use $POSTGREST_URL here — it includes /rest/v1 and would double it.
+      VITE_POSTGREST_TARGET: ${VITE_POSTGREST_TARGET:-https://cloud.voipappz.io/rest/v1}
+
+
+    extra_hosts:
+      - "host.docker.internal:172.17.0.1"
+    command: >
+      bash -c "
+        echo 'Installing dependencies...' &&
+        npm install &&
+        echo 'Starting Vite development server...' &&
+        npm run dev -- --host 0.0.0.0 --port 4200
+      "
+
+  # Production build test. Opt-in: --profile test
+  test-build:
+    profiles: ["test"]
+    image: node:lts
+    user: "node"
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules_cache:/app/node_modules
+      - ~/.gitconfig:/home/node/.gitconfig:ro
+      - ~/.ssh:/home/node/.ssh:ro
+    environment:
+      NODE_ENV: production
+      TERM: xterm
+    command: >
+      bash -c "
+        echo '🔧 Testing production build...' &&
+        npm install &&
+        echo '🚀 Building production bundle...' &&
+        npm run build &&
+        echo '✅ Build completed successfully!' &&
+        ls -la dist/
+      "
+
+  # Deno API server (CORE — thin BFF: auth proxy, cable→/ws relay, engine reads).
+  deno-api:
+    image: denoland/deno:latest
+    security_opt:
+      - "seccomp=unconfined"
+    # Managed lifecycle (Kamal-parity) — survive crashes/reboots instead of an
+    # ad-hoc `deno run`. Prod uses the same process via the Kamal `web` role.
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./api:/app
+    # Host networking so localhost:6000 reaches the cable server in the ../ root
+    # stack (those services are all network_mode: host too). Also publishes :4001.
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      PORT: 4001
+      # Live cable subscription consumes call events from the va-crystal cable
+      # server's CallEvents channel (ActionCable WS) and relays them to browser
+      # /ws subscribers (the Dashboard) — no local store. On as soon as SECRET_KEY
+      # (= cable's SECRET_KEY) is set — deno mints the HS256 JWT itself; or pass
+      # a ready-made CABLE_TOKEN.
+      SECRET_KEY: ${SECRET_KEY:-}
+      CABLE_URL: ${CABLE_URL:-ws://127.0.0.1:6000/cable}
+      CABLE_TOKEN: ${CABLE_TOKEN:-}
+      # Map VITE_-prefixed vars from root .env to non-prefixed vars Deno expects
+      SUPABASE_URL: ${VITE_SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # Shared secret to sign the PostgREST events token.
+      VA_PGRST_JWT_SECRET: ${VA_PGRST_JWT_SECRET:-}
+      POSTGREST_URL: ${POSTGREST_URL}
+      # Engine (voipappz-api, "the brain") — transcripts are read on request from
+      # its event store. Server-side basic-auth creds, NEVER VITE_-prefixed.
+      ENGINE_URL: ${ENGINE_URL:-https://cloud.voipappz.io}
+      ACCOUNT_EMAIL: ${ACCOUNT_EMAIL:-}
+      ACCOUNT_PASSWORD: ${ACCOUNT_PASSWORD:-}
+      # Event-freshness alarm: seconds the cable can be silent before /health
+      # reports the stream `stale` (degraded, not 503). 0 disables. Default 15min.
+      EVENTS_STALE_SECONDS: ${EVENTS_STALE_SECONDS:-900}
+      # InfluxDB 3 (monitoring.voipappz.com) — dashboard calls-per-hour source.
+      # Server-side only (token never reaches the browser). Plain HTTP on :8181.
+      INFLUXDB_URL: ${INFLUXDB_URL:-http://monitoring.voipappz.com:8181}
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-}
+      INFLUXDB_DATABASE: ${INFLUXDB_DATABASE:-telegraf}
+    command: deno run --allow-net --allow-env --allow-read --watch supabase.ts
+
+  # Deno API tests. Opt-in: --profile test
+  deno-tests:
+    profiles: ["test"]
+    image: denoland/deno:latest
+    working_dir: /app
+    volumes:
+      - ./api:/app
+    env_file:
+      - .env
+    environment:
+      SUPABASE_URL: ${VITE_SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+    command: deno test --allow-net --allow-env --allow-read tests/
+
+  # ngrok tunnel for DocuSeal webhook development. Opt-in: --profile tools
+  ngrok:
+    profiles: ["tools"]
+    image: ngrok/ngrok:latest
+    ports:
+      - "4040:4040"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: http deno-api:4000
+    depends_on:
+      - deno-api
+
+  # Production image (build + run). Opt-in: --profile prod
+  # Heavy build (Deno + Vite). Behind a profile so a build failure can never
+  # break the core dev stack — it is only built/run when you ask for it.
+  production:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+volumes:
+  node_modules_cache:

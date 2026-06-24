@@ -1,0 +1,37 @@
+name: react-dashboard
+root: <%= ENV["PWD"] %>
+
+# Runs before everything
+pre_window: docker compose up -d
+
+windows:
+  - main:
+      layout: main-vertical
+      panes:
+        - claude:
+            - docker compose exec claude bash
+        - logs:
+            - docker compose logs -f react-app
+
+  - react-app:
+      layout: even-horizontal
+      panes:
+        - shell:
+            - docker compose exec react-app bash
+        - npm:
+            - docker compose exec react-app bash
+            - echo "Ready for npm commands..."
+
+  - docker:
+      layout: tiled
+      panes:
+        - status:
+            - docker compose ps
+            - echo ""
+            - echo "Commands:"
+            - echo "  docker compose ps       - List containers"
+            - echo "  docker compose logs -f  - Follow all logs"
+            - echo "  docker compose restart  - Restart services"
+            - echo "  docker compose down     - Stop all services"
+        - monitor:
+            - watch -n 2 docker compose ps
