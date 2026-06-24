@@ -1,0 +1,50 @@
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  height: 100vh;
+}
+
+/* Top bar is now used instead of sidebar */
+
+.content-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  /* No sidebar — nav lives in the top bar; content is full width. */
+  margin-inline-start: 0;
+  /* Add padding for fixed header */
+  padding-top: 64px;
+}
+
+/* Login page specific styles */
+.login-left-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.login-content-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  height: 100vh;
+}
+
+/* Responsive layout fixes */
+@media (max-width: 768px) {
+  .content-container {
+    margin-inline-start: 0;
+    padding-top: 64px; /* Space for fixed header on mobile */
+  }
+
+  .login-left-container {
+    display: none;
+  }
+
+  .login-content-container {
+    width: 100% !important;
+  }
+}

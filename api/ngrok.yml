@@ -1,0 +1,9 @@
+version: 3
+
+agent:
+  authtoken: 36eNQLd8nMe5nVDYfYm7sgelxDn_25B9VBuaudgop4KmaULLC 
+
+tunnels:
+  deno:
+    proto: http
+    addr: deno-app:3000

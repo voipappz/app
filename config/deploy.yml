@@ -1,0 +1,79 @@
+# Kamal deployment configuration for VoipAppZ (React + Deno).
+#
+# Mirrors docker-compose.yml 1:1 — two roles built from the SAME image,
+# deployed together by `kamal deploy`:
+#   - web: serves /app/dist (React) + dispatches /apps/* on port 3000
+#          (kamal-proxy fronts this at appcc3.freetelecom.net)
+#   - pdf: runs pdf-service/server.ts on port 8001 (internal-only,
+#          reachable from web at http://voipappz-pdf:8001)
+#
+# Kamal names role containers <service>-<role>-<image-hash>, which
+# changes every deploy. We give the pdf role a stable network alias
+# (`voipappz-pdf`) via `options.network-alias` so web can address it
+# by a bare hostname — same way docker-compose service names work.
+
+service: voipappz
+
+image: nirlevi/bots
+
+# Boot wait — Deno needs ~3-5s to subscribe to Supabase realtime before
+# startServer() binds port 3000. 30s (the default) cuts it too close
+# given the 3s healthcheck interval.
+deploy_timeout: 60
+
+servers:
+  web:
+    hosts:
+      - 212.199.160.156
+    # Runtime secrets live on the host in /etc/voipappz/secrets.env, mounted
+    # via --env-file. Place that file out-of-band (scp from your laptop). It
+    # is NOT managed by Kamal — that way real secrets never appear in this
+    # repo, in CI, or in .kamal/secrets.
+    options:
+      env-file: /etc/voipappz/secrets.env
+
+builder:
+  arch: amd64
+  dockerfile: Dockerfile.production
+  # VITE_* values are baked into the React bundle at build time. They are
+  # PUBLIC by design (anon keys ship in every user's browser), so it is safe
+  # to pull them from CI env / .kamal/secrets.
+  args:
+    VITE_SUPABASE_URL: <%= ENV["VITE_SUPABASE_URL"] %>
+    VITE_SUPABASE_ANON_KEY: <%= ENV["VITE_SUPABASE_ANON_KEY"] %>
+    VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: <%= ENV["VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY"] %>
+    # Version stamp shown in the app footer. Format: YYYY.MM.DD-<short-sha>
+    # so multiple deploys on the same day are still distinguishable.
+    VITE_APP_VERSION: <%= "#{Time.now.strftime('%Y.%m.%d')}-#{`git rev-parse --short HEAD`.strip}" %>
+
+proxy:
+  ssl: false
+  hosts:
+    - 212.199.160.156
+    - appcc3.freetelecom.net
+  app_port: 3000
+  healthcheck:
+    path: /health
+    interval: 3
+    timeout: 5
+
+registry:
+  username: nirlevi
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  clear:
+    PORT: 3000
+    DENO_ENV: production
+    STATIC_DIR: /app/dist
+    # Seed mock calls + transcription jobs once into an empty DuckDB so the
+    # Calls/Reports screens have data on a fresh deploy. No-op once the store
+    # has events (real tap or prior seed). Live LavinMQ tap stays ON (default)
+    # — set AMQP_* in /etc/voipappz/secrets.env to point it at the broker.
+    MOCK_SEED: "1"
+
+ssh:
+  user: root
+  port: 2228
+  keys: ["~/.ssh/kamal_deploy"]

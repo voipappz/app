@@ -1,0 +1,12 @@
+.env
+.env.local
+# DuckDB event-store runtime data — rebuilt from the tap/seed, never committed.
+data/
+*.duckdb
+*.duckdb.wal
+coverage/
+temp/
+*.log
+*.swp
+.DS_Store
+Thumbs.db

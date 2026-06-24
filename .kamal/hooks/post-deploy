@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+#
+# Kamal post-deploy hook — runs after the new container is healthy.
+# Lightweight wiring smoke checks against the live deploy: the frontend serves,
+# the dependency /health is up, and the auth + engine-transcript routes are
+# mounted (probing error paths only — no real calls, no creds consumed).
+#
+# Set KAMAL_HEALTHCHECK_URL to the deployed host; defaults below otherwise.
+
+set -euo pipefail
+
+BASE_URL="${KAMAL_HEALTHCHECK_URL:-https://forms.nimbusip.com}"
+FAIL=0
+
+probe() {
+  local name="$1" method="$2" path="$3" expected="$4" body="${5:-}"
+  local args=(-s -o /dev/null -w "%{http_code}" --max-time 10 -X "$method" "$BASE_URL$path")
+  if [ -n "$body" ]; then
+    args+=(-H "Content-Type: application/json" --data "$body")
+  fi
+  local code
+  code=$(curl "${args[@]}")
+  if [ "$code" = "$expected" ]; then
+    echo "  ✓  $name → $code"
+  else
+    echo "  ✗  $name → expected $expected, got $code"
+    FAIL=1
+  fi
+}
+
+echo "=== Post-deploy: Waiting 5s for proxy to settle ==="
+sleep 5
+
+echo "=== Post-deploy: Smoke checks against $BASE_URL ==="
+# Health probe — cable + events-freshness + engine + supabase. 200 = all
+# required deps reachable (degraded-but-up is still 200); 503 = one is down.
+probe "GET  /health                        (deps health)" GET "/health" 200
+# Quick status summary (cable_ready, relayed/tapped, events_status).
+probe "GET  /test                          (status)" GET "/test" 200
+
+# React bundle is served (the SPA shell / login page loads).
+probe "GET  /                              (frontend)" GET "/" 200
+
+# Auth proxy is mounted: a bodyless login is a 400 (validation), proving the
+# /auth/login → PostgREST /rpc/login route is wired (not a 404).
+probe "POST /auth/login                    (no body → 400)" POST "/auth/login" 400 '{}'
+
+# Transcript read is JWT-gated: unauthenticated → 401, proving the engine-backed
+# transcript route is mounted and protected (not 404/500).
+probe "GET  /calls/smoke/transcript        (no auth → 401)" GET "/calls/smoke/transcript" 401
+
+if [ "$FAIL" = "1" ]; then
+  echo
+  echo "❌  One or more smoke checks failed. The deploy is live but an integration"
+  echo "    is mis-wired. Inspect the container log:"
+  echo "      ssh root@91.202.171.162 'docker logs \$(docker ps --filter label=role=web -q | head -1) --tail 60'"
+  exit 1
+fi
+
+echo
+echo "=== Post-deploy: All smoke checks passed ==="

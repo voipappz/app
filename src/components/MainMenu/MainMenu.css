@@ -1,0 +1,157 @@
+/* App menu — clean white rail, slate icons, teal active/hover.
+   Color tokens: brand teal #00ADB4, slate text #475569, hairline #e5e7eb. */
+.main-menu {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+}
+
+.main-menu .logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-inline-start: 2px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+  max-width: 56px;
+  height: 56px;
+  background-color: transparent;
+  border-radius: 12px;
+}
+
+.main-menu .logo-container img{
+  max-width: none;
+}
+/* Add transition for hover effects */
+.MuiButton-root {
+  transition: all 0.3s ease !important;
+}
+
+/* Sidebar variant - CSS variable moved to global scope */
+
+.main-menu.side {
+  inset-inline-start: 0;
+  top: 0;
+  height: 100vh;
+  width: var(--sidebar-width);
+  justify-content: flex-start;
+  border-inline-end: 1px solid #e5e7eb;
+}
+
+.vertical-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  gap: 6px;
+}
+
+/* Icon-only navigation */
+.nav-icons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: 10px;
+  gap: 6px;
+}
+
+.icon-button {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 12px !important;
+  color: #64748b !important;
+  transition: background-color 0.18s ease, color 0.18s ease !important;
+}
+
+.icon-button:hover {
+  background-color: rgba(0, 173, 180, 0.10) !important;
+  color: #00838A !important;
+}
+
+/* Active page indicator */
+.icon-button.active {
+  background-color: rgba(0, 173, 180, 0.14) !important;
+  color: #00838A !important;
+}
+
+.bottom-actions {
+  margin-top: auto;
+  padding-bottom: 8px;
+}
+
+/* Mobile drawer content styles (always apply when drawer is used) */
+.mobile-drawer-content {
+  width: 260px;
+  padding: 16px 0;
+  background-color: #ffffff;
+  color: #0f172a;
+  height: 100%;
+}
+
+.mobile-drawer-content .mobile-logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 20px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-right: auto;
+  margin-left: auto;
+}
+.mobile-drawer-content .mobile-logo-container img{
+  background-color: transparent;
+  border-radius: 3px;
+}
+.mobile-drawer-content .MuiListItemIcon-root {
+  color: #64748b !important;
+}
+
+.mobile-drawer-content .MuiListItemText-primary {
+  color: #0f172a !important;
+  font-weight: 600;
+}
+
+.mobile-drawer-content .MuiListItemButton-root {
+  border-radius: 10px;
+  margin: 2px 10px;
+}
+
+.mobile-drawer-content .MuiListItemButton-root:hover {
+  background-color: rgba(0, 173, 180, 0.10);
+}
+
+/* Mobile styles */
+@media (max-width: 900px) {
+  .main-menu.side {
+    display: none;
+  }
+
+  .main-menu.mobile {
+    position: fixed;
+    top: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    height: 64px;
+    width: 100%;
+    z-index: 1100;
+  }
+
+  .mobile-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+    padding: 0 16px;
+  }
+
+  .mobile-menu-button {
+    color: #0f172a !important;
+  }
+
+  .mobile-logo-container {
+    display: flex;
+    align-items: center;
+  }
+}

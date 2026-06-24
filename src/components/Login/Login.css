@@ -1,0 +1,109 @@
+.login-container {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-paper {
+  width: 100%;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: none;
+}
+
+.login-title {
+  margin-bottom: 40px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 400px;
+}
+
+.input-container {
+  margin-bottom: 32px;
+}
+
+.email-container {
+  margin-bottom: 32px;
+}
+
+.password-container {
+  margin-bottom: 24px;
+}
+
+/* Specific field styling */
+.email-input, .password-input {
+  margin-bottom: 8px;
+}
+
+/* Error message styling */
+.error-message {
+  margin-top: 4px;
+  font-size: 0.75rem;
+}
+
+.login-input .MuiOutlinedInput-root {
+  border-radius: 4px;
+}
+
+.login-input .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #000;
+  border-width: 2px;
+}
+
+.login-input .MuiInputLabel-root.Mui-focused {
+  color: #000;
+}
+
+.form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 32px;
+}
+
+.forgot-password {
+  cursor: pointer;
+  text-decoration: none;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
+
+.login-button {
+  padding: 8px 24px;
+  /* Background color now comes from MUI theme primary */
+  color: #fff;
+  border-radius: 4px;
+  text-transform: none;
+  min-width: 80px;
+}
+
+/* Mobile-only logo */
+.mobile-login-logo {
+  display: none; /* Hidden on desktop */
+}
+
+@media (max-width: 768px) {
+  .mobile-login-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2rem;
+    width: 100%;
+  }
+
+  .mobile-login-logo img {
+    width: 120px;
+    height: auto;
+  }
+}

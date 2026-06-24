@@ -1,0 +1,123 @@
+.notifications-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.notifications-title {
+  font-weight: 700;
+  color: #1976d2;
+  background: linear-gradient(45deg, #1976d2, #42a5f5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.notifications-list {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.notifications-list-items {
+  padding: 0;
+}
+
+.notification-item {
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+.notification-item.unread {
+  background-color: rgba(25, 118, 210, 0.04);
+}
+
+.notification-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.notification-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.notification-item:hover .notification-actions {
+  opacity: 1;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chips .MuiChip-root {
+  transition: all 0.2s ease-in-out;
+}
+
+.filter-chips .MuiChip-root:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation for new notifications */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification-item.new {
+  animation: slideInRight 0.5s ease-out;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .notifications-container {
+    padding: 8px;
+  }
+  
+  .notifications-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .filter-chips {
+    justify-content: center;
+  }
+  
+  .notification-actions {
+    opacity: 1;
+  }
+}
+
+/* Badge customization */
+.MuiBadge-badge {
+  background: linear-gradient(45deg, #f44336, #ff5722);
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+}
+
+/* Notification level colors */
+.notification-error {
+  border-inline-start-color: #f44336;
+}
+
+.notification-warning {
+  border-inline-start-color: #ff9800;
+}
+
+.notification-info {
+  border-inline-start-color: #2196f3;
+}
+
+.notification-success {
+  border-inline-start-color: #4caf50;
+}

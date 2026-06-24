@@ -1,0 +1,131 @@
+{
+  "_comment": "Mock seed for the DuckDB event store. Shapes mirror real events we tapped off LavinMQ (TAP.Events): real internal extensions (500/501/503/9001/9002 ...) and the real call.* + register.* + transcription.* lifecycles. seedMock() in store.ts expands each call below into an event stream (ringing -> answered -> completed/failed, then transcription.queued -> processing -> completed/failed). Seeded ONCE into an empty store; no live stream.",
+  "registrations": ["500", "501", "503", "504", "505", "509", "510", "512", "513", "514", "9001", "9002"],
+  "calls": [
+    {
+      "id": "seed_9002_9001",
+      "from": "9002",
+      "to": "9001",
+      "direction": "internal",
+      "minutes_ago": 6,
+      "outcome": "completed",
+      "talk_sec": 84,
+      "transcription": {
+        "status": "completed",
+        "language": "en",
+        "confidence": 0.94,
+        "segments": [
+          { "speaker": "caller", "start": 0.0, "end": 3.2, "text": "Hi, this is extension 9002 — can you hear me okay?" },
+          { "speaker": "agent", "start": 3.6, "end": 6.1, "text": "Loud and clear. What can I do for you?" },
+          { "speaker": "caller", "start": 6.5, "end": 12.4, "text": "My desk phone keeps dropping calls after about a minute." },
+          { "speaker": "agent", "start": 12.9, "end": 18.7, "text": "Sounds like a NAT timeout. Let me shorten the registration interval on your account." },
+          { "speaker": "caller", "start": 19.2, "end": 21.8, "text": "Great, can you do that now?" },
+          { "speaker": "agent", "start": 22.1, "end": 27.5, "text": "Done — please re-register your phone and the drops should stop." },
+          { "speaker": "caller", "start": 28.0, "end": 30.2, "text": "Perfect, thank you!" }
+        ]
+      }
+    },
+    {
+      "id": "seed_503_500",
+      "from": "503",
+      "to": "500",
+      "direction": "internal",
+      "minutes_ago": 19,
+      "outcome": "completed",
+      "talk_sec": 212,
+      "transcription": {
+        "status": "completed",
+        "language": "en",
+        "confidence": 0.89,
+        "segments": [
+          { "speaker": "agent", "start": 0.0, "end": 3.0, "text": "Thanks for calling VoIPAppz support, this is the front desk." },
+          { "speaker": "caller", "start": 3.4, "end": 9.1, "text": "Hi, I'd like to add two new extensions for our new hires." },
+          { "speaker": "agent", "start": 9.6, "end": 14.2, "text": "Sure — what names and which department should they sit under?" },
+          { "speaker": "caller", "start": 14.7, "end": 20.0, "text": "Dana in sales and Omer in support, please." },
+          { "speaker": "agent", "start": 20.4, "end": 26.8, "text": "I'll provision 515 for Dana and 516 for Omer and email the credentials." }
+        ]
+      }
+    },
+    {
+      "id": "seed_9001_505",
+      "from": "9001",
+      "to": "505",
+      "direction": "internal",
+      "minutes_ago": 34,
+      "outcome": "completed",
+      "talk_sec": 47,
+      "transcription": {
+        "status": "processing",
+        "language": "en",
+        "confidence": null,
+        "segments": []
+      }
+    },
+    {
+      "id": "seed_504_512",
+      "from": "504",
+      "to": "512",
+      "direction": "internal",
+      "minutes_ago": 52,
+      "outcome": "no_answer",
+      "talk_sec": 0,
+      "transcription": { "status": "none" }
+    },
+    {
+      "id": "seed_513_501",
+      "from": "513",
+      "to": "501",
+      "direction": "internal",
+      "minutes_ago": 71,
+      "outcome": "completed",
+      "talk_sec": 365,
+      "transcription": {
+        "status": "failed",
+        "language": "en",
+        "confidence": null,
+        "error": "asr_engine_timeout",
+        "segments": []
+      }
+    },
+    {
+      "id": "seed_509_514",
+      "from": "509",
+      "to": "514",
+      "direction": "internal",
+      "minutes_ago": 96,
+      "outcome": "busy",
+      "talk_sec": 0,
+      "transcription": { "status": "none" }
+    },
+    {
+      "id": "seed_510_9002",
+      "from": "510",
+      "to": "9002",
+      "direction": "internal",
+      "minutes_ago": 133,
+      "outcome": "completed",
+      "talk_sec": 118,
+      "transcription": {
+        "status": "completed",
+        "language": "he",
+        "confidence": 0.91,
+        "segments": [
+          { "speaker": "caller", "start": 0.0, "end": 4.0, "text": "שלום, אני מתקשר לגבי החשבונית האחרונה." },
+          { "speaker": "agent", "start": 4.4, "end": 9.2, "text": "בוודאי, אני בודק את הפרטים שלך עכשיו." },
+          { "speaker": "caller", "start": 9.7, "end": 13.5, "text": "תודה, חיכיתי לזיכוי שלא הגיע." },
+          { "speaker": "agent", "start": 14.0, "end": 19.6, "text": "הזיכוי אושר, הוא יופיע בחשבון תוך שלושה ימי עסקים." }
+        ]
+      }
+    },
+    {
+      "id": "seed_501_503",
+      "from": "501",
+      "to": "503",
+      "direction": "internal",
+      "minutes_ago": 178,
+      "outcome": "failed",
+      "talk_sec": 0,
+      "transcription": { "status": "none" }
+    }
+  ]
+}

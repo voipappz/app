@@ -1,0 +1,695 @@
+{
+  "common": {
+    "buttons": {
+      "next": "Next",
+      "previous": "Previous",
+      "submit": "Submit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "send": "Send Summary",
+      "back": "Back",
+      "viewAll": "View All",
+      "start": "Start"
+    },
+    "status": {
+      "loading": "Loading...",
+      "sending": "Sending..."
+    },
+    "messages": {
+      "noMoreToLoad": "No more items to load",
+      "noItemsFound": "No items found"
+    }
+  },
+  "header": {
+    "title": "Business Management Platform",
+    "greeting": "Hello, {{name}}",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "welcome": "Welcome, {{name}}",
+    "roleAndPermissions": "Role: {{role}} | Permissions: {{count}}",
+    "upcomingInstallations": "Upcoming Installations",
+    "noInstallationsToday": "No installations scheduled for today",
+    "actions": {
+      "orders": "Orders",
+      "newOrder": "New Order",
+      "newCompany": "New Company",
+      "products": "Products"
+    },
+    "recentCustomers": "Recent Customers",
+    "noCustomers": "No customers yet"
+  },
+  "installations": {
+    "pageTitle": "Installations",
+    "steps": {
+      "items": "Items",
+      "photos": "Photos",
+      "signature": "Signature",
+      "final": "Notes & Submit"
+    },
+    "labels": {
+      "notes": "Notes",
+      "photos": "Photos",
+      "optional": "Optional",
+      "customerSignature": "Customer Signature",
+      "signatureRequired": "Signature required to continue",
+      "completionStatus": "Completion Status",
+      "itemsInInstallation": "Installation Items",
+      "markInstalledItems": "Mark items that were installed successfully",
+      "takePhotos": "Take photos of the installation for documentation",
+      "askCustomerSign": "Ask the customer to sign the installation approval",
+      "notesPlaceholder": "Installation notes...",
+      "branch": "Branch",
+      "created": "Created",
+      "total": "Total",
+      "installationNumber": "Installation Number",
+      "address": "Address",
+      "addressNotAvailable": "Address not available"
+    },
+    "actions": {
+      "startInstallation": "Start Installation",
+      "navigate": "Navigate",
+      "call": "Call",
+      "closeTask": "Close Task",
+      "viewDetails": "View Details"
+    },
+    "status": {
+      "all": "All Statuses",
+      "new": "New",
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "on_site": "On Site",
+      "completed": "Completed",
+      "partial": "Partially Completed",
+      "cancelled": "Cancelled",
+      "rescheduled": "Rescheduled"
+    },
+    "dateTabs": {
+      "all": "All",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "thisWeek": "This Week",
+      "selectDate": "Select Date"
+    },
+    "table": {
+      "date": "Date",
+      "installationNumber": "Installation #",
+      "company": "Company",
+      "branch": "Branch",
+      "amount": "Amount",
+      "status": "Status",
+      "actions": "Actions",
+      "columns": "Columns",
+      "showAll": "Show All"
+    },
+    "footer": {
+      "showingCount": "Showing {{count}} installation",
+      "showingCount_other": "Showing {{count}} installations",
+      "loadingMore": "Loading more installations...",
+      "loadMore": "Load More",
+      "allLoaded": "All installations loaded"
+    },
+    "filters": {
+      "status": "Status"
+    },
+    "messages": {
+      "noMoreToLoad": "No more installations to load",
+      "noInstallationsFound": "No installations found",
+      "alreadyActiveInstallation": "You already have an active installation. Complete it first.",
+      "errorUpdatingStatus": "Error updating status"
+    },
+    "details": {
+      "loadingDetails": "Loading installation details...",
+      "installationNotFound": "Installation not found",
+      "backToList": "Back to installations list",
+      "title": "Installation Details",
+      "installationNumber": "Installation number:",
+      "closeTask": "Close Task",
+      "close": "Close",
+      "startTask": "Start Task",
+      "start": "Start",
+      "hasActiveInstallation": "You have an active installation",
+      "inProgress": "In Progress",
+      "returnToActive": "Return to active installation",
+      "notes": "Notes",
+      "notesPlaceholder": "Enter notes...",
+      "noNotes": "No notes"
+    },
+    "summary": {
+      "loadingData": "Loading data...",
+      "installationNotFound": "Installation not found",
+      "backToList": "Back to installations list",
+      "title": "Installation Summary",
+      "installationNumber": "Installation number:",
+      "contactPerson": "Contact:",
+      "itemsTitle": "Installation Items",
+      "markInstalled": "Mark items that were installed successfully",
+      "photosTitle": "Photos",
+      "photosOptional": "(Optional)",
+      "photosDescription": "Take photos of the installation for documentation",
+      "signatureTitle": "Customer Signature",
+      "signatureDescription": "Ask the customer to sign the installation approval",
+      "signatureRequired": "Signature required to continue",
+      "notesTitle": "Notes",
+      "notesPlaceholder": "Installation notes...",
+      "completionStatus": "Completion Status",
+      "sending": "Sending...",
+      "submitSummary": "Submit Summary"
+    }
+  },
+  "customers": {
+    "pageTitle": "New Customer",
+    "subtitle": "Add a new customer to the system",
+    "stepProgress": "Step {{current}} of {{total}}",
+    "successMessage": "Customer created successfully!",
+    "steps": {
+      "businessInfo": "Business Info",
+      "signatory": "Signatory",
+      "contactPerson": "Contact Person",
+      "branches": "Branches",
+      "technicalInfo": "Technical Info",
+      "additionalInfo": "Additional Info"
+    },
+    "businessInfo": {
+      "title": "Business Information",
+      "businessName": "Business Name",
+      "businessNameRequired": "Business name is required",
+      "businessNameMinLength": "Business name must be at least 2 characters",
+      "businessType": "Business Type",
+      "businessTypeRequired": "Business type is required",
+      "businessTypeOptions": {
+        "licensed": "Licensed Dealer",
+        "company": "Ltd. Company",
+        "association": "Association / Non-profit",
+        "passport": "Passport"
+      },
+      "businessId": "Company/Business ID",
+      "businessIdRequired": "Company/Business ID is required",
+      "businessIdMinLength": "Company/Business ID must be at least 8 digits",
+      "businessIdMaxLength": "Company/Business ID can have up to 9 digits",
+      "businessIdPattern": "Company/Business ID must contain only digits",
+      "businessIdExists": "Company/Business ID {{id}} already exists in the system",
+      "businessIdPlaceholder": "8-9 digits",
+      "businessPhone": "Business Phone",
+      "businessPhoneRequired": "Business phone is required",
+      "phonePattern": "Invalid phone number",
+      "businessAddress": "Business Address",
+      "businessAddressRequired": "Business address is required",
+      "businessAddressMinLength": "Address must be at least 5 characters",
+      "businessAddressPlaceholder": "Street, Number, City",
+      "businessEmail": "Business Email - for invoices",
+      "businessEmailRequired": "Email address is required",
+      "emailPattern": "Invalid email address",
+      "checking": "Checking..."
+    },
+    "signatory": {
+      "title": "Authorized Signatory",
+      "name": "Signatory Full Name",
+      "nameRequired": "Signatory name is required",
+      "nameMinLength": "Name must be at least 2 characters",
+      "namePlaceholder": "Full name",
+      "id": "Signatory ID",
+      "idRequired": "Signatory ID is required",
+      "idLength": "ID must contain 9 digits",
+      "idPattern": "ID must contain only digits",
+      "idPlaceholder": "9 digits",
+      "email": "Signatory Email",
+      "emailRequired": "Signatory email is required",
+      "phone": "Signatory Mobile",
+      "phoneRequired": "Signatory mobile is required"
+    },
+    "contactPerson": {
+      "title": "Contact Person",
+      "toggleLabel": "Add contact person (if different from signatory)",
+      "toggleDescription": "Optional - only if there is an additional contact person",
+      "name": "Contact Name",
+      "nameRequired": "Contact name is required",
+      "namePlaceholder": "Full name",
+      "phone": "Contact Mobile",
+      "phoneRequired": "Contact mobile is required",
+      "email": "Contact Email",
+      "emailRequired": "Contact email is required"
+    },
+    "branches": {
+      "title": "Add Branches",
+      "branchName": "Branch Name",
+      "branchNamePlaceholder": "Branch name",
+      "branchAddress": "Branch Address",
+      "branchAddressPlaceholder": "Branch address",
+      "branchContact": "Contact Person",
+      "branchContactPlaceholder": "Branch contact person",
+      "branchPhone": "Phone",
+      "branchPhonePlaceholder": "Branch phone",
+      "isMainBranch": "Main Branch",
+      "addBranch": "Add Branch",
+      "addedBranches": "Added Branches ({{count}})",
+      "mainBranchLabel": "Main"
+    },
+    "technicalInfo": {
+      "title": "Technical Information",
+      "internetProvider": "Internet Provider",
+      "internetProviderRequired": "Internet provider is required",
+      "hasSecureRouter": "Secure Router",
+      "hasSecureRouterDescription": "Is there a security router in the system",
+      "secureRouterType": "Secure Router Type",
+      "secureRouterTypeRequired": "Secure router type is required",
+      "providers": {
+        "bezeq": "Bezeq",
+        "cellcom": "Cellcom",
+        "partner": "Partner",
+        "hot": "HOT",
+        "netvision": "013 Netvision",
+        "other": "Other"
+      }
+    },
+    "additionalInfo": {
+      "title": "Additional Information",
+      "hasClientDevices": "Client Devices",
+      "hasClientDevicesDescription": "Are there existing devices that need documentation",
+      "deviceImagesTitle": "Client Device Photos",
+      "deviceImagesDescription": "Take or upload photos of existing devices",
+      "takePhoto": "Take Photo",
+      "uploadPhoto": "Upload Photo",
+      "documentsTitle": "Relevant Documents",
+      "documentsDescription": "Upload relevant documents for the customer (optional)",
+      "uploadDocuments": "Upload Documents",
+      "notes": "Customer Notes",
+      "notesPlaceholder": "Additional notes for customer...",
+      "createCustomer": "Create Customer",
+      "creatingCustomer": "Creating customer..."
+    },
+    "list": {
+      "pageTitle": "Customers",
+      "search": "Search customer...",
+      "noResults": "No customers found",
+      "newCustomer": "New Customer",
+      "table": {
+        "businessName": "Business Name",
+        "businessId": "Business ID",
+        "phone": "Phone",
+        "email": "Email",
+        "address": "Address",
+        "createdAt": "Created"
+      }
+    },
+    "footer": {
+      "showingCount": "Showing {{count}} customer",
+      "showingCount_other": "Showing {{count}} customers",
+      "allLoaded": "All customers loaded"
+    },
+    "details": {
+      "title": "Company Details",
+      "loading": "Loading company details...",
+      "back": "Back",
+      "editCompany": "Edit",
+      "saving": "Saving...",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saveSuccess": "Company updated successfully",
+      "saveError": "Error updating company",
+      "companyNotFound": "Company not found",
+      "viewCompany": "View Company",
+      "createOrder": "Create Order"
+    },
+    "toast": {
+      "creatingCustomer": "Creating customer...",
+      "customerCreated": "Customer created successfully!",
+      "createError": "Error creating customer. Please try again.",
+      "savingCompany": "Saving changes...",
+      "companyUpdated": "Company updated successfully",
+      "updateError": "Error updating company. Please try again."
+    }
+  },
+  "login": {
+    "title": "Login Account",
+    "email": "Email/Username",
+    "password": "Password",
+    "requiredField": "Required field",
+    "forgotPassword": "Forgot Password",
+    "loginButton": "Login",
+    "loggingIn": "Logging in...",
+    "welcome": "Welcome to {{brand}}",
+    "subtitle": "Please log in to access your dashboard",
+    "footer": {
+      "privacy": "Privacy",
+      "legal": "Legal",
+      "contact": "Contact"
+    }
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "calls": "Calls",
+    "reports": "Reports",
+    "switchToLTR": "Switch to LTR",
+    "switchToRTL": "Switch to RTL",
+    "logout": "Logout",
+    "notifications": "Notifications",
+    "status": "Status"
+  },
+  "callDashboard": {
+    "subtitle": "Call activity",
+    "callsToday": "Calls today",
+    "callsTotal": "Total calls",
+    "answerRate": "Answer rate",
+    "avgDuration": "Avg duration",
+    "inbound": "Inbound",
+    "outbound": "Outbound",
+    "failed": "Failed / missed",
+    "recentCalls": "Recent calls",
+    "noCalls": "No calls yet — events will appear here as they arrive.",
+    "liveEvents": "Live Events",
+    "callsPerHour": "Calls per hour",
+    "live": "Live",
+    "mock": "Mock data",
+    "timeRange": {
+      "lastHour": "Last hour",
+      "last3Hours": "Last 3 hours",
+      "last9Hours": "Last 9 hours",
+      "last12Hours": "Last 12 hours",
+      "last24Hours": "Last 24 hours",
+      "custom": "Custom",
+      "from": "From",
+      "to": "To"
+    }
+  },
+  "usageReports": {
+    "subtitle": "Call usage analytics",
+    "period": {
+      "today": "Today",
+      "d7": "7 days",
+      "d30": "30 days",
+      "all": "All"
+    },
+    "totalCalls": "Total calls",
+    "answerRate": "Answer rate",
+    "avgDuration": "Avg duration",
+    "talkTime": "Total talk time",
+    "inbound": "Inbound",
+    "outbound": "Outbound",
+    "callsOverTime": "Calls over time",
+    "byStatus": "By status",
+    "busiestHours": "Busiest hours",
+    "topDestinations": "Top destinations",
+    "noData": "No data for this period",
+    "calls": "Calls",
+    "status": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "no_answer": "No answer",
+      "busy": "Busy",
+      "ringing": "Ringing",
+      "in_progress": "In progress"
+    }
+  },
+  "calls": {
+    "subtitle_one": "1 call",
+    "subtitle_other": "{{count}} calls",
+    "live": "live",
+    "mock": "mock data",
+    "total": "Total",
+    "answered": "Answered",
+    "missed": "Missed",
+    "avgDuration": "Avg duration",
+    "inbound": "Inbound",
+    "outbound": "Outbound",
+    "group": {
+      "timeStatus": "Time → Status",
+      "status": "Status",
+      "flat": "Flat"
+    },
+    "col": {
+      "from": "From",
+      "to": "To",
+      "duration": "Duration",
+      "status": "Status",
+      "started": "Started",
+      "legs": "Legs",
+      "events": "Events",
+      "transcript": "Transcript"
+    },
+    "bucket": {
+      "Today": "Today",
+      "Yesterday": "Yesterday",
+      "This week": "This week",
+      "Older": "Older"
+    },
+    "noCalls": "No calls yet — waiting for events on the bus.",
+    "timeline": "Call timeline",
+    "transcriptLabel": "Transcript",
+    "eventTimeline": "Event timeline",
+    "noEvents": "No events.",
+    "legsLabel": "legs",
+    "eventsLabel": "events",
+    "tx": {
+      "transcript": "transcript",
+      "transcribing": "transcribing",
+      "queued": "queued",
+      "failed": "tx failed",
+      "none": "No transcription for this call.",
+      "processingMsg": "Transcribing…",
+      "queuedMsg": "Queued for transcription…",
+      "failedMsg": "Transcription failed",
+      "transcribed": "transcribed",
+      "confidence": "confidence",
+      "caller": "Caller",
+      "agent": "Agent",
+      "transcribeNow": "Transcribe now",
+      "retranscribe": "Re-transcribe",
+      "triggering": "Sending…",
+      "disabled": "Transcription is not enabled on the server (missing GEMINI_API_KEY)."
+    }
+  },
+  "scheduling": {
+    "dashboard": {
+      "title": "Installation Scheduling",
+      "subtitle": "Manage installation assignments and technician scheduling",
+      "viewQueue": "View Queue",
+      "manageTechnicians": "Manage Technicians",
+      "quickActions": "Quick Actions"
+    },
+    "stats": {
+      "pendingScheduling": "Pending Scheduling",
+      "assignedToday": "Assigned Today",
+      "availableTechnicians": "Available Technicians",
+      "urgentPriority": "Urgent Priority"
+    },
+    "actions": {
+      "viewPendingOrders": "View Pending Orders",
+      "assignTechnician": "Assign Technician",
+      "manageAvailability": "Manage Availability"
+    },
+    "queue": {
+      "title": "Installation Queue",
+      "subtitle": "Orders waiting for technician assignment",
+      "orderNumber": "Order #",
+      "customer": "Customer",
+      "priority": "Priority",
+      "preferredDate": "Preferred Date",
+      "requirements": "Requirements",
+      "created": "Created",
+      "actions": "Actions",
+      "empty": "No orders in queue"
+    },
+    "priority": {
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "assignDialog": {
+      "title": "Assign Technician",
+      "technician": "Technician",
+      "scheduledDate": "Scheduled Date",
+      "notes": "Notes",
+      "assign": "Assign"
+    },
+    "technicians": {
+      "title": "Technician Management",
+      "subtitle": "Monitor workload and manage technician assignments",
+      "list": "Technicians",
+      "assignments": "Recent Assignments",
+      "noAssignments": "No recent assignments",
+      "selectTechnician": "Select a technician",
+      "selectToView": "Click on a technician to view their assignments"
+    },
+    "availability": {
+      "available": "Available",
+      "busy": "Busy",
+      "unavailable": "Unavailable",
+      "unknown": "Unknown"
+    },
+    "workload": {
+      "today": "Today",
+      "upcoming": "Upcoming"
+    }
+  },
+  "orders": {
+    "pageTitle": "Orders",
+    "newOrder": "New Order",
+    "searchPlaceholder": "Search by company name...",
+    "loadingData": "Loading data...",
+    "loadingOrderDetails": "Loading order details...",
+    "orderNotFound": "Order not found",
+    "backToOrders": "Back to orders list",
+    "orderDetails": "Order Details",
+    "orderNumber": "Order number:",
+    "editOrder": "Edit Order",
+    "saving": "Saving...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "selectOrderType": "Select Order Type",
+    "generic": "Generic",
+    "calculator": "Calculator",
+    "creatingOrderFor": "Creating order for {{name}}",
+    "orderSentSuccess": "Order sent for signature successfully!",
+    "underConstruction": "Under construction...",
+    "toast": {
+      "creatingOrder": "Creating order...",
+      "sendingForSignature": "Sending for signature...",
+      "sentForSignature": "Order sent for signature successfully",
+      "draftSaved": "Order saved as draft",
+      "createError": "Error creating order. Please try again.",
+      "pdfError": "Order created but failed to send for signature",
+      "savingOrder": "Saving changes...",
+      "orderUpdated": "Order updated successfully",
+      "updateError": "Error updating order. Please try again."
+    },
+    "table": {
+      "created": "Created",
+      "orderNumber": "Order Number",
+      "company": "Company",
+      "branch": "Branch",
+      "totalAmount": "Total Amount",
+      "status": "Status",
+      "actions": "Actions",
+      "viewDetails": "View details",
+      "editOrder": "Edit order",
+      "deleteOrder": "Delete order",
+      "columns": "Columns",
+      "showAll": "Show All"
+    },
+    "customerSelection": {
+      "title": "Select Customer",
+      "subtitle": "Select an existing customer to start a new order.",
+      "customerList": "Customer List",
+      "newCustomer": "New Customer",
+      "searchPlaceholder": "Search by business name or ID...",
+      "businessId": "ID",
+      "noCustomersFound": "No matching customers found",
+      "notFound": "Can't find \"{{search}}\"?",
+      "createNewCustomer": "Create New Customer"
+    },
+    "summary": {
+      "title": "Order Summary",
+      "emptyCart": "Cart is empty",
+      "paymentTerms": "Payment Terms",
+      "singlePayment": "Single Payment",
+      "payments36": "36 Payments",
+      "payments48": "48 Payments",
+      "companyNotes": "Customer Notes",
+      "notInContract": "not in contract",
+      "orderNotes": "Order Notes",
+      "inContract": "appears in contract",
+      "notesPlaceholder": "Notes...",
+      "total": "Total:",
+      "perMonth": "/month",
+      "sending": "Sending...",
+      "sendForSignature": "Send for Signature",
+      "saveAsDraft": "Save as Draft",
+      "savingDraft": "Saving...",
+      "priceBelowMinimum": "Minimum ₪{{min}}"
+    },
+    "status": {
+      "all": "All Statuses",
+      "new": "New",
+      "draft": "Draft",
+      "awaiting_customer_signature": "Awaiting Customer Signature",
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "prep_for_scheduling": "Prep for Scheduling",
+      "ready_for_scheduling": "Ready for Scheduling",
+      "pending_installation": "Pending Installation",
+      "signed": "Signed",
+      "customer_signed": "Customer Signed",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "footer": {
+      "showingCount": "Showing {{count}} order",
+      "showingCount_other": "Showing {{count}} orders",
+      "loadingMore": "Loading more orders...",
+      "loadMore": "Load More",
+      "allLoaded": "All orders loaded"
+    },
+    "paymentDetails": {
+      "title": "Payment Details",
+      "oneTimePayment": "One Time Payment",
+      "equipmentInstallments": "Equipment Installments",
+      "monthlyServices": "Monthly Services",
+      "ipPhone": "IP Phone",
+      "totalMonthly": "Total Monthly"
+    }
+  },
+  "health": {
+    "live": "Live",
+    "idle": "No events yet",
+    "stale": "No call events for {{mins}}m",
+    "offline": "Status unavailable",
+    "lastEvent": "Last event: {{at}}"
+  },
+  "phone": {
+    "ready": "Ready",
+    "offline": "Offline",
+    "connecting": "Connecting…",
+    "failed": "Connection failed",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "reconnect": "Reconnect",
+    "extension": "Extension",
+    "password": "Password",
+    "domain": "SIP domain",
+    "server": "WebSocket server",
+    "displayName": "Display name",
+    "autoConnect": "Connect automatically",
+    "dialpad": "Dialpad",
+    "history": "History",
+    "settings": "Settings",
+    "enterNumber": "Enter number",
+    "call": "Call",
+    "hangup": "Hang up",
+    "answer": "Answer",
+    "decline": "Decline",
+    "inbound": "Incoming call",
+    "outbound": "Calling",
+    "ringing": "Ringing…",
+    "notConnected": "Not connected — see Settings",
+    "noHistory": "No recent calls"
+  },
+  "status": {
+    "title": "System status",
+    "allOk": "All systems operational",
+    "degraded": "Degraded",
+    "unreachable": "Unreachable",
+    "healthUnreachable": "Cannot reach the health endpoint.",
+    "lastEvent": "last event {{age}} ago",
+    "updated": "Updated",
+    "checks": {
+      "cable": "Cable (realtime)",
+      "events": "Event stream",
+      "engine": "Engine (mothership)",
+      "supabase": "Users (Supabase)",
+      "duckdb": "Local store"
+    },
+    "state": {
+      "up": "up",
+      "down": "down",
+      "stale": "stale",
+      "idle": "idle",
+      "disabled": "disabled",
+      "registered": "up",
+      "unregistered": "down",
+      "failed": "failed"
+    }
+  }
+}

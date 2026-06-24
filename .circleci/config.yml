@@ -1,0 +1,172 @@
+version: 2.1
+
+# Simple, deterministic pipeline (pattern borrowed from nimbus-admin):
+#   install-deps → test-quality (lint + Vitest) + test-api (deno) → build-docker
+# Playwright is intentionally NOT run here — browser downloads stall on the
+# CI runners and the suite needs a live backend. E2E is run against a live
+# deploy from a feature branch / locally, not in the main pipeline.
+
+jobs:
+  install-deps:
+    docker:
+      - image: cimg/node:lts
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          paths:
+            - node_modules
+          key: v2-node-deps-{{ checksum "package-lock.json" }}
+
+  test-quality:
+    docker:
+      - image: cimg/node:lts
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v2-node-deps-{{ checksum "package-lock.json" }}
+            - v2-node-deps-
+      - run:
+          name: Run linter
+          command: npm run lint
+      - run:
+          name: Run unit tests (Vitest)
+          command: npm run test:run
+
+  test-api:
+    docker:
+      - image: denoland/deno:2.5.3
+    steps:
+      - checkout
+      - run:
+          name: Run Deno API tests (cable normalize, event freshness)
+          # Thin BFF: no local store, so no DuckDB perms. Runs the whole tests/
+          # dir so new specs are picked up automatically. @std/assert is in deno.json.
+          command: cd api && deno test --allow-net --allow-env --allow-read --no-check --config deno.json tests/
+          no_output_timeout: 5m
+
+  build-docker:
+    docker:
+      - image: cimg/base:24.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker image
+          command: |
+            echo "🐳 Building Docker image"
+            TAG="release-${CIRCLE_BUILD_NUM}"
+            docker build \
+              -f Dockerfile.production \
+              -t nirlevi/telecom-sales-app:${TAG} .
+            echo "✅ Docker images created:"
+            echo "- nirlevi/telecom-sales-app:${TAG}"
+      - run:
+          name: Build and push Docker image
+          command: |
+            docker login -u nirlevi -p $DOCKER_PASS
+
+            RELEASE_TAG="nirlevi/telecom-sales-app:release-${CIRCLE_BUILD_NUM}"
+            LATEST_TAG="nirlevi/telecom-sales-app:latest"
+
+            echo "🏷️ Building with tags:"
+            echo "  Release: ${RELEASE_TAG}"
+            echo "  Latest: ${LATEST_TAG}"
+
+            # Build with cache and parallel layers
+            docker build \
+              --build-arg BUILDKIT_INLINE_CACHE=1 \
+              --cache-from ${LATEST_TAG} \
+              --tag ${RELEASE_TAG} \
+              --tag ${LATEST_TAG} \
+              -f Dockerfile.production \
+              .
+
+            docker push ${RELEASE_TAG} &
+            docker push ${LATEST_TAG} &
+            wait
+      - run: rm -rf Dockerfile.production
+
+workflows:
+  version: 2
+
+  # Main CI/CD workflow - production branches only
+  ci-cd:
+    jobs:
+      - install-deps:
+          filters:
+            branches:
+              only:
+                - main
+                - master
+      - test-api:
+          filters:
+            branches:
+              only:
+                - main
+                - master
+      - test-quality:
+          requires:
+            - install-deps
+          filters:
+            branches:
+              only:
+                - main
+                - master
+      - build-docker:
+          requires:
+            - test-quality
+            - test-api
+          filters:
+            branches:
+              only:
+                - main
+                - master
+
+  # Feature branch workflow - lighter testing
+  feature-testing:
+    jobs:
+      - install-deps:
+          filters:
+            branches:
+              only:
+                - free-tel
+                - /^feature.*/
+                - /^fix.*/
+                - /^dev-.*/
+                - /^va-.*/
+      - test-api:
+          filters:
+            branches:
+              only:
+                - free-tel
+                - /^feature.*/
+                - /^fix.*/
+                - /^dev-.*/
+                - /^va-.*/
+      - test-quality:
+          requires:
+            - install-deps
+          filters:
+            branches:
+              only:
+                - free-tel
+                - /^feature.*/
+                - /^fix.*/
+                - /^dev-.*/
+                - /^va-.*/
+      - build-docker:
+          requires:
+            - test-quality
+            - test-api
+          filters:
+            branches:
+              only:
+                - free-tel
+                - /^feature.*/
+                - /^fix.*/
+                - /^dev-.*/
+                - /^va-.*/

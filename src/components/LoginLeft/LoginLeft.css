@@ -1,0 +1,59 @@
+.sidebar {
+  background-color: black;
+  color: #fff;
+  min-height: 100vh; /* Minimum height of viewport */
+  height: 100%; /* Fill parent container */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2rem;
+}
+
+.login-left .logo-container {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+}
+
+.welcome-text {
+  text-align: center;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.login-subtitle {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #aaa;
+  font-weight: 400;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+.footer a {
+  color: #aaa;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+.copyright {
+  color: #aaa;
+  font-size: 0.75rem;
+}
