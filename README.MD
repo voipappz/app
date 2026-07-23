@@ -1,5 +1,6 @@
 # VoipAppZ Dashboard
 
+#
 React + Deno application template for VoIP/telecom tenants. Ships with Supabase auth and a single `users` table; tenant-specific business tables are added per-deployment.
 
 ## Quick Start
