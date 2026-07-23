@@ -9,7 +9,7 @@ import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranscript } from './useTranscript';
-import { callEvents } from '../../lib/postgrest';
+import { callEvents } from '../../lib/clients/api';
 import StatusChip from '../common/StatusChip';
 import CallTranscript from './CallTranscript';
 import { mockTranscriptForCall, storeMockTranscript } from './conversation-mocks';

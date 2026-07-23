@@ -6,7 +6,7 @@ export const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY
 export const PORT = parseInt(Deno.env.get("PORT") || "4001");
 
 // PostgREST base URL — deno is the BFF/"brain": it proxies login (/rpc/login,
-// the accounts table) and reads to PostgREST. deno runs network_mode: host, so
+// the users table) and reads to PostgREST. deno runs network_mode: host, so
 // the loopback bind (127.0.0.1:3001) is reachable directly; override for other
 // topologies (e.g. through Kong). NB: no trailing slash.
 export const POSTGREST_URL = (Deno.env.get("POSTGREST_URL") || "http://127.0.0.1:3001").replace(/\/$/, "");
@@ -40,6 +40,12 @@ export const CABLE_ACCOUNT_UUID = Deno.env.get("CABLE_ACCOUNT_UUID") || "events-
 // SECRET_KEY (matching the cable) and that's it, or pass a ready-made
 // CABLE_TOKEN. No token ⇒ off (relay idle), which is fine for tests/demos.
 export const CABLE_ENABLED = CABLE_TOKEN !== "" || CABLE_SECRET !== "";
+// DashboardLive: the live agents/extensions panel is a SEPARATE cable channel
+// whose stream is `dashboard:live:{account_uuid}`. Subscribing needs the
+// dashboard's uuid (the channel's `Live_uuid` param) + a real account_uuid.
+// Set both to bridge the live dashboard to /ws/events as `dashboard.live`
+// frames; unset ⇒ the dashboard bridge stays off (calls/transcripts unaffected).
+export const CABLE_DASHBOARD_UUID = Deno.env.get("CABLE_DASHBOARD_UUID") || "";
 
 // ── InfluxDB 3 (monitoring.voipappz.com) — dashboard time-series source ─────
 // The dashboard's aggregated call metrics (calls-per-hour, KPIs) come from the

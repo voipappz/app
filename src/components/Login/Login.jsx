@@ -23,10 +23,15 @@ const Login = () => {
     touched,
     loading,
     error,
+    otpStep,
+    otpCode,
     handleEmailChange,
     handlePasswordChange,
+    handleOtpCodeChange,
     handleBlur,
-    handleSubmit
+    handleSubmit,
+    handleOtpSubmit,
+    handleBackToCredentials
   } = useLogin();
 
   return (
@@ -41,15 +46,64 @@ const Login = () => {
         </Box>
 
         <Typography component="h1" variant="h5" className="login-title">
-          {t('login.title')}
+          {otpStep ? t('login.otpTitle') : t('login.title')}
         </Typography>
-        
+
+        {otpStep && (
+          <Typography variant="body2" className="login-subtitle" data-testid="otp-subtitle">
+            {t('login.otpSent')}
+          </Typography>
+        )}
+
         {error && (
           <Alert severity="error" className="mb-3" data-testid="error-message">
             {error}
           </Alert>
         )}
-        
+
+        {otpStep ? (
+          <Box component="form" onSubmit={handleOtpSubmit} className="login-form" data-testid="otp-form">
+            <FormControl fullWidth className="input-container otp-container mb-3">
+              <TextField
+                fullWidth
+                id="otp"
+                name="otp"
+                label={t('login.otpCode')}
+                value={otpCode}
+                onChange={handleOtpCodeChange}
+                variant="outlined"
+                className="login-input otp-input"
+                data-testid="otp-input"
+                autoFocus
+                inputProps={{ inputMode: 'numeric', maxLength: 6, style: { letterSpacing: '0.4em', textAlign: 'center' } }}
+                required
+              />
+            </FormControl>
+
+            <Box className="form-footer">
+              <Typography
+                variant="body2"
+                className="forgot-password"
+                onClick={handleBackToCredentials}
+                data-testid="otp-back"
+                sx={{ cursor: 'pointer' }}
+              >
+                {t('login.back')}
+              </Typography>
+
+              <Button
+                type="submit"
+                variant="contained"
+                className="login-button"
+                data-testid="otp-verify-button"
+                disabled={loading || otpCode.length !== 6}
+                startIcon={loading ? <CircularProgress size={20} /> : null}
+              >
+                {loading ? t('login.verifying') : t('login.verify')}
+              </Button>
+            </Box>
+          </Box>
+        ) : (
         <Box component="form" onSubmit={handleSubmit} className="login-form" data-testid="login-form">
           <FormControl fullWidth className="input-container email-container mb-3">
             <TextField
@@ -115,6 +169,7 @@ const Login = () => {
             </Button>
           </Box>
         </Box>
+        )}
       </Paper>
     </Container>
   );

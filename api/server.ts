@@ -11,7 +11,7 @@
 //   deno holds nothing; the engine event store is the single source of truth.
 import {
   PORT, CABLE_URL, CABLE_CHANNEL, CABLE_TOKEN, CABLE_SECRET, CABLE_ACCOUNT_UUID, CABLE_ENABLED,
-  POSTGREST_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
+  CABLE_DASHBOARD_UUID, POSTGREST_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
 } from './config.ts';
 import { createJwtVerifier, unauthorizedResponse, type JwtVerifier } from './auth_middleware.ts';
 import { fetchTranscript } from './engine.ts';
@@ -44,34 +44,17 @@ interface DepStatus { status: "up" | "down" | "disabled"; detail?: string }
 interface HealthReport {
   healthy: boolean;
   status: "ok" | "degraded";
-  checks: { cable: DepStatus; events: Freshness; engine: DepStatus; supabase: DepStatus };
+  checks: { cable: DepStatus; events: Freshness; engine: DepStatus };
   timestamp: string;
 }
 
-async function checkHealth(supabase: any): Promise<HealthReport> {
+async function checkHealth(): Promise<HealthReport> {
   // Cable — the WS client reconnects on its own; the flag reflects whether the
   // CallEvents subscription is currently confirmed. Not enabled (no token) ⇒
   // disabled, which does NOT fail the check (seed-only / mock runs).
   const cable: DepStatus = !CABLE_ENABLED
     ? { status: "disabled", detail: "cable tap off (no token)" }
     : (cableClient?.ready() ? { status: "up" } : { status: "down", detail: "cable not subscribed" });
-
-  // Supabase — lightweight HEAD count on the users table. Not configured ⇒ disabled.
-  let supabaseStatus: DepStatus;
-  if (!supabase) {
-    supabaseStatus = { status: "disabled", detail: "SUPABASE_URL unset" };
-  } else {
-    try {
-      const { error } = await supabase
-        .from("users")
-        .select("id", { count: "exact", head: true });
-      supabaseStatus = error
-        ? { status: "down", detail: error.message }
-        : { status: "up" };
-    } catch (err) {
-      supabaseStatus = { status: "down", detail: String(err) };
-    }
-  }
 
   // Engine — backfill source for transcripts. Not configured ⇒ disabled.
   const engine: DepStatus = !ENGINE_ENABLED
@@ -83,7 +66,7 @@ async function checkHealth(supabase: any): Promise<HealthReport> {
   // don't restart the container), but degrades `status` for monitoring.
   const events = eventFreshness(lastCableEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED);
 
-  const checks = { cable, events, engine, supabase: supabaseStatus };
+  const checks = { cable, events, engine };
   // Only a hard "down" fails the container healthcheck. `stale`/`idle` are
   // visible-but-not-fatal so a legitimately-quiet stream never triggers restarts.
   const healthy = Object.values(checks).every((c) => c.status !== "down");
@@ -116,6 +99,7 @@ const subscribers = new Map<WebSocket, Subscriber>();
 let relayedCounter = 0;   // events relayed to /ws subscribers
 let tappedCounter = 0;    // everything received from cable
 let cableClient: CableClient | null = null;
+let dashboardCableClient: CableClient | null = null;  // DashboardLive (agents/extensions stream)
 let lastCableEventAt: number | null = null;   // epoch ms of the last cable event (freshness)
 
 // Single emit path — fan a canonical event out to matching /ws subscribers. No
@@ -162,6 +146,29 @@ async function startCableClient() {
     },
   });
   console.log(`📡 cable client → ${CABLE_URL} channel=${CABLE_CHANNEL}`);
+
+  // DashboardLive — the live agents/extensions panel. Separate channel; its
+  // stream is dashboard:live:{account_uuid}. The broadcast is a value map
+  // { "<widget_uuid>": { type:"table", table:[ {uuid, …fields} ] } } produced
+  // by va-crystal from the voipappz-api dashboard structure (saved in Redis).
+  // We pass it through untouched as a `dashboard.live` /ws frame — the browser
+  // renders it. Needs a real account_uuid + the dashboard uuid (Live_uuid).
+  if (CABLE_DASHBOARD_UUID && CABLE_ACCOUNT_UUID && CABLE_ACCOUNT_UUID !== "events-consumer") {
+    dashboardCableClient = createCableClient({
+      url: CABLE_URL,
+      token,
+      identifier: { channel: "DashboardLive", account_uuid: CABLE_ACCOUNT_UUID, Live_uuid: CABLE_DASHBOARD_UUID },
+      log: (m) => console.log(`📊 ${m}`),
+      onRaw: (message) => {
+        lastCableEventAt = Date.now();
+        // payload = widget_uuid → { type, table }. Render-ready for the client.
+        emitEvent("dashboard.live", (message && typeof message === "object") ? message as Pojo : { raw: message });
+      },
+    });
+    console.log(`📊 dashboard cable client → ${CABLE_URL} channel=DashboardLive dashboard=${CABLE_DASHBOARD_UUID}`);
+  } else {
+    console.log("📊 dashboard cable bridge off — set CABLE_DASHBOARD_UUID + a real CABLE_ACCOUNT_UUID");
+  }
 }
 
 // ── WS lifecycle ──────────────────────────────────────────────────────
@@ -218,7 +225,7 @@ async function serveStatic(pathname: string): Promise<Response | null> {
   return null;
 }
 
-export function createRequestHandler(supabase: any, jwtVerifier?: JwtVerifier) {
+export function createRequestHandler(jwtVerifier?: JwtVerifier) {
   const verifyJwt = jwtVerifier || createJwtVerifier();
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
@@ -226,10 +233,11 @@ export function createRequestHandler(supabase: any, jwtVerifier?: JwtVerifier) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
 
     // ── Login (deno is the brain) — POST /auth/login {email,password} ─────
-    // Proxies to PostgREST's accounts-backed `api.login` RPC and returns the
-    // signed JWT (role api_readonly + account/customer/environment claims). The
+    // Proxies to PostgREST's users-backed `api.login` RPC and returns the
+    // signed JWT (role api_readonly + user_uuid/environment_uuid claims). The
     // browser stores it and sends it back as the bearer on every request. This
-    // replaces Supabase Auth: one account login, one token, single source.
+    // replaces Supabase Auth: one user login, one token, single source. The
+    // environment_uuid claim scopes api.calls to the user's environment.
     // NB: path is /auth/login (not /login) so it never collides with the SPA's
     // own `/login` page route when deno serves the bundle in production.
     if (request.method === "POST" && url.pathname === "/auth/login") {
@@ -306,7 +314,7 @@ export function createRequestHandler(supabase: any, jwtVerifier?: JwtVerifier) {
     // Health probe (cable + events freshness + engine + supabase). Used by
     // Kamal's container healthcheck — returns 503 when any required dep is down.
     if (url.pathname === "/health") {
-      const report = await checkHealth(supabase);
+      const report = await checkHealth();
       return new Response(JSON.stringify(report), {
         status: report.healthy ? 200 : 503,
         headers: JSON_HEADERS,
@@ -332,13 +340,31 @@ export function createRequestHandler(supabase: any, jwtVerifier?: JwtVerifier) {
   };
 }
 
-export function startServer(supabase: any) {
-  console.log(`🎯 voipappz template — http://localhost:${PORT}  (ws: ws://localhost:${PORT}/ws/events)`);
-  console.log(`🧠 calls/history → PostgREST; Dashboard → cable /ws (live); transcripts → engine (${ENGINE_ENABLED ? "on" : "off"})`);
+export function startServer() {
+  console.log(`🎯 voipappz app — http://localhost:${PORT}  (ws: ws://localhost:${PORT}/ws/events)`);
+  console.log(`🧠 Dashboard → cable /ws (live); transcripts → engine (${ENGINE_ENABLED ? "on" : "off"})`);
 
   // Live cable subscription (default ON when a token resolves) → relayed to /ws
   // for the Dashboard. No token ⇒ relay idle (fine for tests/demos).
   if (CABLE_ENABLED) startCableClient();
   else console.log(`🔇 cable tap disabled (no token) — relay idle`);
-  Deno.serve({ port: PORT }, createRequestHandler(supabase));
+
+  // TLS: when TLS_CERT_FILE + TLS_KEY_FILE point at readable PEM files, serve
+  // HTTPS on the same PORT (the cert is read once at boot). Otherwise plain HTTP.
+  // Used on the MTN deploy to serve https on :8888 with the host's own cert
+  // (mounted read-only); no cert env ⇒ unchanged HTTP behaviour everywhere else.
+  const certFile = Deno.env.get("TLS_CERT_FILE");
+  const keyFile = Deno.env.get("TLS_KEY_FILE");
+  if (certFile && keyFile) {
+    try {
+      const cert = Deno.readTextFileSync(certFile);
+      const key = Deno.readTextFileSync(keyFile);
+      console.log(`🔒 TLS enabled — https on :${PORT} (cert: ${certFile})`);
+      Deno.serve({ port: PORT, cert, key }, createRequestHandler());
+      return;
+    } catch (err) {
+      console.error(`⚠️ TLS_CERT_FILE/TLS_KEY_FILE set but unreadable — falling back to HTTP:`, err instanceof Error ? err.message : err);
+    }
+  }
+  Deno.serve({ port: PORT }, createRequestHandler());
 }

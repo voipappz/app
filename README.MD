@@ -1,282 +1,107 @@
-# VoipAppZ Dashboard
+# VoIPAppz portal
 
-#
-React + Deno application template for VoIP/telecom tenants. Ships with Supabase auth and a single `users` table; tenant-specific business tables are added per-deployment.
+A **React + Vite** portal for VoIP/telecom tenants, built as reusable components
+on top of the **voipappz-api mothership**. A tenant fork changes **env, not
+code** — point `VITE_MOTHERSHIP_URL` at the tenant's backend and the same app
+lights up against that tenant's data (login, calls, reports, feature flags).
 
-## Quick Start
+- **Building a feature?** → [DEVELOPING.md](./DEVELOPING.md) (the data-access layer + "add a feature page" recipe)
+- **How it fits together?** → [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **Repo conventions / gotchas?** → [CLAUDE.md](./CLAUDE.md)
+
+---
+
+## Quick start
 
 ```bash
-# Install dependencies
+cp .env.example .env          # set VITE_MOTHERSHIP_URL (the only required var)
 npm install
-
-# Start dev server
-npm run dev
-
-# Run tests
-make test
+npm run dev                   # → http://localhost:4200
 ```
 
-## Architecture Overview
+That's the whole loop for frontend work: the app talks to the mothership over
+HTTPS, so you don't need any backend running locally. Log in with a real
+mothership user (or set `VITE_MOCK_LOGIN=1` in `.env` to log in offline with any
+email + OTP `123456`).
 
-```
-FreeSWITCH → mod_amqp → LavinMQ → va-crystal cable
-    → deno-api (ActionCable client) → DuckDB event store
-    → /ws/events WebSocket → React UI (live updates)
-```
+## Two ways to run
 
-| Layer | Stack |
-|-------|-------|
-| **Frontend** | React 19.2, Vite 6.3.5, Material-UI 7.1, TailwindCSS 3.4, RTL support |
-| **Backend** | Deno, DuckDB (event store), Supabase (auth + RLS) |
-| **Real-time** | ActionCable (va-crystal), WebSocket (`/ws/events`) |
+| Mode | Command | When |
+|---|---|---|
+| **Frontend only** | `npm run dev` | Day-to-day UI work. Vite on :4200, proxies `/api/*` to the mothership. |
+| **Full stack (Docker)** | `make up` | When you also need the deno backend (live-events WS, calls-per-hour chart, transcripts). Vite :4200 + deno-api :4001. |
 
-> **⚠️ Demo mock (branch `free-tel` only):** the Calls list is real
-> (`cloud.voipappz.io`), but the **Transcribe button is faked** — it skips the
-> Gemini backend and shows a canned Hebrew conversation locally so a client can't
-> tell. Code: `src/components/Calls/conversation-mocks.ts` +
-> `Calls.jsx` `triggerTranscribe()`. To switch to real transcription, follow the
-> revert checklist in **TASKS.MD → "Mocked Call Transcription for Demo"**.
+The **deno backend is optional** — the core app (login, calls, reports, feature
+flags) hits the mothership directly. deno-api only powers three Dashboard
+widgets; without it, those simply stay quiet.
 
-## Docker Development (Recommended)
+> **Gotcha:** editing `.env` and running `docker compose restart` does *not*
+> re-read env vars. Use `docker compose up -d --force-recreate <service>`.
 
-### Start the Environment
+## Configuration
+
+All configuration is env (see **[.env.example](./.env.example)** — copy it to
+`.env`). The only required variable:
 
 ```bash
-# Start core services (react-app + deno-api)
-docker compose up -d
-
-# Or use make
-make up
+VITE_MOTHERSHIP_URL=https://cloud.voipappz.io   # the tenant's voipappz-api
 ```
 
-**Services started by default:**
+Everything else (softphone SIP, dashboard extras, branding, mocks) is optional
+and documented inline in `.env.example`. Do **not** set `VITE_API_BASE_URL` in
+dev — it bypasses the Vite proxy and trips CORS.
 
-| Service | Port | Description |
-|---------|------|-------------|
-| `react-app-tichman` | 5174→5173 | Vite dev server, proxies API calls to deno-api |
-| `deno-api` | 4001 | HTTP API, WebSocket events, DuckDB store, cable client |
+## Make commands
 
-**Opt-in services (start explicitly):**
-
-```bash
-# Claude CLI dev shell
-docker compose --profile tools up -d claude
-
-# Run Deno API tests
-docker compose --profile test run --rm deno-tests
-
-# Production build test
-docker compose --profile test run --rm test-build
 ```
-
-### Access Containers
-
-```bash
-docker compose exec react-app-tichman bash
-docker compose exec deno-api sh
-docker compose exec claude bash  # if started with --profile tools
+make            # list targets
 ```
-
-### Stop Services
-
-```bash
-docker compose down
-# or: make down
-```
-
-> **Gotcha**: Editing `.env` requires `docker compose up -d --force-recreate <service>` to apply changes (restart does not re-read env vars).
-
-## Make Commands
 
 | Command | Description |
-|---------|-------------|
-| `make dev` | Vite dev server (frontend only) |
-| `make up` | Start react-app + deno-api via docker compose |
-| `make down` | Stop all services |
-| `make test` | Run all Playwright tests |
-| `make test-auth` | Run auth-specific tests |
-| `make duckdb-ui` | Enable DuckDB browser UI at http://localhost:4213 |
-| `make verify` | Health check: API, web, cable server, dependencies |
-| `make backup` | Back up Supabase data to `backups/` |
-| `make push` | Git push current branch |
-| `make deploy` | Kamal build → registry push → container swap |
-| `make ship` | `make push` + `make deploy` combined |
-| `make status` | Git status + production health |
+|---|---|
+| `make dev` | Run the app (deno-api in Docker + host Vite with HMR) |
+| `make up` / `make down` | Start / stop the full Docker stack (web + deno-api) |
+| `make build` | Production build (`dist/`) |
+| `make test` | Playwright E2E (needs the app running) |
+| `make verify` | Health check: deno-api, web, and dependency report |
+| `make status` | Local git + production health (set `PROD_URL`) |
+| `make deploy` / `make ship` | Kamal deploy / push + deploy |
 
-## Playwright E2E Testing
-
-### Test Structure
+## Project layout
 
 ```
-tests/
-├── auth-fixture.ts          # Auth fixture + navigation helpers
-├── auth-real.spec.ts        # Real Supabase login flow
-├── calls-api.spec.ts        # Calls endpoint tests
-├── calls-events.spec.ts     # WebSocket event subscription
-├── calls-ui.spec.ts         # UI rendering tests
-├── dashboard-mock.spec.ts   # Dashboard with mock data
-├── health-check.spec.ts     # Service availability
-├── security.spec.ts         # ACL & permissions
-├── test-cleanup.ts          # Supabase cleanup utilities
-└── helpers/                 # Shared test utilities
-
-api/tests/                   # Deno API tests
-├── cable.test.ts            # Cable client tests (mock WS)
-├── store.test.ts            # DuckDB store operations
-├── calls_endpoint.test.ts   # HTTP endpoint tests
-└── transcription.test.ts    # Transcription worker tests
+src/
+  lib/          # auth (token/session) + clients/ (mothership api, login, portal)
+  services/     # one module per backend feature (callsApi, reportsApi, featuresApi)
+  hooks/        # cross-cutting hooks (useFeatures, useACL)
+  components/   # Calls (blueprint), Reports, Login, Phone, Dashboard, common/
+  context/      # Auth, Direction
+  i18n/         # react-i18next (Hebrew RTL default + English)
+  theme/        # MUI theme
+api/            # deno backend (BFF): /ws events relay, calls-per-hour, transcripts
+tests/          # Playwright E2E
 ```
 
-### Test Pattern
+To add a feature, follow the **service → hook → component** recipe with `Calls`
+as the blueprint — see [DEVELOPING.md](./DEVELOPING.md).
 
-Tests follow: **Input → Fill Form → Submit → Capture Response → Assert → Cleanup**
-
-```typescript
-test('should create record and verify', async ({ authenticatedPage: page }) => {
-  // 1. Define input
-  const input = { field: 'value', ... };
-
-  // 2. Fill form
-  await page.fill('[name="field"]', input.field);
-
-  // 3. Setup response capture (before submit!)
-  const responsePromise = page.waitForResponse(
-    r => r.url().includes('/table') && r.request().method() === 'POST'
-  );
-
-  // 4. Submit
-  await submitButton.click();
-
-  // 5. Assert response
-  const response = await responsePromise;
-  const created = await response.json();
-  expect(created.field).toBe(input.field);
-
-  // 6. Verify & cleanup
-  expect(await verifyRecordExists('table', created.id)).toBe(true);
-  trackForCleanup('table', created.id);
-});
-```
-
-### Test Results
-
-- HTML report: `playwright-report/`
-- Screenshots/Videos: `test-results/`
-- View report: `npx playwright show-report`
-
-## Auth Gate Pattern
-
-The app blocks rendering until auth is determined:
-
-```jsx
-// AuthContext.jsx
-if (!isInitialized) {
-  return null; // Prevents race conditions
-}
-return <AuthContext.Provider>{children}</AuthContext.Provider>;
-```
-
-**401 Event Handling:**
-```javascript
-// API interceptor dispatches event
-if (error.response?.status === 401) {
-  window.dispatchEvent(new CustomEvent('auth:unauthorized'));
-}
-// AuthContext listens and logs out
-```
-
-## Internationalization (i18n)
-
-Hebrew (default, RTL) and English supported via `react-i18next`.
-
-```jsx
-import { useTranslation } from 'react-i18next';
-import { useDirection } from './context/DirectionContext';
-
-function MyComponent() {
-  const { t } = useTranslation();
-  const { direction } = useDirection();
-
-  return (
-    <Box dir={direction}>
-      <h1>{t('orders.pageTitle')}</h1>
-    </Box>
-  );
-}
-```
-
-**Locales:** `src/i18n/locales/he.json`, `src/i18n/locales/en.json`
-
-## Environment Variables
-
-### Required
+## Testing
 
 ```bash
-# Supabase (Frontend)
-VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_ANON_KEY=xxx
-
-# Supabase (Backend/Tests)
-SUPABASE_SERVICE_ROLE_KEY=xxx
+npm test            # Vitest unit tests (services, hooks)
+make test           # Playwright E2E (Input → Submit → capture → assert)
+npm run build       # must be clean before shipping
 ```
 
-### Optional (Backend Services)
+## Internationalization
 
-```bash
-# Cable connection (for live call events)
-SECRET_KEY=xxx           # Cable's signing secret
-CABLE_URL=ws://127.0.0.1:6000/cable
+Hebrew (default, RTL) + English via `react-i18next`. Locales in
+`src/i18n/locales/`. Use `useTranslation()` for copy and `useDirection()` for
+layout direction.
 
-# Transcription (Google Gemini)
-GEMINI_API_KEY=xxx
-GEMINI_MODEL=gemini-2.0-flash
+## Deploy
 
-# S3/MinIO (call recordings)
-S3_ENDPOINT=xxx
-S3_KEY=xxx
-S3_SECRET=xxx
-
-# SMTP, DocuSeal, Fireberry (stubs)
-SMTP_HOST=smtp.example.com
-DOCUSEAL_API_KEY=xxx
-FIREBERRY_TOKEN=xxx
-```
-
-### Do NOT Set in Dev
-
-- **`VITE_API_BASE_URL`** — causes CORS issues by bypassing Vite proxy
-
-## Key Directories
-
-| Directory | Purpose |
-|-----------|---------|
-| `src/components/` | React components |
-| `src/components/Calls/` | Canonical feature example (replicate for new features) |
-| `src/components/Dashboard/` | Dashboard + widgets |
-| `src/components/Reports/` | Data-table framework |
-| `src/context/` | React contexts (Auth, Direction, Audit) |
-| `src/lib/` | API client, DB, Supabase utilities |
-| `src/i18n/` | i18next config + locales |
-| `api/` | Deno backend (events, transcription, stubs) |
-| `api/tests/` | Deno API tests |
-| `tests/` | Playwright E2E tests |
-
-## DuckDB Browser UI
-
-Live SQL notebook over the event store:
-
-```bash
-make duckdb-ui
-# Opens http://localhost:4213/
-```
-
-Tables: `events` (source of truth)
-Views: `calls_view`, `calls_per_hour`, `events_per_hour`, `registrations_view`
-
-Turn off: `make up` (recreates deno-api without UI)
-
-## Support
-
-- Project instructions: `CLAUDE.md`
-- Deployment guide: `DEPLOYMENT.md`
-- Auth documentation: `AUTH.md`
+`make deploy` builds the image, pushes to the registry, and swaps the container
+via Kamal (sources `.kamal/secrets`). `make ship` = `git push` + deploy. After a
+deploy, `make status` probes the deployed version. See [CLAUDE.md](./CLAUDE.md)
+for the MTN deployment specifics.

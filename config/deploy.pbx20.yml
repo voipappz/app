@@ -1,38 +1,36 @@
-# Kamal DESTINATION override for the "pbx20" server.
+# Kamal DESTINATION override for pbx20 — NON-DISRUPTIVE test deploy.
 #
-# Deep-merged on top of config/deploy.yml by Kamal. Only the host-specific
-# bits live here — image, builder, env, registry, and the two roles all come
-# from the base file. Deploy with:
+# pbx20 (freeswitch-20) runs the live VoIP stack with KONG on 80/443. So we do
+# NOT run kamal-proxy (proxy: false) and publish ONLY on 127.0.0.1:8888 — the
+# host's 80/443 (Kong) are never touched. itdroot is in the docker group, so no
+# root is needed. The browser logs in against the MTN API directly
+# (VITE_MOTHERSHIP_URL baked below); deno just serves the bundle.
 #
+#     kamal config -d pbx20     # render + verify (read-only)
 #     kamal deploy -d pbx20
 #     kamal app logs -d pbx20
-#
-# Runtime secrets still live out-of-band on the host at
-# /etc/voipappz/secrets.env (see servers.web.options.env-file in deploy.yml),
-# so scp that file to pbx20.itd-pbx.com before the first deploy.
 
 servers:
   web:
     hosts:
       - pbx20.itd-pbx.com
-
-proxy:
-  # Automatic HTTPS via kamal-proxy's built-in Let's Encrypt. DNS for the host
-  # resolves to the box's public IP (199.203.162.92) and :80/:443 are open, so
-  # the ACME HTTP-01 challenge succeeds. HTTP is auto-redirected to HTTPS.
-  ssl: true
-  hosts:
-    - pbx20.itd-pbx.com
-  app_port: 3000
-  healthcheck:
-    # Pbx20 has no AMQP broker, so /health reports 503 (amqp down). Gate on /
-    # (the app serves index.html = 200) until AMQP is removed from the code.
-    path: /
-    interval: 3
-    timeout: 5
+    # Do NOT run kamal-proxy for this role — Kong owns 80/443. Role-level
+    # `proxy: false` runs the container directly, published on 8888 below.
+    proxy: false
+    # Replace the prod env-file (which lives on appcc3, not here) with a local
+    # one (created on the host first), and publish 8888→3000.
+    options:
+      env-file: /home/itdroot/voipappz-app.env
+      publish:
+        - "127.0.0.1:8888:3000"
 
 ssh:
   user: itdroot
-  # Pbx20 uses the standard SSH port (base deploy.yml uses 2228, overridden here).
   port: 22
-  keys: ["~/.ssh/kamal_deploy"]
+  keys:
+    - "~/.ssh/kamal_deploy"
+
+builder:
+  arch: amd64
+  args:
+    VITE_MOTHERSHIP_URL: https://mtnunicom.mtn.com.gh

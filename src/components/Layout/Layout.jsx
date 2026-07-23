@@ -1,19 +1,15 @@
-import { Box, Typography, Button, IconButton } from '@mui/material';
+import { Box, Typography, IconButton } from '@mui/material';
 import { useLayout } from './Layout';
-import { useAuth } from '../../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import MainMenu from '../MainMenu/MainMenu.jsx';
 import LoginLeft from '../LoginLeft/LoginLeft.jsx';
-import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import { APP_THEME } from '../../theme/appTheme';
-import LanguageSelector from '../common/LanguageSelector';
 import SystemHealth from '../common/SystemHealth';
 import PhoneWidget from '../Phone/PhoneWidget';
-import { useFireberry } from '../../context/FireberryContext';
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import ErrorBoundary from '../common/ErrorBoundary';
 import './Layout.css';
 
 const Layout = ({ children }) => {
@@ -21,8 +17,6 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const { t } = useTranslation();
   const isLoginPage = location.pathname === '/login';
-  const { user, logout } = useAuth();
-  const { toast } = useFireberry();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   // Header shows the current screen's name (per route), not a static product title.
@@ -94,25 +88,29 @@ const Layout = ({ children }) => {
             }}
           >
             <Box
+              dir="ltr"
               sx={{
                 mx: 'auto',
                 px: { xs: 2, sm: 3, lg: 4 },
                 height: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                // Force physical placement regardless of language: hamburger +
+                // menu live on the LEFT, the phone lives on the RIGHT. The `dir`
+                // attribute (not just sx) is needed to beat the RTL root.
               }}
             >
-              {/* Left side - Hamburger (mobile only) + Title and Role */}
+              {/* Left side - Hamburger (opens the left slide-out menu) + Title */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {/* Hamburger Menu - Mobile Only */}
+                {/* Hamburger Menu — always visible; the nav now lives in a
+                    left drawer (WebRTC-portal style), not an inline top bar. */}
                 <IconButton
                   color="inherit"
                   edge="start"
                   onClick={handleDrawerToggle}
-                  sx={{
-                    display: { xs: 'block', md: 'none' }
-                  }}
+                  aria-label="open menu"
+                  data-testid="menu-button"
                 >
                   <MenuIcon />
                 </IconButton>
@@ -136,47 +134,13 @@ const Layout = ({ children }) => {
                 />
               </Box>
 
-              {/* Right side - User info, Language and Logout */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: { xs: 1, sm: 2 }
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{ display: { xs: 'none', sm: 'block' } }}
-                >
-                  {t('header.greeting', { name: user?.name })}
-                </Typography>
-                <IconButton
-                  size="small"
-                  title="Test Fireberry Toast"
-                  onClick={() => toast.show({ content: 'Fireberry toast is working!', toastType: 'success', autoDismissTimeout: 4000 })}
-                  sx={{ color: '#475569' }}
-                >
-                  <NotificationsActiveIcon fontSize="small" />
-                </IconButton>
+              {/* Right side — the phone lives here (menu/language/logout are in
+                  the left drawer). Kept simple: health + the softphone. */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
                 <SystemHealth />
-                <PhoneWidget />
-                <LanguageSelector />
-                <Button
-                  variant="text"
-                  size="small"
-                  onClick={logout}
-                  startIcon={<LogoutIcon />}
-                  sx={{
-                    color: '#475569',
-                    fontWeight: 600,
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 173, 180, 0.08)',
-                      color: '#00838A'
-                    }
-                  }}
-                >
-                  {t('header.logout')}
-                </Button>
+                <ErrorBoundary label="phone-widget" fallback={null}>
+                  <PhoneWidget />
+                </ErrorBoundary>
               </Box>
             </Box>
           </Box>

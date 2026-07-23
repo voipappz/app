@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:native": "concurrently -k -n vite,deno \"vite\" \"PORT=4001 deno run --watch=api/ -A api/app.ts\"",
+    "serve": "STATIC_DIR=./dist PORT=4200 deno run --watch=api/ -A api/app.ts",
+    "dev:unified": "vite build && concurrently -k -n vite,deno \"vite build --watch\" \"npm:serve\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -50,6 +53,7 @@
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^10.0.3",
     "dotenv": "^17.2.2",
     "eslint": "^9.25.0",
     "eslint-plugin-react-hooks": "^5.2.0",

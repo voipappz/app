@@ -124,7 +124,15 @@ export interface CableClientOpts {
   url: string;                                   // ws://host:6000/cable
   token: string;                                 // HS256 JWT (?token=)
   channel?: string;                              // default "CallEvents"
-  onEvent: (n: Normalized) => void | Promise<void>;
+  // Full ActionCable identifier override. CallEvents needs only {channel};
+  // DashboardLive needs {channel, account_uuid, Live_uuid}. When set, it
+  // takes precedence over `channel`.
+  identifier?: Pojo;
+  // Default path: normalize each broadcast into a canonical call event.
+  onEvent?: (n: Normalized) => void | Promise<void>;
+  // Raw path (DashboardLive): receive the untouched broadcast `message`
+  // (the dashboard is a value stream, not a call event — skip normalization).
+  onRaw?: (message: unknown) => void | Promise<void>;
   log?: (m: string) => void;
   reconnectMs?: number;
   socketFactory?: (url: string, protocol: string) => WebSocketLike; // DI for tests
@@ -134,7 +142,7 @@ export interface CableClient { stop(): void; ready(): boolean; }
 
 export function createCableClient(opts: CableClientOpts): CableClient {
   const channel = opts.channel ?? "CallEvents";
-  const identifier = JSON.stringify({ channel });
+  const identifier = JSON.stringify(opts.identifier ?? { channel });
   const log = opts.log ?? (() => {});
   const reconnectMs = opts.reconnectMs ?? 3000;
   const factory = opts.socketFactory ?? ((u, p) => new WebSocket(u, p) as unknown as WebSocketLike);
@@ -169,10 +177,13 @@ export function createCableClient(opts: CableClientOpts): CableClient {
       case "disconnect":
         return;
     }
-    // Data frame: { identifier, message }. message is the baked call event.
+    // Data frame: { identifier, message }.
     if (frame && frame.message !== undefined) {
+      // Raw path (DashboardLive): hand the broadcast through untouched.
+      if (opts.onRaw) { await opts.onRaw(frame.message); return; }
+      // Default path: message is a baked call event → normalize + emit.
       const n = normalizeCableEvent(frame.message);
-      if (n) await opts.onEvent(n);
+      if (n) await opts.onEvent?.(n);
     }
   }
 

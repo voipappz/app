@@ -67,10 +67,36 @@ const getWebSocketUrl = (path) => {
 //   VITE_BRAND_LOGO        logo URL (light bg: menu, login, favicon)
 //   VITE_BRAND_LOGO_WHITE  logo URL (dark bg: login sidebar)
 const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+
+// Customer portal data (cached at login by lib/clients/customerPortal) is the
+// AUTHORITATIVE tenant branding — served from the API's customer.profile, so a
+// tenant rebrands with no code/env change. Falls back to VITE_* then the bundled
+// defaults. Read lazily (getters) because it lands after the module is imported.
+function portal() {
+  try {
+    const raw = localStorage.getItem('customerData');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export const brand = {
-  name: env.VITE_APP_NAME || 'voipappz',
-  logo: env.VITE_BRAND_LOGO || '/brand/voipappz-logo.png',
-  logoWhite: env.VITE_BRAND_LOGO_WHITE || '/brand/voipappz-logo-white.png',
+  get name() {
+    return portal()?.logo_title || env.VITE_APP_NAME || 'voipappz';
+  },
+  get logo() {
+    return portal()?.logo_url || env.VITE_BRAND_LOGO || '/brand/voipappz-logo.png';
+  },
+  get logoWhite() {
+    return portal()?.logo_url || env.VITE_BRAND_LOGO_WHITE || '/brand/voipappz-logo-white.png';
+  },
+  get icon() {
+    return portal()?.logo_icon || '/favicon.ico';
+  },
+  get color() {
+    return portal()?.logo_color || env.VITE_PRIMARY_COLOR || '';
+  },
 };
 
 export const config = {

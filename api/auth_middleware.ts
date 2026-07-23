@@ -1,6 +1,9 @@
-// JWT verification middleware for Deno API endpoints
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.ts';
+// JWT verification middleware for Deno API endpoints.
+//
+// Supabase Auth was removed — the app authenticates against the mothership
+// (voipappz-api). JWT-gated Deno routes are therefore disabled by default; wire
+// a mothership-token verifier here if a Deno route ever needs to gate on the
+// user. Keeping the interface so callers don't change.
 
 export interface AuthResult {
   authenticated: boolean;
@@ -12,42 +15,13 @@ export interface AuthResult {
 export type JwtVerifier = (request: Request) => Promise<AuthResult>;
 
 /**
- * Create a JWT verifier that validates tokens against Supabase Auth.
+ * Default verifier: no auth configured (rejects). No external dependency, so the
+ * Deno backend runs natively with zero install. Replace with a mothership-token
+ * check if a gated route is added.
  */
 export function createJwtVerifier(): JwtVerifier {
-  // Built only when Supabase is configured. Without it, JWT-gated routes
-  // (e.g. /calls/:id/transcribe) reject — the DuckDB calls/events path needs no auth client.
-  const authClient = SUPABASE_URL
-    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } })
-    : null;
-
-  return async (request: Request): Promise<AuthResult> => {
-    if (!authClient) return { authenticated: false, error: "Auth not configured" };
-
-    const authHeader = request.headers.get("Authorization");
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return { authenticated: false, error: "Missing or invalid Authorization header" };
-    }
-
-    const token = authHeader.slice(7);
-
-    try {
-      const { data: { user }, error } = await authClient.auth.getUser(token);
-
-      if (error || !user) {
-        return { authenticated: false, error: error?.message || "Invalid token" };
-      }
-
-      return {
-        authenticated: true,
-        userId: user.id,
-        email: user.email
-      };
-    } catch (_err) {
-      return { authenticated: false, error: "Token verification failed" };
-    }
-  };
+  return (_request: Request): Promise<AuthResult> =>
+    Promise.resolve({ authenticated: false, error: "Auth not configured" });
 }
 
 /**

@@ -1,9 +1,10 @@
-// Auth session — accounts-table login via deno (POST /login → PostgREST api.login).
+// Auth session — users-table login via deno (POST /login → PostgREST api.login).
 //
-// The signed JWT (role `api_readonly` + account/customer/environment claims) is
-// the single credential: stored in localStorage and sent as the bearer on every
-// request to deno / PostgREST. This replaces Supabase Auth — one account login,
-// one token, one source of truth.
+// The signed JWT (role `api_readonly` + user/environment claims) is the single
+// credential: stored in localStorage and sent as the bearer on every request to
+// deno / PostgREST. This replaces Supabase Auth — one user login, one token, one
+// source of truth. A user belongs to one environment (users.environment_uuid),
+// and that `environment_uuid` claim scopes the calls list to that environment.
 
 // Where the browser posts credentials. Default '/auth/login' rides the Vite dev
 // proxy / same-origin route to deno (the brain), which forwards to PostgREST
@@ -12,12 +13,14 @@ const AUTH_URL = (import.meta.env.VITE_AUTH_URL ?? '/auth/login') as string;
 const STORAGE_KEY = 'auth';
 
 export interface AuthSession {
-  access: string;             // the HS256 JWT
+  access: string;             // the bearer token (HS256 JWT, or opaque mothership token)
   email: string;
-  account_uuid: string;
-  customer_uuid?: string;
-  environment_uuids?: string[];
-  expires_at?: number;        // epoch seconds (JWT `exp`)
+  user_uuid: string;
+  environment_uuid?: string;  // the user's environment (scopes the calls list)
+  expires_at?: number;        // epoch seconds (JWT `exp`); absent → no client-side expiry
+  name?: string;              // display name (mothership user.fullname)
+  refresh?: string;           // mothership refresh token (for future token refresh)
+  user?: any;                 // full mothership user object (environment/extension/profile/acl)
 }
 
 function decodeJwt(token: string): Record<string, any> {
@@ -52,6 +55,11 @@ export function getToken(): string | null {
   return getSession()?.access ?? null;
 }
 
+/** Persist a session (built by a login client, e.g. lib/clients/mothership). */
+export function saveSession(session: AuthSession): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+}
+
 /** Log in with account credentials. Persists + returns the session, or throws. */
 export async function login(email: string, password: string): Promise<AuthSession> {
   const r = await fetch(AUTH_URL, {
@@ -70,9 +78,8 @@ export async function login(email: string, password: string): Promise<AuthSessio
   const session: AuthSession = {
     access: data.token,
     email: data.email ?? claims.email ?? email,
-    account_uuid: data.account_uuid ?? claims.account_uuid,
-    customer_uuid: data.customer_uuid ?? claims.customer_uuid,
-    environment_uuids: data.environment_uuids ?? claims.environment_uuids,
+    user_uuid: data.user_uuid ?? claims.user_uuid,
+    environment_uuid: data.environment_uuid ?? claims.environment_uuid,
     expires_at: claims.exp,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
@@ -83,18 +90,21 @@ export function logout(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-// Build the app/ACL user from a session. Accounts carry no app role in the token
-// (the JWT `role` claim is the Postgres role `api_readonly`), so default to the
-// wildcard `admin` template until per-account app-roles exist.
+// Build the app/ACL user from a session. Prefers the mothership `user` object
+// (carried on the session) and falls back to JWT claims for the legacy accounts
+// login. Users carry no app role yet, so default to the wildcard `admin`
+// template until per-user app-roles exist.
 export function sessionUser(s: AuthSession | null) {
   if (!s) return null;
   const claims = decodeJwt(s.access);
+  const u = s.user || {};
   return {
-    id: s.account_uuid,
-    email: s.email,
-    account_uuid: s.account_uuid,
-    customer_uuid: s.customer_uuid,
-    environment_uuids: s.environment_uuids,
-    role: claims.app_role || 'admin',
+    id: s.user_uuid || u.uuid || u.id,
+    email: s.email || u.email,
+    name: s.name || u.fullname || u.name,
+    user_uuid: s.user_uuid || u.uuid,
+    environment_uuid: s.environment_uuid || u.environment?.uuid,
+    role: u.app_role || claims.app_role || 'admin',
+    raw: u,
   };
 }

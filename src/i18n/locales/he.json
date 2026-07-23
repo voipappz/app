@@ -349,6 +349,12 @@
     "forgotPassword": "שכחתי סיסמה",
     "loginButton": "התחבר",
     "loggingIn": "מתחבר...",
+    "otpTitle": "אימות דו-שלבי",
+    "otpSent": "שלחנו קוד בן 6 ספרות. הזן אותו כדי להמשיך.",
+    "otpCode": "קוד אימות",
+    "verify": "אמת",
+    "verifying": "מאמת...",
+    "back": "חזרה",
     "welcome": "ברוכים הבאים ל-{{brand}}",
     "subtitle": "התחבר כדי לגשת ללוח הבקרה שלך",
     "footer": {

@@ -81,10 +81,16 @@ globalThis.WebSocket = class MockWebSocket {
   }
 };
 
-// Mock getUserMedia
-globalThis.navigator = {
-  ...globalThis.navigator,
-  mediaDevices: {
-    getUserMedia: () => Promise.resolve(new MediaStream())
-  }
-};
+// Mock getUserMedia — AUGMENT the existing navigator rather than replacing it.
+// (Spreading navigator drops prototype getters like `userAgent`, which react-dom
+// reads on render — clobbering it crashed every render test with
+// `Cannot read properties of undefined (reading 'indexOf')`.)
+if (typeof globalThis.navigator === 'undefined') {
+  globalThis.navigator = { userAgent: 'node' };
+}
+if (!globalThis.navigator.mediaDevices) {
+  Object.defineProperty(globalThis.navigator, 'mediaDevices', {
+    configurable: true,
+    value: { getUserMedia: () => Promise.resolve(new MediaStream()) },
+  });
+}

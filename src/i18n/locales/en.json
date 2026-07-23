@@ -328,6 +328,12 @@
     "forgotPassword": "Forgot Password",
     "loginButton": "Login",
     "loggingIn": "Logging in...",
+    "otpTitle": "Two-step verification",
+    "otpSent": "We sent a 6-digit code. Enter it to continue.",
+    "otpCode": "Verification code",
+    "verify": "Verify",
+    "verifying": "Verifying...",
+    "back": "Back",
     "welcome": "Welcome to {{brand}}",
     "subtitle": "Please log in to access your dashboard",
     "footer": {

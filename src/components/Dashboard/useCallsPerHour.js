@@ -20,6 +20,8 @@ export function useCallsPerHour({ minutes = 1440, env = [] } = {}) {
     for (const e of env) if (e) params.append('env', e);
     const token = typeof getToken === 'function' ? getToken() : null;
 
+    // This endpoint is deno's (custom logic — the InfluxDB token stays
+    // server-side). Same auth as the rest of the app: the user JWT as Bearer.
     fetch(`${EVENTS_API}/dashboard/calls-per-hour?${params.toString()}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

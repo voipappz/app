@@ -1,0 +1,49 @@
+# Kamal DESTINATION override for MTN — mtnunicom.mtn.com.gh (81.199.146.152).
+#
+# Same non-disruptive posture as pbx20: the MTN box is a live production host
+# running nginx on 80/443 + the voipappz-api on :8000, so we do NOT run
+# kamal-proxy (proxy: false) and publish ONLY on 127.0.0.1:8888. The existing
+# nginx reverse-proxies to :8888; TLS stays with nginx. The frontend logs in
+# against the MTN API on the same box.
+#
+#     kamal config -d mtn      # render + verify (read-only)
+#     kamal deploy -d mtn
+
+servers:
+  web:
+    hosts:
+      - 81.199.146.152
+    # The portal (va_portal_1 nginx) owns 80/443 here — role-level proxy:false
+    # runs our container directly on 8888. We terminate TLS ourselves on 8888
+    # using the host's OWN cert, mounted read-only. Nothing on 80/443/the portal
+    # is touched.
+    proxy: false
+    options:
+      env-file: /home/voipappz/voipappz-app.env
+      # Run as root so deno can read the 0600 host key (owned by voipappz uid
+      # 1000; our container's deno user is uid 1993). Container-root is namespaced
+      # — no host access, and the cert mount is read-only.
+      user: "0:0"
+      # Mount the host's live cert dir read-only — always the current (renewed)
+      # cert; we never write to it.
+      volume:
+        - "/opt/va/certs:/certs:ro"
+      publish:
+        - "0.0.0.0:8888:3000"   # https://mtnunicom.mtn.com.gh:8888/
+
+env:
+  clear:
+    TLS_CERT_FILE: /certs/mtn.crt
+    TLS_KEY_FILE: /certs/mtn.key
+
+ssh:
+  user: voipappz
+  port: 22
+  keys:
+    - "~/.ssh/kamal_deploy"
+
+builder:
+  arch: amd64
+  args:
+    # Same-origin: the app is served from the MTN host and talks to its own API.
+    VITE_MOTHERSHIP_URL: https://mtnunicom.mtn.com.gh

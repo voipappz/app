@@ -9,6 +9,16 @@ WORKDIR /build
 ARG VITE_APP_VERSION
 ENV VITE_APP_VERSION=$VITE_APP_VERSION
 
+# Mothership/API base — MUST be exposed as ENV before `npm run build` so Vite
+# bakes it into the bundle; otherwise the app falls back to the code default
+# (https://cloud.voipappz.io) and talks to the cloud instead of this deployment.
+# Only bake vars we actually pass a value for — declaring an ARG with no value
+# bakes an EMPTY STRING, which `?? default` in code does NOT override (only the
+# code now uses `|| default`, which does). The auth/portal PATHS are left to
+# their code defaults, so we do NOT declare empty ARGs for them.
+ARG VITE_MOTHERSHIP_URL
+ENV VITE_MOTHERSHIP_URL=$VITE_MOTHERSHIP_URL
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
@@ -21,13 +31,13 @@ WORKDIR /app
 
 COPY api/deno.json api/deno.lock ./
 COPY api/*.ts ./
-# The DuckDB schema migration is read at runtime by store.ts (relative to the
-# module), so it must be present in the image — not just the .ts files.
-COPY api/migrations ./migrations
-# The mock seed fixture (calls + transcription jobs) is also read at runtime by
-# store.ts → seedMock(), so it must ship in the image when MOCK_SEED=1.
+# The mock seed fixture (calls + transcription jobs) is read at runtime by the
+# BFF, so it must ship in the image when MOCK_SEED=1.
+# NB: api/migrations was dropped in the thin-BFF refactor (6d23a4b, DuckDB buffer
+# removed); do not re-add a COPY for it — the dir no longer exists and the build
+# fails with "/api/migrations: not found".
 COPY api/mock ./mock
-RUN deno cache supabase.ts
+RUN deno cache app.ts
 
 COPY --from=frontend-builder /build/dist ./dist
 
@@ -47,4 +57,4 @@ EXPOSE 3000
 USER deno
 
 # --allow-write (DuckDB file) + --allow-ffi/--allow-sys (DuckDB native addon).
-CMD ["deno", "run", "--allow-net", "--allow-env", "--allow-read", "--allow-write", "--allow-ffi", "--allow-sys", "supabase.ts"]
+CMD ["deno", "run", "--allow-net", "--allow-env", "--allow-read", "--allow-write", "--allow-ffi", "--allow-sys", "app.ts"]

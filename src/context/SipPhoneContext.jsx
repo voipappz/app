@@ -2,9 +2,18 @@
 // SIP registration and any active call survive page navigation and an incoming
 // call rings on whatever screen the user is on. Wraps the useSipPhone hook and
 // the persisted Settings; the Phone UI consumes this via useSipPhoneCtx().
-import { createContext, useContext, useCallback, useEffect, useState } from 'react';
+//
+// RESILIENCE: the SIP/WebRTC layer (sip.js + RTCPeerConnection) must NEVER take
+// the whole app down. The live phone runs inside SipPhoneLive, isolated behind an
+// ErrorBoundary. If it throws while loading (no WebRTC support, sip.js init error,
+// etc.) the boundary swaps in a DEGRADED context (status 'unavailable', no-op
+// actions) and still renders the children — so Dashboard/Calls/Reports keep
+// working and only the softphone is disabled.
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSipPhone } from '../lib/sip/useSipPhone';
-import { loadSipSettings, saveSipSettings, sipSettingsReady } from '../lib/sip/sipSettings';
+import { loadSipSettings, saveSipSettings, clearSipSettings, defaultSipSettings, sipSettingsReady } from '../lib/sip/sipSettings';
+import { useAuth } from './AuthContext';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 
 const SipPhoneContext = createContext(null);
 
@@ -14,9 +23,38 @@ export const useSipPhoneCtx = () => {
   return ctx;
 };
 
-export function SipPhoneProvider({ children }) {
+const noop = () => {};
+const noopAsync = async () => {};
+
+// Degraded context used when the SIP/WebRTC subsystem fails to load. Same shape
+// as the live value so consumers (PhoneWidget) render without crashing — the
+// softphone simply reports 'unavailable' and its actions are no-ops.
+function degradedValue(settings, updateSettings) {
+  return {
+    status: 'unavailable',
+    unavailable: true,
+    connected: false,
+    call: null,
+    muted: false,
+    logs: [],
+    settings,
+    updateSettings,
+    dial: noopAsync,
+    answer: noopAsync,
+    hangup: noopAsync,
+    sendDtmf: noop,
+    setMuted: noop,
+    clearLogs: noop,
+    connect: noopAsync,
+    disconnect: noopAsync,
+  };
+}
+
+// The live softphone. Isolated so a throw here is caught by the boundary above
+// instead of crashing the whole React tree.
+function SipPhoneLive({ settings, setSettings, updateSettings, children }) {
   const phone = useSipPhone();
-  const [settings, setSettings] = useState(() => loadSipSettings());
+  const { isAuthenticated } = useAuth();
 
   const connect = useCallback(async (next) => {
     const s = next ?? settings;
@@ -26,11 +64,22 @@ export function SipPhoneProvider({ children }) {
       { username: s.username, password: s.password, domain: s.domain, displayName: s.displayName || s.username },
       { wssUrl: s.wssUrl, domain: s.domain },
     );
-  }, [phone, settings]);
+  }, [phone, settings, setSettings]);
 
   const disconnect = useCallback(async () => { await phone.unregister(); }, [phone]);
 
-  const updateSettings = useCallback((next) => { setSettings(next); saveSipSettings(next); }, []);
+  // On logout: unregister the softphone and FORGET the account's SIP creds, so
+  // the next user doesn't inherit them. (Login re-derives + re-registers from the
+  // freshly entered credentials — see Login.js.)
+  const wasAuthed = useRef(isAuthenticated);
+  useEffect(() => {
+    if (wasAuthed.current && !isAuthenticated) {
+      clearSipSettings();
+      setSettings(defaultSipSettings());
+      phone.unregister().catch(() => { /* ignore */ });
+    }
+    wasAuthed.current = isAuthenticated;
+  }, [isAuthenticated, phone, setSettings]);
 
   // Auto-connect when opted-in + creds present. Registers whenever the phone is
   // idle (not while connecting/registered/reconnecting). This is StrictMode-safe:
@@ -49,6 +98,27 @@ export function SipPhoneProvider({ children }) {
     settings, updateSettings, connect, disconnect,
   };
   return <SipPhoneContext.Provider value={value}>{children}</SipPhoneContext.Provider>;
+}
+
+export function SipPhoneProvider({ children }) {
+  const [settings, setSettings] = useState(() => loadSipSettings());
+  const updateSettings = useCallback((next) => { setSettings(next); saveSipSettings(next); }, []);
+
+  const degraded = useMemo(() => degradedValue(settings, updateSettings), [settings, updateSettings]);
+
+  return (
+    <ErrorBoundary
+      label="sip"
+      onError={(err) => console.error('[sip] softphone failed to load; running without it:', err)}
+      fallback={() => (
+        <SipPhoneContext.Provider value={degraded}>{children}</SipPhoneContext.Provider>
+      )}
+    >
+      <SipPhoneLive settings={settings} setSettings={setSettings} updateSettings={updateSettings}>
+        {children}
+      </SipPhoneLive>
+    </ErrorBoundary>
+  );
 }
 
 export default SipPhoneProvider;
