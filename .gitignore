@@ -48,3 +48,7 @@ backups/
 
 # ─── Captured call data (real events — never commit) ───
 api/mock/captured_calls.json
+
+# Kamal destination secrets (registry PAT etc.) — never commit
+.kamal/secrets-common
+.kamal/secrets.*
