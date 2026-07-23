@@ -39,11 +39,9 @@ export default defineConfig(({ mode }) => {
       // directly from a container.
       const POSTGREST = process.env.VITE_POSTGREST_TARGET || 'http://127.0.0.1:8000';
       return {
-        // External upstream API (cloud).
+        // External upstream API (cloud). All data reads go here now — PostgREST
+        // is gone; the app talks only to voipappz-api /api/*.
         '/api': { target: process.env.VITE_API_TARGET || 'https://cloud.voipappz.io', changeOrigin: true, secure: true },
-        // PostgREST via Kong: the calls/events READ path. NO rewrite — Kong's
-        // /rest/v1 route does the strip to PostgREST (/calls, /events, /rpc/login).
-        '/rest/v1': { target: POSTGREST, changeOrigin: true },
         // deno-api: app endpoints, the worker (transcription/recording), the
         // account login proxy (/auth/login → PostgREST /rpc/login), and the live
         // WS. NB: /auth/login (not /login) so it doesn't shadow the SPA's /login

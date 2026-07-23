@@ -1,8 +1,8 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
   Box, Paper, Typography, Chip, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TableSortLabel, CircularProgress, Alert, ToggleButton,
-  ToggleButtonGroup, Button,
+  ToggleButtonGroup, Button, TablePagination,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
@@ -15,6 +15,8 @@ import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import SubtitlesIcon from '@mui/icons-material/Subtitles';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useCalls, computeCallStats } from './useCalls';
+import Filters from '../common/Filters';
+import { applyFilters } from '../common/filterModel';
 import PageHeader from '../common/PageHeader';
 import StatCard from '../common/StatCard';
 import StatusChip from '../common/StatusChip';
@@ -110,20 +112,67 @@ function GroupHeader({ label, count, level, colSpan }) {
 
 export default function Calls() {
   const { t } = useTranslation();
-  const { calls, loading, error, source, refresh, patchCall } = useCalls();
+  const {
+    calls, total, page, perPage, loading, error, source,
+    setPage, setPerPage, handleSortChange, applyRange, refresh, patchCall,
+  } = useCalls();
   const [groupBy, setGroupBy] = useState('time');
   const [orderBy, setOrderBy] = useState('started_at');
   const [order, setOrder] = useState('desc');
   const [selected, setSelected] = useState(null);
+  const [filters, setFilters] = useState([]);
 
-  const stats = useMemo(() => computeCallStats(calls), [calls]);
+  // Filter fields (ported from report-filters). Values are pushed to the SERVER
+  // as search[...] params (see services/callsApi buildCallsQuery).
+  const filterFields = useMemo(() => [
+    { name: 'from_number', label: t('calls.from', 'From'), type: 'string' },
+    { name: 'to_number', label: t('calls.to', 'To'), type: 'string' },
+    { name: 'status', label: t('calls.status', 'Status'), type: 'multiselect', options: STATUS_ORDER },
+    { name: 'direction', label: t('calls.direction', 'Direction'), type: 'select', options: ['inbound', 'outbound'] },
+    { name: 'duration_seconds', label: t('calls.duration', 'Duration'), type: 'numeric' },
+    { name: 'started_at', label: t('calls.started', 'Started'), type: 'time' },
+  ], [t]);
+
+  // Split the filters by where they can actually run. The `started_at` range is
+  // pushed to the SERVER as search[created_at] (the only server filter this API
+  // accepts — other search[<field>] params 500 it, verified live). Everything
+  // else filters the current page client-side.
+  const { serverRange, clientFilters } = useMemo(() => {
+    let range = null;
+    const rest = [];
+    for (const f of filters) {
+      if (f.name === 'started_at' && f.type === 'time' && (f.value?.from || f.value?.to)) {
+        range = {
+          start: f.value.from ? new Date(f.value.from).getTime() : 0,
+          end: f.value.to ? new Date(f.value.to).getTime() : Date.now(),
+        };
+      } else {
+        rest.push(f);
+      }
+    }
+    return { serverRange: range, clientFilters: rest };
+  }, [filters]);
+
+  const rangeKey = JSON.stringify(serverRange);
+  useEffect(() => { applyRange(serverRange); }, [rangeKey]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filtered = useMemo(() => applyFilters(calls, clientFilters), [calls, clientFilters]);
+  const stats = useMemo(() => computeCallStats(filtered), [filtered]);
   const answerRate = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
 
   // Visible column count drives group-header colSpan (so it spans the table even
   // when the hide-on-mobile columns are collapsed). md+ shows all; phone hides 3.
   const visibleColSpan = COLUMNS.length;
 
+  // Sort: mapped columns (started_at) sort on the SERVER across all pages;
+  // handleSortChange returns false for unmapped ones, which then sort the
+  // current page client-side (the API's other sortable fields are unverified).
   const onSort = (key) => {
+    if (handleSortChange(key)) {
+      setOrderBy(key);
+      setOrder((prev) => (orderBy === key && prev === 'desc' ? 'asc' : 'desc'));
+      return;
+    }
     if (orderBy === key) setOrder(order === 'asc' ? 'desc' : 'asc');
     else { setOrderBy(key); setOrder('asc'); }
   };
@@ -131,7 +180,7 @@ export default function Calls() {
   // Build grouped sections. groupBy: 'time' → time bucket then status; 'status'
   // → status only; 'none' → flat. Rows within the innermost group are sorted.
   const sections = useMemo(() => {
-    const rows = [...calls].sort((a, b) => cmp(a, b, orderBy, order));
+    const rows = [...filtered].sort((a, b) => cmp(a, b, orderBy, order));
     if (groupBy === 'none') return [{ label: null, count: rows.length, subs: [{ label: null, rows }] }];
 
     const byKey = (arr, keyFn) => arr.reduce((m, c) => { const k = keyFn(c); (m[k] ||= []).push(c); return m; }, {});
@@ -148,7 +197,7 @@ export default function Calls() {
       const subs = STATUS_ORDER.filter((s) => gs[s]).map((s) => ({ label: s, kind: 'status', rows: gs[s] }));
       return { label: tk, kind: 'time', count: gt[tk].length, subs };
     });
-  }, [calls, groupBy, orderBy, order]);
+  }, [filtered, groupBy, orderBy, order]);
 
   // Translate a group label (time bucket or status) for display.
   const groupLabel = (label, kind) =>
@@ -181,7 +230,7 @@ export default function Calls() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, width: '100%', maxWidth: 1440, mx: 'auto' }}>
-      <PageHeader title={t('menu.calls')} subtitle={t('calls.subtitle', { count: calls.length })} actions={sourceChip} />
+      <PageHeader title={t('menu.calls')} subtitle={t('calls.subtitle', { count: filtered.length })} actions={sourceChip} />
 
       {/* KPI cards — CSS grid (MUI v7 dropped the legacy <Grid item> API) */}
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', lg: 'repeat(6, 1fr)' }, mb: 2 }}>
@@ -194,6 +243,9 @@ export default function Calls() {
       </Box>
 
       {error && <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {/* Filters (ported from va-voipbox-portal report-filters) */}
+      <Filters fields={filterFields} value={filters} onChange={setFilters} />
 
       {/* Group toggle */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
@@ -246,6 +298,19 @@ export default function Calls() {
           </Table>
         )}
       </TableContainer>
+
+      {/* Server-side pagination — `total` is the API's X-Total (all rows), not
+          just what's loaded, so the whole history is reachable. */}
+      <TablePagination
+        component="div"
+        count={total}
+        page={page}
+        rowsPerPage={perPage}
+        onPageChange={(_e, p) => setPage(p)}
+        onRowsPerPageChange={(e) => { setPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+        rowsPerPageOptions={[10, 20, 50, 100]}
+        data-testid="calls-pagination"
+      />
 
       <CallDetailDrawer
         call={selected}

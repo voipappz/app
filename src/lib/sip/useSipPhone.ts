@@ -144,24 +144,39 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     const creds = credsRef.current;
     const cfg = cfgRef.current;
     if (!creds) return;
+    // WebRTC must be available (secure context + browser support). If it isn't,
+    // fail cleanly to 'failed' rather than throwing — the softphone is optional
+    // and must never break the rest of the app.
+    if (typeof RTCPeerConnection === "undefined" || typeof WebSocket === "undefined") {
+      addLog("error", "sip.WebRTC", "WebRTC unavailable (insecure context or unsupported browser); softphone disabled");
+      setStatus("failed");
+      return;
+    }
     const domain = creds.domain || cfg.domain;
     const uri = UserAgent.makeURI(`sip:${creds.username}@${domain}`);
     if (!uri) { setStatus("failed"); return; }
 
-    const ua = new UserAgent({
-      uri,
-      transportOptions: { server: cfg.wssUrl },
-      authorizationUsername: String(creds.username),
-      authorizationPassword: creds.password,
-      displayName: creds.displayName,
-      // Capture SIP.js logs at debug into the phone's Logs tab. Built-in console
-      // output stays at the configured level so dev tooling is unaffected.
-      logLevel: "debug",
-      logBuiltinEnabled: cfg.logLevel === "debug",
-      logConnector: (level: string, category: string, _label: string | undefined, content: unknown) => addLog(level, category, content),
-      sessionDescriptionHandlerFactoryOptions: { peerConnectionConfiguration: { iceServers: cfg.iceServers } },
-      delegate: { onInvite: (invitation: Invitation) => handleIncomingCall(invitation) },
-    });
+    let ua: UserAgent;
+    try {
+      ua = new UserAgent({
+        uri,
+        transportOptions: { server: cfg.wssUrl },
+        authorizationUsername: String(creds.username),
+        authorizationPassword: creds.password,
+        displayName: creds.displayName,
+        // Capture SIP.js logs at debug into the phone's Logs tab. Built-in console
+        // output stays at the configured level so dev tooling is unaffected.
+        logLevel: "debug",
+        logBuiltinEnabled: cfg.logLevel === "debug",
+        logConnector: (level: string, category: string, _label: string | undefined, content: unknown) => addLog(level, category, content),
+        sessionDescriptionHandlerFactoryOptions: { peerConnectionConfiguration: { iceServers: cfg.iceServers } },
+        delegate: { onInvite: (invitation: Invitation) => handleIncomingCall(invitation) },
+      });
+    } catch (err) {
+      addLog("error", "sip.UserAgent", `failed to create SIP user agent: ${err instanceof Error ? err.message : String(err)}`);
+      setStatus("failed");
+      return;
+    }
     uaRef.current = ua;
 
     // Manual reconnect on unexpected transport drops (webrtc-phone.ts 723–755).

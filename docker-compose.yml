@@ -47,23 +47,10 @@ services:
     environment:
       NODE_ENV: development
       TERM: xterm
-      # deno-api runs network_mode: host (listens on the host at :4001). react-app-tichman
-      # is on the bridge network, so the Vite proxy reaches deno-api via the host
-      # gateway (extra_hosts below). One upstream now — calls/events + WS + app.
+      # The app talks to the mothership (VITE_MOTHERSHIP_URL, from .env) for /api/*.
+      # deno-api runs network_mode: host (:4001 on the host); this container is on
+      # the bridge, so the Vite proxy reaches it via the host gateway (extra_hosts).
       VITE_DENO_API_TARGET: ${VITE_DENO_API_TARGET:-http://host.docker.internal:4001}
-      # # PostgREST is reached via KONG (host-networked :8000), which owns/strips the
-      # # /rest/v1 route. PostgREST itself is loopback-only, so go through the gateway
-      # # to Kong. The browser only ever sees /rest/v1 (proxied).
-      # VITE_POSTGREST_TARGET: ${VITE_POSTGREST_TARGET:-http://host.docker.internal:8000}
-
-      # PostgREST is reached via a gateway (Kong) that owns/strips the /rest/v1
-      # route. The Vite /rest/v1 proxy does NO rewrite, so this MUST be an ORIGIN
-      # only (no /rest/v1 suffix) — the request path /rest/v1/* is appended as-is.
-      # Local Kong: http://host.docker.internal:8000 · Cloud: https://cloud.voipappz.io
-      # NB: do NOT use $POSTGREST_URL here — it includes /rest/v1 and would double it.
-      VITE_POSTGREST_TARGET: ${VITE_POSTGREST_TARGET:-https://cloud.voipappz.io/rest/v1}
-
-
     extra_hosts:
       - "host.docker.internal:172.17.0.1"
     command: >
@@ -124,13 +111,6 @@ services:
       SECRET_KEY: ${SECRET_KEY:-}
       CABLE_URL: ${CABLE_URL:-ws://127.0.0.1:6000/cable}
       CABLE_TOKEN: ${CABLE_TOKEN:-}
-      # Map VITE_-prefixed vars from root .env to non-prefixed vars Deno expects
-      SUPABASE_URL: ${VITE_SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      # Shared secret to sign the PostgREST events token.
-      VA_PGRST_JWT_SECRET: ${VA_PGRST_JWT_SECRET:-}
-      POSTGREST_URL: ${POSTGREST_URL}
       # Engine (voipappz-api, "the brain") — transcripts are read on request from
       # its event store. Server-side basic-auth creds, NEVER VITE_-prefixed.
       ENGINE_URL: ${ENGINE_URL:-https://cloud.voipappz.io}
@@ -155,23 +135,7 @@ services:
       - ./api:/app
     env_file:
       - .env
-    environment:
-      SUPABASE_URL: ${VITE_SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
     command: deno test --allow-net --allow-env --allow-read tests/
-
-  # ngrok tunnel for DocuSeal webhook development. Opt-in: --profile tools
-  ngrok:
-    profiles: ["tools"]
-    image: ngrok/ngrok:latest
-    ports:
-      - "4040:4040"
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    command: http deno-api:4000
-    depends_on:
-      - deno-api
 
   # Production image (build + run). Opt-in: --profile prod
   # Heavy build (Deno + Vite). Behind a profile so a build failure can never

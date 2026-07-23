@@ -13,7 +13,7 @@ import DateRangeIcon from '@mui/icons-material/DateRange';
 // Calls page uses, so the Dashboard and Calls never disagree on the numbers.
 import { useCalls, computeCallStats } from '../Calls/useCalls';
 import { useCallsPerHour } from './useCallsPerHour';
-import { LiveEvents } from './widgets';
+import { LiveEvents, DashboardWidgets } from './widgets';
 import PageHeader from '../common/PageHeader';
 import StatCard from '../common/StatCard';
 import StatusChip from '../common/StatusChip';
@@ -210,6 +210,11 @@ export default function Dashboard() {
       >
         <CallsPerHourChart calls={windowed} points={callsPerHour} />
         <LiveEvents from={from} to={to} />
+      </Box>
+
+      {/* Live dashboard — widgets streamed as-is from va-crystal cable (DashboardLive) */}
+      <Box sx={{ mb: 3 }}>
+        <DashboardWidgets />
       </Box>
 
       {/* Recent calls */}

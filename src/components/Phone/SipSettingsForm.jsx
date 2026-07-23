@@ -15,8 +15,32 @@ export default function SipSettingsForm() {
   const [busy, setBusy] = useState(false);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  // Static label ABOVE each input (not a floating MUI label) — on the tight dark
+  // dock the floating labels were clipped by the field above. This reads cleanly
+  // and never overlaps: a muted caption + a borderless rounded white input.
   const field = (k, label, type = 'text') => (
-    <TextField size="small" fullWidth type={type} label={label} value={form[k] ?? ''} onChange={set(k)} margin="dense" />
+    <Box sx={{ mb: 1.5 }}>
+      <Typography
+        component="label"
+        htmlFor={`sip-${k}`}
+        sx={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.02em',
+              color: 'rgba(255,255,255,0.55)', mb: 0.5 }}
+      >
+        {label}
+      </Typography>
+      <TextField
+        id={`sip-${k}`}
+        size="small"
+        fullWidth
+        type={type}
+        value={form[k] ?? ''}
+        onChange={set(k)}
+        sx={{
+          '& .MuiOutlinedInput-root': { bgcolor: '#fff', borderRadius: '8px' },
+          '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+        }}
+      />
+    </Box>
   );
 
   const onConnect = async () => {

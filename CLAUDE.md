@@ -151,6 +151,91 @@ reachability, and the `/health` dependency report (`cable` / `duckdb` / `supabas
 - **Internationalization**: react-i18next (Hebrew default, RTL)
 - **Testing**: Playwright E2E tests with auth fixtures + Vitest for unit tests
 
+### UX shell — WebRTC-portal layout (modeled on `../va-voipbox-admin`, 2026-06-26)
+The app shell mimics the **old WebRTC portal** (`/opt/src-DONT-USE-HERE/va-voipbox-admin`,
+an Ionic/AngularJS app with WebRTC built in). The header bar is forced to **`dir="ltr"`**
+(`Layout.jsx`) so placement is PHYSICAL regardless of language: hamburger+title on the
+LEFT, the phone on the RIGHT (the app is otherwise RTL). Two anchors:
+- **Left:** a **hamburger** (`data-testid="menu-button"`) opens the **main menu as a
+  left slide-out drawer** on every screen size (no inline top-bar nav). The drawer
+  holds nav (Dashboard/Calls/Reports/Notifications/Status) + an **Options** section
+  (language he⇄en, direction RTL⇄LTR) + logout — language/logout were moved OUT of the
+  header into here. Impl: `MainMenu.jsx`.
+- **Right:** the **softphone is a dark, full-height panel DOCKED to the right edge**,
+  styled like the portal's phone dock — avatar header (`name • extension`), a
+  **presence pill** (Available/Away/DND), ready-status line with a colored dot, bottom
+  tabs **Calls · Dialpad · Settings**, borderless keypad, big green call CTA. Header
+  icons: logs (terminal), **pin/stick**, close. Impl: `PhoneWidget.jsx`
+  (`data-testid="phone-panel"`). Palette: panel `#3b4350`, header `#2f3640`, orange
+  `#f5a623`, green `#34c759`.
+- **RTL note:** MUI flips `Drawer` anchors under RTL, so both drawers pick their anchor
+  from `isRTL` to stay physical (phone right, menu left). The phone Paper is `dir="ltr"`
+  so the keypad reads 1-2-3 and tabs read Calls·Dialpad·Settings like the portal.
+- **Pin/"stick":** the pin toggle makes the dock `variant="persistent"` (stays open, no
+  backdrop, app stays usable) and persists to `localStorage['sip-phone-pinned']` so it
+  survives reloads; closing (✕) unpins.
+
+### Dashboard / Reports / Calls — data-source routing (direction, 2026-06-26)
+Each screen has ONE authoritative source; do not cross them:
+- **Calls → Postgres** via PostgREST (`VITE_REST_URL`, `useCalls.js`). ✅ already so.
+- **Reports → InfluxDB** client (server-side, via deno-api — the apiv3 token never
+  reaches the browser; same pattern as `useCallsPerHour.js`'s `/dashboard/calls-per-hour`).
+  ⚠️ TODO: Reports currently piggybacks on `useCalls` (PostgREST) — move to InfluxDB.
+- **Dashboard → cable WSS** (`../va-crystal` cable). The dashboard **structure** is
+  defined in **`../voipappz-api`** (`Mediators::Customer::Init` seeds the "live"
+  dashboard: an agents table [`extension_username, status, time_in_status, state,
+  time_in_state, call_incoming_count, call_outgoing_count, call_duration, talking_to`]
+  + a calls table), which **saves it on Redis**; **cable reads it from Redis and streams
+  it**. **Cable sends only the value stream**, not the layout.
+  - **Channel:** `DashboardLive` — subscribe `{channel, account_uuid, Live_uuid}`,
+    stream `dashboard:live:{account_uuid}`. Broadcast payload =
+    `{ "<widget_uuid>": { type:"table", table:[ {uuid, …fields} ] } }` (cable GETs
+    `user:{uuid}:{field}` from Redis).
+  - **Wiring (this app, Phase A built 2026-06-26):** deno-api bridges it — a second
+    cable client (`api/cable.ts` generalized with `identifier`/`onRaw`) subscribes
+    DashboardLive and re-emits frames on `/ws/events` as **`dashboard.live`**. Gated by
+    **`CABLE_DASHBOARD_UUID`** (the dashboard's `Live_uuid`) + a real `CABLE_ACCOUNT_UUID`.
+  - **React = pure stream renderer (display as-is).** Crystal owns all fetch/structure
+    resolution; React does NOT call the dashboard API. `useDashboardLive.js` subscribes
+    `/ws/events?topics=dashboard.#` and keeps the streamed `{ uuid: descriptor }` map;
+    `widgets/DashboardWidgets.jsx` renders each descriptor using the **portal widget
+    logic** (`models/widget.model.ts` shape): `type` (table/counter), `title`, grid
+    `row/col/sizeX/sizeY`, header colors, and `columns:[{name, header_name, type, icon,
+    display}]`. Cell formatting by column `type` (status/state → colored chip per
+    `Identity::User.color?`, duration → mm:ss, timestamp, url, number). If a frame omits
+    `columns`, they're derived from the row keys so it renders before the richer
+    descriptor lands. Verified live by feeding a synthetic widget frame.
+  - **Crystal side fixed (2026-06-26).** `Dashboard::AdminBroadcaster` was already
+    implemented (the `task_account` scratch in `cable.cr` is dead code). The real bug:
+    `DashboardLive` subscribed to `dashboard:live:{account}`, which nothing publishes to.
+    Fixed to stream from the broadcaster's channel `dashboard:{Live_uuid}:consumer:{account}`
+    (== `Dashboard::RedisCacheReader.cache_key`) — now the subscription, the scheduler's
+    `PUBSUB CHANNELS dashboard:*:consumer:*` detection, the handoff key, and the publish
+    target all align. Regression: `cable/spec/dashboard/dashboard_live_contract_spec.cr`
+    (passes; `cable.cr` type-checks). **Drive it from Redis** (no voipappz-api needed):
+    `cable/scripts/seed_dashboard_redis.sh` sets the handoff `dashboard:{uuid}:consumer:
+    {account}` + `user:{uuid}:{field}` values; point deno's `CABLE_DASHBOARD_UUID` +
+    `CABLE_ACCOUNT_UUID` at the same uuid/account. (Full live E2E needs a running
+    Redis+cable+NATS, not available in the build sandbox.) (The InfluxDB
+    `useCallsPerHour.js` still feeds the KPI chart.)
+- **Toaster/notifications:** the incoming-call UX is a **slide-in toast** modeled on
+  `va-voipbox-portal`'s `components/call-toast` — `src/components/Phone/CallToast.jsx`
+  (green `#367823`, Answer/Reject), rendered by `PhoneWidget` (replaced the modal
+  Dialog). General notifications still go through the `FireberryContext` toast; wiring
+  the cable `Notifications` channel into it is the remaining piece.
+
+### Porting from `../va-voipbox-portal` (Ionic + Angular 5 — UX/spec, not code)
+The legacy customer/agent portal is the **UX & feature-set reference** (re-implemented
+in React/MUI — no verbatim copy across frameworks). Ported so far: `call-toast` → toaster;
+`models/widget.model.ts` → dashboard widget renderer; **`components/report-filters` →
+`src/components/common/Filters.jsx`** (a reusable, controlled filter builder — types:
+string, numeric, select, multiselect, time/date-range, boolean) with the pure predicate
+helper **`src/components/common/filterModel.js`** (`applyFilters`, unit-checked), wired
+into **Calls** and **Reports** (client-side over the loaded rows; moving Reports to a
+server-side InfluxDB query honoring the filters is the remaining Phase B step). Its module catalog
+(contacts, voicemails, queues, campaigns, conferences, announcements, ivrs, agent) is the
+backlog of feature pages to port incrementally on the `Calls` scaffold.
+
 ### Backend (Deno API)
 - **Runtime**: Deno TypeScript runtime
 - **Purpose**: real-time calls/events (cable → DuckDB) + the `/ws/events` UI feed; plus PDF/email/DocuSeal/Fireberry stubs

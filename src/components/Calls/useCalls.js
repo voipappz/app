@@ -1,31 +1,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MOCK_CALLS } from './mock-data';
 import { getStoredMockTranscript } from './conversation-mocks';
-import { pgGet } from '../../lib/postgrest';
+import { getCalls } from '../../services/callsApi';
 
 /**
- * useCalls — calls pulled from the Postgres event store via PostgREST.
+ * useCalls — a page of calls from voipappz-api (GET /api/calls).
  *
- * The CALLS LIST is read from PostgREST's `api.calls` view (one row per call,
- * folded from EventCdr legs by va_call_uuid) — no deno-api, no DuckDB. There is
- * no live push (PostgREST can't), so updates are MANUAL: call `refresh()` (the
- * Calls page wires a Refresh button to it).
+ * SERVER-SIDE paging/sort/filter (nimbus-admin's pattern): the API returns one
+ * page plus the total in the `X-Total` header, so the UI can reach all rows
+ * instead of a truncated fetch. Paging/sort/search state lives here and any
+ * change refetches. There is no live push — `refresh()` is the manual re-read
+ * (the Calls page wires a Refresh button to it).
  *
- * The single deno-api worker still owns custom logic (transcription, recording,
- * transcribe) — those endpoints are reached via `EVENTS_API` below, NOT this
- * hook.
- *
- * Env (all from .env): see src/lib/postgrest.ts (VITE_REST_URL, VITE_EVENTS_*).
- *   VITE_USE_MOCK=1  skip the API, use static MOCK_CALLS.
+ * Env: VITE_MOTHERSHIP_URL (the API base, see lib/clients/api.ts).
+ *      VITE_USE_MOCK=1  skip the API, use static MOCK_CALLS.
  */
 
-// HTTP base for the deno-api worker endpoints (transcription / recording /
-// transcribe). Kept for the sibling components that still call deno; the calls
-// list + event timeline now come from PostgREST. '' = same-origin.
+// UI column → API sort field. Only these are sent as `order_by`; columns absent
+// from the map are sorted client-side within the current page (the API's
+// sortable fields beyond created_at are unverified on this deployment).
+export const SORT_FIELD_MAP = { started_at: 'created_at' };
+
+// HTTP base for the deno-api worker endpoints (transcription / recording).
+// Deno is custom-logic only; the calls list comes from voipappz-api. '' = same-origin.
 export const EVENTS_API = import.meta.env.VITE_EVENTS_API_URL ?? '';
 
-// WS base for the LiveEvents dashboard widget, which still taps the deno-api
-// worker's /ws/events. Same-origin by default so it rides the Vite proxy.
+// WS base for the LiveEvents dashboard widget (deno /ws/events). Same-origin by
+// default so it rides the Vite proxy.
 export function eventsWsBase() {
   if (import.meta.env.VITE_EVENTS_WS_URL) return import.meta.env.VITE_EVENTS_WS_URL;
   if (typeof window !== 'undefined' && window.location) {
@@ -36,64 +37,92 @@ export function eventsWsBase() {
 }
 
 export function useCalls() {
-  const [callMap, setCallMap] = useState(() => new Map());
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);            // 0-based (MUI TablePagination)
+  const [perPage, setPerPage] = useState(20);     // nimbus uses 20
+  const [orderBy, setOrderBy] = useState('created_at');
+  const [orderType, setOrderType] = useState('desc');
+  // Date range is the ONLY server-side filter this deployment accepts:
+  // search[created_at]=<start> - <end> → 200, while search[<other field>] → 500
+  // (verified live). Every other filter is applied client-side by the caller.
+  const [range, setRange] = useState(null);
   const [source, setSource] = useState('loading');
   const [error, setError] = useState(null);
   const cancelled = useRef(false);
 
   const useMock = import.meta.env.VITE_USE_MOCK === '1';
+  // Stable dep for the effect — `range` is a fresh object on every change.
+  const rangeKey = JSON.stringify(range);
 
-  // Pull the folded call rows from PostgREST (api.calls). Re-run on demand via
-  // the returned `refresh` — there is no live socket.
-  const loadHistory = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
-      const rows = await pgGet('/calls?order=started_at.desc&limit=200');
+      const { rows: got, total: n } = await getCalls({
+        page: page + 1,               // API is 1-based
+        perPage,
+        orderBy,
+        orderType,
+        range,
+      });
       if (cancelled.current) return;
       // Demo: reflect previously mock-transcribed calls so the list chip stays
       // 'completed' after a reload (transcripts are persisted in localStorage).
-      setCallMap(new Map((Array.isArray(rows) ? rows : []).map((c) => [
-        c.id,
-        getStoredMockTranscript(c.id) ? { ...c, transcription_status: 'completed' } : c,
-      ])));
+      setRows(got.map((c) => (getStoredMockTranscript(c.id) ? { ...c, transcription_status: 'completed' } : c)));
+      setTotal(n);
       setSource('events');
       setError(null);
     } catch (err) {
-      if (!cancelled.current) setError(String(err));
+      if (!cancelled.current) { setError(String(err)); setSource('events'); }
     }
-  }, []);
+    // `range` is covered by rangeKey; listing it would refetch on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, perPage, orderBy, orderType, rangeKey]);
 
   useEffect(() => {
     cancelled.current = false;
 
     if (useMock) {
-      setCallMap(new Map(MOCK_CALLS.map((c) => [c.id, c])));
+      setRows(MOCK_CALLS);
+      setTotal(MOCK_CALLS.length);
       setSource('mock');
       return () => { cancelled.current = true; };
     }
 
-    loadHistory();
+    load();
     return () => { cancelled.current = true; };
-  }, [useMock, loadHistory]);
+  }, [useMock, load]);
 
-  // Optimistically merge a patch into one cached call row (e.g. flip
-  // transcription_status as the drawer's transcribe flow progresses). No-op if
-  // the id isn't loaded; a later refresh() re-reads authoritative server state.
-  const patchCall = useCallback((id, patch) => {
-    setCallMap((prev) => {
-      const existing = prev.get(id);
-      if (!existing) return prev;
-      const next = new Map(prev);
-      next.set(id, { ...existing, ...patch });
-      return next;
-    });
+  // Sort request from the table. Mapped columns sort on the SERVER (refetch from
+  // page 0); unmapped ones return false so the caller sorts the page client-side.
+  const handleSortChange = useCallback((uiKey) => {
+    const field = SORT_FIELD_MAP[uiKey];
+    if (!field) return false;
+    setOrderType((prev) => (orderBy === field && prev === 'desc' ? 'asc' : 'desc'));
+    setOrderBy(field);
+    setPage(0);
+    return true;
+  }, [orderBy]);
+
+  // Date range changed → back to page 0 and refetch with search[created_at].
+  const applyRange = useCallback((next) => {
+    setRange(next || null);
+    setPage(0);
   }, []);
 
-  const calls = useMemo(
-    () => [...callMap.values()].sort((a, b) => new Date(b.started_at || 0) - new Date(a.started_at || 0)),
-    [callMap]
-  );
+  // Optimistically merge a patch into one row (e.g. transcription_status as the
+  // drawer's transcribe flow progresses). A later refresh() re-reads the server.
+  const patchCall = useCallback((id, patch) => {
+    setRows((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  }, []);
 
-  return { calls, loading: source === 'loading', error, source, refresh: loadHistory, patchCall };
+  const calls = useMemo(() => rows, [rows]);
+
+  return {
+    calls, total, page, perPage, orderBy, orderType,
+    loading: source === 'loading', error, source,
+    setPage, setPerPage, handleSortChange, applyRange,
+    refresh: load, patchCall,
+  };
 }
 
 /** Pure stats reducer — display KPIs from a call list. */
