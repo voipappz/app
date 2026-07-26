@@ -13,11 +13,10 @@
 import { AuthSession, saveSession } from '../auth';
 
 // All endpoint knobs are env-driven so tenant forks / surfaces repoint without a
-// code change. Defaults are the values proven to work against cloud.voipappz.io
-// (port 443; the older :9443 endpoint is refused from some networks).
-// `||` not `??` so an empty-string env (e.g. an unvalued Docker ARG) still falls
-// back to the default instead of becoming "" (which would post to the root).
-const BASE = (((import.meta.env.VITE_MOTHERSHIP_URL as string) || 'https://cloud.voipappz.io')).replace(/\/$/, '');
+// code change. BASE defaults to RELATIVE (same origin): login rides the Vite
+// proxy in dev and the deno-api mothership forwarder in prod, so no backend
+// host is baked into the bundle. Set VITE_MOTHERSHIP_URL only to go direct.
+const BASE = (((import.meta.env.VITE_MOTHERSHIP_URL as string) || '')).replace(/\/$/, '');
 // USER surface (this app is user-facing, like voipappz-app). Verified live on
 // MTN: /auth/user_login → { user, token } where user carries profile.language,
 // acl.data, extension{username,password}, environment{domain,wss_server}.

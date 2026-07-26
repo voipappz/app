@@ -38,15 +38,23 @@ export default defineConfig(({ mode }) => {
       // PostgREST itself binds loopback-only (127.0.0.1:3001), so never target it
       // directly from a container.
       const POSTGREST = process.env.VITE_POSTGREST_TARGET || 'http://127.0.0.1:8000';
+      // The mothership (voipappz-api). One knob repoints it: VITE_MOTHERSHIP_URL
+      // in .env (VITE_API_TARGET still wins if set explicitly). The browser only
+      // ever sees relative URLs — this proxy (dev) / the deno forwarder (prod)
+      // owns the actual host.
+      const MOTHERSHIP = process.env.VITE_API_TARGET || env.VITE_MOTHERSHIP_URL || 'https://cloud.voipappz.io';
       return {
-        // External upstream API (cloud). All data reads go here now — PostgREST
-        // is gone; the app talks only to voipappz-api /api/*.
-        '/api': { target: process.env.VITE_API_TARGET || 'https://cloud.voipappz.io', changeOrigin: true, secure: true },
+        // Mothership surfaces: data reads (/api/*), the user login/OTP surface
+        // (/auth/user_login, /auth/user/otp/verify), and public portal branding
+        // (/tasks/customer_portal_data).
+        '/api':   { target: MOTHERSHIP, changeOrigin: true, secure: true },
+        '/tasks': { target: MOTHERSHIP, changeOrigin: true, secure: true },
         // deno-api: app endpoints, the worker (transcription/recording), the
         // account login proxy (/auth/login → PostgREST /rpc/login), and the live
         // WS. NB: /auth/login (not /login) so it doesn't shadow the SPA's /login
-        // page route.
+        // page route, and it must stay ABOVE the general /auth mothership entry.
         '/auth/login':   { target: DENO, changeOrigin: true },
+        '/auth':         { target: MOTHERSHIP, changeOrigin: true, secure: true },
         '/deno-api':     { target: DENO, changeOrigin: true, rewrite: (p) => p.replace(/^\/deno-api/, '') },
         '/events-api':   { target: DENO, changeOrigin: true, rewrite: (p) => p.replace(/^\/events-api/, '') },
         '/ws/events':    { target: DENO, changeOrigin: true, ws: true },

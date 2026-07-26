@@ -2,8 +2,9 @@
 
 A guide for teams building tenant features on top of this template. The app is
 **component-based** and talks to **one backend — the voipappz-api mothership**.
-A tenant fork changes **env, not code**: point `VITE_MOTHERSHIP_URL` at the
-tenant's mothership and the same components light up against that tenant's data.
+A tenant fork changes **env, not code**: repoint the mothership endpoints
+(`VITE_API_TARGET` dev / `ENGINE_URL` prod) and the same components light up
+against that tenant's data.
 
 > Architecture context: [ARCHITECTURE.md](./ARCHITECTURE.md) · repo conventions:
 > [CLAUDE.md](./CLAUDE.md). This file is the **how-to for adding features**.
@@ -50,7 +51,8 @@ A fork is configured entirely by env — no code changes.
 
 | Var | Default | Meaning |
 |---|---|---|
-| `VITE_MOTHERSHIP_URL` | `https://cloud.voipappz.io` | The tenant's voipappz-api base. **The one knob** that repoints the whole app. |
+| `VITE_API_TARGET` / `ENGINE_URL` | `https://cloud.voipappz.io` | The tenant's voipappz-api, reached same-origin via the Vite proxy (dev) / deno forwarder (prod). |
+| `VITE_MOTHERSHIP_URL` | — (relative) | Direct-mode escape hatch for static-only hosting (browser calls the mothership cross-origin). Leave unset. |
 | `VITE_AUTH_URL` | `/auth/login` | Where the browser posts credentials (rides the Vite/deno proxy). |
 | `VITE_MOCK_LOGIN` | — | `1` = offline login mock (any email → OTP `123456`), for local dev with no backend. |
 

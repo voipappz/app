@@ -121,7 +121,7 @@ export const config = {
   // WebSocket endpoints (relative to current host)
   ws: {
     get cable() {
-      return "wss://cloud.voipappz.io/ws";//getWebSocketUrl('/ws'); 
+      return getWebSocketUrl('/ws');
     },
     get ws() {
       return getWebSocketUrl('/ws');
