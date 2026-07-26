@@ -92,7 +92,7 @@ export default tseslint.config(
   },
   // Node.js files configuration
   {
-    files: ['server.js', 'vite.config.js', 'test-websocket.js', 'scripts/debug/analyze-reports.js', 'cypress.config.js', 'tailwind.config.js'],
+    files: ['vite.config.js', 'tailwind.config.js'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {

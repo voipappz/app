@@ -103,5 +103,6 @@ layout direction.
 
 `make deploy` builds the image, pushes to the registry, and swaps the container
 via Kamal (sources `.kamal/secrets`). `make ship` = `git push` + deploy. After a
-deploy, `make status` probes the deployed version. See [CLAUDE.md](./CLAUDE.md)
-for the MTN deployment specifics.
+deploy, `make status` probes the deployed version. See
+[DEPLOYMENT.md](./DEPLOYMENT.md) for the full flow and the per-tenant deploy
+configs (`config/deploy.mtn.yml`, `config/deploy.pbx20.yml`).
