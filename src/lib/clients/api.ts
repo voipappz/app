@@ -11,7 +11,11 @@
 import { getToken, logout } from '../auth';
 import { AUTH_EVENTS } from '../../context/AuthContext';
 
-const BASE = ((import.meta.env.VITE_MOTHERSHIP_URL ?? 'https://cloud.voipappz.io') as string).replace(/\/$/, '');
+// Default is RELATIVE (same origin): requests ride the Vite proxy in dev and
+// the deno-api mothership forwarder in prod, so no backend host is baked into
+// the bundle. Set VITE_MOTHERSHIP_URL only to bypass the app server and talk
+// to a mothership directly (requires CORS on that host).
+const BASE = ((import.meta.env.VITE_MOTHERSHIP_URL || '') as string).replace(/\/$/, '');
 
 export interface ApiListResult<T> {
   rows: T[];

@@ -11,7 +11,7 @@
 //   deno holds nothing; the engine event store is the single source of truth.
 import {
   PORT, CABLE_URL, CABLE_CHANNEL, CABLE_TOKEN, CABLE_SECRET, CABLE_ACCOUNT_UUID, CABLE_ENABLED,
-  CABLE_DASHBOARD_UUID, POSTGREST_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
+  CABLE_DASHBOARD_UUID, POSTGREST_URL, ENGINE_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
 } from './config.ts';
 import { createJwtVerifier, unauthorizedResponse, type JwtVerifier } from './auth_middleware.ts';
 import { fetchTranscript } from './engine.ts';
@@ -26,6 +26,37 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 const JSON_HEADERS = { "Content-Type": "application/json", ...CORS_HEADERS };
+
+// Mothership (voipappz-api) paths the BFF forwards same-origin — see the
+// forwarder block in the request handler.
+const MOTHERSHIP_PREFIXES = ["/api/", "/auth/", "/tasks/"];
+
+async function forwardToMothership(request: Request, url: URL): Promise<Response> {
+  const target = `${ENGINE_URL}${url.pathname}${url.search}`;
+  const headers = new Headers();
+  for (const h of ["authorization", "content-type", "accept"]) {
+    const v = request.headers.get(h);
+    if (v) headers.set(h, v);
+  }
+  try {
+    const res = await fetch(target, {
+      method: request.method,
+      headers,
+      // Buffer the body (login/OTP payloads are tiny) — simplest cross-runtime-safe way.
+      body: request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer(),
+      redirect: "manual",
+    });
+    const out = new Headers(CORS_HEADERS);
+    for (const h of ["content-type", "x-total"]) {
+      const v = res.headers.get(h);
+      if (v) out.set(h, v);
+    }
+    return new Response(res.body, { status: res.status, headers: out });
+  } catch (err) {
+    console.error("mothership forward failed:", err instanceof Error ? err.message : err);
+    return new Response(JSON.stringify({ error: "mothership unreachable" }), { status: 502, headers: JSON_HEADERS });
+  }
+}
 
 const STATIC_DIR = Deno.env.get("STATIC_DIR") || "./dist";
 
@@ -232,6 +263,8 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
 
+    // (forwarded prefixes are matched at the bottom, after deno's own routes)
+
     // ── Login (deno is the brain) — POST /auth/login {email,password} ─────
     // Proxies to PostgREST's users-backed `api.login` RPC and returns the
     // signed JWT (role api_readonly + user_uuid/environment_uuid claims). The
@@ -330,6 +363,17 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
         last_event_at: fresh.last_event_at, seconds_since_last_event: fresh.age_seconds, events_status: fresh.status,
         engine: ENGINE_ENABLED, timestamp: new Date().toISOString(),
       }), { status: 200, headers: JSON_HEADERS });
+    }
+
+    // ── Mothership forwarder — /api/*, /auth/*, /tasks/* → ENGINE_URL ─────
+    // The browser only ever talks same-origin: data reads (/api/...), the user
+    // login/OTP surface (/auth/user_login, /auth/user/otp/verify), and the
+    // public portal branding (/tasks/customer_portal_data) all ride through
+    // here, so no mothership URL is ever baked into the bundle. The client's
+    // own Authorization header passes through untouched; deno adds nothing.
+    // (deno's own /auth/login POST is handled above and never reaches this.)
+    if (MOTHERSHIP_PREFIXES.some((p) => url.pathname.startsWith(p))) {
+      return forwardToMothership(request, url);
     }
 
     if (request.method === "GET" || request.method === "HEAD") {

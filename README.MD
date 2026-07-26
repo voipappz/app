@@ -2,7 +2,7 @@
 
 A **React + Vite** portal for VoIP/telecom tenants, built as reusable components
 on top of the **voipappz-api mothership**. A tenant fork changes **env, not
-code** — point `VITE_MOTHERSHIP_URL` at the tenant's backend and the same app
+code** — repoint the mothership endpoints (`VITE_API_TARGET`/`ENGINE_URL`) and the same app
 lights up against that tenant's data (login, calls, reports, feature flags).
 
 - **Building a feature?** → [DEVELOPING.md](./DEVELOPING.md) (the data-access layer + "add a feature page" recipe)
@@ -14,7 +14,7 @@ lights up against that tenant's data (login, calls, reports, feature flags).
 ## Quick start
 
 ```bash
-cp .env.example .env          # set VITE_MOTHERSHIP_URL (the only required var)
+cp .env.example .env          # defaults work out of the box (cloud mothership)
 npm install
 npm run dev                   # → http://localhost:4200
 ```
@@ -41,10 +41,13 @@ widgets; without it, those simply stay quiet.
 ## Configuration
 
 All configuration is env (see **[.env.example](./.env.example)** — copy it to
-`.env`). The only required variable:
+`.env`). Nothing is required out of the box — the browser uses relative URLs
+and reaches the mothership through the app server (Vite proxy in dev, deno-api
+forwarder in prod). Repoint a tenant fork with:
 
 ```bash
-VITE_MOTHERSHIP_URL=https://cloud.voipappz.io   # the tenant's voipappz-api
+VITE_API_TARGET=https://tenant.example   # dev: Vite proxy upstream
+ENGINE_URL=https://tenant.example        # prod: deno-api forward target
 ```
 
 Everything else (softphone SIP, dashboard extras, branding, mocks) is optional

@@ -6,7 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **VoipAppZ portal** — a React 19 + Vite admin portal for VoIP/telecom tenants.
 The app is component-based and talks to **one backend: the voipappz-api
-"mothership"** (`VITE_MOTHERSHIP_URL`). A tenant fork changes **env, not code**.
+"mothership"**, always same-origin through the app server (Vite proxy in dev,
+deno-api forwarder in prod). A tenant fork changes **env, not code**.
 
 - **How it fits together** → [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **How to add a feature** (service → hook → component recipe, data-access layer, feature flags) → [DEVELOPING.md](./DEVELOPING.md)
@@ -57,8 +58,14 @@ remnants exist in `api/config.ts` / deploy configs; don't build on them.
 ## Environment
 
 Env is the whole tenant-configuration surface — see `.env.example` (documented
-inline). Only **`VITE_MOTHERSHIP_URL`** is required.
+inline). Nothing is required out of the box; repoint a tenant fork with
+`VITE_API_TARGET` (dev Vite proxy upstream) + `ENGINE_URL` (prod deno forward
+target).
 
+- **The browser never carries a backend host.** Clients build relative URLs;
+  the Vite proxy (dev) or the deno forwarder (prod) owns the actual mothership
+  host. `VITE_MOTHERSHIP_URL` is the direct-mode escape hatch for static-only
+  hosting (e.g. the Fireberry embed) — leave it unset otherwise.
 - **Never set `VITE_API_BASE_URL` in dev** — it bypasses the Vite proxy and
   trips CORS.
 - **Never `VITE_`-prefix a secret** — `VITE_*` is baked into the public browser
