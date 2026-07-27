@@ -1,4 +1,8 @@
-.PHONY: help dev check-mothership up down build verify test push deploy ship status tmux module prod prod-down
+.PHONY: help dev check-mothership up down build lint unit verify test push deploy ship status tmux module prod prod-down
+
+# Everything runs in Docker — no host node/npm/ruby required. One-off npm/node
+# commands reuse the react-app service (repo mount + cached node_modules volume).
+NPM_RUN := docker compose run --rm --no-deps react-app bash -c
 
 # ── Config (override on the CLI or in .env) ─────────────────────────────────
 # The mothership base — read from .env (VITE_MOTHERSHIP_URL), else the cloud.
@@ -18,11 +22,10 @@ help: ## Show this help
 	@awk 'BEGIN{FS=":.*## ";printf "\nmake \033[36m<target>\033[0m\n\n"} \
 	      /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n",$$1,$$2}' $(MAKEFILE_LIST)
 
-dev: check-mothership ## Run the app: deno-api (Docker) + host Vite with HMR
-	docker compose up -d deno-api          # backend extras: /ws events, calls-per-hour, transcripts
-	-docker compose stop react-app # free :4200 so host Vite (HMR) can bind it
-	@echo "deno-api → :4001 · Vite → $(WEB_APP) (proxies /api → mothership $(MOTHERSHIP))"
-	npm run dev
+dev: check-mothership ## Run the app in Docker (Vite HMR :4200 + deno-api :4001), attached logs
+	docker compose up -d react-app deno-api
+	@echo "deno-api → :4001 · Vite → $(WEB_APP) (proxies /api → mothership $(MOTHERSHIP)) — Ctrl-C detaches, stack keeps running"
+	docker compose logs -f react-app
 
 check-mothership: ## Verify the mothership (VITE_MOTHERSHIP_URL) is reachable
 	@echo "==> Mothership (override: MOTHERSHIP=https://<host>)"
@@ -43,10 +46,16 @@ tmux: ## Open the dev cockpit (tmuxinator: stack + logs + shells)
 
 module: ## Scaffold a feature module: make module NAME=Foo [ENDPOINT=/api/foos]
 	@test -n "$(NAME)" || { echo "usage: make module NAME=Foo [ENDPOINT=/api/foos]"; exit 1; }
-	node scripts/new-module.mjs "$(NAME)" "$(ENDPOINT)"
+	docker compose run --rm --no-deps react-app node scripts/new-module.mjs "$(NAME)" "$(ENDPOINT)"
 
-build: ## Production build → dist/
-	npm run build
+build: ## Production build → dist/ (in Docker)
+	$(NPM_RUN) 'npm install --loglevel=error --no-audit --no-fund && npm run build'
+
+lint: ## ESLint (in Docker)
+	$(NPM_RUN) 'npm install --loglevel=error --no-audit --no-fund && npm run lint'
+
+unit: ## Vitest unit tests, one-shot (in Docker)
+	$(NPM_RUN) 'npm install --loglevel=error --no-audit --no-fund && npm run test:run'
 
 prod: ## Deploy via docker compose: build + run the production image (:8000)
 	docker compose --profile prod build production
@@ -68,8 +77,8 @@ verify: ## Health check: deno-api, web, and the /health dependency report
 	@echo "==> Dependencies (reported by $(DENO_API)/health)"
 	@curl -s "$(DENO_API)/health" | python3 -c "import sys,json;d=json.load(sys.stdin);c=d.get('checks',{});[print('  %-9s %-5s %s'%(k,v.get('status','?').upper(),'('+v['detail']+')' if v.get('detail') else '')) for k,v in c.items()];print('  %-9s %s'%('overall',d.get('status','?').upper()))" 2>/dev/null || echo "  health endpoint unreachable"
 
-test: ## Run all Playwright tests (needs the app running)
-	npx playwright test
+test: ## Playwright E2E in Docker (needs the app running — make up / make dev)
+	docker compose --profile test run --rm e2e
 
 # Kamal — ALWAYS via the official Docker image (no native/rvm install): any
 # box with Docker can deploy, and everyone runs the same kamal version.
