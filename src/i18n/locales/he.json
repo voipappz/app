@@ -704,9 +704,7 @@
     "checks": {
       "cable": "כבל (זמן אמת)",
       "events": "זרם אירועים",
-      "engine": "מנוע (אם)",
-      "supabase": "משתמשים (Supabase)",
-      "duckdb": "אחסון מקומי"
+      "engine": "מנוע (אם)"
     },
     "state": {
       "up": "תקין",

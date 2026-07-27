@@ -1,6 +1,6 @@
 version: "3.8"
 
-# Core services (react-app-tichman + deno-api) have NO profile, so a plain
+# Core services (react-app + deno-api) have NO profile, so a plain
 #   docker compose up -d        (or: make up)
 # starts ONLY them. Everything else is behind a profile and is never built or
 # started by a default `up`/`build` — so a heavy/optional build (e.g. the
@@ -31,7 +31,7 @@ services:
     command: sleep infinity
 
   # React + Vite development server (CORE — always started by `up`)
-  react-app-tichman:
+  react-app:
     security_opt:
       - "seccomp=unconfined"
     image: node:24.10.0
@@ -150,16 +150,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.production
+    # The image serves everything on PORT (deno: dist/ + API) — same process
+    # Kamal runs in prod (config/deploy.yml, app_port 3000).
     ports:
-      - "8000:8000"
+      - "8000:3000"
     environment:
-      - NODE_ENV=production
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 3s
-      start_period: 5s
-      retries: 3
+      PORT: 3000
+    # No container healthcheck: the image has no curl (in prod, kamal-proxy
+    # probes /test externally — config/deploy.yml). Verify locally with:
+    #   curl localhost:8000/test
 
 volumes:
   node_modules_cache:

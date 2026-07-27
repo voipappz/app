@@ -1,99 +1,80 @@
-# Architecture — VoIPAppZ admin template
+# Architecture — VoIPAppz portal
 
-A simple, env-driven template for a per-tenant VoIP admin. **The app consumes what it
-can from the mothership and adds its own custom logic + local data on top.** Fork it per
-tenant by changing env, not code.
+A React 19 + Vite admin portal for VoIP/telecom tenants, built as reusable
+components over **one backend: the voipappz-api "mothership"**. A tenant fork
+changes **env, not code**.
 
-## The model: consume the mothership, write custom
+## The one rule: same-origin, always
 
-- **Mothership** (central, shared, owned elsewhere): **PostgREST/Kong** (accounts +
-  call event store) and the **cable** (live call events). The app **CONSUMES** these —
-  account login, historical reads, live event subscription. It does not own them; they're
-  reached over env-configured endpoints (`KONG`, `CABLE_ADDR`, local or remote).
-- **The app** (this repo, per tenant): **deno-api ("the brain")** + the React admin.
-  It consumes the mothership AND **WRITES its own custom appz** — the transcription /
-  recording worker, **DuckDB** analytics/BI fed from the cable, and any tenant-specific
-  features. This local/custom side is what each fork actually builds.
+The browser never carries a backend host — every client builds **relative
+URLs**. The app server in front owns the actual upstream:
 
 ```
-        ┌──────── MOTHERSHIP (central, consumed) ────────┐        ┌──── THIS APP (local, custom) ────┐
-        │  PostgREST/Kong   accounts + call event store  │        │  deno-api (brain) + React admin   │
-        │  cable            live call events             │        │  worker, DuckDB, tenant features  │
-        └───────▲───────────────────▲────────────────────┘        └──────────────┬───────────────────┘
-                │ login + reads      │ live events (cable)                        │ writes custom
-  React ──same──┤ (POST /auth/login, │                                            ▼
-  (Vite :4200)  │  GET /rest/v1/…)   └────► deno cable consumer ──► DuckDB (analytics/BI) + /ws live push
-        bearer  │                          deno worker ─────────► transcription / recording
-        =JWT    └────► deno /auth/login ──► PostgREST /rpc/login (mothership accounts) ──► JWT ──► browser
+                    dev                                prod (single container, Kamal)
+  Browser ──► Vite :4200 ─┬─ /api, /auth/*, /tasks ──►  Browser ──► deno-api ─┬─ /api, /auth/*, /tasks ──► ENGINE_URL
+              (proxy)     │        (mothership)                    (serves     │        (mothership)
+                          ├─ /rest/v1 ──► deno-api                  dist/)     ├─ /rest/v1 ──► POSTGREST_URL (optional)
+                          └─ /auth/login, /ws/events,                          ├─ /ws/events (cable relay)
+                             /deno-api ──► deno-api                            └─ /dashboard/*, /calls/*/transcript
 ```
 
-## Principles
-
-1. **Consume the mothership; own only your custom data.** Accounts + calls/events are
-   the mothership's, read via PostgREST — the app never owns or duplicates them as truth.
-   DuckDB and any app-specific tables are *derived/custom local* data, never authoritative.
-2. **deno is the brain (BFF).** The browser only ever talks to deno (same origin) — no
-   CORS, no exposed ports, one place for auth/logic. deno forwards to PostgREST and
-   the cable.
-3. **One login, one token.** Login posts account credentials → deno → PostgREST
-   `api.login` (accounts table, bcrypt) → a signed **HS256 JWT** carrying
-   `role: api_readonly`, `account_uuid`, `customer_uuid`, `environment_uuids`, `exp`.
-   The browser stores it in `localStorage.auth` and sends it as the bearer on every
-   request. The same token reads PostgREST (RLS-ready). **No Supabase.**
-4. **Per-node, local-first.** Each node owns its own Postgres + DuckDB. The live cable
-   stream is persisted locally into DuckDB for history/BI; FreeSWITCH can be a
-   secondary/backup source later.
-5. **Template by env, not code.** Brand, endpoints, and secrets are env-driven, so a
-   tenant fork changes `.env`, not source.
+`VITE_MOTHERSHIP_URL` exists only as a **direct-mode escape hatch** for
+static-only hosting (e.g. the Fireberry embed) where no app server fronts the
+bundle.
 
 ## Pieces
 
 | Piece | Where | Role |
 |---|---|---|
-| React admin | `src/` (Vite, :4200) | UI. Talks only to deno (same origin). |
-| deno-api | `api/` (:4001) | The brain: `POST /auth/login`, reads, cable→DuckDB, `/ws`, worker. |
-| PostgREST | host (`/rest/v1` via Kong / loopback :3001) | Reads + `rpc/login` over Postgres. |
-| Postgres | host | Source of truth: `accounts`, `event_store_events`. |
-| DuckDB | `api/data/` | Per-node derived cache: logs / history / BI. |
-| Cable | va-crystal (:6000 `CallEvents`) | Live call events into deno. |
+| React app | `src/` (Vite :4200) | UI. Strict data-access layering: `lib/auth.ts` (the one credential) → `lib/clients/` (transport) → `services/` (per-feature) → `components/` (folder-per-component; `Calls` is the blueprint). |
+| deno-api | `api/` (:4001, entry `app.ts` → `server.ts`) | Thin BFF: mothership forwarder, `/ws/events` live cable relay, calls-per-hour (InfluxDB, server-side token), engine-backed transcript reads, `/health`. Serves `dist/` in prod. **Optional in dev** — without it the Dashboard extras stay quiet. |
+| Mothership (voipappz-api) | external, env-pointed | Accounts + login (`/auth/user_login` + optional per-environment OTP), calls, reports, feature flags, portal branding. The source of truth. |
+| PostgREST | external, **optional** | A second, direct-SQL data plane (`/rest/v1/*`) for tenant-custom tables/views — see below. |
+| Cable (va-crystal) | external, optional | Live call events; deno subscribes and relays to `/ws/events`. |
 
-## Auth flow (the spine)
+## Auth (the spine)
 
 ```
-Login form → POST /auth/login {email,password}
-  → deno → PostgREST POST /rpc/login   (api.login: accounts, bcrypt, signs the JWT)
-  → { token, account_uuid, customer_uuid, environment_uuids } → localStorage.auth
-  → every request: Authorization: Bearer <token>
-  → PostgREST verifies the JWT (shared secret); RLS can scope rows by the claims
+Login form → POST /auth/user_login (relative → proxy/forwarder → mothership)
+  → { user, token }  or  OTP challenge → POST /auth/user/otp/verify
+  → session (JWT) in localStorage.auth   [lib/auth.ts]
+  → every request: Authorization: Bearer <token>   [lib/clients/api.ts]
+  → 401 anywhere → session dropped, re-login       [AUTH_EVENTS.UNAUTHORIZED]
 ```
-Code: `src/lib/auth.ts` (session + login) · `src/context/AuthContext.jsx` (route gate)
-· `src/lib/postgrest.ts` (reads) · `api/server.ts` `POST /auth/login` → `POSTGREST_URL`.
 
-## Key env (the template knobs)
+The user object also configures the softphone: `extension.{username,password}`
++ `environment.{domain,wss_server}` → `sipSettingsFromUser` — **no SIP endpoint
+is baked into the code** (`VITE_SIP_*` is a dev/demo override only).
 
-| Env | Default | Purpose |
-|---|---|---|
-| `VITE_AUTH_URL` | `/auth/login` | Where the browser posts credentials (→ deno). |
-| `VITE_REST_URL` | `/rest/v1` | PostgREST read base (same-origin via gateway). |
-| `POSTGREST_URL` | `http://127.0.0.1:3001` | deno → PostgREST (login + reads). |
-| `VA_PGRST_JWT_SECRET` | — | Shared secret so PostgREST verifies the login JWT. |
-| `CABLE_URL` / `CABLE_SECRET` | `ws://127.0.0.1:6000/cable` | Live call-event cable. |
-| `VITE_APP_NAME` / `VITE_BRAND_LOGO[_WHITE]` | `voipappz` | Brand (name + logo). |
+## The optional PostgREST plane
 
-## Status / roadmap
+For tenant-custom tables/views that live beside the mothership. Enable it by
+setting **`POSTGREST_URL`** on deno (unset ⇒ `/rest/v1/*` and the PostgREST
+`/auth/login` proxy answer 503 and the app is mothership-only). The same login
+JWT rides through — PostgREST verifies it with its own shared secret
+(`VA_PGRST_JWT_SECRET`), so RLS can scope rows by the token's claims.
 
-- **Done:** accounts login via deno→PostgREST; Supabase removed from the auth path;
-  reads use the login JWT.
-- **Next:** route reads through deno; RLS policies scoping events by
-  `account_uuid`/`customer_uuid`; events-based logs/dashboard from DuckDB + `/ws`.
-  Working plan: `.claude/plans/`.
+Frontend building blocks, layered like everything else:
+
+- `lib/clients/postgrest.ts` — `pgrstList` / `pgrstGet` (relative `/rest/v1`,
+  bearer auth, exact counts via `Content-Range`).
+- `components/PostgrestTable/` — a generic drop-in table with server-side
+  paging + sorting: `<PostgrestTable table="my_view" />`.
+
+## Configuration
+
+Env is the whole tenant surface — every knob is documented inline in
+[.env.example](./.env.example) (frontend `VITE_*` only; deno reads the
+unprefixed vars — never `VITE_`-prefix a secret). Defaults point at the
+voipappz cloud; repoint a fork with `VITE_API_TARGET` (dev) + `ENGINE_URL`
+(prod).
 
 ## Verify
 
 ```bash
-# login (accounts → JWT), through the browser path (Vite → deno → PostgREST)
-curl -s -X POST localhost:4200/auth/login -H 'content-type: application/json' \
-  --data '{"email":"<acct>","password":"<pw>"}'           # → { token, ... }
-# read calls with that token
-TOK=...; curl -s -H "authorization: Bearer $TOK" localhost:4200/rest/v1/calls?limit=3
+make verify        # deno-api + web + /health dependency report
+# through the app server (any mode):
+curl -s localhost:4200/tasks/customer_portal_data          # mothership, public → 200
+curl -s localhost:4200/api/calls                           # mothership, authed → 401 without a token
+curl -s localhost:4200/rest/v1/anything                    # optional plane → 503 unless POSTGREST_URL is set
 ```
