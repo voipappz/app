@@ -1,5 +1,3 @@
-version: "3.8"
-
 # Core services (react-app + deno-api) have NO profile, so a plain
 #   docker compose up -d        (or: make up)
 # starts ONLY them. Everything else is behind a profile and is never built or
@@ -53,6 +51,9 @@ services:
       # deno-api runs network_mode: host (:4001 on the host); this container is on
       # the bridge, so the Vite proxy reaches it via the host gateway (extra_hosts).
       VITE_DENO_API_TARGET: ${VITE_DENO_API_TARGET:-http://host.docker.internal:4001}
+      # Offline mock login passthrough (see CLAUDE.md) — lets `make test` run
+      # the E2E suite against the dev stack: VITE_MOCK_LOGIN=1 make up
+      VITE_MOCK_LOGIN: ${VITE_MOCK_LOGIN:-}
     extra_hosts:
       - "host.docker.internal:172.17.0.1"
     command: >
@@ -129,6 +130,25 @@ services:
       INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-}
       INFLUXDB_DATABASE: ${INFLUXDB_DATABASE:-telegraf}
     command: deno run --allow-net --allow-env --allow-read --watch app.ts
+
+  # Playwright E2E (browsers preinstalled). Opt-in: --profile test
+  # Drives the app on the host network (make up / make dev must be running,
+  # or point PLAYWRIGHT_BASE_URL at any deployed origin).
+  e2e:
+    profiles: ["test"]
+    image: mcr.microsoft.com/playwright:v1.57.0-noble
+    network_mode: host
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules_cache:/app/node_modules
+    environment:
+      PLAYWRIGHT_BASE_URL: ${PLAYWRIGHT_BASE_URL:-http://localhost:4200}
+    command: >
+      bash -c "
+        npm install --loglevel=error --no-audit --no-fund &&
+        npx playwright test
+      "
 
   # Deno API tests. Opt-in: --profile test
   deno-tests:

@@ -18,15 +18,12 @@ deno-api forwarder in prod). A tenant fork changes **env, not code**.
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Frontend only — Vite on :4200, proxies `/api/*` to the mothership. The usual loop; no local backend needed. |
-| `make dev` | deno-api in Docker + host Vite with HMR |
-| `make up` / `make down` | Full Docker stack (web :4200 + deno-api :4001) |
-| `npm run lint` | ESLint |
-| `npm test` | Vitest unit tests (watch mode; `npm run test:run` for one-shot) |
-| `make test` | All Playwright E2E tests — **needs the app running** |
-| `npx playwright test tests/smoke.spec.ts` | A single Playwright spec |
+| `make dev` | Run the app in Docker — Vite HMR :4200 + deno-api :4001, attached logs. The usual loop; needs only Docker. |
+| `make up` / `make down` | Same stack, detached |
+| `make lint` / `make unit` | ESLint / Vitest one-shot — run in Docker (host `npm run lint` / `npm test` also work if you have node) |
+| `make test` | Playwright E2E in Docker — needs the app running; use `VITE_MOCK_LOGIN=1 make up` first for the offline suite |
 | `docker compose --profile test run --rm deno-tests` | Deno API tests (or natively: `deno test --allow-net --allow-env --allow-read api/tests`) |
-| `npm run build` | Production build → `dist/`. Must be clean before shipping. |
+| `make build` | Production bundle → `dist/`, built in Docker. Must be clean before shipping. |
 | `make verify` | Health check: deno-api, web, and the `/health` dependency report |
 | `make prod` / `make prod-down` | Run the production image on this box via docker compose (:8000) |
 | `make deploy` / `make ship` | Deploy to the production server / push + deploy — **always via the Makefile**; Docker-only, see DEPLOYMENT.md |

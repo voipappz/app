@@ -15,21 +15,20 @@ lights up against that tenant's data (login, calls, reports, feature flags).
 
 ```bash
 cp .env.example .env          # defaults work out of the box (cloud mothership)
-npm install
-npm run dev                   # → http://localhost:4200
+make dev                      # → http://localhost:4200  (everything runs in Docker)
 ```
 
-That's the whole loop for frontend work: the app talks to the mothership over
-HTTPS, so you don't need any backend running locally. Log in with a real
-mothership user (or set `VITE_MOCK_LOGIN=1` in `.env` to log in offline with any
-email + OTP `123456`).
+**Docker is the only requirement** — no local node/npm needed. Log in with a
+real mothership user (or `VITE_MOCK_LOGIN=1 make up` for an offline login with
+any email + OTP `123456`). Prefer host tooling? `npm install && npm run dev`
+works too.
 
 ## Two ways to run
 
 | Mode | Command | When |
 |---|---|---|
-| **Frontend only** | `npm run dev` | Day-to-day UI work. Vite on :4200, proxies `/api/*` to the mothership. |
-| **Full stack (Docker)** | `make up` | When you also need the deno backend (live-events WS, calls-per-hour chart, transcripts). Vite :4200 + deno-api :4001. |
+| **Attached** | `make dev` | Day-to-day work: stack up + Vite logs following. Ctrl-C detaches; the stack keeps running. |
+| **Detached** | `make up` / `make down` | Same stack in the background. Vite :4200 + deno-api :4001. |
 
 The **deno backend is optional** — the core app (login, calls, reports, feature
 flags) hits the mothership directly. deno-api only powers three Dashboard
@@ -62,9 +61,9 @@ make            # list targets
 
 | Command | Description |
 |---|---|
-| `make dev` | Run the app (deno-api in Docker + host Vite with HMR) |
+| `make dev` | Run the app in Docker (attached logs) |
 | `make up` / `make down` | Start / stop the full Docker stack (web + deno-api) |
-| `make build` | Production build (`dist/`) |
+| `make build` | Production build (`dist/`, in Docker) |
 | `make test` | Playwright E2E (needs the app running) |
 | `make verify` | Health check: deno-api, web, and dependency report |
 | `make status` | Local git + production health (set `PROD_URL`) |
@@ -91,9 +90,10 @@ as the blueprint — see [DEVELOPING.md](./DEVELOPING.md).
 ## Testing
 
 ```bash
-npm test            # Vitest unit tests (services, hooks)
-make test           # Playwright E2E (Input → Submit → capture → assert)
-npm run build       # must be clean before shipping
+make unit           # Vitest unit tests (services, hooks) — in Docker
+make test           # Playwright E2E in Docker (app must be running: VITE_MOCK_LOGIN=1 make up)
+make lint           # ESLint — in Docker
+make build          # must be clean before shipping
 ```
 
 ## Internationalization
