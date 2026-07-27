@@ -52,8 +52,10 @@ Two runtime pieces:
    production the same process serves `dist/` (single container via Kamal).
    Runs `network_mode: host` in compose.
 
-There is **no Supabase** — auth is mothership accounts + a JWT. Some `SUPABASE_*`
-remnants exist in `api/config.ts` / deploy configs; don't build on them.
+There is **no Supabase** — auth is mothership accounts + a JWT. **PostgREST is
+an optional second data plane** for tenant-custom tables: set `POSTGREST_URL`
+on deno and `/rest/v1/*` forwards to it (503 when unset); the frontend building
+blocks are `lib/clients/postgrest.ts` + `components/PostgrestTable/`.
 
 ## Environment
 

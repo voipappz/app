@@ -2,11 +2,12 @@
 // Per-customer forks add their own env-bound constants here.
 export const PORT = parseInt(Deno.env.get("PORT") || "4001");
 
-// PostgREST base URL — deno is the BFF/"brain": it proxies login (/rpc/login,
-// the users table) and reads to PostgREST. deno runs network_mode: host, so
-// the loopback bind (127.0.0.1:3001) is reachable directly; override for other
-// topologies (e.g. through Kong). NB: no trailing slash.
-export const POSTGREST_URL = (Deno.env.get("POSTGREST_URL") || "http://127.0.0.1:3001").replace(/\/$/, "");
+// PostgREST — OPTIONAL second data plane. When POSTGREST_URL is set, deno
+// exposes it same-origin: POST /auth/login → {url}/rpc/login, and /rest/v1/*
+// is forwarded (prefix stripped). Unset ⇒ both surfaces answer 503 and the
+// app runs mothership-only. NB: no trailing slash.
+export const POSTGREST_URL = (Deno.env.get("POSTGREST_URL") || "").replace(/\/$/, "");
+export const POSTGREST_ENABLED = POSTGREST_URL !== "";
 
 // ── Engine (voipappz-api, "the brain") — transcript source ─────────────────
 // No local store: history/calls are read by the browser from PostgREST, the

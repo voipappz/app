@@ -1,37 +1,36 @@
-name: react-dashboard
+# Dev cockpit — one command opens the whole stack with logs + shells:
+#   make tmux          (or: tmuxinator local)
+# Requires tmux + tmuxinator on the host. Uses the Docker stack (make up);
+# for host-Vite HMR use `make dev` in a plain terminal instead.
+name: voipappz
 root: <%= ENV["PWD"] %>
 
-# Runs before everything
+# Start the core stack (react-app + deno-api) before any window opens.
 pre_window: docker compose up -d
 
 windows:
-  - main:
+  - app:
       layout: main-vertical
       panes:
-        - claude:
-            - docker compose exec claude bash
-        - logs:
+        - vite:
             - docker compose logs -f react-app
+        - deno:
+            - docker compose logs -f deno-api
 
-  - react-app:
+  - shell:
       layout: even-horizontal
       panes:
-        - shell:
+        - repo:
+            - echo "repo shell — try: make verify | make test | npm run test:run"
+        - container:
             - docker compose exec react-app bash
-        - npm:
-            - docker compose exec react-app bash
-            - echo "Ready for npm commands..."
 
-  - docker:
-      layout: tiled
+  - status:
+      layout: even-horizontal
       panes:
-        - status:
-            - docker compose ps
+        - verify:
+            - make verify
             - echo ""
-            - echo "Commands:"
-            - echo "  docker compose ps       - List containers"
-            - echo "  docker compose logs -f  - Follow all logs"
-            - echo "  docker compose restart  - Restart services"
-            - echo "  docker compose down     - Stop all services"
+            - echo "make verify  — re-run the health check"
         - monitor:
-            - watch -n 2 docker compose ps
+            - watch -n 5 docker compose ps
