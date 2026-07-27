@@ -1,12 +1,14 @@
-.PHONY: help dev check-mothership up down build lint unit verify test push deploy ship status tmux module prod prod-down
+.PHONY: help env dev check-mothership up down build lint unit verify test push deploy ship status tmux module prod prod-down
 
 # Everything runs in Docker — no host node/npm/ruby required. One-off npm/node
 # commands reuse the react-app service (repo mount + cached node_modules volume).
 NPM_RUN := docker compose run --rm --no-deps react-app bash -c
 
 # ── Config (override on the CLI or in .env) ─────────────────────────────────
-# The mothership base — read from .env (VITE_MOTHERSHIP_URL), else the cloud.
-MOTHERSHIP ?= $(shell sed -n 's/^VITE_MOTHERSHIP_URL=//p' .env 2>/dev/null | head -1 | tr -d '\r"')
+# The mothership base — read from .env. MOTHERSHIP_URL is the one tenant knob;
+# VITE_API_TARGET / VITE_MOTHERSHIP_URL are read after it for older .env files.
+# Same precedence as vite.config.js, so the preflight probes what Vite proxies.
+MOTHERSHIP ?= $(shell sed -n 's/^\(MOTHERSHIP_URL\|VITE_API_TARGET\|VITE_MOTHERSHIP_URL\)=//p' .env 2>/dev/null | grep . | head -1 | tr -d '\r"')
 MOTHERSHIP := $(if $(MOTHERSHIP),$(MOTHERSHIP),https://cloud.voipappz.io)
 
 # Local stack endpoints
@@ -22,15 +24,22 @@ help: ## Show this help
 	@awk 'BEGIN{FS=":.*## ";printf "\nmake \033[36m<target>\033[0m\n\n"} \
 	      /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n",$$1,$$2}' $(MAKEFILE_LIST)
 
+env: ## Create .env from the template (never overwrites an existing one)
+	@if [ -f .env ]; then \
+	  echo ".env exists — leaving it alone. Mothership: $(MOTHERSHIP)"; \
+	else \
+	  cp .env.example .env && echo "wrote .env — set MOTHERSHIP_URL to point at your tenant"; \
+	fi
+
 dev: check-mothership ## Run the app in Docker (Vite HMR :4200 + deno-api :4001), attached logs
 	docker compose up -d react-app deno-api
 	@echo "deno-api → :4001 · Vite → $(WEB_APP) (proxies /api → mothership $(MOTHERSHIP)) — Ctrl-C detaches, stack keeps running"
 	docker compose logs -f react-app
 
-check-mothership: ## Verify the mothership (VITE_MOTHERSHIP_URL) is reachable
+check-mothership: ## Verify the mothership (MOTHERSHIP_URL) is reachable
 	@echo "==> Mothership (override: MOTHERSHIP=https://<host>)"
 	@code=$$(curl -s -o /dev/null -w '%{http_code}' "$(MOTHERSHIP)/tasks/customer_portal_data" --max-time 5); \
-	  case $$code in [234]*) s="OK ($$code)";; *) s="UNREACHABLE ($$code) — set VITE_MOTHERSHIP_URL in .env";; esac; \
+	  case $$code in [234]*) s="OK ($$code)";; *) s="UNREACHABLE ($$code) — set MOTHERSHIP_URL in .env";; esac; \
 	  printf "  %-11s %-34s %s\n" "mothership" "$(MOTHERSHIP)" "$$s"
 
 up: ## Start the full Docker stack (web + deno-api)

@@ -68,6 +68,22 @@
   margin-top: 32px;
 }
 
+/* Tenant "expect a code" heads-up under the credentials fields. */
+.login-otp-hint {
+  display: block;
+  margin-top: 12px;
+  color: #666;
+}
+
+/* OTP expiry clock + resend, sitting directly under the code field. */
+.otp-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  color: #666;
+}
+
 .forgot-password {
   cursor: pointer;
   text-decoration: none;

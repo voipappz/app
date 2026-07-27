@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { userLogin, verifyOtp } from '../../lib/clients/mothership';
@@ -6,10 +6,12 @@ import { useSipPhoneCtx } from '../../context/SipPhoneContext';
 import { sipSettingsFromUser } from '../../lib/sip/sipSettings';
 import i18n from '../../i18n/config';
 
-// Two-step OTP login against the mothership (cloud.voipappz.io). Step 1 submits
-// credentials; the server either returns a session (trusted device) or asks for
-// a 6-digit code, which step 2 verifies. Mirrors voipappz-app's flow; token +
-// user are persisted as the app's Bearer session (lib/clients/mothership).
+// Two-step OTP login against the mothership. Step 1 submits credentials; the
+// SERVER decides whether that's enough — it returns a session (OTP disabled for
+// this environment, or a trusted device) or asks for a 6-digit emailed code,
+// which step 2 verifies. We never request or suppress the challenge; we obey the
+// response shape. Token + user are persisted as the app's Bearer session
+// (lib/clients/mothership).
 export const useLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,6 +21,11 @@ export const useLogin = () => {
   const [otpStep, setOtpStep] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [tempToken, setTempToken] = useState('');
+  // Seconds left before the server drops the code. The LIFETIME COMES FROM THE
+  // SERVER (`expires_in` on the step-1 response) — we never assume one. If it
+  // doesn't tell us, we show no clock rather than invent a deadline.
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [hasExpiry, setHasExpiry] = useState(false);
 
   const { login, setLoading, setError, loading, error } = useAuth();
   const { connect: sipConnect } = useSipPhoneCtx();
@@ -32,6 +39,22 @@ export const useLogin = () => {
   const handleBlur = (field) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
+
+  // Tick the OTP expiry down while the code step is open.
+  useEffect(() => {
+    if (!otpStep || secondsLeft <= 0) return undefined;
+    const id = setInterval(() => setSecondsLeft((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(id);
+  }, [otpStep, secondsLeft]);
+
+  // Map the API's auth failures to something actionable. voipappz-api answers
+  // 429 for the per-IP attempt limit and 403 when the account is locked out;
+  // both carry a server message, but a bare "Login failed" hides which it was.
+  const describeError = useCallback((err, fallbackKey) => {
+    if (err?.status === 429) return i18n.t('login.tooManyAttempts');
+    if (err?.status === 403) return err?.message || i18n.t('login.accountLocked');
+    return err?.message || i18n.t(fallbackKey);
+  }, []);
 
   // Session established → update context, register the softphone, navigate.
   const finishLogin = async (session) => {
@@ -67,13 +90,39 @@ export const useLogin = () => {
       if (step.status === 'otp') {
         setTempToken(step.tempToken);
         setOtpStep(true);
+        setOtpCode('');
+        setSecondsLeft(step.expiresIn || 0);
+        setHasExpiry(Boolean(step.expiresIn));
         setError(null);
       } else {
         await finishLogin(step.session);
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err?.message || 'Login failed. Please try again.');
+      setError(describeError(err, 'login.loginFailed'));
+    }
+  };
+
+  // Resend — the API has no dedicated route, so re-run step 1: it invalidates
+  // nothing client-side but mints a fresh temp_token + code server-side.
+  const handleResendOtp = async () => {
+    if (!email || !password) return;
+    setLoading();
+    try {
+      const step = await userLogin(email, password);
+      if (step.status === 'otp') {
+        setTempToken(step.tempToken);
+        setOtpCode('');
+        setSecondsLeft(step.expiresIn || 0);
+        setHasExpiry(Boolean(step.expiresIn));
+        setError(null);
+      } else {
+        // The server stopped asking (e.g. the device became trusted) — just go.
+        await finishLogin(step.session);
+      }
+    } catch (err) {
+      console.error('OTP resend error:', err);
+      setError(describeError(err, 'login.resendFailed'));
     }
   };
 
@@ -93,7 +142,7 @@ export const useLogin = () => {
       await finishLogin(session);
     } catch (err) {
       console.error('OTP error:', err);
-      setError(err?.message || 'Invalid or expired code. Please try again.');
+      setError(describeError(err, 'login.otpInvalid'));
     }
   };
 
@@ -101,6 +150,8 @@ export const useLogin = () => {
     setOtpStep(false);
     setOtpCode('');
     setTempToken('');
+    setSecondsLeft(0);
+    setHasExpiry(false);
     setError(null);
   };
 
@@ -112,12 +163,17 @@ export const useLogin = () => {
     error,
     otpStep,
     otpCode,
+    secondsLeft,
+    hasExpiry,
+    // Only claim expiry when the server gave us a deadline to measure against.
+    otpExpired: otpStep && hasExpiry && secondsLeft === 0,
     handleEmailChange,
     handlePasswordChange,
     handleOtpCodeChange,
     handleBlur,
     handleSubmit,
     handleOtpSubmit,
+    handleResendOtp,
     handleBackToCredentials,
   };
 };

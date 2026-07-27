@@ -11,7 +11,7 @@ URLs**. The app server in front owns the actual upstream:
 
 ```
                     dev                                prod (single container, Kamal)
-  Browser ──► Vite :4200 ─┬─ /api, /auth/*, /tasks ──►  Browser ──► deno-api ─┬─ /api, /auth/*, /tasks ──► ENGINE_URL
+  Browser ──► Vite :4200 ─┬─ /api, /auth/*, /tasks ──►  Browser ──► deno-api ─┬─ /api, /auth/*, /tasks ──► MOTHERSHIP_URL
               (proxy)     │        (mothership)                    (serves     │        (mothership)
                           ├─ /rest/v1 ──► deno-api                  dist/)     ├─ /rest/v1 ──► POSTGREST_URL (optional)
                           └─ /auth/login, /ws/events,                          ├─ /ws/events (cable relay)
@@ -66,8 +66,8 @@ Frontend building blocks, layered like everything else:
 Env is the whole tenant surface — every knob is documented inline in
 [.env.example](./.env.example) (frontend `VITE_*` only; deno reads the
 unprefixed vars — never `VITE_`-prefix a secret). Defaults point at the
-voipappz cloud; repoint a fork with `VITE_API_TARGET` (dev) + `ENGINE_URL`
-(prod).
+voipappz cloud; repoint a fork with the single `MOTHERSHIP_URL` (read by the
+dev proxy, the prod forwarder, and `make dev`'s preflight).
 
 ## Verify
 
