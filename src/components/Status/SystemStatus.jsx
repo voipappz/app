@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { EVENTS_API } from '../Calls/useCalls';
 
 // In-app status page — reads deno's /health dependency report (cable, events
-// freshness, engine, supabase) and renders it natively (RTL/MUI). No Gatus:
+// freshness, engine) and renders it natively (RTL/MUI). No Gatus:
 // the engine /health is the single source, polled live.
 const DOT = {
   up: '#16a34a', registered: '#16a34a',

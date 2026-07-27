@@ -11,7 +11,7 @@
 //   deno holds nothing; the engine event store is the single source of truth.
 import {
   PORT, CABLE_URL, CABLE_CHANNEL, CABLE_TOKEN, CABLE_SECRET, CABLE_ACCOUNT_UUID, CABLE_ENABLED,
-  CABLE_DASHBOARD_UUID, POSTGREST_URL, ENGINE_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
+  CABLE_DASHBOARD_UUID, POSTGREST_URL, POSTGREST_ENABLED, ENGINE_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
 } from './config.ts';
 import { createJwtVerifier, unauthorizedResponse, type JwtVerifier } from './auth_middleware.ts';
 import { fetchTranscript } from './engine.ts';
@@ -30,6 +30,39 @@ const JSON_HEADERS = { "Content-Type": "application/json", ...CORS_HEADERS };
 // Mothership (voipappz-api) paths the BFF forwards same-origin — see the
 // forwarder block in the request handler.
 const MOTHERSHIP_PREFIXES = ["/api/", "/auth/", "/tasks/"];
+
+// PostgREST — optional /rest/v1/* forward (prefix stripped; PostgREST itself
+// has no /rest/v1 route). Auth passes through untouched: PostgREST verifies
+// the request's own JWT. Range/Prefer/Content-Range ride along so PostgREST
+// paging + exact counts work from the browser.
+async function forwardToPostgrest(request: Request, url: URL): Promise<Response> {
+  if (!POSTGREST_ENABLED) {
+    return new Response(JSON.stringify({ error: "postgrest not configured" }), { status: 503, headers: JSON_HEADERS });
+  }
+  const path = url.pathname.slice("/rest/v1".length) || "/";
+  const headers = new Headers();
+  for (const h of ["authorization", "content-type", "accept", "prefer", "range", "range-unit"]) {
+    const v = request.headers.get(h);
+    if (v) headers.set(h, v);
+  }
+  try {
+    const res = await fetch(`${POSTGREST_URL}${path}${url.search}`, {
+      method: request.method,
+      headers,
+      body: request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer(),
+      redirect: "manual",
+    });
+    const out = new Headers(CORS_HEADERS);
+    for (const h of ["content-type", "content-range", "range-unit", "preference-applied"]) {
+      const v = res.headers.get(h);
+      if (v) out.set(h, v);
+    }
+    return new Response(res.body, { status: res.status, headers: out });
+  } catch (err) {
+    console.error("postgrest forward failed:", err instanceof Error ? err.message : err);
+    return new Response(JSON.stringify({ error: "postgrest unreachable" }), { status: 502, headers: JSON_HEADERS });
+  }
+}
 
 async function forwardToMothership(request: Request, url: URL): Promise<Response> {
   const target = `${ENGINE_URL}${url.pathname}${url.search}`;
@@ -278,6 +311,9 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
       if (!creds.email || !creds.password) {
         return new Response(JSON.stringify({ error: "email and password are required" }), { status: 400, headers: JSON_HEADERS });
       }
+      if (!POSTGREST_ENABLED) {
+        return new Response(JSON.stringify({ error: "postgrest not configured" }), { status: 503, headers: JSON_HEADERS });
+      }
       try {
         const r = await fetch(`${POSTGREST_URL}/rpc/login`, {
           method: "POST",
@@ -373,6 +409,11 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
     // (deno's own /auth/login POST is handled above and never reaches this.)
     if (MOTHERSHIP_PREFIXES.some((p) => url.pathname.startsWith(p))) {
       return forwardToMothership(request, url);
+    }
+
+    // Optional PostgREST data plane — /rest/v1/* (503 when not configured).
+    if (url.pathname.startsWith("/rest/v1/")) {
+      return forwardToPostgrest(request, url);
     }
 
     if (request.method === "GET" || request.method === "HEAD") {

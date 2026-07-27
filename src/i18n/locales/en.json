@@ -683,9 +683,7 @@
     "checks": {
       "cable": "Cable (realtime)",
       "events": "Event stream",
-      "engine": "Engine (mothership)",
-      "supabase": "Users (Supabase)",
-      "duckdb": "Local store"
+      "engine": "Engine (mothership)"
     },
     "state": {
       "up": "up",

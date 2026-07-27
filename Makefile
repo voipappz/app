@@ -1,4 +1,4 @@
-.PHONY: help dev check-mothership up down build verify test push deploy ship status
+.PHONY: help dev check-mothership up down build verify test push deploy ship status tmux module
 
 # ── Config (override on the CLI or in .env) ─────────────────────────────────
 # The mothership base — read from .env (VITE_MOTHERSHIP_URL), else the cloud.
@@ -20,7 +20,7 @@ help: ## Show this help
 
 dev: check-mothership ## Run the app: deno-api (Docker) + host Vite with HMR
 	docker compose up -d deno-api          # backend extras: /ws events, calls-per-hour, transcripts
-	-docker compose stop react-app-tichman # free :4200 so host Vite (HMR) can bind it
+	-docker compose stop react-app # free :4200 so host Vite (HMR) can bind it
 	@echo "deno-api → :4001 · Vite → $(WEB_APP) (proxies /api → mothership $(MOTHERSHIP))"
 	npm run dev
 
@@ -31,11 +31,19 @@ check-mothership: ## Verify the mothership (VITE_MOTHERSHIP_URL) is reachable
 	  printf "  %-11s %-34s %s\n" "mothership" "$(MOTHERSHIP)" "$$s"
 
 up: ## Start the full Docker stack (web + deno-api)
-	docker compose up -d react-app-tichman deno-api
+	docker compose up -d react-app deno-api
 	@echo "web → $(WEB_APP)   deno-api → $(DENO_API)"
 
 down: ## Stop all services
-	docker compose down
+	docker compose down --remove-orphans
+
+tmux: ## Open the dev cockpit (tmuxinator: stack + logs + shells)
+	@command -v tmuxinator >/dev/null || { echo "tmuxinator not installed (gem install tmuxinator)"; exit 1; }
+	tmuxinator local
+
+module: ## Scaffold a feature module: make module NAME=Foo [ENDPOINT=/api/foos]
+	@test -n "$(NAME)" || { echo "usage: make module NAME=Foo [ENDPOINT=/api/foos]"; exit 1; }
+	node scripts/new-module.mjs "$(NAME)" "$(ENDPOINT)"
 
 build: ## Production build → dist/
 	npm run build

@@ -155,10 +155,29 @@ Keep it under ~300 lines; split sub-parts into the same folder.
 
 **d. Register** the route/nav (see `MainMenu` / the app router).
 
+> **Shortcut:** `make module NAME=Agent [ENDPOINT=/api/agents]` scaffolds all
+> of the above (service + test + hook + component) in the blueprint shape and
+> prints the two registration lines.
+
 ### Conventions
 - Folder-per-component (`Component.jsx` + hooks + css together).
 - i18n via `react-i18next`; the app is RTL-first (`useDirection`).
 - Reuse `common/Filters.jsx` + `filterModel.js` for filtering, `Reports/ReportChart.jsx` for charts.
+
+---
+
+## 5b. Optional: the PostgREST data plane
+
+For tenant-custom tables/views beside the mothership. Enable by setting
+`POSTGREST_URL` on deno (unset ⇒ `/rest/v1` answers 503). Building blocks:
+
+- `lib/clients/postgrest.ts` — `pgrstList('/my_view?select=*&limit=20')` /
+  `pgrstGet` (relative `/rest/v1`, bearer auth, exact counts).
+- `<PostgrestTable table="my_view" />` (`components/PostgrestTable/`) — generic
+  table with server-side paging + sorting, for quick internal pages.
+
+For a real feature page, wrap PostgREST access in a service module + hook
+exactly like §5 — components should not care which plane the data came from.
 
 ---
 

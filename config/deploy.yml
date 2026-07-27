@@ -64,11 +64,6 @@ env:
     PORT: 3000
     DENO_ENV: production
     STATIC_DIR: /app/dist
-    # Seed mock calls + transcription jobs once into an empty DuckDB so the
-    # Calls/Reports screens have data on a fresh deploy. No-op once the store
-    # has events (real tap or prior seed). Live LavinMQ tap stays ON (default)
-    # — set AMQP_* in /etc/voipappz/secrets.env to point it at the broker.
-    MOCK_SEED: "1"
 
 ssh:
   user: root
