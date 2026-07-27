@@ -32,12 +32,6 @@ export default defineConfig(({ mode }) => {
       https: devHttps,
     proxy: (() => {
       const DENO = process.env.VITE_DENO_API_TARGET || 'http://localhost:4001';
-      // PostgREST is reached through KONG (the host gateway), which owns the
-      // /rest/v1 route and strips it before PostgREST — same path as prod. Kong
-      // is host-networked on :8000; from the react-app container it's the gateway.
-      // PostgREST itself binds loopback-only (127.0.0.1:3001), so never target it
-      // directly from a container.
-      const POSTGREST = process.env.VITE_POSTGREST_TARGET || 'http://127.0.0.1:8000';
       // The mothership (voipappz-api). One knob repoints it: VITE_MOTHERSHIP_URL
       // in .env (VITE_API_TARGET still wins if set explicitly). The browser only
       // ever sees relative URLs — this proxy (dev) / the deno forwarder (prod)

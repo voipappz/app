@@ -1,8 +1,5 @@
 // Shared configuration — import from any backend file.
 // Per-customer forks add their own env-bound constants here.
-export const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-export const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
-export const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 export const PORT = parseInt(Deno.env.get("PORT") || "4001");
 
 // PostgREST base URL — deno is the BFF/"brain": it proxies login (/rpc/login,
@@ -54,12 +51,13 @@ export const CABLE_DASHBOARD_UUID = Deno.env.get("CABLE_DASHBOARD_UUID") || "";
 // reaches the browser; the React dashboard fetches `/dashboard/*`. InfluxDB 3
 // speaks SQL over POST {url}/api/v3/query_sql with a Bearer token.
 // NB: the token is a secret — set via env, never commit it.
-// InfluxDB 3 Core listens on plain HTTP at :8181 (NOT https/443 — 443 times out;
-// :8181 over https gives an SSL "wrong version number"). Verified live.
-export const INFLUX_URL = (Deno.env.get("INFLUXDB_URL") || "http://monitoring.voipappz.com:8181").replace(/\/$/, "");
+// NB: InfluxDB 3 Core typically listens on plain HTTP at :8181 (https/443 is
+// not it). Both URL and token must be set to enable the feature — no default
+// monitoring host is baked in.
+export const INFLUX_URL = (Deno.env.get("INFLUXDB_URL") || "").replace(/\/$/, "");
 export const INFLUX_TOKEN = Deno.env.get("INFLUXDB_TOKEN") || "";
 export const INFLUX_DATABASE = Deno.env.get("INFLUXDB_DATABASE") || Deno.env.get("INFLUXDB_BUCKET") || "telegraf";
-export const INFLUX_ENABLED = INFLUX_TOKEN !== "";
+export const INFLUX_ENABLED = INFLUX_URL !== "" && INFLUX_TOKEN !== "";
 
 // Event freshness alarm — `cable_ready` only means "subscribed", not "events are
 // flowing". This is how long (seconds) the cable can go WITHOUT a single event

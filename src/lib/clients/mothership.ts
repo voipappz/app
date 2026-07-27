@@ -48,7 +48,7 @@ function mockUser(email: string) {
     profile: { language: 'en' },
     acl: { data: { calls: { main: 'read' }, dashboard: { main: 'read' }, report: { main: 'read' } } },
     extension: { username: '200', password: 'mock-sip-secret', caller_id_number: '200' },
-    environment: { uuid: 'mock-env', domain: 'mock.voipappz.io', wss_server: 'switch.voipappz.io:8443' },
+    environment: { uuid: 'mock-env', domain: 'mock.example', wss_server: 'sbc.mock.example:8443' },
   };
 }
 

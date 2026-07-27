@@ -122,9 +122,10 @@ services:
       # Event-freshness alarm: seconds the cable can be silent before /health
       # reports the stream `stale` (degraded, not 503). 0 disables. Default 15min.
       EVENTS_STALE_SECONDS: ${EVENTS_STALE_SECONDS:-900}
-      # InfluxDB 3 (monitoring.voipappz.com) — dashboard calls-per-hour source.
-      # Server-side only (token never reaches the browser). Plain HTTP on :8181.
-      INFLUXDB_URL: ${INFLUXDB_URL:-http://monitoring.voipappz.com:8181}
+      # InfluxDB 3 — dashboard calls-per-hour source. Server-side only (token
+      # never reaches the browser). Both URL and token must be set to enable;
+      # InfluxDB 3 Core typically listens on plain HTTP at :8181.
+      INFLUXDB_URL: ${INFLUXDB_URL:-}
       INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-}
       INFLUXDB_DATABASE: ${INFLUXDB_DATABASE:-telegraf}
     command: deno run --allow-net --allow-env --allow-read --watch app.ts

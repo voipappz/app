@@ -142,7 +142,7 @@ describe('mothership USER OTP mock (VITE_MOCK_LOGIN=1)', () => {
     expect(session.email).toBe('agent@laurusafrica.com');
     // Session is USER-shaped — extension + environment drive the WebRTC path.
     expect(session.user?.extension?.username).toBe('200');
-    expect(session.user?.environment?.wss_server).toBe('switch.voipappz.io:8443');
+    expect(session.user?.environment?.wss_server).toBe('sbc.mock.example:8443');
     expect(session.user?.profile?.language).toBe('en');
   });
 
