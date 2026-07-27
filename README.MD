@@ -11,6 +11,21 @@ lights up against that tenant's data (login, calls, reports, feature flags).
 
 ---
 
+## Start a tenant fork (this repo is a GitHub template)
+
+```bash
+gh repo create my-tenant-portal --template voipappz/app --private --clone
+cd my-tenant-portal
+cp .env.example .env          # repoint: VITE_API_TARGET (dev) + ENGINE_URL (prod)
+make dev
+```
+
+(Or click **Use this template** on GitHub.) A tenant fork changes **env, not
+code** — branding, endpoints, and features are all `.env`-driven, and the
+included GitHub Actions CI works out of the box in the new repo.
+
+---
+
 ## Quick start
 
 ```bash
