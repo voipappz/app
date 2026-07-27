@@ -9,13 +9,10 @@ WORKDIR /build
 ARG VITE_APP_VERSION
 ENV VITE_APP_VERSION=$VITE_APP_VERSION
 
-# Mothership/API base — MUST be exposed as ENV before `npm run build` so Vite
-# bakes it into the bundle; otherwise the app falls back to the code default
-# (https://cloud.voipappz.io) and talks to the cloud instead of this deployment.
-# Only bake vars we actually pass a value for — declaring an ARG with no value
-# bakes an EMPTY STRING, which `?? default` in code does NOT override (only the
-# code now uses `|| default`, which does). The auth/portal PATHS are left to
-# their code defaults, so we do NOT declare empty ARGs for them.
+# VITE_MOTHERSHIP_URL is the DIRECT-mode escape hatch only. Leave it unset
+# (the default): the bundle then uses RELATIVE URLs and all backend traffic
+# rides this container's deno forwarder (ENGINE_URL picks the mothership at
+# runtime). Set it only for static-only hosting builds (e.g. Fireberry embed).
 ARG VITE_MOTHERSHIP_URL
 ENV VITE_MOTHERSHIP_URL=$VITE_MOTHERSHIP_URL
 
@@ -31,20 +28,9 @@ WORKDIR /app
 
 COPY api/deno.json api/deno.lock ./
 COPY api/*.ts ./
-# The mock seed fixture (calls + transcription jobs) is read at runtime by the
-# BFF, so it must ship in the image when MOCK_SEED=1.
-# NB: api/migrations was dropped in the thin-BFF refactor (6d23a4b, DuckDB buffer
-# removed); do not re-add a COPY for it — the dir no longer exists and the build
-# fails with "/api/migrations: not found".
-COPY api/mock ./mock
 RUN deno cache app.ts
 
 COPY --from=frontend-builder /build/dist ./dist
-
-# DuckDB event-store file. /app/data must be writable by the non-root `deno`
-# user (store.ts mkdir's it, but the parent dir needs the right owner).
-ENV DUCKDB_PATH=/app/data/events.duckdb
-RUN mkdir -p /app/data && chown -R deno /app/data
 
 ENV STATIC_DIR=/app/dist
 ENV PORT=3000
@@ -56,5 +42,4 @@ EXPOSE 3000
 
 USER deno
 
-# --allow-write (DuckDB file) + --allow-ffi/--allow-sys (DuckDB native addon).
-CMD ["deno", "run", "--allow-net", "--allow-env", "--allow-read", "--allow-write", "--allow-ffi", "--allow-sys", "app.ts"]
+CMD ["deno", "run", "--allow-net", "--allow-env", "--allow-read", "app.ts"]

@@ -49,6 +49,8 @@ export default defineConfig(({ mode }) => {
         // page route, and it must stay ABOVE the general /auth mothership entry.
         '/auth/login':   { target: DENO, changeOrigin: true },
         '/auth':         { target: MOTHERSHIP, changeOrigin: true, secure: true },
+        // Optional PostgREST plane — rides deno (strips /rest/v1, 503 when off).
+        '/rest/v1':      { target: DENO, changeOrigin: true },
         '/deno-api':     { target: DENO, changeOrigin: true, rewrite: (p) => p.replace(/^\/deno-api/, '') },
         '/events-api':   { target: DENO, changeOrigin: true, rewrite: (p) => p.replace(/^\/events-api/, '') },
         '/ws/events':    { target: DENO, changeOrigin: true, ws: true },
