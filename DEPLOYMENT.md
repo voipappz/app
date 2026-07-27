@@ -1,10 +1,23 @@
 # Deployment
 
-Production deploys go through **Kamal** — one image (built from
-`Dockerfile.production`) serving the built React bundle and the deno-api BFF
-from the same process (`api/app.ts`, `STATIC_DIR=/app/dist`).
+One artifact either way: the image built from `Dockerfile.production` serves
+the React bundle and the deno-api BFF from a single process (`api/app.ts`,
+`STATIC_DIR=/app/dist`). CI builds and boot-probes this exact image on every
+push (the `prod-image` job).
 
-## Ship
+## Option A — docker compose (on the target box)
+
+```bash
+make prod        # build the production image + run it (:8000), probes /,/test,/health
+make prod-down   # stop it
+```
+
+Runtime env comes from `.env` beside the compose file (`ENGINE_URL`, cable,
+Influx, PostgREST — see `.env.example`). Remember: compose does not re-read
+env on restart — `docker compose --profile prod up -d --force-recreate
+production` after editing.
+
+## Option B — Kamal (from the ops machine, which has kamal installed)
 
 ```bash
 make deploy   # kamal build → registry push → container swap on prod
@@ -14,7 +27,8 @@ make status   # local git + prod health + deployed version (set PROD_URL in .env
 
 **Always deploy via the Makefile, not raw `kamal deploy`** — `make deploy`
 sources `.kamal/secrets` so the ERB substitutions in `config/deploy.yml`
-resolve (Kamal only auto-sources that file for the registry password).
+resolve (Kamal only auto-sources that file for the registry password). The
+Makefile finds kamal on PATH or in the ops machine's rvm install.
 
 ## Configuration
 

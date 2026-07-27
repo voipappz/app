@@ -1,4 +1,4 @@
-.PHONY: help dev check-mothership up down build verify test push deploy ship status tmux module
+.PHONY: help dev check-mothership up down build verify test push deploy ship status tmux module prod prod-down
 
 # ── Config (override on the CLI or in .env) ─────────────────────────────────
 # The mothership base — read from .env (VITE_MOTHERSHIP_URL), else the cloud.
@@ -48,6 +48,19 @@ module: ## Scaffold a feature module: make module NAME=Foo [ENDPOINT=/api/foos]
 build: ## Production build → dist/
 	npm run build
 
+prod: ## Deploy via docker compose: build + run the production image (:8000)
+	docker compose --profile prod build production
+	docker compose --profile prod up -d production
+	@echo "waiting for boot..."; for i in $$(seq 1 30); do \
+	  curl -sf -o /dev/null localhost:8000/test && break; sleep 1; done
+	@curl -s -o /dev/null -w "  /       → %{http_code}\n" localhost:8000/
+	@curl -s -o /dev/null -w "  /test   → %{http_code}\n" localhost:8000/test
+	@curl -s -o /dev/null -w "  /health → %{http_code}\n" localhost:8000/health
+	@echo "production → http://localhost:8000  (env from .env; recreate to re-read)"
+
+prod-down: ## Stop the docker compose production container
+	docker compose --profile prod down production
+
 verify: ## Health check: deno-api, web, and the /health dependency report
 	@echo "==> Services"
 	@printf "  %-9s %-30s " "deno-api" "$(DENO_API)/test"; curl -sf -o /dev/null "$(DENO_API)/test" && echo OK || echo DOWN
@@ -58,10 +71,10 @@ verify: ## Health check: deno-api, web, and the /health dependency report
 test: ## Run all Playwright tests (needs the app running)
 	npx playwright test
 
-# Kamal (ruby gem) must be on PATH; .kamal/secrets is sourced for ERB
-# substitution in config/deploy.yml (Kamal only auto-sources it for the
-# registry password). Override with KAMAL=/path/to/kamal if needed.
-KAMAL ?= kamal
+# Kamal — used from the ops machine (rvm install) or anywhere it's on PATH.
+# .kamal/secrets is sourced for ERB substitution in config/deploy.yml (Kamal
+# only auto-sources it for the registry password). Override: KAMAL=/path/to/kamal
+KAMAL ?= $(shell command -v kamal 2>/dev/null || ls /home/*/.rvm/gems/*/wrappers/kamal 2>/dev/null | head -1)
 
 push: ## git push current branch to origin
 	git push
