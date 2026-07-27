@@ -1,10 +1,8 @@
-// SIP softphone configuration — fully env-driven, with the verified
-// switch.voipappz.io endpoint as the default. Everything here can be overridden
-// at build time (VITE_SIP_*) or per-call by passing overrides to useSipPhone().
-//
-// Backend (confirmed 2026-06-15): wss://switch.voipappz.io:8443 is FreeSWITCH's
-// SIP-over-WebSocket binding with a browser-trusted *.voipappz.io cert; FS
-// terminates WSS + DTLS-SRTP media directly (no proxy, no rtpengine).
+// SIP softphone configuration — fully env-driven, NO tenant endpoint baked in.
+// The WSS endpoint normally arrives from the logged-in user's environment
+// (mothership `wss_server`); VITE_SIP_* is the env override for dev/demo
+// builds. With neither, the softphone simply stays unconfigured (settings not
+// "ready" → no registration attempt). Per-call overrides via useSipPhone().
 
 export interface SipConfig {
   /** WSS signaling URL (FreeSWITCH ws-binding). */
@@ -32,7 +30,9 @@ function parseIce(): RTCIceServer[] {
     try { return JSON.parse(raw) as RTCIceServer[]; }
     catch { console.warn("VITE_SIP_ICE is not valid JSON — using default ICE servers"); }
   }
-  const stun = (import.meta.env.VITE_SIP_STUN as string | undefined) || "stun:acvideo.voipappz.io";
+  // Default STUN is the public vendor-neutral Google server; set VITE_SIP_STUN
+  // (or VITE_SIP_ICE) to use the tenant's own STUN/TURN.
+  const stun = (import.meta.env.VITE_SIP_STUN as string | undefined) || "stun:stun.l.google.com:19302";
   const servers: RTCIceServer[] = [{ urls: [stun] }];
   // Optional single TURN via discrete env vars (kept simple; use VITE_SIP_ICE for more).
   const turnUrls = (import.meta.env.VITE_SIP_TURN_URLS as string | undefined)?.trim();
@@ -53,7 +53,7 @@ function hostFromWss(wss: string): string {
 export function loadSipConfig(overrides: Partial<SipConfig> = {}): SipConfig {
   const wssUrl = overrides.wssUrl
     || (import.meta.env.VITE_SIP_WSS_URL as string | undefined)
-    || "wss://switch.voipappz.io:8443";
+    || "";
   const domain = overrides.domain
     || (import.meta.env.VITE_SIP_DOMAIN as string | undefined)
     || hostFromWss(wssUrl);

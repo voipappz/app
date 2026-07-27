@@ -16,7 +16,7 @@ PROD_URL ?= $(shell sed -n 's/^PROD_URL=//p' .env 2>/dev/null | head -1 | tr -d 
 
 help: ## Show this help
 	@awk 'BEGIN{FS=":.*## ";printf "\nmake \033[36m<target>\033[0m\n\n"} \
-	      /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-9s\033[0m %s\n",$$1,$$2}' $(MAKEFILE_LIST)
+	      /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n",$$1,$$2}' $(MAKEFILE_LIST)
 
 dev: check-mothership ## Run the app: deno-api (Docker) + host Vite with HMR
 	docker compose up -d deno-api          # backend extras: /ws events, calls-per-hour, transcripts
@@ -50,9 +50,10 @@ verify: ## Health check: deno-api, web, and the /health dependency report
 test: ## Run all Playwright tests (needs the app running)
 	npx playwright test
 
-# Kamal needs ruby-3.3.5 and .kamal/secrets sourced for ERB substitution in
-# config/deploy.yml (Kamal only auto-sources it for the registry password).
-KAMAL ?= $(shell test -x /home/ubuntu/.rvm/gems/ruby-3.3.5/wrappers/kamal && echo /home/ubuntu/.rvm/gems/ruby-3.3.5/wrappers/kamal || command -v kamal)
+# Kamal (ruby gem) must be on PATH; .kamal/secrets is sourced for ERB
+# substitution in config/deploy.yml (Kamal only auto-sources it for the
+# registry password). Override with KAMAL=/path/to/kamal if needed.
+KAMAL ?= kamal
 
 push: ## git push current branch to origin
 	git push
