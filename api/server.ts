@@ -65,12 +65,11 @@ const STATIC_DIR = Deno.env.get("STATIC_DIR") || "./dist";
 //   - cable    (va-crystal ActionCable)    → live subscription flag (Dashboard realtime)
 //   - events   (freshness)                 → stale if the cable goes silent
 //   - engine   (voipappz-api)              → transcript reads
-//   - supabase (optional users table)      → HEAD count on `users`
 //
 // A dependency that is configured-but-unreachable is "down"; one that isn't
-// configured at all (e.g. Supabase in local DuckDB-only dev) is "disabled" and
-// does NOT fail the check. Overall `healthy` is false iff any required
-// dependency is down — callers map that to HTTP 503.
+// configured at all is "disabled" and does NOT fail the check. Overall
+// `healthy` is false iff any required dependency is down — callers map that
+// to HTTP 503.
 interface DepStatus { status: "up" | "down" | "disabled"; detail?: string }
 interface HealthReport {
   healthy: boolean;
@@ -344,8 +343,8 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
       }
     }
 
-    // Health probe (cable + events freshness + engine + supabase). Used by
-    // Kamal's container healthcheck — returns 503 when any required dep is down.
+    // Health probe (cable + events freshness + engine). Used by Kamal's
+    // container healthcheck — returns 503 when any required dep is down.
     if (url.pathname === "/health") {
       const report = await checkHealth();
       return new Response(JSON.stringify(report), {

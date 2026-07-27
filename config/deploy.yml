@@ -39,9 +39,6 @@ builder:
   # PUBLIC by design (anon keys ship in every user's browser), so it is safe
   # to pull them from CI env / .kamal/secrets.
   args:
-    VITE_SUPABASE_URL: <%= ENV["VITE_SUPABASE_URL"] %>
-    VITE_SUPABASE_ANON_KEY: <%= ENV["VITE_SUPABASE_ANON_KEY"] %>
-    VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY: <%= ENV["VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY"] %>
     # Version stamp shown in the app footer. Format: YYYY.MM.DD-<short-sha>
     # so multiple deploys on the same day are still distinguishable.
     VITE_APP_VERSION: <%= "#{Time.now.strftime('%Y.%m.%d')}-#{`git rev-parse --short HEAD`.strip}" %>

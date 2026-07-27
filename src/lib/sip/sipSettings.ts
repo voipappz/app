@@ -1,7 +1,7 @@
 // SIP softphone settings — what the Settings tab edits and persists locally.
-// Defaults come from VITE_SIP_* (see ./config.ts), so a fresh install already
-// points at the verified switch.voipappz.io endpoint; the user only fills in
-// their extension credentials. Later these can be auto-populated from the account.
+// Defaults come from VITE_SIP_* (see ./config.ts); with no env set, the
+// endpoint is auto-populated from the logged-in user's environment
+// (sipSettingsFromUser) and the softphone stays unconfigured until then.
 import { loadSipConfig } from "./config";
 
 export interface SipSettings {
