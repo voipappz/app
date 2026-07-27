@@ -76,7 +76,13 @@ target).
 - Editing `.env` + `docker compose restart` does **not** re-read env vars — use
   `docker compose up -d --force-recreate <service>`.
 - `VITE_MOCK_LOGIN=1` gives an offline login (any email, OTP `123456`) for
-  frontend work with no backend.
+  frontend work with no backend, and is what the CI E2E job builds with so
+  Playwright can drive the real login flow hermetically (no credentials, no
+  network). It deliberately mirrors the mothership's two-step user-OTP shape
+  (the server's `VA_TEST_OTP` knob) and returns a user with
+  `extension`/`environment`, so post-login paths (session decode, SIP
+  derivation) are exercised too. It is a **build-time** flag: production
+  builds never set it, so the shipped bundle can't be toggled into mock auth.
 
 ## Conventions
 

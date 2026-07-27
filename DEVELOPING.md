@@ -84,6 +84,23 @@ Whether OTP is required is a **per-environment** decision on the server
 (`login_otp_enabled` on the environment profile) — the client just handles
 whichever shape comes back. Do **not** gate OTP with a feature flag.
 
+### Working offline: the mock login
+
+`VITE_MOCK_LOGIN=1` (in `.env`) swaps `userLogin` for an offline mock: **any
+email**, then OTP **`123456`**. Use it when:
+
+- you're building UI and have no mothership account / no network;
+- you're writing Playwright specs — CI's E2E job builds with this flag and
+  drives the real login form → OTP → `/dashboard` path hermetically
+  (`tests/smoke.spec.ts`).
+
+It's not a shortcut around the flow: the mock mirrors the mothership's two-step
+user-OTP shape (the server's own `VA_TEST_OTP` test knob) and returns a full
+user object with `extension` + `environment`, so session decoding and SIP
+settings derivation run exactly as with a real login. It is a **build-time**
+flag — production builds never set it, so shipped bundles cannot be toggled
+into mock auth.
+
 ---
 
 ## 4. Feature flags (gate UI per user)
