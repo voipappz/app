@@ -11,7 +11,7 @@ deno-api forwarder in prod). A tenant fork changes **env, not code**.
 
 - **How it fits together** → [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **How to add a feature** (service → hook → component recipe, data-access layer, feature flags) → [DEVELOPING.md](./DEVELOPING.md)
-- **How to deploy** (Kamal) → [DEPLOYMENT.md](./DEPLOYMENT.md)
+- **How to deploy** (Docker-only) → [DEPLOYMENT.md](./DEPLOYMENT.md)
 - **The deno backend** → [api/README.md](./api/README.md)
 
 ## Commands
@@ -24,11 +24,12 @@ deno-api forwarder in prod). A tenant fork changes **env, not code**.
 | `npm run lint` | ESLint |
 | `npm test` | Vitest unit tests (watch mode; `npm run test:run` for one-shot) |
 | `make test` | All Playwright E2E tests — **needs the app running** |
-| `npx playwright test tests/calls.spec.ts` | A single Playwright spec |
+| `npx playwright test tests/smoke.spec.ts` | A single Playwright spec |
 | `docker compose --profile test run --rm deno-tests` | Deno API tests (or natively: `deno test --allow-net --allow-env --allow-read api/tests`) |
 | `npm run build` | Production build → `dist/`. Must be clean before shipping. |
 | `make verify` | Health check: deno-api, web, and the `/health` dependency report |
-| `make deploy` / `make ship` | Kamal deploy / push + deploy — **always via the Makefile** (it sources `.kamal/secrets`); see DEPLOYMENT.md |
+| `make prod` / `make prod-down` | Run the production image on this box via docker compose (:8000) |
+| `make deploy` / `make ship` | Deploy to the production server / push + deploy — **always via the Makefile**; Docker-only, see DEPLOYMENT.md |
 
 ## Architecture (big picture)
 
@@ -49,7 +50,8 @@ Two runtime pieces:
    call-event relay (cable client to va-crystal ActionCable), calls-per-hour
    from InfluxDB (server-side token), engine-backed transcript reads, and the
    `/auth/login` proxy. Without it those widgets simply stay quiet. In
-   production the same process serves `dist/` (single container via Kamal).
+   production the same process serves `dist/` (one container — `make prod`
+   locally, `make deploy` to the server).
    Runs `network_mode: host` in compose.
 
 There is **no Supabase** — auth is mothership accounts + a JWT. **PostgREST is

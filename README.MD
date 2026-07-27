@@ -68,7 +68,7 @@ make            # list targets
 | `make test` | Playwright E2E (needs the app running) |
 | `make verify` | Health check: deno-api, web, and dependency report |
 | `make status` | Local git + production health (set `PROD_URL`) |
-| `make deploy` / `make ship` | Kamal deploy / push + deploy |
+| `make deploy` / `make ship` | Deploy to the production server / push + deploy |
 
 ## Project layout
 
@@ -104,8 +104,8 @@ layout direction.
 
 ## Deploy
 
-`make deploy` builds the image, pushes to the registry, and swaps the container
-via Kamal (sources `.kamal/secrets`). `make ship` = `git push` + deploy. After a
-deploy, `make status` probes the deployed version. See
-[DEPLOYMENT.md](./DEPLOYMENT.md) for the full flow and the per-tenant deploy
-configs (`config/deploy.mtn.yml`, `config/deploy.pbx20.yml`).
+Two ways, both Docker-only (nothing to install): `make prod` runs the
+production image on this box (:8000); `make deploy` builds, pushes to the
+registry, and swaps the container on the production server (`make ship` =
+`git push` + deploy; `make status` probes the deployed version). See
+[DEPLOYMENT.md](./DEPLOYMENT.md).

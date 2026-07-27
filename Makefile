@@ -71,18 +71,25 @@ verify: ## Health check: deno-api, web, and the /health dependency report
 test: ## Run all Playwright tests (needs the app running)
 	npx playwright test
 
-# Kamal — used from the ops machine (rvm install) or anywhere it's on PATH.
+# Kamal — ALWAYS via the official Docker image (no native/rvm install): any
+# box with Docker can deploy, and everyone runs the same kamal version.
 # .kamal/secrets is sourced for ERB substitution in config/deploy.yml (Kamal
-# only auto-sources it for the registry password). Override: KAMAL=/path/to/kamal
-KAMAL ?= $(shell command -v kamal 2>/dev/null || ls /home/*/.rvm/gems/*/wrappers/kamal 2>/dev/null | head -1)
+# only auto-sources it for the registry password).
+KAMAL ?= docker run --rm \
+  -v "$(CURDIR):/workdir" \
+  -v "$(HOME)/.ssh:/root/.ssh:ro" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e KAMAL_REGISTRY_PASSWORD \
+  ghcr.io/basecamp/kamal:latest
 
 push: ## git push current branch to origin
 	git push
 
-deploy: ## Build image, push to registry, swap container on production
+deploy: ## Build image, push to registry, swap container on production (Docker only — no local tooling)
+	@test -f .kamal/secrets || { echo "missing .kamal/secrets — cp .kamal/secrets.example .kamal/secrets and fill it in"; exit 1; }
 	@set -a; . .kamal/secrets; set +a; $(KAMAL) deploy
 
-ship: push deploy ## git push + kamal deploy in one shot
+ship: push deploy ## git push + deploy in one shot
 
 status: ## Local git + production health + deployed version
 	@echo "=== Local git ==="
