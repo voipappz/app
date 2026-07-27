@@ -22,6 +22,50 @@ export interface CustomerPortalData {
   logo_icon?: string;   // favicon
   logo_title?: string;  // app/tenant title
   logo_color?: string;  // brand colour
+  // Login-screen hint: does this tenant use two-step verification? A plain
+  // customer.profile field like the rest — the API `.to_s`es it, so it's always
+  // a STRING: "true"/"false"/"on"/…, or "" when the key isn't set. (boolean|null
+  // stay in the type only to tolerate an older API or a hand-seeded cache.)
+  login_otp_enabled?: string | boolean | null;
+}
+
+/**
+ * The tenant's OTP hint, or `undefined` when the server made no claim.
+ *
+ * ADVISORY ONLY — use it to set expectations on the login screen, never to
+ * decide the flow. The real decision is per-ENVIRONMENT and lives in
+ * voipappz-api (`Mediators::User::Login#otp_enabled?` reads
+ * `user.environment.profile?(:login_otp_enabled)`), which it can only resolve
+ * once it knows the user. This value is per-CUSTOMER and pre-login, so for a
+ * customer whose environments differ it will be wrong for some of them. The
+ * authority is always the shape of the step-1 login response.
+ */
+// What the profile store counts as "on". Mirrors Mediators::User::Login#truthy?
+// so the hint and the enforcement can never disagree about the same stored value.
+const TRUTHY_PROFILE_VALUES = ['true', '1', 'yes', 'on'];
+
+export function isLoginOtpEnabled(): boolean | undefined {
+  const val = getCustomerData()?.login_otp_enabled;
+  // No claim: key unset, explicit null, or an empty hstore value.
+  if (val === undefined || val === null || val === '') return undefined;
+  if (typeof val === 'boolean') return val;
+  return TRUTHY_PROFILE_VALUES.includes(String(val).trim().toLowerCase());
+}
+
+/**
+ * Should the login screen expect a code? **OTP is the default** — we assume
+ * two-step verification unless the tenant explicitly says `false`.
+ *
+ * Deliberately distinct from `isLoginOtpEnabled()`: that one reports what the
+ * server actually said (including "nothing"), this one applies our assumption on
+ * top. Keeping them apart means a wrong hint can be traced to the assumption
+ * rather than blamed on the payload.
+ *
+ * Still only a hint — it changes copy, never the flow. The step-1 response
+ * decides whether a code is really sent.
+ */
+export function expectsLoginOtp(): boolean {
+  return isLoginOtpEnabled() !== false;
 }
 
 /** The cached portal data (written at login), or null. */

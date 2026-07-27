@@ -340,7 +340,17 @@
       "privacy": "Privacy",
       "legal": "Legal",
       "contact": "Contact"
-    }
+    },
+    "otpSentTo": "We emailed a 6-digit code to <strong>{{email}}</strong>. Enter it to continue.",
+    "otpExpiresIn": "Code expires in {{time}}",
+    "otpExpired": "Code expired — request a new one",
+    "resendCode": "Resend code",
+    "loginFailed": "Login failed. Please try again.",
+    "otpInvalid": "Invalid or expired code. Please try again.",
+    "resendFailed": "Could not resend the code. Please try again.",
+    "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
+    "accountLocked": "Account locked due to too many failed attempts. Try again later.",
+    "otpExpectedHint": "This account uses two-step verification — we'll email you a code after you sign in."
   },
   "menu": {
     "dashboard": "Dashboard",

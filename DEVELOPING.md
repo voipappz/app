@@ -3,7 +3,7 @@
 A guide for teams building tenant features on top of this template. The app is
 **component-based** and talks to **one backend — the voipappz-api mothership**.
 A tenant fork changes **env, not code**: repoint the mothership endpoints
-(`VITE_API_TARGET` dev / `ENGINE_URL` prod) and the same components light up
+(one var: `MOTHERSHIP_URL`) and the same components light up
 against that tenant's data.
 
 > Architecture context: [ARCHITECTURE.md](./ARCHITECTURE.md) · repo conventions:
@@ -51,7 +51,7 @@ A fork is configured entirely by env — no code changes.
 
 | Var | Default | Meaning |
 |---|---|---|
-| `VITE_API_TARGET` / `ENGINE_URL` | `https://cloud.voipappz.io` | The tenant's voipappz-api, reached same-origin via the Vite proxy (dev) / deno forwarder (prod). |
+| `MOTHERSHIP_URL` | `https://cloud.voipappz.io` | **The one tenant knob.** The tenant's voipappz-api, reached same-origin via the Vite proxy (dev) / deno forwarder (prod). Unprefixed so it can never reach the bundle. (`VITE_API_TARGET` / `ENGINE_URL` override it for one consumer only.) |
 | `VITE_MOTHERSHIP_URL` | — (relative) | Direct-mode escape hatch for static-only hosting (browser calls the mothership cross-origin). Leave unset. |
 | `VITE_AUTH_URL` | `/auth/login` | Where the browser posts credentials (rides the Vite/deno proxy). |
 | `VITE_MOCK_LOGIN` | — | `1` = offline login mock (any email → OTP `123456`), for local dev with no backend. |
@@ -83,6 +83,62 @@ if (step.status === 'otp') {
 Whether OTP is required is a **per-environment** decision on the server
 (`login_otp_enabled` on the environment profile) — the client just handles
 whichever shape comes back. Do **not** gate OTP with a feature flag.
+
+**The client never asks for a challenge and cannot suppress one.** voipappz-api
+resolves the policy in `Mediators::User::Login#otp_enabled?`, from
+`user.environment.profile?(:login_otp_enabled)` — which it can only know *after*
+looking the user up by email. So there is nothing to send: don't add an `otp`
+param (the API ignores one). **The response shape is the instruction.**
+
+### The pre-login hint (advisory)
+
+`customer_portal_data` also carries `login_otp_enabled`. It exists so the login
+screen can say "expect a code" *before* the user submits — tenant config, no
+code change, same store as the branding. Two readers, deliberately separate:
+
+- `isLoginOtpEnabled()` — what the server actually said: `true`, `false`, or
+  `undefined` for "no claim". The API passes the profile value through **raw**,
+  and `customer.profile` is an **hstore**, so the wire shape is a *string*
+  (`"true"` / `"false"`), not a boolean. This reader applies the same truthy
+  rule as `Mediators::User::Login#truthy?` (`true`/`1`/`yes`/`on`) so the hint
+  and the enforcement can't disagree about one stored value. Empty string, null
+  and absent all mean "no claim".
+- `expectsLoginOtp()` — what the UI assumes. **OTP is the client default**: it
+  returns `true` unless the tenant explicitly sent `false`. Use this one for
+  rendering; the split means a wrong hint traces to the assumption, not the
+  payload.
+
+Note this default is the client's alone. The **server** defaults the other way —
+`Login#truthy?(nil)` is `false`, so an environment that never sets the key gets
+password-only login. A tenant with OTP off therefore sees the hint until someone
+sets `login_otp_enabled: false` on its customer profile.
+
+**It is a hint, never the decision.** Two limits, both structural:
+
+- It's per-**customer** (resolved from the origin host), while enforcement is
+  per-**environment**. A customer whose environments run different policies
+  cannot be described by one value, so the hint will be wrong for some users.
+- It's read from `localStorage.customerData`, so it's trivially editable.
+
+Neither matters, because the client can't act on it: whatever the hint says, the
+server still returns `{temp_token}` or `{user, token}` and `useLogin` obeys that.
+Use it for copy and expectation-setting only — never to branch the flow, skip a
+step, or decide what to render *after* submit.
+
+What the server enforces, and what the UI does with it:
+
+| Server | `Mediators::User::…` | UI |
+|---|---|---|
+| Code lifetime | `Login::OTP_TTL` → `expires_in` on the response | drives the countdown; Verify disables at zero. **Never hardcode a copy** — no `expires_in` ⇒ no clock shown |
+| 5 wrong codes ⇒ `temp_token` destroyed | `VerifyOtp::MAX_ATTEMPTS` | error surfaces; Back/Resend restart step 1 |
+| No resend route | — | "Resend" re-POSTs step 1 for a fresh code |
+| Delivered by email | `Jobs::Mail::Send` | subtitle names the address |
+| 429 rate limit (10 fails/5min per IP) | `auth.rb` `ratelimit_invalid_auth` | distinct message |
+| 403 lockout (5 fails/15min) | `Login::LOCKOUT_*` | distinct message |
+| 30-day trusted device | `DEVICE_TRUST_TTL` | `device_token` cached, replayed on step 1 |
+
+Failures throw `AuthError` carrying `.status`, so 429/403 stay distinguishable
+from a plain 401.
 
 ### Working offline: the mock login
 

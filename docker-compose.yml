@@ -47,7 +47,7 @@ services:
     environment:
       NODE_ENV: development
       TERM: xterm
-      # The app talks to the mothership (VITE_MOTHERSHIP_URL, from .env) for /api/*.
+      # The app talks to the mothership (MOTHERSHIP_URL, from .env) for /api/*.
       # deno-api runs network_mode: host (:4001 on the host); this container is on
       # the bridge, so the Vite proxy reaches it via the host gateway (extra_hosts).
       VITE_DENO_API_TARGET: ${VITE_DENO_API_TARGET:-http://host.docker.internal:4001}
@@ -117,7 +117,10 @@ services:
       CABLE_TOKEN: ${CABLE_TOKEN:-}
       # Engine (voipappz-api, "the brain") — transcripts are read on request from
       # its event store. Server-side basic-auth creds, NEVER VITE_-prefixed.
-      ENGINE_URL: ${ENGINE_URL:-https://cloud.voipappz.io}
+      # MOTHERSHIP_URL is the one tenant knob; ENGINE_URL overrides it when the
+      # engine lives elsewhere. Must be resolved here — this `environment:` entry
+      # would otherwise shadow whatever .env sets via env_file.
+      ENGINE_URL: ${ENGINE_URL:-${MOTHERSHIP_URL:-https://cloud.voipappz.io}}
       ACCOUNT_EMAIL: ${ACCOUNT_EMAIL:-}
       ACCOUNT_PASSWORD: ${ACCOUNT_PASSWORD:-}
       # Event-freshness alarm: seconds the cable can be silent before /health
