@@ -15,10 +15,10 @@ describe('sipSettings', () => {
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it('defaults come from config with empty creds + autoConnect off', () => {
+  it('defaults are UNCONFIGURED — no endpoint baked in, empty creds, autoConnect off', () => {
     const s = defaultSipSettings();
-    expect(s.wssUrl).toContain('wss://');
-    expect(s.domain).toBeTruthy();
+    expect(s.wssUrl).toBe('');   // endpoint comes from the user object or env
+    expect(s.domain).toBe('');
     expect(s.username).toBe('');
     expect(s.password).toBe('');
     expect(s.autoConnect).toBe(false);
@@ -39,9 +39,10 @@ describe('sipSettings', () => {
   });
 
   it('sipSettingsReady requires wss + domain + username + password', () => {
-    expect(sipSettingsReady(defaultSipSettings())).toBe(false);
-    expect(sipSettingsReady({ ...defaultSipSettings(), username: '1001' })).toBe(false);
-    expect(sipSettingsReady({ ...defaultSipSettings(), username: '1001', password: 'pw' })).toBe(true);
+    const configured = { ...defaultSipSettings(), wssUrl: 'wss://sbc.example:8443', domain: 'd.test' };
+    expect(sipSettingsReady(defaultSipSettings())).toBe(false);  // no endpoint
+    expect(sipSettingsReady({ ...configured, username: '1001' })).toBe(false);   // no password
+    expect(sipSettingsReady({ ...configured, username: '1001', password: 'pw' })).toBe(true);
   });
 
   it('env creds are authoritative over stale saved settings', () => {
@@ -57,13 +58,14 @@ describe('sipSettings', () => {
   });
 
   it('derives SIP creds from the account email + login password (not hardcoded)', () => {
-    const s = sipSettingsFromAccount('200@6174.nimbusip.com', 'BaRFdB4');
+    vi.stubEnv('VITE_SIP_WSS_URL', 'wss://sbc.example:8443');  // SBC endpoint from env
+    const s = sipSettingsFromAccount('200@tenant.example', 'BaRFdB4');
     expect(s.username).toBe('200');                 // local part of the email
-    expect(s.domain).toBe('6174.nimbusip.com');     // the account's domain
+    expect(s.domain).toBe('tenant.example');        // the account's domain
     expect(s.password).toBe('BaRFdB4');             // the login password
     expect(s.displayName).toBe('200');
     expect(s.autoConnect).toBe(true);               // registers right after login
-    expect(s.wssUrl).toBe(defaultSipSettings().wssUrl); // SBC endpoint stays from config
+    expect(s.wssUrl).toBe('wss://sbc.example:8443'); // SBC endpoint stays from config/env
     expect(sipSettingsReady(s)).toBe(true);
   });
 
@@ -104,10 +106,12 @@ describe('sipSettings', () => {
     expect(s.password).toBe('pw');
   });
 
-  it('reads hardcoded creds + autoConnect from VITE_SIP_* env', () => {
+  it('reads creds + autoConnect from VITE_SIP_* env', () => {
     vi.stubEnv('VITE_SIP_USERNAME', '11125');
     vi.stubEnv('VITE_SIP_PASSWORD', 'secret');
     vi.stubEnv('VITE_SIP_AUTOCONNECT', '1');
+    vi.stubEnv('VITE_SIP_WSS_URL', 'wss://sbc.example:8443');
+    vi.stubEnv('VITE_SIP_DOMAIN', 'd.test');
     const s = defaultSipSettings();
     expect(s.username).toBe('11125');
     expect(s.password).toBe('secret');
