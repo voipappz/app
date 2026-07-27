@@ -20,3 +20,10 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await page.waitForURL('**/dashboard', { timeout: 15_000 });
   await expect(page.getByTestId('login-form')).toHaveCount(0);
 });
+
+// ProtectedRoute gate: unauthenticated deep links must land on /login.
+test('unauthenticated /calls redirects to login', async ({ page }) => {
+  await page.goto('/calls');
+  await page.waitForURL('**/login', { timeout: 10_000 });
+  await expect(page.getByTestId('login-form')).toBeVisible();
+});
