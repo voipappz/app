@@ -55,9 +55,14 @@ tmux: ## Open the dev cockpit (tmuxinator: stack + logs + shells)
 	@command -v tmuxinator >/dev/null || { echo "tmuxinator not installed (gem install tmuxinator)"; exit 1; }
 	tmuxinator local
 
+# --user: the scaffolder writes into the repo mount and the container is root,
+# so without it the new files land root-owned and you need sudo to edit or
+# delete your own scaffold. Safe here (unlike build/lint/unit) because this
+# command only writes source files — it never touches the node_modules volume.
 module: ## Scaffold a feature module: make module NAME=Foo [ENDPOINT=/api/foos]
 	@test -n "$(NAME)" || { echo "usage: make module NAME=Foo [ENDPOINT=/api/foos]"; exit 1; }
-	docker compose run --rm --no-deps react-app node scripts/new-module.mjs "$(NAME)" "$(ENDPOINT)"
+	docker compose run --rm --no-deps --user "$(shell id -u):$(shell id -g)" \
+	  react-app node scripts/new-module.mjs "$(NAME)" "$(ENDPOINT)"
 
 build: ## Production build → dist/ (in Docker)
 	$(NPM_RUN) 'npm install --loglevel=error --no-audit --no-fund && npm run build'
@@ -100,16 +105,29 @@ KAMAL ?= docker run --rm \
   -v "$(HOME)/.ssh:/root/.ssh:ro" \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e KAMAL_REGISTRY_PASSWORD \
+  -e KAMAL_HEALTHCHECK_URL \
   ghcr.io/basecamp/kamal:latest
+
+# Tenant destination → config/deploy.$(DEST).yml. Empty = config/deploy.yml.
+#   make deploy DEST=mtn      # 81.199.146.152, published on :8888
+#   make deploy DEST=pbx20
+DEST ?=
+KAMAL_DEST := $(if $(DEST),-d $(DEST),)
+
+# Where the post-deploy hook aims its smoke checks. Unset ⇒ the hook skips them
+# rather than probing some other tenant's host and failing the deploy.
+HEALTHCHECK_URL ?= $(if $(filter mtn,$(DEST)),https://mtnunicom.mtn.com.gh:8888,$(PROD_URL))
 
 push: ## git push current branch to origin
 	git push
 
-deploy: ## Build image, push to registry, swap container on production (Docker only — no local tooling)
+deploy: ## Build image, push to registry, swap container on production — make deploy [DEST=mtn]
 	@test -f .kamal/secrets || { echo "missing .kamal/secrets — cp .kamal/secrets.example .kamal/secrets and fill it in"; exit 1; }
-	@set -a; . .kamal/secrets; set +a; $(KAMAL) deploy
+	@echo "==> kamal deploy $(KAMAL_DEST)  (config/deploy$(if $(DEST),.$(DEST),).yml)"
+	@set -a; . .kamal/secrets; set +a; \
+	  KAMAL_HEALTHCHECK_URL="$(HEALTHCHECK_URL)" $(KAMAL) deploy $(KAMAL_DEST)
 
-ship: push deploy ## git push + deploy in one shot
+ship: push deploy ## git push + deploy in one shot (honours DEST)
 
 status: ## Local git + production health + deployed version
 	@echo "=== Local git ==="

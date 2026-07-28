@@ -1,5 +1,11 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+#
+# POSIX sh, not bash: hooks run INSIDE the kamal image
+# (ghcr.io/basecamp/kamal — Alpine), which ships no bash. A `#!/usr/bin/env
+# bash` shebang here failed every deploy with
+#   env: can't execute 'bash': No such file or directory
+# (surfaced by kamal as the useless `pre-build exit status: 32512`).
+set -eu
 
 echo "=== Pre-build: Deno type check ==="
 #( cd api && deno check supabase.ts )
