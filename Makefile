@@ -118,12 +118,30 @@ KAMAL_DEST := $(if $(DEST),-d $(DEST),)
 # rather than probing some other tenant's host and failing the deploy.
 HEALTHCHECK_URL ?= $(if $(filter mtn,$(DEST)),https://mtnunicom.mtn.com.gh:8888,$(PROD_URL))
 
+# Destinations that run `proxy: false` on a FIXED host port (mtn, pbx20) cannot
+# have two containers alive at once: the outgoing one still holds 8888, so the
+# incoming one dies with
+#   docker: Bind for 0.0.0.0:8888 failed: port is already allocated  (exit 125)
+# There is no proxy to hand traffic over, so the old container must let go
+# first — a few seconds of downtime is the cost of publishing a fixed port.
+# The default destination fronts with kamal-proxy and hands over cleanly, so
+# stopping there would add an outage for nothing.
+#
+# This can't live in a kamal hook: hooks run INSIDE the kamal image on the
+# DEPLOY box, where `docker` talks to the local daemon and there is no ssh
+# binary to reach the target host. `kamal app stop` uses kamal's own net-ssh.
+STOP_FIRST := $(if $(filter mtn pbx20,$(DEST)),1,)
+
 push: ## git push current branch to origin
 	git push
 
 deploy: ## Build image, push to registry, swap container on production — make deploy [DEST=mtn]
 	@test -f .kamal/secrets || { echo "missing .kamal/secrets — cp .kamal/secrets.example .kamal/secrets and fill it in"; exit 1; }
 	@echo "==> kamal deploy $(KAMAL_DEST)  (config/deploy$(if $(DEST),.$(DEST),).yml)"
+ifneq ($(STOP_FIRST),)
+	@echo "==> $(DEST) publishes a fixed port with proxy:false — stopping the old container first (brief downtime)"
+	-@set -a; . .kamal/secrets; set +a; $(KAMAL) app stop $(KAMAL_DEST)
+endif
 	@set -a; . .kamal/secrets; set +a; \
 	  KAMAL_HEALTHCHECK_URL="$(HEALTHCHECK_URL)" $(KAMAL) deploy $(KAMAL_DEST)
 
