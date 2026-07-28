@@ -9,15 +9,10 @@ export function fmtDuration(sec) {
 }
 
 // Compact clock format (m:ss / h:mm:ss) for the narrow avg-duration KPI tile,
-// so "1m 45s" doesn't overflow the 2-column mobile card.
-export function fmtClock(sec) {
-  if (!sec) return '0:00';
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
+// so "1m 45s" doesn't overflow the 2-column mobile card. Moved to lib/format
+// once the login OTP countdown needed the same thing; re-exported here so the
+// Calls components and their tests keep importing it from one place.
+export { fmtClock } from '../../lib/format';
 
 // API timestamps look like "2026-05-28 21:00:00.123" — UTC, but with no zone
 // marker. Force UTC ('Z') so toLocaleString()/toLocaleTimeString() render in the

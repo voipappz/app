@@ -18,6 +18,7 @@ deno-api forwarder in prod). A tenant fork changes **env, not code**.
 
 | Command | Description |
 |---|---|
+| `make env` | Create `.env` from the template (never overwrites an existing one) — then set `MOTHERSHIP_URL` |
 | `make dev` | Run the app in Docker — Vite HMR :4200 + deno-api :4001, attached logs. The usual loop; needs only Docker. |
 | `make up` / `make down` | Same stack, detached |
 | `make lint` / `make unit` | ESLint / Vitest one-shot — run in Docker (host `npm run lint` / `npm test` also work if you have node) |
@@ -35,7 +36,7 @@ Two runtime pieces:
 1. **React app** (`src/`, Vite :4200). All backend access goes through the
    mothership over the Vite proxy. Data-access layering is strict:
    - `src/lib/auth.ts` — the one credential (login JWT in `localStorage`, session helpers).
-   - `src/lib/clients/` — transport: `api.ts` (`apiList`/`apiGet` — adds the Bearer token, reads `X-Total`, drops the session on 401), `mothership.ts` (two-step login: password → optional per-environment OTP), `customerPortal.ts` (public branding).
+   - `src/lib/clients/` — transport: `api.ts` (`apiList`/`apiGet` — adds the Bearer token, reads `X-Total`, drops the session on 401), `mothership.ts` (two-step login: password → optional per-customer OTP), `customerPortal.ts` (public branding).
    - `src/services/` — one module per backend feature (`callsApi.js`, `reportsApi.js`, `featuresApi.js`): knows the endpoint, query params, and row normalization.
    - `src/components/<Feature>/` — folder-per-component with its own hook (`useCalls.js` pattern). Components never build URLs or set headers.
 
@@ -60,8 +61,8 @@ blocks are `lib/clients/postgrest.ts` + `components/PostgrestTable/`.
 
 Env is the whole tenant-configuration surface — see `.env.example` (documented
 inline). Nothing is required out of the box; repoint a tenant fork with
-`VITE_API_TARGET` (dev Vite proxy upstream) + `ENGINE_URL` (prod deno forward
-target).
+one var: `MOTHERSHIP_URL` (read by the dev Vite proxy, the prod deno
+forwarder, and `make dev`'s preflight).
 
 - **The browser never carries a backend host.** Clients build relative URLs;
   the Vite proxy (dev) or the deno forwarder (prod) owns the actual mothership

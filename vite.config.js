@@ -32,11 +32,16 @@ export default defineConfig(({ mode }) => {
       https: devHttps,
     proxy: (() => {
       const DENO = process.env.VITE_DENO_API_TARGET || 'http://localhost:4001';
-      // The mothership (voipappz-api). One knob repoints it: VITE_MOTHERSHIP_URL
-      // in .env (VITE_API_TARGET still wins if set explicitly). The browser only
-      // ever sees relative URLs — this proxy (dev) / the deno forwarder (prod)
-      // owns the actual host.
-      const MOTHERSHIP = process.env.VITE_API_TARGET || env.VITE_MOTHERSHIP_URL || 'https://cloud.voipappz.io';
+      // The mothership (voipappz-api). ONE knob repoints a tenant: MOTHERSHIP_URL
+      // in .env — unprefixed on purpose, so it can never land in the browser
+      // bundle or flip the client into cross-origin direct mode. VITE_API_TARGET
+      // overrides it for this proxy alone. The browser only ever sees relative
+      // URLs — this proxy (dev) / the deno forwarder (prod) owns the actual host.
+      //
+      // VITE_MOTHERSHIP_URL is deliberately NOT read here: it means direct mode
+      // to the browser clients (api.ts / mothership.ts / customerPortal.ts), and
+      // a static-hosting fork that sets it must not silently retarget this proxy.
+      const MOTHERSHIP = process.env.VITE_API_TARGET || env.MOTHERSHIP_URL || 'https://cloud.voipappz.io';
       return {
         // Mothership surfaces: data reads (/api/*), the user login/OTP surface
         // (/auth/user_login, /auth/user/otp/verify), and public portal branding

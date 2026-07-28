@@ -1,12 +1,16 @@
-.PHONY: help dev check-mothership up down build lint unit verify test push deploy ship status tmux module prod prod-down
+.PHONY: help env dev check-mothership up down build lint unit verify test push deploy ship status tmux module prod prod-down
 
 # Everything runs in Docker — no host node/npm/ruby required. One-off npm/node
 # commands reuse the react-app service (repo mount + cached node_modules volume).
 NPM_RUN := docker compose run --rm --no-deps react-app bash -c
 
 # ── Config (override on the CLI or in .env) ─────────────────────────────────
-# The mothership base — read from .env (VITE_MOTHERSHIP_URL), else the cloud.
-MOTHERSHIP ?= $(shell sed -n 's/^VITE_MOTHERSHIP_URL=//p' .env 2>/dev/null | head -1 | tr -d '\r"')
+# The mothership base, resolved exactly as vite.config.js does so the preflight
+# always probes the host Vite actually proxies to: VITE_API_TARGET wins, else
+# MOTHERSHIP_URL. Two seds, not one alternation — an alternation matches by line
+# order in .env, not by precedence, so it could report OK against the wrong host.
+MOTHERSHIP ?= $(shell sed -n 's/^VITE_API_TARGET=//p' .env 2>/dev/null | grep . | head -1 | tr -d '\r"')
+MOTHERSHIP := $(if $(MOTHERSHIP),$(MOTHERSHIP),$(shell sed -n 's/^MOTHERSHIP_URL=//p' .env 2>/dev/null | grep . | head -1 | tr -d '\r"'))
 MOTHERSHIP := $(if $(MOTHERSHIP),$(MOTHERSHIP),https://cloud.voipappz.io)
 
 # Local stack endpoints
@@ -22,15 +26,22 @@ help: ## Show this help
 	@awk 'BEGIN{FS=":.*## ";printf "\nmake \033[36m<target>\033[0m\n\n"} \
 	      /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n",$$1,$$2}' $(MAKEFILE_LIST)
 
+env: ## Create .env from the template (never overwrites an existing one)
+	@if [ -f .env ]; then \
+	  echo ".env exists — leaving it alone. Mothership: $(MOTHERSHIP)"; \
+	else \
+	  cp .env.example .env && echo "wrote .env — set MOTHERSHIP_URL to point at your tenant"; \
+	fi
+
 dev: check-mothership ## Run the app in Docker (Vite HMR :4200 + deno-api :4001), attached logs
 	docker compose up -d react-app deno-api
 	@echo "deno-api → :4001 · Vite → $(WEB_APP) (proxies /api → mothership $(MOTHERSHIP)) — Ctrl-C detaches, stack keeps running"
 	docker compose logs -f react-app
 
-check-mothership: ## Verify the mothership (VITE_MOTHERSHIP_URL) is reachable
+check-mothership: ## Verify the mothership (MOTHERSHIP_URL) is reachable
 	@echo "==> Mothership (override: MOTHERSHIP=https://<host>)"
 	@code=$$(curl -s -o /dev/null -w '%{http_code}' "$(MOTHERSHIP)/tasks/customer_portal_data" --max-time 5); \
-	  case $$code in [234]*) s="OK ($$code)";; *) s="UNREACHABLE ($$code) — set VITE_MOTHERSHIP_URL in .env";; esac; \
+	  case $$code in [234]*) s="OK ($$code)";; *) s="UNREACHABLE ($$code) — set MOTHERSHIP_URL in .env";; esac; \
 	  printf "  %-11s %-34s %s\n" "mothership" "$(MOTHERSHIP)" "$$s"
 
 up: ## Start the full Docker stack (web + deno-api)
@@ -44,9 +55,14 @@ tmux: ## Open the dev cockpit (tmuxinator: stack + logs + shells)
 	@command -v tmuxinator >/dev/null || { echo "tmuxinator not installed (gem install tmuxinator)"; exit 1; }
 	tmuxinator local
 
+# --user: the scaffolder writes into the repo mount and the container is root,
+# so without it the new files land root-owned and you need sudo to edit or
+# delete your own scaffold. Safe here (unlike build/lint/unit) because this
+# command only writes source files — it never touches the node_modules volume.
 module: ## Scaffold a feature module: make module NAME=Foo [ENDPOINT=/api/foos]
 	@test -n "$(NAME)" || { echo "usage: make module NAME=Foo [ENDPOINT=/api/foos]"; exit 1; }
-	docker compose run --rm --no-deps react-app node scripts/new-module.mjs "$(NAME)" "$(ENDPOINT)"
+	docker compose run --rm --no-deps --user "$(shell id -u):$(shell id -g)" \
+	  react-app node scripts/new-module.mjs "$(NAME)" "$(ENDPOINT)"
 
 build: ## Production build → dist/ (in Docker)
 	$(NPM_RUN) 'npm install --loglevel=error --no-audit --no-fund && npm run build'
@@ -89,16 +105,29 @@ KAMAL ?= docker run --rm \
   -v "$(HOME)/.ssh:/root/.ssh:ro" \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e KAMAL_REGISTRY_PASSWORD \
+  -e KAMAL_HEALTHCHECK_URL \
   ghcr.io/basecamp/kamal:latest
+
+# Tenant destination → config/deploy.$(DEST).yml. Empty = config/deploy.yml.
+#   make deploy DEST=mtn      # 81.199.146.152, published on :8888
+#   make deploy DEST=pbx20
+DEST ?=
+KAMAL_DEST := $(if $(DEST),-d $(DEST),)
+
+# Where the post-deploy hook aims its smoke checks. Unset ⇒ the hook skips them
+# rather than probing some other tenant's host and failing the deploy.
+HEALTHCHECK_URL ?= $(if $(filter mtn,$(DEST)),https://mtnunicom.mtn.com.gh:8888,$(PROD_URL))
 
 push: ## git push current branch to origin
 	git push
 
-deploy: ## Build image, push to registry, swap container on production (Docker only — no local tooling)
+deploy: ## Build image, push to registry, swap container on production — make deploy [DEST=mtn]
 	@test -f .kamal/secrets || { echo "missing .kamal/secrets — cp .kamal/secrets.example .kamal/secrets and fill it in"; exit 1; }
-	@set -a; . .kamal/secrets; set +a; $(KAMAL) deploy
+	@echo "==> kamal deploy $(KAMAL_DEST)  (config/deploy$(if $(DEST),.$(DEST),).yml)"
+	@set -a; . .kamal/secrets; set +a; \
+	  KAMAL_HEALTHCHECK_URL="$(HEALTHCHECK_URL)" $(KAMAL) deploy $(KAMAL_DEST)
 
-ship: push deploy ## git push + deploy in one shot
+ship: push deploy ## git push + deploy in one shot (honours DEST)
 
 status: ## Local git + production health + deployed version
 	@echo "=== Local git ==="

@@ -11,8 +11,9 @@ import {
   Alert
 } from '@mui/material';
 import { useLogin } from './Login';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { brand } from '../../config';
+import { fmtClock } from '../../lib/format';
 import './Login.css';
 
 const Login = () => {
@@ -23,16 +24,22 @@ const Login = () => {
     touched,
     loading,
     error,
+    expectsOtp,
     otpStep,
     otpCode,
+    secondsLeft,
+    hasExpiry,
+    otpExpired,
     handleEmailChange,
     handlePasswordChange,
     handleOtpCodeChange,
     handleBlur,
     handleSubmit,
     handleOtpSubmit,
+    handleResendOtp,
     handleBackToCredentials
   } = useLogin();
+
 
   return (
     <Container component="main" maxWidth="sm" className="login-container">
@@ -49,9 +56,11 @@ const Login = () => {
           {otpStep ? t('login.otpTitle') : t('login.title')}
         </Typography>
 
+        {/* Name the destination — the code is emailed (Jobs::Mail::Send), so
+            saying which address it went to is both accurate and self-service. */}
         {otpStep && (
           <Typography variant="body2" className="login-subtitle" data-testid="otp-subtitle">
-            {t('login.otpSent')}
+            <Trans i18nKey="login.otpSentTo" values={{ email }} components={{ strong: <strong /> }} />
           </Typography>
         )}
 
@@ -75,10 +84,37 @@ const Login = () => {
                 className="login-input otp-input"
                 data-testid="otp-input"
                 autoFocus
-                inputProps={{ inputMode: 'numeric', maxLength: 6, style: { letterSpacing: '0.4em', textAlign: 'center' } }}
+                // one-time-code lets iOS/Android/Chrome autofill the emailed code;
+                // pattern keeps the numeric keypad on older mobile browsers.
+                autoComplete="one-time-code"
+                inputProps={{
+                  inputMode: 'numeric',
+                  pattern: '[0-9]*',
+                  maxLength: 6,
+                  style: { letterSpacing: '0.4em', textAlign: 'center' },
+                }}
                 required
               />
             </FormControl>
+
+            {/* No deadline from the server ⇒ no clock, rather than a made-up
+                one. Resend stays available either way. */}
+            <Box className="otp-status mb-3">
+              {hasExpiry && (
+                <Typography variant="caption" data-testid="otp-countdown">
+                  {otpExpired ? t('login.otpExpired') : t('login.otpExpiresIn', { time: fmtClock(secondsLeft) })}
+                </Typography>
+              )}
+              <Typography
+                variant="caption"
+                className="forgot-password"
+                onClick={loading ? undefined : handleResendOtp}
+                data-testid="otp-resend"
+                sx={{ cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.5 : 1 }}
+              >
+                {t('login.resendCode')}
+              </Typography>
+            </Box>
 
             <Box className="form-footer">
               <Typography
@@ -96,7 +132,7 @@ const Login = () => {
                 variant="contained"
                 className="login-button"
                 data-testid="otp-verify-button"
-                disabled={loading || otpCode.length !== 6}
+                disabled={loading || otpCode.length !== 6 || otpExpired}
                 startIcon={loading ? <CircularProgress size={20} /> : null}
               >
                 {loading ? t('login.verifying') : t('login.verify')}
@@ -148,6 +184,14 @@ const Login = () => {
             )}
           </FormControl>
           
+          {/* Tenant-level heads-up so the OTP screen isn't a surprise. Purely
+              informational — the server still decides whether a code is sent. */}
+          {expectsOtp && (
+            <Typography variant="caption" className="login-otp-hint" data-testid="otp-hint">
+              {t('login.otpExpectedHint')}
+            </Typography>
+          )}
+
           <Box className="form-footer">
             <Typography
               variant="body2"

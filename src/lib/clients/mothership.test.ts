@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { userLogin, verifyOtp, getDeviceToken } from './mothership';
+import { userLogin, verifyOtp, getDeviceToken, AuthError } from './mothership';
 import { getSession, getToken, logout } from '../auth';
 
 // Drive the mothership client with a mocked fetch (no network). Asserts the
@@ -32,7 +32,43 @@ describe('mothership auth client', () => {
     // USER surface (this app is user-facing) — /auth/login is the admin surface.
     expect(url).toContain('/auth/user_login?');
     expect(url).toContain('email=user%40x.com');
-    expect(url).toContain('otp=true');
+    // We do NOT ask for a challenge. voipappz-api gates on `login_otp_enabled`
+    // on the user's environment profile (Mediators::User::Login#otp_enabled?)
+    // and ignores any client-sent `otp` param — sending one implies a control
+    // the client doesn't have.
+    expect(url).not.toContain('otp=');
+  });
+
+  // The server's rate limit (429, 10 fails / 5min per IP) and lockout (403, 5
+  // fails / 15min) need to reach the UI as distinct states, so the thrown error
+  // has to carry the status — a bare message can't be told apart from a 401.
+  it('surfaces the HTTP status on failure so 429/403 stay distinguishable', async () => {
+    global.fetch = mockFetch(429, { message: 'Too many failed attempts. Please try again later.' });
+    const err = await userLogin('user@x.com', 'pw').catch((e) => e);
+    expect(err).toBeInstanceOf(AuthError);
+    expect(err.status).toBe(429);
+    expect(err.message).toContain('Too many failed attempts');
+  });
+
+  // The code's lifetime is the SERVER's to state (`expires_in`, from its own
+  // OTP_TTL). We never assume one — an absent or junk value must read as "no
+  // deadline known" so the UI shows no clock instead of inventing a deadline.
+  it('takes the OTP lifetime from the server response', async () => {
+    global.fetch = mockFetch(200, { otp_sent: true, temp_token: 'tmp-1', expires_in: 120 });
+    const step = await userLogin('user@x.com', 'pw');
+    expect(step.expiresIn).toBe(120);
+  });
+
+  it('reports no lifetime when the server states none', async () => {
+    global.fetch = mockFetch(200, { otp_sent: true, temp_token: 'tmp-1' });
+    const step = await userLogin('user@x.com', 'pw');
+    expect(step.expiresIn).toBeUndefined();
+  });
+
+  it('ignores a junk lifetime rather than counting down from garbage', async () => {
+    global.fetch = mockFetch(200, { otp_sent: true, temp_token: 'tmp-1', expires_in: 'soon' });
+    const step = await userLogin('user@x.com', 'pw');
+    expect(step.expiresIn).toBeUndefined();
   });
 
   it('step 1 logs in directly for a trusted device (token in response)', async () => {

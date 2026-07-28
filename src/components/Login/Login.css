@@ -68,6 +68,28 @@
   margin-top: 32px;
 }
 
+/* Tenant "expect a code" heads-up under the credentials fields. */
+.login-otp-hint {
+  display: block;
+  margin-top: 12px;
+  color: #666;
+}
+
+/* OTP expiry clock + resend, sitting directly under the code field. The clock is
+   absent when the server states no deadline, so resend is pushed to the end with
+   an auto margin rather than a spacer element — and inline-start keeps that
+   correct in RTL, which is the default direction here. */
+.otp-status {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  color: #666;
+}
+
+.otp-status .forgot-password {
+  margin-inline-start: auto;
+}
+
 .forgot-password {
   cursor: pointer;
   text-decoration: none;

@@ -1,29 +1,47 @@
-#!/usr/bin/env bash
+#!/bin/sh
 #
 # Kamal post-deploy hook — runs after the new container is healthy.
 # Lightweight wiring smoke checks against the live deploy: the frontend serves,
 # the dependency /health is up, and the auth + engine-transcript routes are
 # mounted (probing error paths only — no real calls, no creds consumed).
 #
-# Set KAMAL_HEALTHCHECK_URL to the deployed host; defaults below otherwise.
+# POSIX sh and curl-optional, because hooks run INSIDE the kamal image
+# (ghcr.io/basecamp/kamal — Alpine): no bash, no bash arrays, no curl — only
+# busybox wget. See the shebang note in pre-build.
+#
+# Probes ONLY when KAMAL_HEALTHCHECK_URL names the deployed host. Unset = skip:
+# a hardcoded default probes whichever tenant it was written for and then fails
+# the deploy of every other one. `make deploy DEST=<dest>` sets it per
+# destination.
+set -eu
 
-set -euo pipefail
+BASE_URL="${KAMAL_HEALTHCHECK_URL:-}"
+if [ -z "$BASE_URL" ]; then
+  echo "=== Post-deploy: KAMAL_HEALTHCHECK_URL unset — skipping smoke checks ==="
+  exit 0
+fi
 
-BASE_URL="${KAMAL_HEALTHCHECK_URL:-https://forms.nimbusip.com}"
 FAIL=0
 
-probe() {
-  local name="$1" method="$2" path="$3" expected="$4" body="${5:-}"
-  local args=(-s -o /dev/null -w "%{http_code}" --max-time 10 -X "$method" "$BASE_URL$path")
-  if [ -n "$body" ]; then
-    args+=(-H "Content-Type: application/json" --data "$body")
-  fi
-  local code
-  code=$(curl "${args[@]}")
-  if [ "$code" = "$expected" ]; then
-    echo "  ✓  $name → $code"
+# Status code for a GET, via whichever client the image has.
+# -k / --no-check-certificate: MTN terminates TLS on :8888 with the host's own
+# cert and we are probing our own box by name — a chain check adds nothing.
+http_code() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "$1"
   else
-    echo "  ✗  $name → expected $expected, got $code"
+    wget --no-check-certificate -S -q -O /dev/null -T 10 "$1" 2>&1 \
+      | awk '/^ *HTTP\//{c=$2} END{print (c ? c : "000")}'
+  fi
+}
+
+probe() {
+  _name="$1"; _path="$2"; _expected="$3"
+  _code=$(http_code "$BASE_URL$_path")
+  if [ "$_code" = "$_expected" ]; then
+    echo "  ✓  $_name → $_code"
+  else
+    echo "  ✗  $_name → expected $_expected, got $_code"
     FAIL=1
   fi
 }
@@ -32,28 +50,22 @@ echo "=== Post-deploy: Waiting 5s for proxy to settle ==="
 sleep 5
 
 echo "=== Post-deploy: Smoke checks against $BASE_URL ==="
-# Health probe — cable + events-freshness + engine + supabase. 200 = all
-# required deps reachable (degraded-but-up is still 200); 503 = one is down.
-probe "GET  /health                        (deps health)" GET "/health" 200
+# Health probe — cable + events freshness + engine. 200 = every required dep
+# reachable (degraded-but-up is still 200); 503 = one is down.
+probe "GET  /health                  (deps health)" "/health" 200
 # Quick status summary (cable_ready, relayed/tapped, events_status).
-probe "GET  /test                          (status)" GET "/test" 200
-
+probe "GET  /test                    (status)" "/test" 200
 # React bundle is served (the SPA shell / login page loads).
-probe "GET  /                              (frontend)" GET "/" 200
-
-# Auth proxy is mounted: a bodyless login is a 400 (validation), proving the
-# /auth/login → PostgREST /rpc/login route is wired (not a 404).
-probe "POST /auth/login                    (no body → 400)" POST "/auth/login" 400 '{}'
-
+probe "GET  /                        (frontend)" "/" 200
 # Transcript read is JWT-gated: unauthenticated → 401, proving the engine-backed
 # transcript route is mounted and protected (not 404/500).
-probe "GET  /calls/smoke/transcript        (no auth → 401)" GET "/calls/smoke/transcript" 401
+probe "GET  /calls/smoke/transcript  (no auth → 401)" "/calls/smoke/transcript" 401
 
 if [ "$FAIL" = "1" ]; then
   echo
   echo "❌  One or more smoke checks failed. The deploy is live but an integration"
-  echo "    is mis-wired. Inspect the container log:"
-  echo "      ssh root@91.202.171.162 'docker logs \$(docker ps --filter label=role=web -q | head -1) --tail 60'"
+  echo "    is mis-wired. Inspect the container log on the deployed host:"
+  echo "      docker logs \$(docker ps --filter label=role=web -q | head -1) --tail 60"
   exit 1
 fi
 

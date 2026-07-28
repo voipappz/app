@@ -14,7 +14,9 @@ export const POSTGREST_ENABLED = POSTGREST_URL !== "";
 // Dashboard renders the cable /ws stream as-is, and call transcripts are read
 // on request from the engine event store (`ai.transcribe.done`). Server-side
 // basic auth — NEVER exposed to the browser.
-export const ENGINE_URL = (Deno.env.get("ENGINE_URL") || "https://cloud.voipappz.io").replace(/\/$/, "");
+// MOTHERSHIP_URL is the ONE knob that repoints a tenant (dev proxy + this
+// forwarder read it); ENGINE_URL still wins when the engine lives elsewhere.
+export const ENGINE_URL = (Deno.env.get("ENGINE_URL") || Deno.env.get("MOTHERSHIP_URL") || "https://cloud.voipappz.io").replace(/\/$/, "");
 export const ENGINE_EMAIL = Deno.env.get("ENGINE_EMAIL") || Deno.env.get("ACCOUNT_EMAIL") || "";
 export const ENGINE_PASSWORD = Deno.env.get("ENGINE_PASSWORD") || Deno.env.get("ACCOUNT_PASSWORD") || "";
 export const ENGINE_ENABLED = ENGINE_EMAIL !== "" && ENGINE_PASSWORD !== "";
