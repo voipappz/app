@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { userLogin, verifyOtp } from '../../lib/clients/mothership';
 import { expectsLoginOtp } from '../../lib/clients/customerPortal';
+import { logout } from '../../lib/auth';
 import { useSipPhoneCtx } from '../../context/SipPhoneContext';
 import { sipSettingsFromUser } from '../../lib/sip/sipSettings';
 import i18n from '../../i18n/config';
@@ -80,9 +81,22 @@ export const useLogin = () => {
   };
 
   // Apply whichever shape step 1 returned: a challenge, or a finished session.
+  //
+  // When the tenant expects two-step verification we challenge EVEN IF the
+  // server issued a session without one — the policy says two steps, so one is
+  // not enough. Note `userLogin` has already persisted that session (toSession →
+  // saveSession), so we drop it here; otherwise the user would be holding a live
+  // token while staring at a code prompt.
+  //
+  // Such a challenge has no temp_token behind it: the server never generated a
+  // code, so it cannot be completed. handleOtpSubmit says so plainly rather than
+  // claiming the code was wrong. This resolves once the server actually gates on
+  // login_otp_enabled.
   const applyStep = async (step) => {
-    if (step.status !== 'otp') return finishLogin(step.session);
-    setTempToken(step.tempToken);
+    if (step.status !== 'otp' && !expectsOtp) return finishLogin(step.session);
+
+    if (step.status !== 'otp') logout();
+    setTempToken(step.tempToken || '');
     setOtpStep(true);
     setOtpCode('');
     setDeadline(step.expiresIn ? Date.now() + step.expiresIn * 1000 : null);
@@ -127,6 +141,13 @@ export const useLogin = () => {
 
     if (!otpCode || otpCode.length !== 6) {
       setError('Please enter the 6-digit code');
+      return;
+    }
+
+    // No temp_token ⇒ the server never issued a code, so there is nothing to
+    // verify. Say that, instead of letting verifyOtp fail as "invalid code".
+    if (!tempToken) {
+      setError(i18n.t('login.otpNotIssued'));
       return;
     }
 
