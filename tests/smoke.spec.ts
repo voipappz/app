@@ -67,7 +67,7 @@ async function stubPortalData(page, body) {
 }
 
 test('tenant OTP hint shows when the portal data states it', async ({ page }) => {
-  await stubPortalData(page, { name: 'mtn', language: 'en', login_otp_enabled: true });
+  await stubPortalData(page, { name: 'mtn', language: 'en', login_otp_enabled: 'true' });
   await page.goto('/login');
   await expect(page.getByTestId('otp-hint')).toBeVisible();
 });
@@ -82,7 +82,7 @@ test('tenant OTP hint shows when the portal data omits the key', async ({ page }
 
 // ...and only an explicit opt-out takes it away.
 test('tenant OTP hint hidden only when the tenant opts out', async ({ page }) => {
-  await stubPortalData(page, { name: 'mtn', language: 'en', login_otp_enabled: false });
+  await stubPortalData(page, { name: 'mtn', language: 'en', login_otp_enabled: 'false' });
   await page.goto('/login');
   await expect(page.getByTestId('login-form')).toBeVisible();
   await expect(page.getByTestId('otp-hint')).toHaveCount(0);
