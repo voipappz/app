@@ -23,12 +23,13 @@ describe('expectsLoginOtp', () => {
     expect(expectsLoginOtp()).toBe(true);
   });
 
-  it.each(['true', 'True', ' TRUE ', '1', 'yes', 'on'])('expects OTP for %s', (v) => {
+  // 'enabled' included: Validate::String::Boolean accepts it, so it can be stored.
+  it.each(['true', 'True', ' TRUE ', '1', 'yes', 'on', 'enabled'])('expects OTP for %s', (v) => {
     seedPortal({ login_otp_enabled: v });
     expect(expectsLoginOtp()).toBe(true);
   });
 
-  it.each(['false', 'off', '0', 'no'])('stands down for %s', (v) => {
+  it.each(['false', 'off', '0', 'no', 'disabled'])('stands down for %s', (v) => {
     seedPortal({ login_otp_enabled: v });
     expect(expectsLoginOtp()).toBe(false);
   });
