@@ -13,7 +13,7 @@ import {
 import { useLogin } from './Login';
 import { useTranslation, Trans } from 'react-i18next';
 import { brand } from '../../config';
-import { expectsLoginOtp } from '../../lib/clients/customerPortal';
+import { fmtClock } from '../../lib/format';
 import './Login.css';
 
 const Login = () => {
@@ -24,6 +24,7 @@ const Login = () => {
     touched,
     loading,
     error,
+    expectsOtp,
     otpStep,
     otpCode,
     secondsLeft,
@@ -39,13 +40,6 @@ const Login = () => {
     handleBackToCredentials
   } = useLogin();
 
-  // mm:ss left before the server drops the code.
-  const countdown = `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`;
-
-  // Tenant hint from the customer portal data. OTP IS THE DEFAULT — we expect a
-  // code unless the tenant explicitly opts out. Advisory: the login response
-  // still decides what actually happens.
-  const expectsOtp = expectsLoginOtp();
 
   return (
     <Container component="main" maxWidth="sm" className="login-container">
@@ -103,16 +97,13 @@ const Login = () => {
               />
             </FormControl>
 
-            {/* The code dies server-side; the deadline comes from the server's
-                `expires_in`. No deadline given ⇒ no clock, rather than a made-up
+            {/* No deadline from the server ⇒ no clock, rather than a made-up
                 one. Resend stays available either way. */}
             <Box className="otp-status mb-3">
-              {hasExpiry ? (
+              {hasExpiry && (
                 <Typography variant="caption" data-testid="otp-countdown">
-                  {otpExpired ? t('login.otpExpired') : t('login.otpExpiresIn', { time: countdown })}
+                  {otpExpired ? t('login.otpExpired') : t('login.otpExpiresIn', { time: fmtClock(secondsLeft) })}
                 </Typography>
-              ) : (
-                <span />
               )}
               <Typography
                 variant="caption"

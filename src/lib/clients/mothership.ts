@@ -132,24 +132,21 @@ export interface LoginStep {
 }
 
 /**
- * Step 1 — submit credentials. Returns `{status:'otp', tempToken}` when the
- * server sends a code, or `{status:'ok', session}` for a trusted device.
+ * Step 1 — submit credentials. Returns `{status:'otp', tempToken, expiresIn}`
+ * when the server sends a code, or `{status:'ok', session}` when it doesn't.
  *
- * WHETHER A CODE IS SENT IS THE SERVER'S CALL, NOT OURS. voipappz-api gates on
- * `login_otp_enabled` on the user's ENVIRONMENT profile (Mediators::User::Login
- * #otp_enabled?) — a per-environment policy it can only resolve after looking
- * the user up by email. So there is no flag to send and none to pre-fetch: we
- * post credentials and obey the response shape. Re-posting is also how a code
- * gets resent — the API has no separate resend route.
+ * The server owns that choice: voipappz-api gates on `login_otp_enabled` on the
+ * user's ENVIRONMENT profile (`Mediators::User::Login#otp_enabled?`), which it
+ * can only resolve after looking the user up by email. So there's no flag to
+ * send and none to pre-fetch — we post credentials and obey the response shape.
+ * Re-posting is also how a code gets resent; the API has no resend route.
  *
- * `expiresIn` likewise comes from the server (`expires_in`, its own OTP_TTL) —
- * we never assume a lifetime. Absent ⇒ we don't know ⇒ show no countdown.
+ * `expiresIn` is the server's own OTP_TTL. Absent means we don't know, which
+ * callers must render as no countdown rather than an invented deadline.
  */
 export async function userLogin(email: string, password: string): Promise<LoginStep> {
   // Offline USER OTP mock: any email goes through the 2-step flow (like the server
-  // with VA_TEST_OTP). The code is checked in step 2 (verifyOtp). MOCK_OTP_TTL is
-  // this fake server's own OTP_TTL — the mock stands in for the API, so the value
-  // belongs here, not in the UI.
+  // with VA_TEST_OTP). The code is checked in step 2 (verifyOtp).
   if (mockLoginEnabled() && email.trim()) {
     return { status: 'otp', tempToken: `mock:${email.trim().toLowerCase()}`, expiresIn: MOCK_OTP_TTL };
   }

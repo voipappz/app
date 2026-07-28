@@ -5,10 +5,12 @@
 NPM_RUN := docker compose run --rm --no-deps react-app bash -c
 
 # ── Config (override on the CLI or in .env) ─────────────────────────────────
-# The mothership base — read from .env. MOTHERSHIP_URL is the one tenant knob;
-# VITE_API_TARGET / VITE_MOTHERSHIP_URL are read after it for older .env files.
-# Same precedence as vite.config.js, so the preflight probes what Vite proxies.
-MOTHERSHIP ?= $(shell sed -n 's/^\(MOTHERSHIP_URL\|VITE_API_TARGET\|VITE_MOTHERSHIP_URL\)=//p' .env 2>/dev/null | grep . | head -1 | tr -d '\r"')
+# The mothership base, resolved exactly as vite.config.js does so the preflight
+# always probes the host Vite actually proxies to: VITE_API_TARGET wins, else
+# MOTHERSHIP_URL. Two seds, not one alternation — an alternation matches by line
+# order in .env, not by precedence, so it could report OK against the wrong host.
+MOTHERSHIP ?= $(shell sed -n 's/^VITE_API_TARGET=//p' .env 2>/dev/null | grep . | head -1 | tr -d '\r"')
+MOTHERSHIP := $(if $(MOTHERSHIP),$(MOTHERSHIP),$(shell sed -n 's/^MOTHERSHIP_URL=//p' .env 2>/dev/null | grep . | head -1 | tr -d '\r"'))
 MOTHERSHIP := $(if $(MOTHERSHIP),$(MOTHERSHIP),https://cloud.voipappz.io)
 
 # Local stack endpoints
