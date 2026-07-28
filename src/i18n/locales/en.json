@@ -329,7 +329,6 @@
     "loginButton": "Login",
     "loggingIn": "Logging in...",
     "otpTitle": "Two-step verification",
-    "otpSent": "We sent a 6-digit code. Enter it to continue.",
     "otpCode": "Verification code",
     "verify": "Verify",
     "verifying": "Verifying...",
