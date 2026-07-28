@@ -36,7 +36,7 @@ Two runtime pieces:
 1. **React app** (`src/`, Vite :4200). All backend access goes through the
    mothership over the Vite proxy. Data-access layering is strict:
    - `src/lib/auth.ts` — the one credential (login JWT in `localStorage`, session helpers).
-   - `src/lib/clients/` — transport: `api.ts` (`apiList`/`apiGet` — adds the Bearer token, reads `X-Total`, drops the session on 401), `mothership.ts` (two-step login: password → optional per-environment OTP), `customerPortal.ts` (public branding).
+   - `src/lib/clients/` — transport: `api.ts` (`apiList`/`apiGet` — adds the Bearer token, reads `X-Total`, drops the session on 401), `mothership.ts` (two-step login: password → optional per-customer OTP), `customerPortal.ts` (public branding).
    - `src/services/` — one module per backend feature (`callsApi.js`, `reportsApi.js`, `featuresApi.js`): knows the endpoint, query params, and row normalization.
    - `src/components/<Feature>/` — folder-per-component with its own hook (`useCalls.js` pattern). Components never build URLs or set headers.
 

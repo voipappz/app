@@ -28,7 +28,7 @@ bundle.
 |---|---|---|
 | React app | `src/` (Vite :4200) | UI. Strict data-access layering: `lib/auth.ts` (the one credential) → `lib/clients/` (transport) → `services/` (per-feature) → `components/` (folder-per-component; `Calls` is the blueprint). |
 | deno-api | `api/` (:4001, entry `app.ts` → `server.ts`) | Thin BFF: mothership forwarder, `/ws/events` live cable relay, calls-per-hour (InfluxDB, server-side token), engine-backed transcript reads, `/health`. Serves `dist/` in prod. **Optional in dev** — without it the Dashboard extras stay quiet. |
-| Mothership (voipappz-api) | external, env-pointed | Accounts + login (`/auth/user_login` + optional per-environment OTP), calls, reports, feature flags, portal branding. The source of truth. |
+| Mothership (voipappz-api) | external, env-pointed | Accounts + login (`/auth/user_login` + optional per-customer OTP), calls, reports, feature flags, portal branding. The source of truth. |
 | PostgREST | external, **optional** | A second, direct-SQL data plane (`/rest/v1/*`) for tenant-custom tables/views — see below. |
 | Cable (va-crystal) | external, optional | Live call events; deno subscribes and relays to `/ws/events`. |
 

@@ -80,15 +80,15 @@ if (step.status === 'otp') {
 }
 ```
 
-Whether OTP is required is a **per-environment** decision on the server
-(`login_otp_enabled` on the environment profile) — the client just handles
+Whether OTP is required is a **per-customer** decision on the server
+(`login_otp_enabled` on the customer profile) — the client just handles
 whichever shape comes back. Do **not** gate OTP with a feature flag.
 
 **The client never asks for a challenge and cannot suppress one.** voipappz-api
 resolves the policy in `Mediators::User::Login#otp_enabled?`, from
-`user.environment.profile?(:login_otp_enabled)` — which it can only know *after*
-looking the user up by email. So there is nothing to send: don't add an `otp`
-param (the API ignores one). **The response shape is the instruction.**
+`user.environment.customer.profile[:login_otp_enabled]`. So there is nothing to
+send: don't add an `otp` param (the API ignores one). **The response shape is
+the instruction.**
 
 ### The pre-login hint (advisory)
 
@@ -102,9 +102,11 @@ serializer change — no app release. The client only decodes it, with
 `Mediators::User::Login#truthy?`'s rule so the hint can't disagree with the
 enforcement.
 
-The hint and the enforcement still default opposite ways: the server treats an
-unset *environment* key as off, so a tenant with OTP off shows the hint until
-`login_otp_enabled` is set `false` on its **customer** profile.
+Hint and enforcement now read the **same customer key**, so a correct payload
+means a correct expectation. They still default opposite ways, though: the
+serializer defaults to `"true"` while `Login#truthy?(nil)` is `false`, so a
+customer that has never set the key shows the hint but gets password-only login.
+Set the key explicitly to make them agree.
 
 **It is a hint, never the decision.** Two limits, both structural:
 
