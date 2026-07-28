@@ -30,27 +30,16 @@ export interface CustomerPortalData {
 
 /**
  * Should the login screen say "expect a code"? A HINT ONLY — it changes copy,
- * never the flow. The real decision is per-ENVIRONMENT, made server-side once
- * voipappz-api knows the user (`Mediators::User::Login#otp_enabled?`), and
- * reaches us as the shape of the step-1 login response. This value is
- * per-CUSTOMER and pre-login, so it can't describe a customer whose
- * environments differ.
+ * never the flow. The step-1 login response decides what actually happens, and
+ * it decides per-ENVIRONMENT, which this per-customer value can't describe.
  *
- * THE VALUE COMES FROM THE TENANT, NOT FROM HERE. The API always sends a
- * non-empty string and supplies the default itself for a customer that hasn't
- * set the key, so changing the default is a serializer change, not an app
- * release. We only decode it, using the same truthy rule as `Login#truthy?` so
- * the hint can't disagree with the enforcement about one stored value.
- *
- * The one case we answer on our own is having no portal data at all — the boot
- * fetch failed, so there is nothing to read. Then we mirror the API's default
- * rather than silently downgrade the tenant's posture on a network blip.
+ * The tenant owns the value AND its default: the API always sends a non-empty
+ * string, so we just decode it — with Login#truthy?'s rule, so the hint can't
+ * disagree with the enforcement. Only a missing payload falls back here.
  */
-const API_DEFAULT_WHEN_PORTAL_UNAVAILABLE = true;
-
 export function expectsLoginOtp(): boolean {
   const val = getCustomerData()?.login_otp_enabled;
-  if (val == null || val === '') return API_DEFAULT_WHEN_PORTAL_UNAVAILABLE;
+  if (!val) return true;   // no portal data or older API — match the API default
   return ['true', '1', 'yes', 'on'].includes(String(val).trim().toLowerCase());
 }
 
