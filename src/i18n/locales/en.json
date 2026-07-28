@@ -349,7 +349,8 @@
     "resendFailed": "Could not resend the code. Please try again.",
     "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
     "accountLocked": "Account locked due to too many failed attempts. Try again later.",
-    "otpExpectedHint": "This account uses two-step verification — we'll email you a code after you sign in."
+    "otpExpectedHint": "This account uses two-step verification — we'll email you a code after you sign in.",
+    "otpNotIssued": "No code was sent. This account requires two-step verification, but the server did not issue a code — contact your administrator."
   },
   "menu": {
     "dashboard": "Dashboard",
