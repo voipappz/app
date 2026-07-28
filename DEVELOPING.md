@@ -96,20 +96,15 @@ param (the API ignores one). **The response shape is the instruction.**
 `expectsLoginOtp()`. It lets the login screen say "expect a code" *before* the
 user submits — tenant config, no code change, same store as the branding.
 
-**The value and its default both come from the tenant, not the app.** The
-serializer always sends a non-empty string and supplies `"true"` itself for a
-customer that hasn't set the key, so changing the default is a serializer
-change — no app release. The client only decodes it, using the same truthy rule
-as `Mediators::User::Login#truthy?` so the hint can't disagree with the
-enforcement about one stored value. The only thing the app answers on its own is
-having no portal data at all (boot fetch failed), where it mirrors the API
-default rather than downgrading the tenant's posture on a network blip.
+**The tenant owns the value and its default.** The serializer always sends a
+non-empty string, defaulting to `"true"`, so changing the default is a
+serializer change — no app release. The client only decodes it, with
+`Mediators::User::Login#truthy?`'s rule so the hint can't disagree with the
+enforcement.
 
-Note the hint and the enforcement still default opposite ways. The **server**
-treats an unset *environment* key as off (`Login#truthy?(nil)` is `false`), so
-an environment that never sets it gets password-only login while the portal
-default says to expect a code. A tenant with OTP off shows the hint until
-`login_otp_enabled` is set to `false` on its **customer** profile.
+The hint and the enforcement still default opposite ways: the server treats an
+unset *environment* key as off, so a tenant with OTP off shows the hint until
+`login_otp_enabled` is set `false` on its **customer** profile.
 
 **It is a hint, never the decision.** Two limits, both structural:
 

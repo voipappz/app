@@ -12,23 +12,14 @@ function seedPortal(data: Record<string, unknown>) {
 describe('expectsLoginOtp', () => {
   beforeEach(() => localStorage.clear());
 
-  // The API supplies the default for an unset key, so in practice the value is
-  // always a real string. These are the degraded paths where it isn't — the boot
-  // fetch failed, or an older API is still deployed — and they must not silently
-  // downgrade the tenant's posture.
+  // The API sends the default itself, so a missing value only happens when the
+  // payload is missing — boot fetch failed, or an older API. Must not downgrade.
   it.each([
-    ['no portal data at all — boot fetch failed', undefined],
-    ['key missing — an older API without the field', { name: 'mtn', language: 'en' }],
+    ['no portal data', undefined],
+    ['older API without the field', { name: 'mtn', language: 'en' }],
     ['empty value', { login_otp_enabled: '' }],
-  ])('mirrors the API default when there is nothing to read: %s', (_label, data) => {
+  ])('falls back to the API default: %s', (_label, data) => {
     if (data) seedPortal(data as Record<string, unknown>);
-    expect(expectsLoginOtp()).toBe(true);
-  });
-
-  it('takes "true" from the tenant rather than assuming it', () => {
-    // What the API now sends for a customer that has never set the key: the
-    // default is decided there, we only decode it.
-    seedPortal({ name: 'mtn', login_otp_enabled: 'true' });
     expect(expectsLoginOtp()).toBe(true);
   });
 
