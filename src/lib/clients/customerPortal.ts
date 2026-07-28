@@ -41,7 +41,7 @@ export interface CustomerPortalData {
 export function expectsLoginOtp(): boolean {
   const val = getCustomerData()?.login_otp_enabled;
   if (!val) return true;   // no portal data or older API — match the API default
-  return ['true', '1', 'yes', 'on'].includes(String(val).trim().toLowerCase());
+  return ['true', '1', 'yes', 'on', 'enabled'].includes(String(val).trim().toLowerCase());
 }
 
 /** The cached portal data (written at login), or null. */
