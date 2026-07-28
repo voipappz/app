@@ -4,8 +4,8 @@
 // the declared registry (AppFeatures in voipappz-api). Use it to gate UI per
 // user. Managed from nimbus-admin → Settings → Feature Flags.
 //
-// NB: user-login OTP is NOT a feature flag — it's a per-environment setting on
-// the environment profile. Don't gate OTP through here.
+// NB: user-login OTP is NOT a feature flag — it's a per-customer setting on
+// the customer profile. Don't gate OTP through here.
 import { apiGet } from '../lib/clients/api';
 
 /**

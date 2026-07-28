@@ -30,8 +30,9 @@ export interface CustomerPortalData {
 
 /**
  * Should the login screen say "expect a code"? A HINT ONLY — it changes copy,
- * never the flow. The step-1 login response decides what actually happens, and
- * it decides per-ENVIRONMENT, which this per-customer value can't describe.
+ * never the flow, and it's client-side so it's editable. The step-1 login
+ * response stays the authority. But it reads the SAME per-customer key the
+ * server enforces on, so a correct payload and a correct decision agree.
  *
  * The tenant owns the value AND its default: the API always sends a non-empty
  * string, so we just decode it — with Login#truthy?'s rule, so the hint can't
