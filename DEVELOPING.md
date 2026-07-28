@@ -92,26 +92,20 @@ param (the API ignores one). **The response shape is the instruction.**
 
 ### The pre-login hint (advisory)
 
-`customer_portal_data` also carries `login_otp_enabled`. It exists so the login
-screen can say "expect a code" *before* the user submits — tenant config, no
-code change, same store as the branding. Two readers, deliberately separate:
+`customer_portal_data` also carries `login_otp_enabled`, read with
+`expectsLoginOtp()`. It lets the login screen say "expect a code" *before* the
+user submits — tenant config, no code change, same store as the branding.
 
-- `isLoginOtpEnabled()` — what the server actually said: `true`, `false`, or
-  `undefined` for "no claim". The API passes the profile value through **raw**,
-  and `customer.profile` is an **hstore**, so the wire shape is a *string*
-  (`"true"` / `"false"`), not a boolean. This reader applies the same truthy
-  rule as `Mediators::User::Login#truthy?` (`true`/`1`/`yes`/`on`) so the hint
-  and the enforcement can't disagree about one stored value. Empty string, null
-  and absent all mean "no claim".
-- `expectsLoginOtp()` — what the UI assumes. **OTP is the client default**: it
-  returns `true` unless the tenant explicitly sent `false`. Use this one for
-  rendering; the split means a wrong hint traces to the assumption, not the
-  payload.
+**OTP is the client default**: a tenant that says nothing gets the hint; only an
+explicit off-value stands it down. The value arrives as an hstore **string**
+(`"true"` / `"false"` / `""`), and the accepted on-values mirror
+`Mediators::User::Login#truthy?` so the hint can't disagree with the enforcement
+about one stored value.
 
-Note this default is the client's alone. The **server** defaults the other way —
-`Login#truthy?(nil)` is `false`, so an environment that never sets the key gets
-password-only login. A tenant with OTP off therefore sees the hint until someone
-sets `login_otp_enabled: false` on its customer profile.
+Note the two sides default opposite ways. The **server** treats an unset key as
+off (`Login#truthy?(nil)` is `false`), so an environment that never sets it gets
+password-only login — while the app still shows the hint. A tenant with OTP off
+sees it until `login_otp_enabled` is set to `false` on its customer profile.
 
 **It is a hint, never the decision.** Two limits, both structural:
 
