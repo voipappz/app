@@ -36,12 +36,21 @@ export interface CustomerPortalData {
  * per-CUSTOMER and pre-login, so it can't describe a customer whose
  * environments differ.
  *
- * OTP is the default: a tenant that says nothing gets the hint. Only an
- * explicit off-value stands it down, matching Login#truthy? for stated values.
+ * THE VALUE COMES FROM THE TENANT, NOT FROM HERE. The API always sends a
+ * non-empty string and supplies the default itself for a customer that hasn't
+ * set the key, so changing the default is a serializer change, not an app
+ * release. We only decode it, using the same truthy rule as `Login#truthy?` so
+ * the hint can't disagree with the enforcement about one stored value.
+ *
+ * The one case we answer on our own is having no portal data at all — the boot
+ * fetch failed, so there is nothing to read. Then we mirror the API's default
+ * rather than silently downgrade the tenant's posture on a network blip.
  */
+const API_DEFAULT_WHEN_PORTAL_UNAVAILABLE = true;
+
 export function expectsLoginOtp(): boolean {
   const val = getCustomerData()?.login_otp_enabled;
-  if (!val) return true;   // unset, empty, or no portal data ⇒ assume OTP
+  if (val == null || val === '') return API_DEFAULT_WHEN_PORTAL_UNAVAILABLE;
   return ['true', '1', 'yes', 'on'].includes(String(val).trim().toLowerCase());
 }
 
