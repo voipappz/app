@@ -37,6 +37,9 @@ const DEVICE_TOKEN_KEY = 'va_user_device_token';
 const mockLoginEnabled = () => import.meta.env.VITE_MOCK_LOGIN === '1';
 // The accepted code, matching the server's VA_TEST_OTP (overridable for parity).
 const MOCK_OTP_CODE = (import.meta.env.VITE_MOCK_OTP_CODE ?? '123456') as string;
+// The mock server's OTP lifetime, mirroring Mediators::User::Login::OTP_TTL. Only
+// the MOCK carries a literal — the real one is read from the response.
+const MOCK_OTP_TTL = 300;
 
 // Build a user-shaped session for the mocked user. Carries extension+environment
 // so the post-login WebRTC registration path (sipSettingsFromUser) is exercised.
@@ -67,6 +70,16 @@ function decodeJwt(token: string): Record<string, any> {
   }
 }
 
+/** Error carrying the HTTP status, so callers can tell 429/403 from a plain 401. */
+export class AuthError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'AuthError';
+    this.status = status;
+  }
+}
+
 async function post(path: string, params: Record<string, string>): Promise<any> {
   const qs = new URLSearchParams(params).toString();
   const res = await fetch(`${BASE}${path}?${qs}`, {
@@ -75,7 +88,7 @@ async function post(path: string, params: Record<string, string>): Promise<any> 
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data?.message || data?.error || `Request failed (${res.status})`);
+    throw new AuthError(data?.message || data?.error || `Request failed (${res.status})`, res.status);
   }
   return data;
 }
@@ -114,27 +127,43 @@ function toSession(data: any, email: string): AuthSession {
 export interface LoginStep {
   status: 'otp' | 'ok';
   tempToken?: string;      // present when status === 'otp'
+  expiresIn?: number;      // seconds the code is valid for — the SERVER's number
   session?: AuthSession;   // present when status === 'ok' (trusted device)
 }
 
 /**
- * Step 1 — submit credentials. Returns `{status:'otp', tempToken}` when the
- * server sends a code, or `{status:'ok', session}` for a trusted device.
+ * Step 1 — submit credentials. Returns `{status:'otp', tempToken, expiresIn}`
+ * when the server sends a code, or `{status:'ok', session}` when it doesn't.
+ *
+ * The server owns that choice: voipappz-api gates on `login_otp_enabled` on the
+ * user's ENVIRONMENT profile (`Mediators::User::Login#otp_enabled?`), which it
+ * can only resolve after looking the user up by email. So there's no flag to
+ * send and none to pre-fetch — we post credentials and obey the response shape.
+ * Re-posting is also how a code gets resent; the API has no resend route.
+ *
+ * `expiresIn` is the server's own OTP_TTL. Absent means we don't know, which
+ * callers must render as no countdown rather than an invented deadline.
  */
 export async function userLogin(email: string, password: string): Promise<LoginStep> {
   // Offline USER OTP mock: any email goes through the 2-step flow (like the server
   // with VA_TEST_OTP). The code is checked in step 2 (verifyOtp).
   if (mockLoginEnabled() && email.trim()) {
-    return { status: 'otp', tempToken: `mock:${email.trim().toLowerCase()}` };
+    return { status: 'otp', tempToken: `mock:${email.trim().toLowerCase()}`, expiresIn: MOCK_OTP_TTL };
   }
   const data = await post(LOGIN_PATH, {
     email,
     password,
     device_token: getDeviceToken(),
-    otp: 'true',
   });
   if (data.token || data.access) return { status: 'ok', session: toSession(data, email) };
-  if (data.temp_token) return { status: 'otp', tempToken: data.temp_token };
+  if (data.temp_token) {
+    const expiresIn = Number(data.expires_in);
+    return {
+      status: 'otp',
+      tempToken: data.temp_token,
+      expiresIn: Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : undefined,
+    };
+  }
   throw new Error(data?.message || 'Unexpected login response');
 }
 

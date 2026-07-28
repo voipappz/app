@@ -2,7 +2,7 @@
 
 A **React + Vite** portal for VoIP/telecom tenants, built as reusable components
 on top of the **voipappz-api mothership**. A tenant fork changes **env, not
-code** — repoint the mothership endpoints (`VITE_API_TARGET`/`ENGINE_URL`) and the same app
+code** — repoint the mothership with one var (`MOTHERSHIP_URL`) and the same app
 lights up against that tenant's data (login, calls, reports, feature flags).
 
 - **Building a feature?** → [DEVELOPING.md](./DEVELOPING.md) (the data-access layer + "add a feature page" recipe)
@@ -16,7 +16,7 @@ lights up against that tenant's data (login, calls, reports, feature flags).
 ```bash
 gh repo create my-tenant-portal --template voipappz/app --private --clone
 cd my-tenant-portal
-cp .env.example .env          # repoint: VITE_API_TARGET (dev) + ENGINE_URL (prod)
+make env                      # writes .env — set MOTHERSHIP_URL to your tenant
 make dev
 ```
 
@@ -60,8 +60,7 @@ and reaches the mothership through the app server (Vite proxy in dev, deno-api
 forwarder in prod). Repoint a tenant fork with:
 
 ```bash
-VITE_API_TARGET=https://tenant.example   # dev: Vite proxy upstream
-ENGINE_URL=https://tenant.example        # prod: deno-api forward target
+MOTHERSHIP_URL=https://tenant.example    # dev proxy + prod forwarder + preflight
 ```
 
 Everything else (softphone SIP, dashboard extras, branding, mocks) is optional

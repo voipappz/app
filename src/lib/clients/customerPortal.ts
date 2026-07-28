@@ -22,6 +22,26 @@ export interface CustomerPortalData {
   logo_icon?: string;   // favicon
   logo_title?: string;  // app/tenant title
   logo_color?: string;  // brand colour
+  // Two-step verification hint for the login screen. A plain customer.profile
+  // field like the rest, so it arrives as an hstore string: "true", "false", or
+  // "" when unset. See expectsLoginOtp().
+  login_otp_enabled?: string;
+}
+
+/**
+ * Should the login screen say "expect a code"? A HINT ONLY — it changes copy,
+ * never the flow, and it's client-side so it's editable. The step-1 login
+ * response stays the authority. But it reads the SAME per-customer key the
+ * server enforces on, so a correct payload and a correct decision agree.
+ *
+ * The tenant owns the value AND its default: the API always sends a non-empty
+ * string, so we just decode it — with Login#truthy?'s rule, so the hint can't
+ * disagree with the enforcement. Only a missing payload falls back here.
+ */
+export function expectsLoginOtp(): boolean {
+  const val = getCustomerData()?.login_otp_enabled;
+  if (!val) return true;   // no portal data or older API — match the API default
+  return ['true', '1', 'yes', 'on', 'enabled'].includes(String(val).trim().toLowerCase());
 }
 
 /** The cached portal data (written at login), or null. */
