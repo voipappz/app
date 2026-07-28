@@ -116,7 +116,19 @@ KAMAL_DEST := $(if $(DEST),-d $(DEST),)
 
 # Where the post-deploy hook aims its smoke checks. Unset ⇒ the hook skips them
 # rather than probing some other tenant's host and failing the deploy.
-HEALTHCHECK_URL ?= $(if $(filter mtn,$(DEST)),https://mtnunicom.mtn.com.gh:8888,$(PROD_URL))
+#
+# NOT set for mtn/pbx20. Those publish on 8888 behind someone else's nginx, and
+# 8888 is firewalled off the public internet — the hook runs on the DEPLOY box,
+# so every probe came back 000 (no response) and failed a deploy that had in
+# fact succeeded:
+#   ✗ GET /health → expected 200, got 000   ... post-deploy exit status: 256
+# Measured against mtnunicom.mtn.com.gh: :443 → 200, :8000 → 200, :8888 → 000,
+# and :443 is the va_portal_1 site (<title>Voipappz | Portal</title>, and
+# /calls/smoke/transcript answers 200 instead of 401), NOT this container. So no
+# externally reachable URL smoke-tests this app; verify on the host instead:
+#   ssh <host> 'curl -sk -o /dev/null -w "%{http_code}\n" https://127.0.0.1:8888/test'
+# Kamal's own container healthcheck still gates the deploy either way.
+HEALTHCHECK_URL ?= $(if $(filter mtn pbx20,$(DEST)),,$(PROD_URL))
 
 # Destinations that run `proxy: false` on a FIXED host port (mtn, pbx20) cannot
 # have two containers alive at once: the outgoing one still holds 8888, so the
