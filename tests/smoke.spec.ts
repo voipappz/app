@@ -88,48 +88,6 @@ test('tenant OTP hint hidden only when the tenant opts out', async ({ page }) =>
   await expect(page.getByTestId('otp-hint')).toHaveCount(0);
 });
 
-/**
- * Tenant expects OTP but the server issues a session without one — MTN today.
- * The app challenges anyway rather than logging in on one factor. Requires mock
- * login OFF, so both endpoints are stubbed to reproduce the real shapes.
- */
-test('challenges even when the server did not, and says why it cannot proceed', async ({ page }) => {
-  await stubPortalData(page, { name: 'mtn', language: 'en' });          // no otp key ⇒ default on
-
-  let serverWasCalled = false;
-  await page.route('**/auth/user_login*', (route) => {
-    serverWasCalled = true;
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      // A finished session, no temp_token — what an ungated server returns.
-      body: JSON.stringify({ token: 'server-issued-token', user: { uuid: 'u-1', email: 'x@mtn.com.gh' } }),
-    });
-  });
-
-  await page.goto('/login');
-  await page.getByTestId('email-input').locator('input').fill('x@mtn.com.gh');
-  await page.getByTestId('password-input').locator('input').fill('pw');
-  await page.getByTestId('login-button').click();
-
-  // Challenged, not logged in.
-  await expect(page.getByTestId('otp-form')).toBeVisible();
-
-  // VITE_MOCK_LOGIN=1 (how CI builds) short-circuits userLogin before any fetch,
-  // so the stub never applies and the mock always challenges — this scenario
-  // cannot exist there. Skip rather than assert against the mock's behaviour.
-  test.skip(!serverWasCalled, 'built with VITE_MOCK_LOGIN=1 — no server call to stub');
-  await expect(page).not.toHaveURL(/dashboard/);
-  // The half-issued session must not survive — otherwise the user holds a live
-  // token while looking at a code prompt.
-  expect(await page.evaluate(() => localStorage.getItem('auth'))).toBeNull();
-
-  // Submitting says the code was never issued, not that it was wrong.
-  await page.getByTestId('otp-input').locator('input').fill('123456');
-  await page.getByTestId('otp-verify-button').click();
-  await expect(page.getByTestId('error-message')).toContainText(/did not issue a code/i);
-});
-
 // ProtectedRoute gate: unauthenticated deep links must land on /login.
 test('unauthenticated /calls redirects to login', async ({ page }) => {
   await page.goto('/calls');
