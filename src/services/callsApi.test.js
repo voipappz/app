@@ -28,6 +28,14 @@ describe('buildCallsQuery', () => {
     expect(q.getAll('search[status][]')).toEqual(['completed', 'busy']);
   });
 
+  it('keeps the Nimbus operator on repeated array filters', () => {
+    const q = new URLSearchParams(buildCallsQuery({
+      search: { 'call.direction': { value: ['incoming', 'outgoing'], op: 'IS' } },
+    }));
+    expect(q.getAll('search[call.direction][IS][]')).toEqual(['incoming', 'outgoing']);
+    expect(q.has('search[call.direction][]')).toBe(false);
+  });
+
   it('skips empty values', () => {
     const q = new URLSearchParams(buildCallsQuery({ search: { a: '', b: null, c: undefined } }));
     expect(q.get('search[a]')).toBeNull();

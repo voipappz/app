@@ -43,10 +43,10 @@ export function useCalls() {
   const [perPage, setPerPage] = useState(20);     // nimbus uses 20
   const [orderBy, setOrderBy] = useState('created_at');
   const [orderType, setOrderType] = useState('desc');
-  // Date range is the ONLY server-side filter this deployment accepts:
-  // search[created_at]=<start> - <end> → 200, while search[<other field>] → 500
-  // (verified live). Every other filter is applied client-side by the caller.
+  // Date range plus Nimbus-compatible call search parameters are server-side,
+  // so filtering applies across the full history rather than one loaded page.
   const [range, setRange] = useState(null);
+  const [search, setSearch] = useState({});
   const [source, setSource] = useState('loading');
   const [error, setError] = useState(null);
   const cancelled = useRef(false);
@@ -54,6 +54,7 @@ export function useCalls() {
   const useMock = import.meta.env.VITE_USE_MOCK === '1';
   // Stable dep for the effect — `range` is a fresh object on every change.
   const rangeKey = JSON.stringify(range);
+  const searchKey = JSON.stringify(search);
 
   const load = useCallback(async () => {
     try {
@@ -63,6 +64,7 @@ export function useCalls() {
         orderBy,
         orderType,
         range,
+        search,
       });
       if (cancelled.current) return;
       // Demo: reflect previously mock-transcribed calls so the list chip stays
@@ -75,7 +77,7 @@ export function useCalls() {
       if (!cancelled.current) { setError(String(err)); setSource('events'); }
     }
     // `range` is represented by the stable serialized rangeKey dependency.
-  }, [page, perPage, orderBy, orderType, rangeKey]);
+  }, [page, perPage, orderBy, orderType, rangeKey, searchKey]);
 
   useEffect(() => {
     cancelled.current = false;
@@ -108,6 +110,11 @@ export function useCalls() {
     setPage(0);
   }, []);
 
+  const applySearch = useCallback((next) => {
+    setSearch(next || {});
+    setPage(0);
+  }, []);
+
   // Optimistically merge a patch into one row (e.g. transcription_status as the
   // drawer's transcribe flow progresses). A later refresh() re-reads the server.
   const patchCall = useCallback((id, patch) => {
@@ -119,7 +126,7 @@ export function useCalls() {
   return {
     calls, total, page, perPage, orderBy, orderType,
     loading: source === 'loading', error, source,
-    setPage, setPerPage, handleSortChange, applyRange,
+    setPage, setPerPage, handleSortChange, applyRange, applySearch,
     refresh: load, patchCall,
   };
 }

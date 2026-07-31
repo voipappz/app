@@ -146,7 +146,7 @@ function WidgetCard({ widget, t }) {
   );
 }
 
-export default function DashboardWidgets() {
+export default function DashboardWidgets({ hideHeading = false }) {
   const { t } = useTranslation();
   const { widgets, status } = useDashboardLive();
   // Stream payload is a { uuid: descriptor } map — render in arrival order.
@@ -155,8 +155,8 @@ export default function DashboardWidgets() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('dashboardLive.heading', 'Live dashboard')}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: hideHeading ? 'flex-end' : 'space-between', mb: 1.5 }}>
+        {!hideHeading && <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('dashboardLive.heading', 'Live dashboard')}</Typography>}
         <Chip
           size="small" icon={<RadioButtonCheckedIcon fontSize="small" />}
           label={live ? t('callDashboard.live', 'live') : status}

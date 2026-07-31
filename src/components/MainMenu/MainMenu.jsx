@@ -41,6 +41,11 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
     navigate('/login');
   };
   const close = () => mobileDrawerOpen && onDrawerToggle && onDrawerToggle();
+  const go = (event, path) => {
+    event.preventDefault();
+    navigate(path);
+    close();
+  };
 
   // Define all menu items with their required permissions
   const allMenuItems = [
@@ -76,7 +81,7 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
           const active = location.pathname === item.path;
           return (
             <ListItem key={item.path} disablePadding>
-              <ListItemButton component={RouterLink} to={item.path} onClick={close} sx={{ ...rowSx, ...(active ? activeSx : {}) }}>
+              <ListItemButton component={RouterLink} to={item.path} onClick={(event) => go(event, item.path)} sx={{ ...rowSx, ...(active ? activeSx : {}) }}>
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.text} />
               </ListItemButton>
@@ -130,6 +135,7 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
                 <ListItemButton
                   component={RouterLink}
                   to={item.path}
+                  onClick={(event) => go(event, item.path)}
                   className={`rail-item${active ? ' active' : ''}`}
                   aria-current={active ? 'page' : undefined}
                 >

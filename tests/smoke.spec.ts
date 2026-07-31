@@ -7,6 +7,8 @@ import { test, expect } from '@playwright/test';
  * routing → authenticated app shell renders.
  */
 test('mock login reaches the dashboard', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
   await page.goto('/login');
 
   await page.getByTestId('email-input').locator('input').fill('ci@example.com');
@@ -31,10 +33,13 @@ test('mock login reaches the dashboard', async ({ page }) => {
   // Core modules remain reachable after the navigation redesign.
   await rail.locator('a[href="/calls"]').click();
   await page.waitForURL('**/calls');
-  await expect(page.getByTestId('main-content')).toBeVisible();
+  const appErrors = () => pageErrors.filter((message) => !message.includes('WebSocket closed'));
+  await expect.poll(appErrors, { message: 'Calls route must not throw in the browser' }).toEqual([]);
+  await expect(page.getByTestId('main-content').getByRole('heading', { name: /Calls|שיחות/i })).toBeVisible();
+  await expect(page.getByTestId('calls-pagination')).toBeVisible();
   await rail.locator('a[href="/reports"]').click();
   await page.waitForURL('**/reports');
-  await expect(page.getByTestId('main-content')).toBeVisible();
+  await expect(page.getByTestId('main-content').getByRole('heading', { name: /Reports|דוחות/i })).toBeVisible();
 });
 
 /**

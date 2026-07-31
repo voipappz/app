@@ -61,7 +61,7 @@ export function buildCallsQuery({ page = 1, perPage = 20, orderBy = 'created_at'
     if (value == null || value === '') continue;
     const key = op ? `search[${field}][${op}]` : `search[${field}]`;
     if (Array.isArray(value)) {
-      for (const v of value) if (v != null && v !== '') params.append(`search[${field}][]`, String(v));
+      for (const v of value) if (v != null && v !== '') params.append(`${key}[]`, String(v));
     } else {
       params.set(key, String(value));
     }

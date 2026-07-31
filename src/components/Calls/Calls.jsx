@@ -35,12 +35,9 @@ function TranscriptionChip({ status }) {
 }
 
 /**
- * Calls page — rows come from the DuckDB event store via `GET /calls`
- * (server-side `calls_view` aggregation over the events table). Live updates
- * arrive over the `/ws/events` WebSocket (LavinMQ tap). KPI cards summarize the
- * set; the table supports grouping (time → status) and column sorting; a
- * row-click opens the event timeline. RTL/Hebrew-first, responsive (CSS grid
- * KPI band + horizontally-scrolling table that hides low-value columns on phones).
+ * End-user Calls page. History and search come from the mature mothership Calls
+ * API; DuckDB remains dashboard-only. Friendly filters map to Nimbus's proven
+ * server-side search contract, so they apply to the complete result set.
  */
 
 function timeBucket(startedAt) {
@@ -114,7 +111,7 @@ export default function Calls() {
   const { t } = useTranslation();
   const {
     calls, total, page, perPage, loading, error, source,
-    setPage, setPerPage, handleSortChange, applyRange, refresh, patchCall,
+    setPage, setPerPage, handleSortChange, applyRange, applySearch, refresh, patchCall,
   } = useCalls();
   const [groupBy, setGroupBy] = useState('time');
   const [orderBy, setOrderBy] = useState('started_at');
@@ -133,30 +130,40 @@ export default function Calls() {
     { name: 'started_at', label: t('calls.started', 'Started'), type: 'time' },
   ], [t]);
 
-  // Split the filters by where they can actually run. The `started_at` range is
-  // pushed to the SERVER as search[created_at] (the only server filter this API
-  // accepts — other search[<field>] params 500 it, verified live). Everything
-  // else filters the current page client-side.
-  const { serverRange, clientFilters } = useMemo(() => {
+  // Map the end-user labels to the API field names used by Nimbus Admin.
+  const { serverRange, serverSearch } = useMemo(() => {
     let range = null;
-    const rest = [];
+    const search = {};
     for (const f of filters) {
       if (f.name === 'started_at' && f.type === 'time' && (f.value?.from || f.value?.to)) {
         range = {
           start: f.value.from ? new Date(f.value.from).getTime() : 0,
           end: f.value.to ? new Date(f.value.to).getTime() : Date.now(),
         };
-      } else {
-        rest.push(f);
+      } else if (f.value !== '' && f.value != null && (!Array.isArray(f.value) || f.value.length)) {
+        if (f.name === 'from_number') search['call.caller'] = { value: f.value, op: 'IS' };
+        if (f.name === 'to_number') search['call.callee'] = { value: f.value, op: 'IS' };
+        if (f.name === 'status') search['call.cause'] = { value: f.value, op: 'IS' };
+        if (f.name === 'direction') {
+          const direction = f.value === 'inbound' ? 'incoming' : f.value === 'outbound' ? 'outgoing' : f.value;
+          search['call.direction'] = { value: [direction], op: 'IS' };
+        }
+        if (f.name === 'duration_seconds') {
+          const op = ({ '>': 'GTE', '>=': 'GTE', '<': 'LTE', '<=': 'LTE', '=': 'IS' })[f.op] || 'IS';
+          search['call.talk_duration'] = { value: f.value, op };
+        }
       }
     }
-    return { serverRange: range, clientFilters: rest };
+    return { serverRange: range, serverSearch: search };
   }, [filters]);
 
   const rangeKey = JSON.stringify(serverRange);
+  const searchKey = JSON.stringify(serverSearch);
   useEffect(() => { applyRange(serverRange); }, [rangeKey]);
+  useEffect(() => { applySearch(serverSearch); }, [searchKey]);
 
-  const filtered = useMemo(() => applyFilters(calls, clientFilters), [calls, clientFilters]);
+  // Static mock data has no server; keep identical filter behavior in demos/tests.
+  const filtered = useMemo(() => source === 'mock' ? applyFilters(calls, filters) : calls, [calls, filters, source]);
   const stats = useMemo(() => computeCallStats(filtered), [filtered]);
   const answerRate = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
 
@@ -287,7 +294,7 @@ export default function Calls() {
                   ))}
                 </Fragment>
               ))}
-              {calls.length === 0 && (
+              {filtered.length === 0 && (
                 <TableRow><TableCell colSpan={visibleColSpan} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
                     {t('calls.noCalls')}
