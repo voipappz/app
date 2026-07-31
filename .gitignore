@@ -9,6 +9,7 @@
 
 # ─── Dependencies ───
 node_modules/
+api/data/
 
 # ─── Build output ───
 dist/

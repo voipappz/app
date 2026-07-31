@@ -1,24 +1,25 @@
-// HTTP + WebSocket server — thin BFF over the engine. NO local store (DuckDB
-// removed). Data plane split:
+// HTTP + WebSocket server — thin BFF over the engine with a Dashboard-only
+// local DuckDB event store. Data plane split:
 //   - calls / history  → the browser reads PostgREST directly
-//   - Dashboard (live)  → the cable /ws stream, relayed as-is (no projection)
+//   - Dashboard          → consumed Cable events in DuckDB + direct live relay
 //   - transcripts       → read on request from the engine (api/engine.ts)
 //   - auth              → /auth/login proxies PostgREST /rpc/login
 //
 // Pipeline (live relay only):
 //   FreeSWITCH → LavinMQ → va-crystal cable (CallEvents) → deno cable client
 //   → normalizeCableEvent → fan out to /ws/events subscribers (the Dashboard).
-//   deno holds nothing; the engine event store is the single source of truth.
+//   DuckDB retains the consumed envelope only; PBX/business logic stays upstream.
 import {
   PORT, CABLE_URL, CABLE_CHANNEL, CABLE_TOKEN, CABLE_SECRET, CABLE_ACCOUNT_UUID, CABLE_ENABLED,
   CABLE_DASHBOARD_UUID, POSTGREST_URL, POSTGREST_ENABLED, ENGINE_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
 } from './config.ts';
 import { createJwtVerifier, unauthorizedResponse, type JwtVerifier } from './auth_middleware.ts';
 import { fetchTranscript } from './engine.ts';
-import { dashboardCallsPerHour } from './influx.ts';
-import { INFLUX_ENABLED } from './config.ts';
 import { eventFreshness, type Freshness } from './health_freshness.ts';
 import { createCableClient, mintCableToken, type CableClient } from "./cable.ts";
+import { EventStore, type EventStoreStats } from "./event_store.ts";
+import { dashboardCallsPerHour } from './influx.ts';
+import { INFLUX_ENABLED } from './config.ts';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -107,7 +108,7 @@ interface DepStatus { status: "up" | "down" | "disabled"; detail?: string }
 interface HealthReport {
   healthy: boolean;
   status: "ok" | "degraded";
-  checks: { cable: DepStatus; events: Freshness; engine: DepStatus };
+  checks: { cable: DepStatus; events: Freshness; event_store: EventStoreStats | DepStatus; engine: DepStatus };
   timestamp: string;
 }
 
@@ -128,8 +129,11 @@ async function checkHealth(): Promise<HealthReport> {
   // stream as `stale`. Informational: never fails `healthy` (so quiet periods
   // don't restart the container), but degrades `status` for monitoring.
   const events = eventFreshness(lastCableEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED);
+  const eventStoreHealth: EventStoreStats | DepStatus = !CABLE_ENABLED
+    ? { status: "disabled", detail: "cable tap off" }
+    : await eventStore.stats();
 
-  const checks = { cable, events, engine };
+  const checks = { cable, events, event_store: eventStoreHealth, engine };
   // Only a hard "down" fails the container healthcheck. `stale`/`idle` are
   // visible-but-not-fatal so a legitimately-quiet stream never triggers restarts.
   const healthy = Object.values(checks).every((c) => c.status !== "down");
@@ -164,10 +168,10 @@ let tappedCounter = 0;    // everything received from cable
 let cableClient: CableClient | null = null;
 let dashboardCableClient: CableClient | null = null;  // DashboardLive (agents/extensions stream)
 let lastCableEventAt: number | null = null;   // epoch ms of the last cable event (freshness)
+const eventStore = new EventStore();
 
-// Single emit path — fan a canonical event out to matching /ws subscribers. No
-// persistence: the engine event store is the source of truth and the Dashboard
-// renders this live cable stream as-is.
+// Single emit path — fan a canonical event out to matching /ws subscribers.
+// The CallEvents handler persists first; DashboardLive remains relay-only.
 function emitEvent(type: string, payload: Pojo, occurredAtIso?: string): void {
   relayedCounter++;
   const occurred_at = occurredAtIso ?? new Date().toISOString();
@@ -188,6 +192,10 @@ type Pojo = Record<string, any>;
 // CABLE_SECRET (= cable's SECRET_KEY) + CABLE_ACCOUNT_UUID.
 async function startCableClient() {
 
+  // Open the local store before subscribing so received events can be persisted
+  // before they are relayed to browser consumers.
+  await eventStore.open();
+
   const token = CABLE_TOKEN ||
     (CABLE_SECRET && CABLE_ACCOUNT_UUID ? await mintCableToken(CABLE_SECRET, CABLE_ACCOUNT_UUID) : "");
   if (!token) {
@@ -200,9 +208,15 @@ async function startCableClient() {
     token,
     channel: CABLE_CHANNEL,
     log: (m) => console.log(`📡 ${m}`),
-    onEvent: (n) => {
+    onEvent: async (n) => {
       tappedCounter++;
       lastCableEventAt = Date.now();   // freshness stamp
+      try {
+        await eventStore.ingest(n);
+      } catch (err) {
+        // Keep the live stream available, but make persistence failures visible.
+        console.error("event store write failed:", err instanceof Error ? err.message : err);
+      }
       // Relay the canonical event as-is to /ws subscribers (the Dashboard).
       // occurredAtIso comes from the cable event's created_at.
       emitEvent(n.wsType, n.wsPayload, n.occurredAtIso);
@@ -335,6 +349,47 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
 
     if (url.pathname === "/ws/events" && request.headers.get("upgrade") === "websocket") return handleWebSocket(request);
 
+    // Dashboard-only projection over consumed va-crystal events. There is no
+    // generic local Calls/Reports API: those modules remain on the mothership.
+    if (request.method === "GET" && url.pathname === "/dashboard/snapshot") {
+      const authResult = await verifyJwt(request);
+      if (!authResult.authenticated && authResult.error !== "Auth not configured") {
+        return unauthorizedResponse(authResult.error || "Unauthorized", CORS_HEADERS);
+      }
+      try {
+        const now = Math.floor(Date.now() / 1000);
+        const from = Number(url.searchParams.get("from") || now - 86400);
+        const to = Number(url.searchParams.get("to") || now);
+        if (!Number.isFinite(from) || !Number.isFinite(to) || from > to) {
+          return new Response(JSON.stringify({ error: "invalid dashboard time range" }), { status: 400, headers: JSON_HEADERS });
+        }
+        return new Response(JSON.stringify(await eventStore.dashboardSnapshot(from, to)), { status: 200, headers: JSON_HEADERS });
+      } catch (err) {
+        console.error("dashboard event projection failed:", err instanceof Error ? err.message : err);
+        return new Response(JSON.stringify({ error: "event store unavailable" }), { status: 503, headers: JSON_HEADERS });
+      }
+    }
+
+    // Optional legacy analytics connector. The current Dashboard uses the
+    // DuckDB snapshot above; this route remains for tenant-specific consumers.
+    if (request.method === "GET" && url.pathname === "/dashboard/calls-per-hour") {
+      const authResult = await verifyJwt(request);
+      if (!authResult.authenticated && authResult.error !== "Auth not configured") {
+        return unauthorizedResponse(authResult.error || "Unauthorized", CORS_HEADERS);
+      }
+      if (!INFLUX_ENABLED) {
+        return new Response(JSON.stringify({ error: "influxdb not configured", points: [] }), { status: 503, headers: JSON_HEADERS });
+      }
+      const minutes = parseInt(url.searchParams.get("minutes") || "1440");
+      const environmentUuids = url.searchParams.getAll("env").flatMap((value) => value.split(",")).map((value) => value.trim()).filter(Boolean);
+      try {
+        return new Response(JSON.stringify({ points: await dashboardCallsPerHour({ minutes, environmentUuids }) }), { status: 200, headers: JSON_HEADERS });
+      } catch (err) {
+        console.error("optional influx connector failed:", err instanceof Error ? err.message : err);
+        return new Response(JSON.stringify({ error: "influxdb upstream unavailable", points: [] }), { status: 502, headers: JSON_HEADERS });
+      }
+    }
+
     // ── Call transcript — GET /calls/:id/transcript ──
     // Read on request from the engine event store (the mothership's transcription
     // workflow persists `ai.transcribe.done`). No local copy. JWT-gated.
@@ -347,35 +402,6 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
       } catch (err) {
         console.error("transcript read failed:", err instanceof Error ? err.message : err);
         return new Response(JSON.stringify({ error: "transcript upstream unavailable" }), { status: 502, headers: JSON_HEADERS });
-      }
-    }
-
-    // ── Dashboard calls-per-hour — GET /dashboard/calls-per-hour ──
-    // InfluxDB 3 (monitoring.voipappz.com) `cdr` measurement, bucketed per hour
-    // and split by direction. The influxdb3 client runs server-side so the
-    // apiv3_ token never reaches the browser. JWT-gated; env-scoped via ?env=
-    // (repeatable / comma list). ?minutes= window (default 1440).
-    if (request.method === "GET" && url.pathname === "/dashboard/calls-per-hour") {
-      const authResult = await verifyJwt(request);
-      // Auth gate is temporarily relaxed ONLY when no auth backend is configured
-      // (the Supabase verifier is vestigial after the accounts-JWT migration — it
-      // reports "Auth not configured"). A real verifier still rejects bad tokens,
-      // so this re-gates automatically once deno verifies the accounts JWT.
-      // TODO: verify the accounts JWT here and drop this exception.
-      if (!authResult.authenticated && authResult.error !== "Auth not configured") {
-        return unauthorizedResponse(authResult.error || "Unauthorized", CORS_HEADERS);
-      }
-      if (!INFLUX_ENABLED) {
-        return new Response(JSON.stringify({ error: "influxdb not configured", points: [] }), { status: 503, headers: JSON_HEADERS });
-      }
-      const minutes = parseInt(url.searchParams.get("minutes") || "1440");
-      const environmentUuids = url.searchParams.getAll("env").flatMap((v) => v.split(",")).map((s) => s.trim()).filter(Boolean);
-      try {
-        const points = await dashboardCallsPerHour({ minutes, environmentUuids });
-        return new Response(JSON.stringify({ points }), { status: 200, headers: JSON_HEADERS });
-      } catch (err) {
-        console.error("dashboard calls-per-hour failed:", err instanceof Error ? err.message : err);
-        return new Response(JSON.stringify({ error: "influxdb upstream unavailable", points: [] }), { status: 502, headers: JSON_HEADERS });
       }
     }
 
@@ -426,11 +452,15 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
 
 export function startServer() {
   console.log(`🎯 voipappz app — http://localhost:${PORT}  (ws: ws://localhost:${PORT}/ws/events)`);
-  console.log(`🧠 Dashboard → cable /ws (live); transcripts → engine (${ENGINE_ENABLED ? "on" : "off"})`);
+  console.log(`🧠 Dashboard → cable + local DuckDB; calls/reports/transcripts → mothership (${ENGINE_ENABLED ? "on" : "off"})`);
 
   // Live cable subscription (default ON when a token resolves) → relayed to /ws
   // for the Dashboard. No token ⇒ relay idle (fine for tests/demos).
-  if (CABLE_ENABLED) startCableClient();
+  if (CABLE_ENABLED) {
+    void startCableClient().catch((err) => {
+      console.error("cable/event-store startup failed:", err instanceof Error ? err.message : err);
+    });
+  }
   else console.log(`🔇 cable tap disabled (no token) — relay idle`);
 
   // TLS: when TLS_CERT_FILE + TLS_KEY_FILE point at readable PEM files, serve

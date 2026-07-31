@@ -24,12 +24,14 @@ servers:
       # 1000; our container's deno user is uid 1993). Container-root is namespaced
       # — no host access, and the cert mount is read-only.
       user: "0:0"
-      # Mount the host's live cert dir read-only — always the current (renewed)
-      # cert; we never write to it.
-      volume:
-        - "/opt/va/certs:/certs:ro"
       publish:
         - "0.0.0.0:8888:3000"   # https://mtnunicom.mtn.com.gh:8888/
+
+# Destination overrides the base volume list, so retain both the live TLS
+# certificate mount and the persistent Dashboard event store.
+volumes:
+  - "/opt/va/certs:/certs:ro"
+  - "voipappz-events:/data"
 
 env:
   clear:

@@ -7,6 +7,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
@@ -39,7 +40,7 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
     logout();
     navigate('/login');
   };
-  const close = () => onDrawerToggle && onDrawerToggle();
+  const close = () => mobileDrawerOpen && onDrawerToggle && onDrawerToggle();
 
   // Define all menu items with their required permissions
   const allMenuItems = [
@@ -59,7 +60,7 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
     '& .MuiListItemIcon-root': { color: 'rgba(255,255,255,0.7)', minWidth: 40 },
     '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
   };
-  const activeSx = { bgcolor: 'rgba(245,166,35,0.18)', color: '#f5a623', '& .MuiListItemIcon-root': { color: '#f5a623' } };
+  const activeSx = { bgcolor: 'rgba(47,111,237,0.10)', color: '#2f6fed', '& .MuiListItemIcon-root': { color: '#2f6fed' } };
   const sectionLabel = (text) => (
     <Typography sx={{ px: 2.5, pt: 1.5, pb: 0.5, fontSize: '0.66rem', fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)' }}>{text}</Typography>
   );
@@ -116,30 +117,69 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
     </Box>
   );
 
-  // Single nav model (WebRTC-portal style): the hamburger in the Layout header
-  // opens this left slide-out drawer on every screen size. No inline top-bar nav.
-  // The drawer portals to <body>, so it's safe to mount from the header.
   if (!isAuthenticated) return null;
   return (
-    <Drawer
-      variant="temporary"
-      open={mobileDrawerOpen}
-      onClose={onDrawerToggle}
-      // Always slide out from the PHYSICAL left edge (MUI flips anchors under RTL).
-      anchor={isRTL ? 'right' : 'left'}
-      ModalProps={{ keepMounted: true }}
-      className="mobile-drawer"
-      PaperProps={{
-        sx: {
-          backgroundColor: '#2f3640',
-          color: '#fff',
-          width: 260,
-          borderRight: 'none',
-        }
-      }}
-    >
-      {drawerContent}
-    </Drawer>
+    <>
+      {/* Desktop icon rail follows the supplied live-dashboard reference. */}
+      <Box component="nav" className="navigation-rail" data-testid="navigation-rail" aria-label={t('menu.navigation', 'Main navigation')}>
+        <Box className="rail-items">
+          {menuItems.map((item) => {
+            const active = location.pathname === item.path;
+            return (
+              <Tooltip key={item.path} title={item.text} placement="right">
+                <ListItemButton
+                  component={RouterLink}
+                  to={item.path}
+                  className={`rail-item${active ? ' active' : ''}`}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  <Box className="rail-icon">{item.icon}</Box>
+                  <Typography className="rail-label">{item.text}</Typography>
+                </ListItemButton>
+              </Tooltip>
+            );
+          })}
+        </Box>
+        <Box className="rail-utilities">
+          <Tooltip title={t('menu.language', 'Language')} placement="right">
+            <ListItemButton className="rail-item utility" onClick={() => changeLanguage(language === 'he' ? 'en' : 'he')}>
+              <Box className="rail-icon"><TranslateIcon /></Box>
+              <Typography className="rail-label">{language.toUpperCase()}</Typography>
+            </ListItemButton>
+          </Tooltip>
+          <Tooltip title={t('menu.logout')} placement="right">
+            <ListItemButton className="rail-item utility" onClick={handleLogout}>
+              <Box className="rail-icon"><LogoutIcon /></Box>
+              <Typography className="rail-label">{t('menu.logout')}</Typography>
+            </ListItemButton>
+          </Tooltip>
+        </Box>
+      </Box>
+
+      {/* Desktop: Sentry-style secondary panel beside the permanent rail. */}
+      <Drawer
+        variant="persistent"
+        open={mobileDrawerOpen}
+        anchor="left"
+        className="desktop-navigation-drawer"
+        PaperProps={{ 'data-testid': 'desktop-navigation-panel', sx: { backgroundColor: '#fff', color: '#0f172a', width: 220, left: 72, top: 64, height: 'calc(100% - 64px)', borderRight: '1px solid #e5e7eb' } }}
+      >
+        {drawerContent}
+      </Drawer>
+
+      {/* Mobile: the identical navigation model becomes a modal drawer. */}
+      <Drawer
+        variant="temporary"
+        open={mobileDrawerOpen}
+        onClose={onDrawerToggle}
+        anchor="left"
+        ModalProps={{ keepMounted: true }}
+        className="mobile-drawer"
+        PaperProps={{ sx: { backgroundColor: '#fff', color: '#0f172a', width: 260, borderRight: '1px solid #e5e7eb' } }}
+      >
+        {drawerContent}
+      </Drawer>
+    </>
   );
 };
 

@@ -13,9 +13,8 @@ URLs**. The app server in front owns the actual upstream:
                     dev                                prod (single container, Kamal)
   Browser ──► Vite :4200 ─┬─ /api, /auth/*, /tasks ──►  Browser ──► deno-api ─┬─ /api, /auth/*, /tasks ──► MOTHERSHIP_URL
               (proxy)     │        (mothership)                    (serves     │        (mothership)
-                          ├─ /rest/v1 ──► deno-api                  dist/)     ├─ /rest/v1 ──► POSTGREST_URL (optional)
-                          └─ /auth/login, /ws/events,                          ├─ /ws/events (cable relay)
-                             /deno-api ──► deno-api                            └─ /dashboard/*, /calls/*/transcript
+                          └─ /dashboard/*, /ws/events ──► deno-api  dist/)     ├─ /ws/events (cable relay)
+                                                                                └─ /dashboard/*, /calls/*/transcript
 ```
 
 `VITE_MOTHERSHIP_URL` exists only as a **direct-mode escape hatch** for
@@ -27,10 +26,10 @@ bundle.
 | Piece | Where | Role |
 |---|---|---|
 | React app | `src/` (Vite :4200) | UI. Strict data-access layering: `lib/auth.ts` (the one credential) → `lib/clients/` (transport) → `services/` (per-feature) → `components/` (folder-per-component; `Calls` is the blueprint). |
-| deno-api | `api/` (:4001, entry `app.ts` → `server.ts`) | Thin BFF: mothership forwarder, `/ws/events` live cable relay, calls-per-hour (InfluxDB, server-side token), engine-backed transcript reads, `/health`. Serves `dist/` in prod. **Optional in dev** — without it the Dashboard extras stay quiet. |
+| deno-api | `api/` (:4001, entry `app.ts` → `server.ts`) | Thin BFF: mothership forwarder, `/ws/events` Cable relay, Dashboard-only DuckDB projections, engine-backed transcript reads, `/health`. Serves `dist/` in prod. |
 | Mothership (voipappz-api) | external, env-pointed | Accounts + login (`/auth/user_login` + optional per-customer OTP), calls, reports, feature flags, portal branding. The source of truth. |
 | PostgREST | external, **optional** | A second, direct-SQL data plane (`/rest/v1/*`) for tenant-custom tables/views — see below. |
-| Cable (va-crystal) | external, optional | Live call events; deno subscribes and relays to `/ws/events`. |
+| Cable (va-crystal) | external, optional | Live call events; deno persists consumed events for Dashboard projections and relays them to `/ws/events`. |
 
 ## Auth (the spine)
 

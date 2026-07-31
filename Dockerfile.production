@@ -34,12 +34,15 @@ COPY --from=frontend-builder /build/dist ./dist
 
 ENV STATIC_DIR=/app/dist
 ENV PORT=3000
+ENV EVENT_STORE_PATH=/data/events.duckdb
 EXPOSE 3000
 
 # Healthcheck handled by kamal-proxy (proxy.healthcheck.path: /test in
 # config/deploy.yml). Avoiding a Dockerfile HEALTHCHECK because Deno 2.5's
 # `deno eval` does not accept --allow-* flags.
 
+RUN mkdir -p /data && chown deno:deno /data
+
 USER deno
 
-CMD ["deno", "run", "--allow-net", "--allow-env", "--allow-read", "app.ts"]
+CMD ["deno", "run", "--allow-net", "--allow-env", "--allow-read", "--allow-write", "--allow-ffi", "app.ts"]

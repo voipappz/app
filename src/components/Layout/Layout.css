@@ -13,10 +13,17 @@
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-  /* No sidebar — nav lives in the top bar; content is full width. */
-  margin-inline-start: 0;
+  margin-left: 72px;
   /* Add padding for fixed header */
   padding-top: 64px;
+}
+
+.authenticated-layout .content-container {
+  transition: margin-left 180ms ease;
+}
+
+.authenticated-layout.menu-expanded .content-container {
+  margin-left: 292px;
 }
 
 /* Login page specific styles */
@@ -36,8 +43,12 @@
 /* Responsive layout fixes */
 @media (max-width: 768px) {
   .content-container {
-    margin-inline-start: 0;
+    margin-left: 0;
     padding-top: 64px; /* Space for fixed header on mobile */
+  }
+
+  .authenticated-layout.menu-expanded .content-container {
+    margin-left: 0;
   }
 
   .login-left-container {

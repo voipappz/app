@@ -32,6 +32,10 @@ servers:
     options:
       env-file: /etc/voipappz/secrets.env
 
+# Persist the embedded Dashboard event store across container replacements.
+volumes:
+  - "voipappz-events:/data"
+
 builder:
   arch: amd64
   dockerfile: Dockerfile.production
@@ -64,6 +68,8 @@ env:
     PORT: 3000
     DENO_ENV: production
     STATIC_DIR: /app/dist
+    EVENT_STORE_PATH: /data/events.duckdb
+    EVENT_RETENTION_DAYS: 7
 
 ssh:
   user: root

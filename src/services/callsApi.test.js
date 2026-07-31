@@ -81,4 +81,11 @@ describe('normalizeApiCall', () => {
     expect(bare.duration_seconds).toBe(0);
     expect(bare.recording_url).toBeNull();
   });
+
+  it('tolerates a null meta object from a partial API row', () => {
+    const call = normalizeApiCall({ uuid: 'partial', meta: null });
+    expect(call.id).toBe('partial');
+    expect(call.direction).toBe('');
+    expect(call.status).toBe('');
+  });
 });

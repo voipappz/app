@@ -1,7 +1,8 @@
 version: 3
 
 agent:
-  authtoken: REDACTED-ROTATE-ME 
+  # Set NGROK_AUTHTOKEN in the environment (never commit the token).
+  authtoken: ${NGROK_AUTHTOKEN}
 
 tunnels:
   deno:

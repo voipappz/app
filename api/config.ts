@@ -10,8 +10,8 @@ export const POSTGREST_URL = (Deno.env.get("POSTGREST_URL") || "").replace(/\/$/
 export const POSTGREST_ENABLED = POSTGREST_URL !== "";
 
 // ── Engine (voipappz-api, "the brain") — transcript source ─────────────────
-// No local store: history/calls are read by the browser from PostgREST, the
-// Dashboard renders the cable /ws stream as-is, and call transcripts are read
+// Calls/history are read from the mothership; only consumed Dashboard events
+// are retained locally in DuckDB, and call transcripts are read
 // on request from the engine event store (`ai.transcribe.done`). Server-side
 // basic auth — NEVER exposed to the browser.
 // MOTHERSHIP_URL is the ONE knob that repoints a tenant (dev proxy + this
@@ -23,12 +23,15 @@ export const ENGINE_ENABLED = ENGINE_EMAIL !== "" && ENGINE_PASSWORD !== "";
 
 // ── Cable (va-crystal ActionCable server) — the event source ───────────────
 // deno-api subscribes to the cable server's CallEvents channel as a WS client
-// and relays broadcasts to browser /ws/events subscribers (no local store — the
-// engine event store is the source of truth). Connection auth is an HS256 JWT
+// persists CallEvents for Dashboard queries, and relays broadcasts to browser
+// /ws/events subscribers. Connection auth is an HS256 JWT
 // (?token=) carrying an account_uuid claim, signed with the cable SECRET_KEY.
 // Provide either a ready-made CABLE_TOKEN, or CABLE_SECRET (= cable's SECRET_KEY)
 // + CABLE_ACCOUNT_UUID to mint one at boot. Server-side only — NEVER expose as VITE_*.
-export const CABLE_URL = Deno.env.get("CABLE_URL") || "ws://127.0.0.1:6000/cable";
+// va-crystal's node serves the ActionCable endpoint on port 4000 by default.
+// Its Cable backend transports broadcasts over NATS; this consumer speaks the
+// stable ActionCable WebSocket protocol rather than coupling to NATS internals.
+export const CABLE_URL = Deno.env.get("CABLE_URL") || "ws://127.0.0.1:4000/cable";
 export const CABLE_CHANNEL = Deno.env.get("CABLE_CHANNEL") || "CallEvents";
 export const CABLE_TOKEN = Deno.env.get("CABLE_TOKEN") || "";
 export const CABLE_SECRET = Deno.env.get("CABLE_SECRET") || Deno.env.get("SECRET_KEY") || "";
@@ -47,16 +50,8 @@ export const CABLE_ENABLED = CABLE_TOKEN !== "" || CABLE_SECRET !== "";
 // frames; unset ⇒ the dashboard bridge stays off (calls/transcripts unaffected).
 export const CABLE_DASHBOARD_UUID = Deno.env.get("CABLE_DASHBOARD_UUID") || "";
 
-// ── InfluxDB 3 (monitoring.voipappz.com) — dashboard time-series source ─────
-// The dashboard's aggregated call metrics (calls-per-hour, KPIs) come from the
-// InfluxDB 3 `cdr` measurement — the role the removed DuckDB projections used to
-// fill. deno-api runs the influxdb3 client SERVER-SIDE so the apiv3_ token never
-// reaches the browser; the React dashboard fetches `/dashboard/*`. InfluxDB 3
-// speaks SQL over POST {url}/api/v3/query_sql with a Bearer token.
-// NB: the token is a secret — set via env, never commit it.
-// NB: InfluxDB 3 Core typically listens on plain HTTP at :8181 (https/443 is
-// not it). Both URL and token must be set to enable the feature — no default
-// monitoring host is baked in.
+// Optional InfluxDB connector retained for tenant-specific analytics. The
+// current Dashboard uses DuckDB and does not require these settings.
 export const INFLUX_URL = (Deno.env.get("INFLUXDB_URL") || "").replace(/\/$/, "");
 export const INFLUX_TOKEN = Deno.env.get("INFLUXDB_TOKEN") || "";
 export const INFLUX_DATABASE = Deno.env.get("INFLUXDB_DATABASE") || Deno.env.get("INFLUXDB_BUCKET") || "telegraf";

@@ -69,7 +69,7 @@ const Layout = ({ children }) => {
         </Box>
       ) : (
         // Regular layout with MainMenu for authenticated pages
-        <Box data-testid="authenticated-layout">
+        <Box className={mobileDrawerOpen ? 'authenticated-layout menu-expanded' : 'authenticated-layout'} data-testid="authenticated-layout">
           {/* Global Header */}
           <Box
             component="header"

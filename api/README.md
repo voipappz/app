@@ -13,8 +13,10 @@ bundle in production.
   server (ActionCable `CallEvents` channel, `cable.ts`) and fans frames out to
   browser WebSocket subscribers (the Dashboard).
 - **`POST /auth/login`** — auth proxy to the mothership.
-- **Calls-per-hour** — Dashboard chart source, queried server-side from
-  InfluxDB 3 (`influx.ts`; the token never reaches the browser).
+- **Dashboard snapshot** — KPIs, hourly call buckets, and recent calls projected
+  from locally consumed events in DuckDB.
+- **Optional Influx connector** — retained for tenant-specific analytics; it is
+  not used by the current Dashboard.
 - **Transcripts** — read on request from the engine's event store
   (`engine.ts`, server-side basic auth), JWT-gated.
 - **`/health` / `/test`** — dependency report (cable, engine, event
@@ -32,7 +34,7 @@ docker compose up -d deno-api                                      # via compose
 
 Configuration is env-driven — see the "Dashboard extras" section of
 [`.env.example`](../.env.example) (`SECRET_KEY`/`CABLE_URL`/`CABLE_TOKEN`,
-`ENGINE_URL` + `ACCOUNT_EMAIL`/`ACCOUNT_PASSWORD`, `INFLUXDB_*`,
+`ENGINE_URL` + `ACCOUNT_EMAIL`/`ACCOUNT_PASSWORD`, `EVENT_STORE_PATH`,
 `EVENTS_STALE_SECONDS`). Secrets are server-side only — never `VITE_`-prefixed.
 
 ## Tests

@@ -7,28 +7,32 @@ import { apiList } from '../lib/clients/api';
 // API nests most fields under `meta`; duration is derived from created→updated
 // when the API doesn't return a numeric seconds field.
 export function normalizeApiCall(row) {
-  const m = row.meta || {};
+  // The API occasionally omits `meta` (or returns it as null) for partial or
+  // newly-created calls. Treat those rows as valid rather than crashing the
+  // whole Calls page while normalizing them.
+  const safeRow = row && typeof row === 'object' ? row : {};
+  const m = safeRow.meta && typeof safeRow.meta === 'object' ? safeRow.meta : {};
   const dir = (m._direction || '').toLowerCase();
-  const startedAt = row.created_at || null;
-  const endedAt = row.updated_at || null;
+  const startedAt = safeRow.created_at || null;
+  const endedAt = safeRow.updated_at || null;
   let duration = Number(m._duration ?? m._billsec ?? 0);
   if ((!duration || Number.isNaN(duration)) && startedAt && endedAt) {
     duration = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 1000));
   }
   return {
-    id: row.uuid,
+    id: safeRow.uuid,
     started_at: startedAt,
     direction: dir === 'incoming' ? 'inbound' : dir === 'outgoing' ? 'outbound' : dir,
     status: m._leg_a_cause || (m._ended === 'true' ? 'completed' : m._ended === 'false' ? 'in_progress' : ''),
     duration_seconds: duration,
     from_number: m._contact_number || m._did_number || '',
     to_number: m._did_number || m._contact_number || '',
-    recording_url: row.recording?.url || null,
+    recording_url: safeRow.recording?.url || null,
     // Legs/events aren't in the list row — default so the table doesn't render '—' wrongly.
-    leg_count: [row.leg_a_type, row.leg_b_type].filter(Boolean).length || null,
+    leg_count: [safeRow.leg_a_type, safeRow.leg_b_type].filter(Boolean).length || null,
     event_count: null,
     transcription_status: null,
-    raw: row,
+    raw: safeRow,
   };
 }
 

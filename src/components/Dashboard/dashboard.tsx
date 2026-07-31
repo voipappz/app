@@ -9,10 +9,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PhoneMissedIcon from '@mui/icons-material/PhoneMissed';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import DateRangeIcon from '@mui/icons-material/DateRange';
-// useCalls/computeCallStats are plain JS (.js) — same DuckDB-backed source the
-// Calls page uses, so the Dashboard and Calls never disagree on the numbers.
-import { useCalls, computeCallStats } from '../Calls/useCalls';
-import { useCallsPerHour } from './useCallsPerHour';
+import { useDashboardSnapshot } from './useDashboardSnapshot';
 import { LiveEvents, DashboardWidgets } from './widgets';
 import PageHeader from '../common/PageHeader';
 import StatCard from '../common/StatCard';
@@ -46,12 +43,6 @@ const RANGES = [
   { key: 'custom', labelKey: 'custom' },
 ] as const;
 
-function inWindow(ts: string | null | undefined, from: Date, to: Date) {
-  if (!ts) return false;
-  const ms = new Date(String(ts).replace(' ', 'T')).getTime();
-  return !Number.isNaN(ms) && ms >= from.getTime() && ms <= to.getTime();
-}
-
 // Date → "YYYY-MM-DDTHH:MM" for <input type="datetime-local"> (local time).
 function toLocalInput(d: Date) {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -61,7 +52,6 @@ function toLocalInput(d: Date) {
 export default function Dashboard() {
   const { t } = useTranslation();
   const { isRTL } = useDirection();
-  const { calls, source, wsStatus } = useCalls() as any;
 
   // Time-range filter: a preset (1h/3h/9h/12h/24h) or a custom from/to range.
   const [range, setRange] = useState<string>('24h');
@@ -80,27 +70,18 @@ export default function Dashboard() {
     return { from: new Date(Date.now() - hours * 3600_000), to: new Date() };
   }, [range, customFrom, customTo]);
 
-  // Calls-per-hour pre-aggregated by InfluxDB 3 (deno /dashboard/calls-per-hour),
-  // scoped to the selected range. null when InfluxDB is unavailable → the chart
-  // falls back to client-side bucketing of `windowed`.
-  const rangeMinutes = Math.max(1, Math.round((to.getTime() - from.getTime()) / 60000));
-  const { points: callsPerHour } = useCallsPerHour({ minutes: rangeMinutes });
-
-  const windowed = useMemo(
-    () => calls.filter((c: any) => inWindow(c.started_at, from, to)),
-    [calls, from, to],
-  );
-  const stats = computeCallStats(windowed);
-  const answerRate = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
-  const recent = windowed.slice(0, 6);
-
-  const live = wsStatus === 'open';
+  const { snapshot, status } = useDashboardSnapshot({ from, to }) as any;
+  const stats = snapshot.stats;
+  const callsPerHour = snapshot.calls_per_hour;
+  const recent = snapshot.recent_calls;
+  const answerRate = stats.total ? Math.round((stats.answered / stats.total) * 100) : 0;
+  const live = status === 'live';
   const sourceChip = (
     <Chip
       size="small"
       icon={<RadioButtonCheckedIcon fontSize="small" />}
-      label={source === 'mock' ? t('callDashboard.mock') : live ? t('callDashboard.live') : wsStatus}
-      color={source === 'mock' ? 'default' : live ? 'success' : 'warning'}
+      label={live ? t('callDashboard.live') : status}
+      color={live ? 'success' : 'warning'}
       variant={live ? 'filled' : 'outlined'}
     />
   );
@@ -108,7 +89,7 @@ export default function Dashboard() {
   const kpis = [
     { label: t('callDashboard.callsTotal'), value: stats.total, icon: PhoneIcon, color: 'primary.main' },
     { label: t('callDashboard.answerRate'), value: `${answerRate}%`, icon: CheckCircleIcon, color: 'success.main' },
-    { label: t('callDashboard.avgDuration'), value: fmtDuration(stats.avgDurationSec), icon: TimerIcon, color: 'info.main' },
+    { label: t('callDashboard.avgDuration'), value: fmtDuration(stats.avg_duration_sec), icon: TimerIcon, color: 'info.main' },
     { label: t('callDashboard.inbound'), value: stats.inbound, icon: CallReceivedIcon, color: 'info.main' },
     { label: t('callDashboard.outbound'), value: stats.outbound, icon: CallMadeIcon, color: 'success.main' },
     { label: t('callDashboard.failed'), value: stats.failed, icon: PhoneMissedIcon, color: 'error.main' },
@@ -208,7 +189,7 @@ export default function Dashboard() {
           alignItems: 'stretch',
         }}
       >
-        <CallsPerHourChart calls={windowed} points={callsPerHour} />
+        <CallsPerHourChart calls={recent} points={callsPerHour} />
         <LiveEvents from={from} to={to} />
       </Box>
 

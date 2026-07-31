@@ -40,6 +40,7 @@ export function periodRange(period) {
 
 /** A report whose result is one number → rendered big in the counter strip. */
 function isCounter(report) {
+  if (report?.error) return false;
   const { series } = splitColumns(report?.columns, report?.rows);
   return report?.rows?.length === 1 && series.length === 1;
 }
@@ -95,6 +96,18 @@ export default function ReportsDashboards({ period = 'd7' }) {
   }), [reports]);
 
   if (error && !dashboards.length) return <Alert severity="warning">{error}</Alert>;
+
+  if (!loading && !dashboards.length) {
+    return (
+      <Paper elevation={0} sx={{ p: 4, textAlign: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <AssessmentIcon sx={{ fontSize: 48, mb: 1, opacity: 0.4 }} />
+        <Typography variant="body1" sx={{ fontWeight: 500 }}>No report dashboards defined</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          Add a categorized report to the reports configuration and it will appear here.
+        </Typography>
+      </Paper>
+    );
+  }
 
   return (
     <Box>

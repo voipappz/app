@@ -19,6 +19,22 @@ test('mock login reaches the dashboard', async ({ page }) => {
 
   await page.waitForURL('**/dashboard', { timeout: 15_000 });
   await expect(page.getByTestId('login-form')).toHaveCount(0);
+
+  // Desktop navigation follows the icon-rail + expandable secondary-panel UX.
+  const rail = page.getByTestId('navigation-rail');
+  await expect(rail).toBeVisible();
+  await expect(rail.locator('[aria-current="page"]')).toContainText(/Dashboard/i);
+  await page.getByTestId('menu-button').click();
+  await expect(page.getByTestId('desktop-navigation-panel')).toBeVisible();
+  await expect(page.getByTestId('authenticated-layout')).toHaveClass(/menu-expanded/);
+
+  // Core modules remain reachable after the navigation redesign.
+  await rail.locator('a[href="/calls"]').click();
+  await page.waitForURL('**/calls');
+  await expect(page.getByTestId('main-content')).toBeVisible();
+  await rail.locator('a[href="/reports"]').click();
+  await page.waitForURL('**/reports');
+  await expect(page.getByTestId('main-content')).toBeVisible();
 });
 
 /**

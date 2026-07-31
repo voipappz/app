@@ -46,7 +46,7 @@ Two runtime pieces:
 2. **deno-api** (`api/`, :4001, entry `api/app.ts` → `server.ts`) — an
    **optional** thin BFF. It only powers Dashboard extras: the `/ws` live
    call-event relay (cable client to va-crystal ActionCable), calls-per-hour
-   from InfluxDB (server-side token), engine-backed transcript reads, and the
+   from the local DuckDB event projection, engine-backed transcript reads, and the
    `/auth/login` proxy. Without it those widgets simply stay quiet. In
    production the same process serves `dist/` (one container — `make prod`
    locally, `make deploy` to the server).
@@ -71,7 +71,7 @@ forwarder, and `make dev`'s preflight).
 - **Never set `VITE_API_BASE_URL` in dev** — it bypasses the Vite proxy and
   trips CORS.
 - **Never `VITE_`-prefix a secret** — `VITE_*` is baked into the public browser
-  bundle; deno-only vars (Influx token, engine creds, cable secret) must stay
+  bundle; deno-only vars (engine creds and cable secret) must stay
   unprefixed.
 - Editing `.env` + `docker compose restart` does **not** re-read env vars — use
   `docker compose up -d --force-recreate <service>`.

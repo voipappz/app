@@ -84,11 +84,15 @@
 
 /* Mobile drawer content styles (always apply when drawer is used) */
 .mobile-drawer-content {
-  width: 260px;
+  width: 100%;
   padding: 16px 0;
   background-color: #ffffff;
   color: #0f172a;
   height: 100%;
+}
+
+.mobile-drawer {
+  display: none;
 }
 
 .mobile-drawer-content .mobile-logo-container {
@@ -122,8 +126,100 @@
   background-color: rgba(0, 173, 180, 0.10);
 }
 
+/* Slim desktop navigation from the live-dashboard reference. */
+.navigation-rail {
+  position: fixed;
+  top: 64px;
+  bottom: 0;
+  left: 0;
+  z-index: 1150;
+  width: 72px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+}
+
+.rail-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 5px;
+}
+
+.rail-utilities {
+  margin-top: auto;
+  padding: 8px 5px 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.navigation-rail .rail-item {
+  min-height: 58px;
+  padding: 6px 2px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: #68717d;
+  text-align: center;
+}
+
+.navigation-rail .rail-item:hover {
+  color: #2f6fed;
+  background: #f4f7ff;
+}
+
+.navigation-rail .rail-item.active {
+  color: #2f6fed;
+  background: #eef3ff;
+}
+
+.navigation-rail .rail-item.active::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  width: 3px;
+  height: 34px;
+  border-radius: 0 3px 3px 0;
+  background: #2f6fed;
+}
+
+.rail-icon {
+  display: flex;
+  line-height: 1;
+}
+
+.rail-icon .MuiSvgIcon-root {
+  font-size: 21px;
+}
+
+.navigation-rail .rail-label {
+  max-width: 64px;
+  margin-top: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navigation-rail .rail-item.utility {
+  min-height: 52px;
+}
+
 /* Mobile styles */
 @media (max-width: 900px) {
+  .navigation-rail {
+    display: none;
+  }
+
+  .desktop-navigation-drawer {
+    display: none;
+  }
+
+  .mobile-drawer {
+    display: block;
+  }
   .main-menu.side {
     display: none;
   }

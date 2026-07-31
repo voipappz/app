@@ -10,15 +10,12 @@ import { statusColor, statusLabel } from './statusColors';
 /**
  * CallsPerHourChart — stacked bar of calls bucketed by hour.
  *
- * Two data sources, in priority order:
- *  1. `points` — pre-aggregated by InfluxDB 3 (deno `/dashboard/calls-per-hour`,
- *     `[{ bucket, inbound, outbound, total }]`). Stacked by direction; the
- *     per-hour bucketing already happened server-side in InfluxDB.
+ * Two inputs, in priority order:
+ *  1. `points` — pre-aggregated by the local DuckDB Dashboard projection.
  *  2. `calls` — already-windowed PostgREST rows (started_at + status), bucketed
  *     CLIENT-SIDE by hour (epoch-keyed so hours on different days stay distinct)
  *     and stacked by status. Honors the dashboard's active time-range filter and
- *     never disagrees with the KPI numbers — the fallback when InfluxDB is
- *     unavailable, so the chart never goes blank.
+ *     never disagrees with the KPI numbers.
  *
  * Recharts; bar colors from the shared status→theme-color map (brand-aware).
  */
@@ -26,7 +23,7 @@ export default function CallsPerHourChart({ calls = [], points = null }) {
   const theme = useTheme();
   const { t } = useTranslation();
 
-  const useInflux = Array.isArray(points) && points.length > 0;
+  const useProjection = Array.isArray(points) && points.length > 0;
 
   const hexFor = (status) => {
     const key = statusColor(status);
@@ -35,10 +32,10 @@ export default function CallsPerHourChart({ calls = [], points = null }) {
       : (theme.palette[key]?.main || theme.palette.grey[500]);
   };
 
-  // InfluxDB path: server-bucketed points → inbound/outbound stacks. The bucket
+  // DuckDB projection: server-bucketed points → inbound/outbound stacks. The bucket
   // is a zoneless UTC instant; render the hour label in the browser's local tz.
-  const influxData = useMemo(() => {
-    if (!useInflux) return [];
+  const projectionData = useMemo(() => {
+    if (!useProjection) return [];
     return points
       .map((p) => {
         const d = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(String(p.bucket)) ? p.bucket : `${p.bucket}Z`);
@@ -51,7 +48,7 @@ export default function CallsPerHourChart({ calls = [], points = null }) {
       })
       .sort((a, b) => String(a._ts).localeCompare(String(b._ts)))
       .slice(-24);
-  }, [useInflux, points]);
+  }, [useProjection, points]);
 
   // Fallback: bucket the (already-windowed) calls by hour, one column per status.
   // Keyed by the hour's epoch so hours on different days stay distinct.
@@ -74,11 +71,10 @@ export default function CallsPerHourChart({ calls = [], points = null }) {
     return { data: ordered, statuses: [...statusSet] };
   }, [calls]);
 
-  const data = useInflux ? influxData : callsData;
-  // Influx path stacks by direction (inbound/outbound); fallback stacks by status.
-  const series = useInflux ? ['inbound', 'outbound'] : statuses;
-  const seriesLabel = (s) => useInflux ? t(`callDashboard.${s}`, s) : t(`usageReports.status.${s}`, statusLabel(s));
-  const seriesColor = (s) => useInflux
+  const data = useProjection ? projectionData : callsData;
+  const series = useProjection ? ['inbound', 'outbound'] : statuses;
+  const seriesLabel = (s) => useProjection ? t(`callDashboard.${s}`, s) : t(`usageReports.status.${s}`, statusLabel(s));
+  const seriesColor = (s) => useProjection
     ? (theme.palette[s === 'inbound' ? 'info' : 'success']?.main || theme.palette.grey[500])
     : hexFor(s);
 

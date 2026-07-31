@@ -99,8 +99,9 @@ services:
     working_dir: /app
     volumes:
       - ./api:/app
-    # Host networking so localhost:6000 reaches the cable server in the ../ root
-    # stack (those services are all network_mode: host too). Also publishes :4001.
+      - event_store_data:/data
+    # Host networking so localhost:4000 reaches the va-crystal node's Cable
+    # endpoint. Also publishes :4001.
     network_mode: host
     env_file:
       - path: .env
@@ -109,11 +110,11 @@ services:
       PORT: 4001
       # Live cable subscription consumes call events from the va-crystal cable
       # server's CallEvents channel (ActionCable WS) and relays them to browser
-      # /ws subscribers (the Dashboard) — no local store. On as soon as SECRET_KEY
+      # /ws subscribers and persists them for Dashboard-only local queries. On as soon as SECRET_KEY
       # (= cable's SECRET_KEY) is set — deno mints the HS256 JWT itself; or pass
       # a ready-made CABLE_TOKEN.
       SECRET_KEY: ${SECRET_KEY:-}
-      CABLE_URL: ${CABLE_URL:-ws://127.0.0.1:6000/cable}
+      CABLE_URL: ${CABLE_URL:-ws://127.0.0.1:4000/cable}
       CABLE_TOKEN: ${CABLE_TOKEN:-}
       # Engine (voipappz-api, "the brain") — transcripts are read on request from
       # its event store. Server-side basic-auth creds, NEVER VITE_-prefixed.
@@ -126,13 +127,13 @@ services:
       # Event-freshness alarm: seconds the cable can be silent before /health
       # reports the stream `stale` (degraded, not 503). 0 disables. Default 15min.
       EVENTS_STALE_SECONDS: ${EVENTS_STALE_SECONDS:-900}
-      # InfluxDB 3 — dashboard calls-per-hour source. Server-side only (token
-      # never reaches the browser). Both URL and token must be set to enable;
-      # InfluxDB 3 Core typically listens on plain HTTP at :8181.
+      EVENT_STORE_PATH: /data/events.duckdb
+      EVENT_RETENTION_DAYS: ${EVENT_RETENTION_DAYS:-7}
+      # Optional connector; the current Dashboard does not require it.
       INFLUXDB_URL: ${INFLUXDB_URL:-}
       INFLUXDB_TOKEN: ${INFLUXDB_TOKEN:-}
       INFLUXDB_DATABASE: ${INFLUXDB_DATABASE:-telegraf}
-    command: deno run --allow-net --allow-env --allow-read --watch app.ts
+    command: deno run --allow-net --allow-env --allow-read --allow-write --allow-ffi --watch app.ts
 
   # Playwright E2E (browsers preinstalled). Opt-in: --profile test
   # Drives the app on the host network (make up / make dev must be running,
@@ -163,7 +164,7 @@ services:
     env_file:
       - path: .env
         required: false   # template: `make up` works before .env exists
-    command: deno test --allow-net --allow-env --allow-read tests/
+    command: deno test --allow-net --allow-env --allow-read --allow-write --allow-ffi tests/
 
   # Production image (build + run). Opt-in: --profile prod
   # Heavy build (Deno + Vite). Behind a profile so a build failure can never
@@ -179,9 +180,14 @@ services:
       - "8000:3000"
     environment:
       PORT: 3000
+      EVENT_STORE_PATH: /data/events.duckdb
+      EVENT_RETENTION_DAYS: ${EVENT_RETENTION_DAYS:-7}
+    volumes:
+      - event_store_data:/data
     # No container healthcheck: the image has no curl (in prod, kamal-proxy
     # probes /test externally — config/deploy.yml). Verify locally with:
     #   curl localhost:8000/test
 
 volumes:
   node_modules_cache:
+  event_store_data:

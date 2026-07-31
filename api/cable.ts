@@ -38,7 +38,13 @@ export async function mintCableToken(secret: string, accountUuid: string): Promi
 // Cable payload (event_record_json):
 //   { type:"call", type_uuid:<call_uuid>, action:"number.answer"|"user.answer"|…,
 //     created_at:"<unix seconds>", user_uuid?, metadata:{ caller_id_number, … } }
-export interface Normalized { wsType: string; wsPayload: Pojo; occurredAtIso?: string }
+export interface Normalized {
+  wsType: string;
+  wsPayload: Pojo;
+  occurredAtIso?: string;
+  /** Original va-crystal event, retained for lossless local persistence. */
+  raw?: Pojo;
+}
 
 const str = (v: unknown): string | null => (v === undefined || v === null || v === "" ? null : String(v));
 
@@ -76,7 +82,7 @@ export function normalizeCableEvent(message: unknown): Normalized | null {
   if (action.startsWith("number.")) {
     const verb = action.slice("number.".length);
     const state = NUMBER_STATE[verb] ?? verb;
-    return { wsType: `call.${state}`, wsPayload: { ...base, state }, occurredAtIso };
+    return { wsType: `call.${state}`, wsPayload: { ...base, state }, occurredAtIso, raw: m };
   }
 
   // transcribe.* — transcripts produced by the mothership's workflow (Roast
@@ -99,17 +105,18 @@ export function normalizeCableEvent(message: unknown): Normalized | null {
         wsType: "transcription.completed",
         wsPayload: { call_id, language: str(md.language), text, segments, summary, confidence: null },
         occurredAtIso,
+        raw: m,
       };
     }
     if (verb === "error") {
-      return { wsType: "transcription.failed", wsPayload: { call_id, error: str(md.error) ?? "unknown" }, occurredAtIso };
+      return { wsType: "transcription.failed", wsPayload: { call_id, error: str(md.error) ?? "unknown" }, occurredAtIso, raw: m };
     }
-    return { wsType: `transcription.${verb}`, wsPayload: { call_id }, occurredAtIso };
+    return { wsType: `transcription.${verb}`, wsPayload: { call_id }, occurredAtIso, raw: m };
   }
 
   // user.* / queue.* (agent/queue lifecycle) — keep under their own type so the
   // event store records them; calls_view only projects call.* rows.
-  return { wsType: action, wsPayload: base, occurredAtIso };
+  return { wsType: action, wsPayload: base, occurredAtIso, raw: m };
 }
 
 // ── ActionCable client ──────────────────────────────────────────────────
@@ -121,7 +128,7 @@ export interface WebSocketLike {
 }
 
 export interface CableClientOpts {
-  url: string;                                   // ws://host:6000/cable
+  url: string;                                   // ws://host:4000/cable (va-crystal)
   token: string;                                 // HS256 JWT (?token=)
   channel?: string;                              // default "CallEvents"
   // Full ActionCable identifier override. CallEvents needs only {channel};
