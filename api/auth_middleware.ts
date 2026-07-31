@@ -20,7 +20,7 @@ export type JwtVerifier = (request: Request) => Promise<AuthResult>;
  * check if a gated route is added.
  */
 export function createJwtVerifier(): JwtVerifier {
-  return (_request: Request): Promise<AuthResult> =>
+  return (): Promise<AuthResult> =>
     Promise.resolve({ authenticated: false, error: "Auth not configured" });
 }
 

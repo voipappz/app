@@ -74,8 +74,7 @@ export function useCalls() {
     } catch (err) {
       if (!cancelled.current) { setError(String(err)); setSource('events'); }
     }
-    // `range` is covered by rangeKey; listing it would refetch on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // `range` is represented by the stable serialized rangeKey dependency.
   }, [page, perPage, orderBy, orderType, rangeKey]);
 
   useEffect(() => {

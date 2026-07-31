@@ -5,7 +5,7 @@ reports, feature flags) talks to the **mothership** directly and does not need
 this service — deno-api only powers the Dashboard extras and serves the built
 bundle in production.
 
-> Architecture context: [../ARCHITECTURE.md](../ARCHITECTURE.md)
+> Architecture context: [../docs/architecture.md](../docs/architecture.md)
 
 ## What it does
 

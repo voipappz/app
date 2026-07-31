@@ -154,7 +154,7 @@ export default function Calls() {
   }, [filters]);
 
   const rangeKey = JSON.stringify(serverRange);
-  useEffect(() => { applyRange(serverRange); }, [rangeKey]);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { applyRange(serverRange); }, [rangeKey]);
 
   const filtered = useMemo(() => applyFilters(calls, clientFilters), [calls, clientFilters]);
   const stats = useMemo(() => computeCallStats(filtered), [filtered]);
@@ -205,13 +205,13 @@ export default function Calls() {
       : kind === 'status' ? t(`usageReports.status.${label}`, label)
         : label;
 
-  // PostgREST has no live push — show the source and a manual Refresh.
+  // Calls are API-backed and have no live push; expose a manual refresh.
   const sourceChip = (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }} data-testid="calls-source" data-source={source}>
       <Chip
         size="small"
         icon={<RadioButtonCheckedIcon fontSize="small" />}
-        label={source === 'mock' ? t('calls.mock') : t('calls.source.postgrest', 'PostgREST')}
+        label={source === 'mock' ? t('calls.mock') : t('calls.source.api', 'API')}
         color={source === 'mock' ? 'default' : 'success'}
         variant="outlined"
       />

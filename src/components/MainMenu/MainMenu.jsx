@@ -31,7 +31,7 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const { t } = useTranslation();
   const { isAuthenticated, logout } = useAuth();
   const { can } = useACL();
-  const { direction, isRTL, toggleDirection } = useDirection();
+  const { direction, toggleDirection } = useDirection();
   const { language, changeLanguage } = useAppTranslation();
   const navigate = useNavigate();
   const location = useLocation();

@@ -70,7 +70,7 @@ export default function Dashboard() {
     return { from: new Date(Date.now() - hours * 3600_000), to: new Date() };
   }, [range, customFrom, customTo]);
 
-  const { snapshot, status } = useDashboardSnapshot({ from, to }) as any;
+  const { snapshot, status } = useDashboardSnapshot({ from, to });
   const stats = snapshot.stats;
   const callsPerHour = snapshot.calls_per_hour;
   const recent = snapshot.recent_calls;
@@ -206,7 +206,7 @@ export default function Dashboard() {
             {t('callDashboard.noCalls')}
           </Typography>
         )}
-        {recent.map((c: any) => (
+        {recent.map((c) => (
           <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}>
             {c.direction === 'inbound'
               ? <CallReceivedIcon fontSize="small" sx={{ color: 'info.main' }} />

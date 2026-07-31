@@ -370,7 +370,7 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
       }
     }
 
-    // Optional legacy analytics connector. The current Dashboard uses the
+    // Optional analytics connector. The current Dashboard uses the
     // DuckDB snapshot above; this route remains for tenant-specific consumers.
     if (request.method === "GET" && url.pathname === "/dashboard/calls-per-hour") {
       const authResult = await verifyJwt(request);
@@ -420,6 +420,7 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
       return new Response(JSON.stringify({
         status: "ok", template: "voipappz",
         cable_ready: cableClient?.ready() ?? false, cable_url: CABLE_URL, cable_channel: CABLE_CHANNEL,
+        dashboard_cable_ready: dashboardCableClient?.ready() ?? false,
         ws_clients: subscribers.size, relayed: relayedCounter, tapped: tappedCounter,
         last_event_at: fresh.last_event_at, seconds_since_last_event: fresh.age_seconds, events_status: fresh.status,
         engine: ENGINE_ENABLED, timestamp: new Date().toISOString(),

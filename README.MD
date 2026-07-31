@@ -6,7 +6,7 @@ code** — repoint the mothership with one var (`MOTHERSHIP_URL`) and the same a
 lights up against that tenant's data (login, calls, reports, feature flags).
 
 - **Building a feature?** → [DEVELOPING.md](./DEVELOPING.md) (the data-access layer + "add a feature page" recipe)
-- **How it fits together?** → [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **How it fits together?** → [docs/architecture.md](./docs/architecture.md)
 - **Repo conventions / gotchas?** → [CLAUDE.md](./CLAUDE.md)
 
 ---
@@ -122,4 +122,4 @@ Two ways, both Docker-only (nothing to install): `make prod` runs the
 production image on this box (:8000); `make deploy` builds, pushes to the
 registry, and swaps the container on the production server (`make ship` =
 `git push` + deploy; `make status` probes the deployed version). See
-[DEPLOYMENT.md](./DEPLOYMENT.md).
+[deployment guide](./docs/deployment.md).

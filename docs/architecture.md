@@ -63,7 +63,7 @@ Frontend building blocks, layered like everything else:
 ## Configuration
 
 Env is the whole tenant surface — every knob is documented inline in
-[.env.example](./.env.example) (frontend `VITE_*` only; deno reads the
+[.env.example](../.env.example) (frontend `VITE_*` only; deno reads the
 unprefixed vars — never `VITE_`-prefix a secret). Defaults point at the
 voipappz cloud; repoint a fork with the single `MOTHERSHIP_URL` (read by the
 dev proxy, the prod forwarder, and `make dev`'s preflight).

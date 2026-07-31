@@ -6,7 +6,7 @@ A tenant fork changes **env, not code**: repoint the mothership endpoints
 (one var: `MOTHERSHIP_URL`) and the same components light up
 against that tenant's data.
 
-> Architecture context: [ARCHITECTURE.md](./ARCHITECTURE.md) · repo conventions:
+> Architecture context: [docs/architecture.md](./docs/architecture.md) · repo conventions:
 > [CLAUDE.md](./CLAUDE.md). This file is the **how-to for adding features**.
 
 ---

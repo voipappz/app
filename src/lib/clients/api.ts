@@ -46,9 +46,9 @@ export async function apiList<T = Record<string, unknown>>(pathAndQuery: string)
  * Per-call event timeline. voipappz-api has no equivalent to PostgREST's raw
  * event feed yet (GET /api/calls/:uuid → 500), so this returns [] for now — the
  * detail drawer degrades to "no timeline" rather than pulling in PostgREST.
- * TODO: wire to the real events endpoint once identified.
+ * Keep this compatibility function until voipappz-api exposes a timeline.
  */
-export async function callEvents(_callId) {
+export async function callEvents() {
   return [];
 }
 

@@ -9,9 +9,9 @@ The app is component-based and talks to **one backend: the voipappz-api
 "mothership"**, always same-origin through the app server (Vite proxy in dev,
 deno-api forwarder in prod). A tenant fork changes **env, not code**.
 
-- **How it fits together** → [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **How it fits together** → [docs/architecture.md](./docs/architecture.md)
 - **How to add a feature** (service → hook → component recipe, data-access layer, feature flags) → [DEVELOPING.md](./DEVELOPING.md)
-- **How to deploy** (Docker-only) → [DEPLOYMENT.md](./DEPLOYMENT.md)
+- **How to deploy** (Docker-only) → [docs/deployment.md](./docs/deployment.md)
 - **The deno backend** → [api/README.md](./api/README.md)
 
 ## Commands
@@ -27,7 +27,7 @@ deno-api forwarder in prod). A tenant fork changes **env, not code**.
 | `make build` | Production bundle → `dist/`, built in Docker. Must be clean before shipping. |
 | `make verify` | Health check: deno-api, web, and the `/health` dependency report |
 | `make prod` / `make prod-down` | Run the production image on this box via docker compose (:8000) |
-| `make deploy` / `make ship` | Deploy to the production server / push + deploy — **always via the Makefile**; Docker-only, see DEPLOYMENT.md |
+| `make deploy` / `make ship` | Deploy to the production server / push + deploy — **always via the Makefile**; Docker-only, see `docs/deployment.md` |
 
 ## Architecture (big picture)
 
