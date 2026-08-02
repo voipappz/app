@@ -23,15 +23,15 @@ echo '==> Deno type-check and tests'
 if command -v deno >/dev/null 2>&1; then
   (
     cd api
-    deno check app.ts server.ts
-    deno test --allow-net --allow-env --allow-read --allow-write --allow-ffi tests/
+    deno check --frozen app.ts server.ts
+    deno test --frozen --allow-net --allow-env --allow-read --allow-write --allow-ffi tests/
   )
 elif command -v docker >/dev/null 2>&1; then
   docker run --rm -e DENO_DIR=/deno-dir -v voipappz-deno-cache:/deno-dir \
-    -v "$repo_dir:/work" -w /work/api denoland/deno:2.5.3 deno check app.ts server.ts
+    -v "$repo_dir:/work" -w /work/api denoland/deno:2.5.3 deno check --frozen app.ts server.ts
   docker run --rm -e DENO_DIR=/deno-dir -v voipappz-deno-cache:/deno-dir \
     -v "$repo_dir:/work" -w /work/api denoland/deno:2.5.3 \
-    deno test --allow-net --allow-env --allow-read --allow-write --allow-ffi tests/
+    deno test --frozen --allow-net --allow-env --allow-read --allow-write --allow-ffi tests/
 else
   echo 'Deno verification requires either deno or Docker.' >&2
   exit 1

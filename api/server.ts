@@ -1,9 +1,9 @@
 // HTTP + WebSocket server — thin BFF over the engine with a Dashboard-only
 // local DuckDB event store. Data plane split:
-//   - calls / history  → the browser reads PostgREST directly
+//   - calls / reports  → mothership voipappz-api via the same-origin forwarder
 //   - Dashboard          → consumed Cable events in DuckDB + direct live relay
 //   - transcripts       → read on request from the engine (api/engine.ts)
-//   - auth              → /auth/login proxies PostgREST /rpc/login
+//   - auth              → mothership /auth/*; optional PostgREST login is isolated
 //
 // Pipeline (live relay only):
 //   FreeSWITCH → LavinMQ → va-crystal cable (CallEvents) → deno cable client
@@ -311,15 +311,15 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
 
     // (forwarded prefixes are matched at the bottom, after deno's own routes)
 
-    // ── Login (deno is the brain) — POST /auth/login {email,password} ─────
+    // ── Optional PostgREST connector login ───────────────────────────────
     // Proxies to PostgREST's users-backed `api.login` RPC and returns the
     // signed JWT (role api_readonly + user_uuid/environment_uuid claims). The
     // browser stores it and sends it back as the bearer on every request. This
     // replaces Supabase Auth: one user login, one token, single source. The
     // environment_uuid claim scopes api.calls to the user's environment.
-    // NB: path is /auth/login (not /login) so it never collides with the SPA's
-    // own `/login` page route when deno serves the bundle in production.
-    if (request.method === "POST" && url.pathname === "/auth/login") {
+    // This is deliberately outside /auth/*: that namespace belongs entirely
+    // to the mothership user login/OTP flow used by this end-user app.
+    if (request.method === "POST" && url.pathname === "/connectors/postgrest/auth/login") {
       let creds: { email?: string; password?: string } = {};
       try { creds = await request.json(); } catch { /* bad body → handled below */ }
       if (!creds.email || !creds.password) {
@@ -433,7 +433,7 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
     // public portal branding (/tasks/customer_portal_data) all ride through
     // here, so no mothership URL is ever baked into the bundle. The client's
     // own Authorization header passes through untouched; deno adds nothing.
-    // (deno's own /auth/login POST is handled above and never reaches this.)
+    // (the optional connector login is handled above and never forwarded.)
     if (MOTHERSHIP_PREFIXES.some((p) => url.pathname.startsWith(p))) {
       return forwardToMothership(request, url);
     }

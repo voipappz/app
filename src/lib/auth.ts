@@ -1,4 +1,6 @@
-// Auth session — users-table login via deno (POST /login → PostgREST api.login).
+// Shared persisted session helpers. Interactive login is implemented only by
+// lib/clients/mothership.ts (user login + OTP); connector auth does not belong
+// in the end-user session module.
 //
 // The signed JWT (role `api_readonly` + user/environment claims) is the single
 // credential: stored in localStorage and sent as the bearer on every request to
@@ -6,10 +8,6 @@
 // source of truth. A user belongs to one environment (users.environment_uuid),
 // and that `environment_uuid` claim scopes the calls list to that environment.
 
-// Where the browser posts credentials. Default '/auth/login' rides the Vite dev
-// proxy / same-origin route to deno (the brain), which forwards to PostgREST
-// /rpc/login. NB: NOT '/login' — that's the SPA's own page route.
-const AUTH_URL = (import.meta.env.VITE_AUTH_URL ?? '/auth/login') as string;
 const STORAGE_KEY = 'auth';
 
 export interface AuthSession {
@@ -58,32 +56,6 @@ export function getToken(): string | null {
 /** Persist a session (built by a login client, e.g. lib/clients/mothership). */
 export function saveSession(session: AuthSession): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-}
-
-/** Log in with account credentials. Persists + returns the session, or throws. */
-export async function login(email: string, password: string): Promise<AuthSession> {
-  const r = await fetch(AUTH_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!r.ok) {
-    let msg = 'Invalid email or password';
-    try { msg = (await r.json()).error || msg; } catch { /* keep default */ }
-    throw new Error(msg);
-  }
-  const data = await r.json();
-  if (!data?.token) throw new Error('Login response missing token');
-  const claims = decodeJwt(data.token);
-  const session: AuthSession = {
-    access: data.token,
-    email: data.email ?? claims.email ?? email,
-    user_uuid: data.user_uuid ?? claims.user_uuid,
-    environment_uuid: data.environment_uuid ?? claims.environment_uuid,
-    expires_at: claims.exp,
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  return session;
 }
 
 export function logout(): void {

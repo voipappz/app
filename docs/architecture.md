@@ -49,8 +49,8 @@ is baked into the code** (`VITE_SIP_*` is a dev/demo override only).
 
 For tenant-custom tables/views that live beside the mothership. Enable it by
 setting **`POSTGREST_URL`** on deno (unset ⇒ `/rest/v1/*` and the PostgREST
-`/auth/login` proxy answer 503 and the app is mothership-only). The same login
-JWT rides through — PostgREST verifies it with its own shared secret
+`/connectors/postgrest/auth/login` proxy answers 503 and the app is mothership-only).
+When enabled, the connector JWT rides through — PostgREST verifies it with its own shared secret
 (`VA_PGRST_JWT_SECRET`), so RLS can scope rows by the token's claims.
 
 Frontend building blocks, layered like everything else:

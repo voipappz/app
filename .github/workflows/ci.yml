@@ -97,5 +97,5 @@ jobs:
           probe /test        200
           probe /health      200
           probe /rest/v1/x   503                       # postgrest off by default
-          probe /auth/login  400 -X POST -H 'content-type: application/json' -d '{}'
+          probe /connectors/postgrest/auth/login 400 -X POST -H 'content-type: application/json' -d '{}'
           docker rm -f app

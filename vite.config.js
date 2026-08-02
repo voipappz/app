@@ -48,13 +48,10 @@ export default defineConfig(({ mode }) => {
         // (/tasks/customer_portal_data).
         '/api':   { target: MOTHERSHIP, changeOrigin: true, secure: true },
         '/tasks': { target: MOTHERSHIP, changeOrigin: true, secure: true },
-        // deno-api: app endpoints, the worker (transcription/recording), the
-        // account login proxy (/auth/login → PostgREST /rpc/login), and the live
-        // WS. NB: /auth/login (not /login) so it doesn't shadow the SPA's /login
-        // page route, and it must stay ABOVE the general /auth mothership entry.
-        '/auth/login':   { target: DENO, changeOrigin: true },
+        // All /auth routes belong to the mothership user login/OTP surface.
         '/auth':         { target: MOTHERSHIP, changeOrigin: true, secure: true },
         // Optional PostgREST plane — rides deno (strips /rest/v1, 503 when off).
+        '/connectors/postgrest': { target: DENO, changeOrigin: true },
         '/rest/v1':      { target: DENO, changeOrigin: true },
         '/deno-api':     { target: DENO, changeOrigin: true, rewrite: (p) => p.replace(/^\/deno-api/, '') },
         '/events-api':   { target: DENO, changeOrigin: true, rewrite: (p) => p.replace(/^\/events-api/, '') },

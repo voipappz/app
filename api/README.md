@@ -12,7 +12,8 @@ bundle in production.
 - **`/ws`** — relays live call events: subscribes to the va-crystal cable
   server (ActionCable `CallEvents` channel, `cable.ts`) and fans frames out to
   browser WebSocket subscribers (the Dashboard).
-- **`POST /auth/login`** — auth proxy to the mothership.
+- **`POST /connectors/postgrest/auth/login`** — optional PostgREST connector login.
+- **`/auth/*`** — forwarded unchanged to the mothership user login/OTP API.
 - **Dashboard snapshot** — KPIs, hourly call buckets, and recent calls projected
   from locally consumed events in DuckDB.
 - **Optional Influx connector** — retained for tenant-specific analytics; it is

@@ -3,7 +3,8 @@
 export const PORT = parseInt(Deno.env.get("PORT") || "4001");
 
 // PostgREST — OPTIONAL second data plane. When POSTGREST_URL is set, deno
-// exposes it same-origin: POST /auth/login → {url}/rpc/login, and /rest/v1/*
+// exposes it same-origin: POST /connectors/postgrest/auth/login → {url}/rpc/login,
+// and /rest/v1/*
 // is forwarded (prefix stripped). Unset ⇒ both surfaces answer 503 and the
 // app runs mothership-only. NB: no trailing slash.
 export const POSTGREST_URL = (Deno.env.get("POSTGREST_URL") || "").replace(/\/$/, "");
