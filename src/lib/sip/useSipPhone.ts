@@ -17,6 +17,26 @@ export interface CallInfo {
   direction: "inbound" | "outbound";
   remote: string;
   state: "ringing" | "connecting" | "active" | "ended";
+  connectedAt?: number;
+}
+export type CallStateEvent =
+  | { type: "start"; call: CallInfo }
+  | { type: "ringing" | "connecting" | "established" | "terminated"; id: string; at?: number }
+  | { type: "clear"; id: string };
+
+// One canonical reducer owns the visible call lifecycle. SIP callbacks may
+// arrive late or out of order; an event for an older UUID must never mutate the
+// current call. This is the React equivalent of the portal's UUID-keyed
+// activeCallsArray + serialized call-event handling.
+export function reduceCallState(current: CallInfo | null, event: CallStateEvent): CallInfo | null {
+  if (event.type === "start") return current && current.state !== "ended" ? current : event.call;
+  if (!current || current.id !== event.id) return current;
+  if (event.type === "ringing") return current.state === "connecting" ? { ...current, state: "ringing" } : current;
+  if (event.type === "connecting") return current.state === "ringing" ? { ...current, state: "connecting" } : current;
+  if (event.type === "established") return { ...current, state: "active", connectedAt: event.at ?? Date.now() };
+  if (event.type === "terminated") return { ...current, state: "ended" };
+  if (event.type === "clear") return current.state === "ended" ? null : current;
+  return current;
 }
 export interface SipCredentials {
   username: string;
@@ -54,6 +74,8 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
   const regRef = useRef<Registerer | null>(null);
   const sessionsRef = useRef<Map<string, Session>>(new Map());  // keyed by ctxid (uuid)
   const invitationRef = useRef<Invitation | null>(null);        // current ringing inbound
+  const answeringRef = useRef(false);                           // guards double-click accept
+  const hangupRequestedRef = useRef<Set<string>>(new Set());    // hangup while accept is settling
   const activeIdRef = useRef<string | null>(null);              // ctxSip.callActiveID
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -93,19 +115,22 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
   const wireSession = useCallback((session: Session, info: CallInfo) => {
     (session as any).ctxid = info.id;
     sessionsRef.current.set(info.id, session);
-    setCall(info);
+    setCall((current) => reduceCallState(current, { type: "start", call: info }));
     session.stateChange.addListener((state: SessionState) => {
       if (state === SessionState.Established) {
         activeIdRef.current = info.id;
+        if (invitationRef.current && (invitationRef.current as any).ctxid === info.id) invitationRef.current = null;
         if (audioRef.current) setupRemoteAudio(session, audioRef.current);
-        setCall((c) => (c?.id === info.id ? { ...c, state: "active" } : c));
+        setCall((c) => reduceCallState(c, { type: "established", id: info.id }));
+        if (hangupRequestedRef.current.delete(info.id)) void (session as any).bye().catch(() => {});
       } else if (state === SessionState.Terminated) {
         sessionsRef.current.delete(info.id);
+        hangupRequestedRef.current.delete(info.id);
         if (activeIdRef.current === info.id) activeIdRef.current = null;
         if (invitationRef.current && (invitationRef.current as any).ctxid === info.id) invitationRef.current = null;
         setMutedState(false);
-        setCall((c) => (c?.id === info.id ? { ...c, state: "ended" } : c));
-        setTimeout(() => setCall((c) => (c?.id === info.id && c.state === "ended" ? null : c)), 1200);
+        setCall((c) => reduceCallState(c, { type: "terminated", id: info.id }));
+        setTimeout(() => setCall((c) => reduceCallState(c, { type: "clear", id: info.id })), 1200);
       }
     });
   }, []);
@@ -120,7 +145,7 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     (invitation as any).ctxid = callUuid;
 
     // Busy / reject-all → 486-style reject (lines 869–877).
-    if (activeIdRef.current) { invitation.reject().catch(() => {}); return; }
+    if (activeIdRef.current || sessionsRef.current.size > 0) { invitation.reject().catch(() => {}); return; }
 
     invitationRef.current = invitation;
     activeIdRef.current = callUuid;
@@ -128,7 +153,7 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
 
     if (vaMeta === "auto_answer") {
       invitation.accept({ sessionDescriptionHandlerOptions: { constraints: AUDIO_CONSTRAINTS } })
-        .then(() => setCall((c) => (c?.id === callUuid ? { ...c, state: "connecting" } : c)))
+        .then(() => setCall((c) => reduceCallState(c, { type: "connecting", id: callUuid })))
         .catch(() => {});
     }
   }, [wireSession]);
@@ -238,13 +263,18 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     try { await uaRef.current?.stop(); } catch { /* ignore */ }
     regRef.current = null; uaRef.current = null;
     sessionsRef.current.clear();
+    hangupRequestedRef.current.clear();
+    answeringRef.current = false;
     activeIdRef.current = null; invitationRef.current = null;
+    setCall(null);
+    setMutedState(false);
     setStatus("idle");
   }, [cancelReconnect]);
 
   const dial = useCallback(async (target: string, cfgOverrides: Partial<SipConfig> = {}) => {
     const ua = uaRef.current;
     if (!ua) throw new Error("not registered");
+    if (activeIdRef.current || sessionsRef.current.size > 0) throw new Error("call already in progress");
     const cfg = loadSipConfig({ ...overrides, ...cfgOverrides });
     const id = genId();
     const targetUri = UserAgent.makeURI(target.startsWith("sip:") ? target : `sip:${target}@${cfg.domain}`);
@@ -253,16 +283,36 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
       sessionDescriptionHandlerOptions: { constraints: AUDIO_CONSTRAINTS },
       extraHeaders: [`X-Va-Call-Uuid: ${id}`, "X-Va-Call-Direction: outgoing"],
     });
+    // Reserve the phone immediately. Waiting for Established allowed a second
+    // outgoing call while the first INVITE was still ringing.
+    activeIdRef.current = id;
     wireSession(inviter, { id, direction: "outbound", remote: target, state: "connecting" });
-    await inviter.invite();
-    setCall((c) => (c?.id === id ? { ...c, state: "ringing" } : c));
+    try {
+      await inviter.invite();
+      setCall((c) => reduceCallState(c, { type: "ringing", id }));
+    } catch (error) {
+      sessionsRef.current.delete(id);
+      if (activeIdRef.current === id) activeIdRef.current = null;
+      setCall((c) => reduceCallState(c, { type: "terminated", id }));
+      setTimeout(() => setCall((c) => reduceCallState(c, { type: "clear", id })), 1200);
+      throw error;
+    }
   }, [overrides, wireSession]);
 
   const answer = useCallback(async () => {
     const inv = invitationRef.current;
-    if (!inv) return;
-    await inv.accept({ sessionDescriptionHandlerOptions: { constraints: AUDIO_CONSTRAINTS } });
-    setCall((c) => (c ? { ...c, state: "connecting" } : c));
+    if (!inv || answeringRef.current) return;
+    const id = (inv as any).ctxid as string;
+    answeringRef.current = true;
+    setCall((c) => reduceCallState(c, { type: "connecting", id }));
+    try {
+      await inv.accept({ sessionDescriptionHandlerOptions: { constraints: AUDIO_CONSTRAINTS } });
+    } catch (error) {
+      setCall((c) => reduceCallState(c, { type: "ringing", id }));
+      throw error;
+    } finally {
+      answeringRef.current = false;
+    }
   }, []);
 
   const hangup = useCallback(async () => {
@@ -273,6 +323,7 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
       if (session && session.state === SessionState.Established) await (session as any).bye();
       else if (session instanceof Inviter && session.state !== SessionState.Terminated) await session.cancel();
       else if (inv && inv.state === SessionState.Initial) await inv.reject();
+      else if (session && session.state !== SessionState.Terminated && id) hangupRequestedRef.current.add(id);
     } catch { /* already terminating */ }
   }, [call]);
 

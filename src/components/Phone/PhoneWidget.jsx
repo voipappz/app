@@ -47,14 +47,15 @@ const pushDial = (n) => {
   return log;
 };
 
-function useCallTimer(active) {
+function useCallTimer(connectedAt) {
   const [secs, setSecs] = useState(0);
   useEffect(() => {
-    if (!active) { setSecs(0); return; }
-    const t0 = Date.now();
+    if (!connectedAt) { setSecs(0); return; }
+    const t0 = connectedAt;
+    setSecs(Math.max(0, Math.floor((Date.now() - t0) / 1000)));
     const id = setInterval(() => setSecs(Math.floor((Date.now() - t0) / 1000)), 1000);
     return () => clearInterval(id);
-  }, [active]);
+  }, [connectedAt]);
   return `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
 }
 
@@ -84,7 +85,7 @@ export default function PhoneWidget() {
 
   const inCall = call && call.state !== 'ended';
   const incoming = call && call.direction === 'inbound' && call.state === 'ringing';
-  const timer = useCallTimer(call?.state === 'active');
+  const timer = useCallTimer(call?.state === 'active' ? call.connectedAt : null);
 
   // Surface the panel automatically when a call starts.
   useEffect(() => { if (inCall) setOpen(true); }, [inCall]);
