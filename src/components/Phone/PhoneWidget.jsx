@@ -153,6 +153,7 @@ export default function PhoneWidget() {
               {name} <Box component="span" sx={{ color: MUTED, fontWeight: 400 }}>• {ext}</Box>
             </Typography>
             <Select
+              data-testid="phone-presence-select"
               value={doNotDisturb ? 'dnd' : presence}
               onChange={(e) => {
                 const next = e.target.value;

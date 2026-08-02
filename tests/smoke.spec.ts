@@ -30,6 +30,15 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await expect(page.getByTestId('desktop-navigation-panel')).toBeVisible();
   await expect(page.getByTestId('authenticated-layout')).toHaveClass(/menu-expanded/);
 
+  // The softphone must remain usable/testable even with no real SIP account.
+  // Signaling lifecycle is covered by unit tests; this guards the integrated UI.
+  await page.getByTestId('phone-button').click();
+  await expect(page.getByTestId('phone-panel')).toBeVisible();
+  await expect(page.getByText(/Offline|Unavailable/i).first()).toBeVisible();
+  await expect(page.getByTestId('phone-presence-select')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('phone-panel')).toBeHidden();
+
   // Core modules remain reachable after the navigation redesign.
   await rail.locator('a[href="/calls"]').click();
   await page.waitForURL('**/calls');

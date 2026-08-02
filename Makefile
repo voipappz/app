@@ -1,4 +1,4 @@
-.PHONY: help env dev check-mothership up down build lint unit verify test push deploy ship status tmux module prod prod-down
+.PHONY: help env dev check-mothership up down build lint unit verify test test-crystal push deploy ship status tmux module prod prod-down
 
 # Everything runs in Docker — no host node/npm/ruby required. One-off npm/node
 # commands reuse the react-app service (repo mount + cached node_modules volume).
@@ -95,6 +95,9 @@ verify: ## Health check: deno-api, web, and the /health dependency report
 
 test: ## Playwright E2E in Docker (needs the app running — make up / make dev)
 	docker compose --profile test run --rm e2e
+
+test-crystal: ## Build API and verify Crystal mock → DuckDB → health/dashboard
+	npm run test:crystal
 
 # Kamal — ALWAYS via the official Docker image (no native/rvm install): any
 # box with Docker can deploy, and everyone runs the same kamal version.

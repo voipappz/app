@@ -1,12 +1,12 @@
 # Build stage - cache dependencies
-FROM denoland/deno:latest AS builder
+FROM denoland/deno:2.5.3 AS builder
 WORKDIR /app
 COPY deno.json deno.lock ./
 COPY *.ts ./
-RUN deno cache app.ts
+RUN deno cache --frozen app.ts
 
 # Runtime stage
-FROM denoland/deno:latest
+FROM denoland/deno:2.5.3
 WORKDIR /app
 
 COPY --from=builder /app/ ./

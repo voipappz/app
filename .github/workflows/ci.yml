@@ -53,6 +53,14 @@ jobs:
           echo
           curl -sf localhost:4001/health
 
+  crystal-pipeline:
+    name: Crystal mock → DuckDB → health/dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image and verify consumed-event pipeline
+        run: npm run test:crystal
+
   e2e:
     name: E2E smoke (mock login → dashboard)
     runs-on: ubuntu-latest
