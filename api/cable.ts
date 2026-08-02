@@ -56,7 +56,15 @@ const NUMBER_STATE: Record<string, string> = {
 };
 
 export function normalizeCableEvent(message: unknown): Normalized | null {
-  const m = (message && typeof message === "object") ? message as Pojo : null;
+  // va-crystal publishes `event_record_json` directly to Cable. That value is
+  // already JSON text, so depending on the Cable backend the ActionCable
+  // frame's `message` can be either the decoded object or that JSON string.
+  // Accept both shapes; the latter is what the real NATS-backed path emits.
+  let decoded = message;
+  if (typeof decoded === "string") {
+    try { decoded = JSON.parse(decoded); } catch { return null; }
+  }
+  const m = (decoded && typeof decoded === "object" && !Array.isArray(decoded)) ? decoded as Pojo : null;
   if (!m) return null;
   const action = String(m.action ?? "");
   if (!action) return null;

@@ -83,11 +83,13 @@ Deno.test("simulated va-crystal CallEvents frames are consumed and saved", async
     socket.frame({ type: "confirm_subscription", identifier: subscribe.identifier });
 
     for (const event of VA_CRYSTAL_CALL_SEQUENCE) {
-      socket.frame({ identifier: subscribe.identifier, message: event });
+      // va-crystal calls Cable.server.publish("call_events", event_record_json),
+      // so the real NATS-backed ActionCable data frame carries JSON text here.
+      socket.frame({ identifier: subscribe.identifier, message: JSON.stringify(event) });
     }
     // Cable is at-most-once, but duplicate frames can still occur around
     // reconnects. Re-deliver one fixture to lock in idempotent persistence.
-    socket.frame({ identifier: subscribe.identifier, message: VA_CRYSTAL_CALL_SEQUENCE[1] });
+    socket.frame({ identifier: subscribe.identifier, message: JSON.stringify(VA_CRYSTAL_CALL_SEQUENCE[1]) });
 
     await waitForRows(store, VA_CRYSTAL_CALL_SEQUENCE.length);
     const rows = await store.list();

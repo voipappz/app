@@ -29,7 +29,7 @@ bundle.
 | deno-api | `api/` (:4001, entry `app.ts` → `server.ts`) | Thin BFF: mothership forwarder, `/ws/events` Cable relay, Dashboard-only DuckDB projections, engine-backed transcript reads, `/health`. Serves `dist/` in prod. |
 | Mothership (voipappz-api) | external, env-pointed | Accounts + login (`/auth/user_login` + optional per-customer OTP), calls, reports, feature flags, portal branding. The source of truth. |
 | PostgREST | external, **optional** | A second, direct-SQL data plane (`/rest/v1/*`) for tenant-custom tables/views — see below. |
-| Cable (va-crystal) | external, optional | Live call events; deno persists consumed events for Dashboard projections and relays them to `/ws/events`. |
+| Cable (va-crystal) | external, optional | Live call events transported by Cable over NATS; deno accepts Crystal's JSON-text frames, persists each consumed event in DuckDB, then relays it to `/ws/events`. |
 
 ## Auth (the spine)
 

@@ -21,8 +21,9 @@ bundle in production.
 - **Transcripts** — read on request from the engine's event store
   (`engine.ts`, server-side basic auth), JWT-gated.
 - **`/health` / `/test`** — dependency report (cable, engine, event
-  freshness via `health_freshness.ts`) used by `make verify` and the Kamal
-  post-deploy hook.
+  freshness via `health_freshness.ts`) used by verification and the Kamal
+  post-deploy hook. `/test` also exposes `tapped`, `persisted`, `duplicates`,
+  and `persistence_failures` counters for the Crystal → DuckDB path.
 - **Static serving** — in production the same process serves `dist/`
   (`STATIC_DIR`), so one container runs the whole app.
 
@@ -46,4 +47,7 @@ deno test --allow-net --allow-env --allow-read api/tests # native
 ```
 
 Tests use dependency injection (e.g. the cable client's `socketFactory` takes a
-fake WebSocket) — no network.
+fake WebSocket) — no network. `tests/event_store.test.ts` sends the exact
+string-valued `message` produced by va-crystal's
+`Cable.server.publish("call_events", event_record_json)`, then verifies the
+three-event call lifecycle was persisted and projected from DuckDB.

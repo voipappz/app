@@ -128,7 +128,7 @@ async function checkHealth(): Promise<HealthReport> {
   // Event freshness — distinct from `cable` (subscribed) — surfaces a silent
   // stream as `stale`. Informational: never fails `healthy` (so quiet periods
   // don't restart the container), but degrades `status` for monitoring.
-  const events = eventFreshness(lastCableEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED);
+  const events = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED);
   const eventStoreHealth: EventStoreStats | DepStatus = !CABLE_ENABLED
     ? { status: "disabled", detail: "cable tap off" }
     : await eventStore.stats();
@@ -165,9 +165,12 @@ interface Subscriber { ws: WebSocket; topics: Set<string>; }
 const subscribers = new Map<WebSocket, Subscriber>();
 let relayedCounter = 0;   // events relayed to /ws subscribers
 let tappedCounter = 0;    // everything received from cable
+let persistedCounter = 0; // newly inserted DuckDB events
+let duplicateCounter = 0; // idempotent Cable redeliveries
+let persistenceFailureCounter = 0;
 let cableClient: CableClient | null = null;
 let dashboardCableClient: CableClient | null = null;  // DashboardLive (agents/extensions stream)
-let lastCableEventAt: number | null = null;   // epoch ms of the last cable event (freshness)
+let lastCallEventAt: number | null = null;    // last accepted CallEvents message; DashboardLive does not mask silence
 const eventStore = new EventStore();
 
 // Single emit path — fan a canonical event out to matching /ws subscribers.
@@ -210,12 +213,17 @@ async function startCableClient() {
     log: (m) => console.log(`📡 ${m}`),
     onEvent: async (n) => {
       tappedCounter++;
-      lastCableEventAt = Date.now();   // freshness stamp
+      lastCallEventAt = Date.now();   // freshness stamp for the persisted event stream
       try {
-        await eventStore.ingest(n);
+        const result = await eventStore.ingest(n);
+        if (result.inserted) persistedCounter++;
+        else duplicateCounter++;
       } catch (err) {
-        // Keep the live stream available, but make persistence failures visible.
+        // Persistence is the contract for CallEvents. Do not show browsers an
+        // event that the local projection failed to record.
+        persistenceFailureCounter++;
         console.error("event store write failed:", err instanceof Error ? err.message : err);
+        return;
       }
       // Relay the canonical event as-is to /ws subscribers (the Dashboard).
       // occurredAtIso comes from the cable event's created_at.
@@ -237,7 +245,6 @@ async function startCableClient() {
       identifier: { channel: "DashboardLive", account_uuid: CABLE_ACCOUNT_UUID, Live_uuid: CABLE_DASHBOARD_UUID },
       log: (m) => console.log(`📊 ${m}`),
       onRaw: (message) => {
-        lastCableEventAt = Date.now();
         // payload = widget_uuid → { type, table }. Render-ready for the client.
         emitEvent("dashboard.live", (message && typeof message === "object") ? message as Pojo : { raw: message });
       },
@@ -416,12 +423,13 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
     }
 
     if (url.pathname === "/test") {
-      const fresh = eventFreshness(lastCableEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED);
+      const fresh = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED);
       return new Response(JSON.stringify({
         status: "ok", template: "voipappz",
         cable_ready: cableClient?.ready() ?? false, cable_url: CABLE_URL, cable_channel: CABLE_CHANNEL,
         dashboard_cable_ready: dashboardCableClient?.ready() ?? false,
         ws_clients: subscribers.size, relayed: relayedCounter, tapped: tappedCounter,
+        persisted: persistedCounter, duplicates: duplicateCounter, persistence_failures: persistenceFailureCounter,
         last_event_at: fresh.last_event_at, seconds_since_last_event: fresh.age_seconds, events_status: fresh.status,
         engine: ENGINE_ENABLED, timestamp: new Date().toISOString(),
       }), { status: 200, headers: JSON_HEADERS });

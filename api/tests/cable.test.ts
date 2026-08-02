@@ -53,6 +53,15 @@ Deno.test("normalizeCableEvent — user.*/queue.* pass through, garbage dropped"
   assertEquals(normalizeCableEvent({ action: "queue.start", type_uuid: "C" })!.wsType, "queue.start");
   assertEquals(normalizeCableEvent(null), null);
   assertEquals(normalizeCableEvent({ type: "call" }), null); // no action
+  assertEquals(normalizeCableEvent("not-json"), null);
+});
+
+Deno.test("normalizeCableEvent — accepts va-crystal event_record_json text", () => {
+  const raw = { type: "call", type_uuid: "C", action: "number.answer", created_at: "1700000000", metadata: { call_type: "inbound" } };
+  const normalized = normalizeCableEvent(JSON.stringify(raw));
+  assertEquals(normalized?.wsType, "call.answered");
+  assertEquals(normalized?.wsPayload.call_id, "C");
+  assertEquals(normalized?.raw, raw);
 });
 
 // Fake WebSocket capturing sent frames and exposing emit() to drive the client.
