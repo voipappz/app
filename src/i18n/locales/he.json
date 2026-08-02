@@ -380,7 +380,11 @@
     "switchToRTL": "מעבר ל-RTL",
     "logout": "יציאה",
     "notifications": "התראות",
-    "status": "סטטוס"
+    "status": "סטטוס",
+    "language": "שפה",
+    "navigation": "ניווט ראשי",
+    "darkMode": "מצב כהה",
+    "lightMode": "מצב בהיר"
   },
   "callDashboard": {
     "subtitle": "פעילות השיחות",
@@ -406,6 +410,16 @@
       "custom": "מותאם אישית",
       "from": "מתאריך",
       "to": "עד תאריך"
+    },
+    "answered": "נענו",
+    "offline": "מנותק",
+    "table": {
+      "time": "שעה",
+      "direction": "כיוון",
+      "from": "מאת",
+      "to": "אל",
+      "status": "סטטוס",
+      "duration": "משך"
     }
   },
   "usageReports": {
@@ -724,6 +738,28 @@
       "registered": "תקין",
       "unregistered": "נפל",
       "failed": "נכשל"
+    }
+  },
+  "dashboardLive": {
+    "heading": "לוח בקרה חי",
+    "widgetsHeading": "תורים וסוכנים בזמן אמת"
+  },
+  "dashboardBuilder": {
+    "heading": "עורך לוח הבקרה",
+    "open": "עריכת לוח",
+    "hint": "הרכיבים מחושבים מאירועי השיחות המקומיים של האפליקציה. ללא רכיבים יוצגו האריחים המובנים.",
+    "newWidget": "כותרת רכיב חדש",
+    "widgetTitle": "כותרת",
+    "deleteWidget": "מחיקת רכיב",
+    "confirmDelete": "למחוק את הרכיב?",
+    "empty": "עדיין לא הוגדרו רכיבים.",
+    "metric": {
+      "total": "סה״כ שיחות",
+      "answered": "נענו",
+      "failed": "נכשלו / לא נענו",
+      "inbound": "נכנסות",
+      "outbound": "יוצאות",
+      "avg_duration_sec": "משך ממוצע"
     }
   }
 }

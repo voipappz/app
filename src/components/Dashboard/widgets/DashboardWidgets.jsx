@@ -146,34 +146,31 @@ function WidgetCard({ widget, t }) {
   );
 }
 
-export default function DashboardWidgets({ hideHeading = false }) {
+export default function DashboardWidgets() {
   const { t } = useTranslation();
   const { widgets, status } = useDashboardLive();
   // Stream payload is a { uuid: descriptor } map — render in arrival order.
   const entries = useMemo(() => Object.entries(widgets), [widgets]);
   const live = status === 'open';
 
+  // No frames yet (cable unconfigured or quiet) → render nothing. The page's
+  // main content is the local projection; an empty "waiting" panel here only
+  // advertises plumbing the end user can't act on.
+  if (entries.length === 0) return null;
+
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: hideHeading ? 'flex-end' : 'space-between', mb: 1.5 }}>
-        {!hideHeading && <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('dashboardLive.heading', 'Live dashboard')}</Typography>}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('dashboardLive.widgetsHeading', 'Live queues & agents')}</Typography>
         <Chip
           size="small" icon={<RadioButtonCheckedIcon fontSize="small" />}
-          label={live ? t('callDashboard.live', 'live') : status}
+          label={live ? t('callDashboard.live', 'Live') : status}
           color={live ? 'success' : 'warning'} variant={live ? 'filled' : 'outlined'}
         />
       </Box>
-      {entries.length === 0 ? (
-        <Paper elevation={0} sx={{ p: 4, textAlign: 'center', border: '1px dashed', borderColor: 'divider', borderRadius: 3 }}>
-          <Typography variant="body2" color="text.secondary">
-            {t('dashboardLive.waiting', 'Waiting for the live dashboard stream from cable…')}
-          </Typography>
-        </Paper>
-      ) : (
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(12, 1fr)' } }}>
-          {entries.map(([uuid, widget]) => <WidgetCard key={uuid} widget={widget} t={t} />)}
-        </Box>
-      )}
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(12, 1fr)' } }}>
+        {entries.map(([uuid, widget]) => <WidgetCard key={uuid} widget={widget} t={t} />)}
+      </Box>
     </Box>
   );
 }

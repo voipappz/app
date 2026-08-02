@@ -204,16 +204,60 @@
 }
 
 .navigation-rail .rail-item.utility {
-  min-height: 52px;
+  min-height: 48px;
+}
+
+/* Bottom cluster: bell + avatar, per the reference UX. */
+.navigation-rail .rail-item.rail-account {
+  min-height: 56px;
+  align-items: center;
+}
+
+/* Dark scheme — driven by <html data-theme>, set by DirectionContext to match
+   the MUI palette mode. Only the plain-CSS surfaces need explicit overrides. */
+[data-theme='dark'] .navigation-rail {
+  background: #111a2b;
+  border-right-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-theme='dark'] .rail-utilities {
+  border-top-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-theme='dark'] .navigation-rail .rail-item {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .navigation-rail .rail-item:hover {
+  color: #8ab0ff;
+  background: rgba(47, 111, 237, 0.16);
+}
+
+[data-theme='dark'] .navigation-rail .rail-item.active {
+  color: #8ab0ff;
+  background: rgba(47, 111, 237, 0.22);
+}
+
+[data-theme='dark'] .mobile-drawer-content {
+  background-color: #111a2b;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .mobile-drawer-content .MuiListItemIcon-root {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .mobile-drawer-content .MuiListItemText-primary {
+  color: #e2e8f0 !important;
+}
+
+[data-theme='dark'] .mobile-drawer-content .mobile-logo-container {
+  border-bottom-color: rgba(148, 163, 184, 0.2);
 }
 
 /* Mobile styles */
 @media (max-width: 900px) {
   .navigation-rail {
-    display: none;
-  }
-
-  .desktop-navigation-drawer {
     display: none;
   }
 

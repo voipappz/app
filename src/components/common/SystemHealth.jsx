@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next';
 // reflects the `events` freshness check (api/health_freshness.ts):
 //   up → green "Live" · stale → red "No call events for Nm" · idle → grey
 //   · offline/unreachable → grey. Informational only.
-const EVENTS_API = import.meta.env.VITE_EVENTS_API_URL ?? '';
+// Same base rule as useCalls.js: same-origin in prod, /events-api proxy in dev.
+const EVENTS_API = import.meta.env.VITE_EVENTS_API_URL ?? (import.meta.env.DEV ? '/events-api' : '');
 const POLL_MS = 30_000;
 
 const DOT = { up: '#16a34a', stale: '#dc2626', idle: '#9ca3af', offline: '#9ca3af' };

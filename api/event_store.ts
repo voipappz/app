@@ -50,6 +50,18 @@ export interface DashboardSnapshot {
   recent_calls: DashboardCall[];
 }
 
+// User-defined dashboard widget DEFINITION (the builder's output). Values are
+// always computed from the local event projection — the definition only says
+// what to show. Stored as a JSON row so the shape can grow without migrations.
+export interface WidgetDefinition {
+  uuid: string;
+  title: string;
+  type: string;                       // 'counter' (v1)
+  metric: string;                     // key into DashboardSnapshot.stats
+  position: number;
+  [key: string]: unknown;
+}
+
 function sqlString(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
@@ -130,8 +142,54 @@ export class EventStore {
     await this.connection.run("CREATE INDEX IF NOT EXISTS events_call_id ON events(call_id)");
     await this.connection.run("CREATE INDEX IF NOT EXISTS events_occurred_at ON events(occurred_at)");
     await this.connection.run("CREATE INDEX IF NOT EXISTS events_action ON events(action)");
+    // Dashboard widget definitions (the builder). Same local DB file — the
+    // dashboard is entirely a local-projection feature.
+    await this.connection.run(`
+      CREATE TABLE IF NOT EXISTS dashboard_widgets (
+        uuid VARCHAR PRIMARY KEY,
+        definition JSON NOT NULL,
+        position INTEGER NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT current_timestamp
+      )
+    `);
     await this.pruneUnlocked();
     this.lastError = null;
+  }
+
+  async listWidgets(): Promise<WidgetDefinition[]> {
+    await this.open();
+    await this.writeQueue;
+    const result = await this.connection.runAndReadAll(
+      "SELECT uuid, definition, position FROM dashboard_widgets ORDER BY position, uuid",
+    );
+    return result.getRowObjects().map((row: Record<string, unknown>) => ({
+      ...(jsonObject(row.definition) ?? {}),
+      uuid: String(row.uuid),
+      position: Number(row.position ?? 0),
+    })) as WidgetDefinition[];
+  }
+
+  /** Insert or replace one widget definition (uuid comes from the caller). */
+  async saveWidget(widget: WidgetDefinition): Promise<WidgetDefinition> {
+    await this.open();
+    const { uuid, position, ...definition } = widget;
+    const stored = { ...definition, title: definition.title || "", type: definition.type || "counter", metric: definition.metric || "total" };
+    await this.connection.run(`
+      INSERT OR REPLACE INTO dashboard_widgets (uuid, definition, position, updated_at)
+      VALUES (${sqlString(uuid)}, CAST(${sqlString(JSON.stringify(stored))} AS JSON),
+        ${Number.isFinite(position) ? Math.floor(position) : 0}, current_timestamp)
+    `);
+    return { ...stored, uuid, position: Number.isFinite(position) ? Math.floor(position) : 0 } as WidgetDefinition;
+  }
+
+  async deleteWidget(uuid: string): Promise<boolean> {
+    await this.open();
+    const before = await this.connection.runAndReadAll(
+      `SELECT COUNT(*) AS count FROM dashboard_widgets WHERE uuid = ${sqlString(uuid)}`,
+    );
+    const exists = Number(before.getRowObjects()?.[0]?.count ?? 0) > 0;
+    if (exists) await this.connection.run(`DELETE FROM dashboard_widgets WHERE uuid = ${sqlString(uuid)}`);
+    return exists;
   }
 
   async ingest(event: Normalized): Promise<{ eventId: string; inserted: boolean }> {

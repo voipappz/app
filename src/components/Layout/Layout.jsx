@@ -69,16 +69,18 @@ const Layout = ({ children }) => {
         </Box>
       ) : (
         // Regular layout with MainMenu for authenticated pages
-        <Box className={mobileDrawerOpen ? 'authenticated-layout menu-expanded' : 'authenticated-layout'} data-testid="authenticated-layout">
+        <Box className="authenticated-layout" data-testid="authenticated-layout">
           {/* Global Header */}
           <Box
             component="header"
             sx={{
-              backgroundColor: APP_THEME.header.backgroundColor,
-              color: APP_THEME.header.color,
+              // Theme-aware (follows light/dark palette mode).
+              backgroundColor: 'background.paper',
+              color: 'text.primary',
               height: APP_THEME.header.height,
               boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-              borderBottom: '1px solid #e5e7eb',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
               position: 'fixed',
               top: 0,
               insetInlineEnd: 0,
@@ -101,16 +103,17 @@ const Layout = ({ children }) => {
                 // attribute (not just sx) is needed to beat the RTL root.
               }}
             >
-              {/* Left side - Hamburger (opens the left slide-out menu) + Title */}
+              {/* Left side - Hamburger (mobile drawer) + Title */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {/* Hamburger Menu — always visible; the nav now lives in a
-                    left drawer (WebRTC-portal style), not an inline top bar. */}
+                {/* Hamburger — mobile only. Desktop navigation is the permanent
+                    icon rail; a second expandable panel would duplicate it. */}
                 <IconButton
                   color="inherit"
                   edge="start"
                   onClick={handleDrawerToggle}
                   aria-label="open menu"
                   data-testid="menu-button"
+                  sx={{ display: { xs: 'inline-flex', md: 'none' } }}
                 >
                   <MenuIcon />
                 </IconButton>
@@ -125,9 +128,8 @@ const Layout = ({ children }) => {
                 >
                   {screenTitle}
                 </Typography>
-                {/* Primary navigation — in the top bar (desktop); mobile uses the
-                    hamburger drawer. MainMenu renders the inline nav on desktop and
-                    the slide-out drawer on mobile. */}
+                {/* Primary navigation — the permanent icon rail (desktop) or the
+                    hamburger drawer (mobile). MainMenu renders both. */}
                 <MainMenu
                   mobileDrawerOpen={mobileDrawerOpen}
                   onDrawerToggle={handleDrawerToggle}

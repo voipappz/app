@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
 import { CacheProvider } from '@emotion/react';
 import { createTheme } from '@mui/material/styles';
 import { prefixer } from 'stylis';
@@ -23,6 +24,21 @@ export const DirectionProvider = ({ children }) => {
   const [direction, setDirection] = useState(() => {
     return localStorage.getItem('app-direction') || 'rtl';
   });
+
+  // Light/dark color scheme — persisted, exposed on <html data-theme> so plain
+  // CSS (rail, drawers) can follow the MUI palette mode.
+  const [mode, setMode] = useState(() => {
+    const stored = localStorage.getItem('app-color-mode');
+    return stored === 'dark' ? 'dark' : 'light';
+  });
+  const toggleMode = () => {
+    const next = mode === 'dark' ? 'light' : 'dark';
+    setMode(next);
+    localStorage.setItem('app-color-mode', next);
+  };
+  useEffect(() => {
+    document.documentElement.dataset.theme = mode;
+  }, [mode]);
 
   // Create emotion cache based on direction
   const emotionCache = useMemo(() => {
@@ -51,6 +67,16 @@ export const DirectionProvider = ({ children }) => {
       direction: direction, // Override direction dynamically
       palette: {
         ...baseMuiTheme.palette,
+        mode,
+        // MUI light defaults come from the base theme; dark needs explicit
+        // surfaces because the base palette pins light-only tokens.
+        ...(mode === 'dark'
+          ? {
+              background: { default: '#0b1220', paper: '#111a2b' },
+              text: { primary: '#e2e8f0', secondary: '#94a3b8' },
+              divider: 'rgba(148, 163, 184, 0.2)',
+            }
+          : {}),
         ...(brandColor
           ? { primary: { ...baseMuiTheme.palette?.primary, main: brandColor } }
           : {}),
@@ -71,7 +97,7 @@ export const DirectionProvider = ({ children }) => {
         },
       },
     });
-  }, [direction]);
+  }, [direction, mode]);
 
   // Toggle direction function
   const toggleDirection = () => {
@@ -104,12 +130,16 @@ export const DirectionProvider = ({ children }) => {
     toggleDirection,
     setDirection: setDirectionValue,
     isRTL: direction === 'rtl',
+    mode,
+    toggleMode,
+    isDark: mode === 'dark',
   };
 
   return (
     <DirectionContext.Provider value={value}>
       <CacheProvider value={emotionCache}>
         <ThemeProvider theme={theme}>
+          <CssBaseline />
           {children}
         </ThemeProvider>
       </CacheProvider>

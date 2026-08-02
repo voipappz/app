@@ -18,7 +18,7 @@ import { createJwtVerifier, unauthorizedResponse, type JwtVerifier } from './aut
 import { fetchTranscript } from './engine.ts';
 import { eventFreshness, type Freshness } from './health_freshness.ts';
 import { createCableClient, mintCableToken, normalizeCableEvent, type CableClient, type Normalized } from "./cable.ts";
-import { EventStore, type EventStoreStats } from "./event_store.ts";
+import { EventStore, type EventStoreStats, type WidgetDefinition } from "./event_store.ts";
 import { mockCrystalCallSequence } from "./mock_crystal_events.ts";
 import { dashboardCallsPerHour } from './influx.ts';
 import { INFLUX_ENABLED } from './config.ts';
@@ -421,6 +421,44 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
       } catch (err) {
         console.error("dashboard event projection failed:", err instanceof Error ? err.message : err);
         return new Response(JSON.stringify({ error: "event store unavailable" }), { status: 503, headers: JSON_HEADERS });
+      }
+    }
+
+    // Dashboard widget DEFINITIONS (the builder) — stored in the same local
+    // DuckDB as the events they visualize. No mothership involvement.
+    if (url.pathname === "/dashboard/widgets" || url.pathname.startsWith("/dashboard/widgets/")) {
+      const authResult = await verifyJwt(request);
+      if (!authResult.authenticated && authResult.error !== "Auth not configured") {
+        return unauthorizedResponse(authResult.error || "Unauthorized", CORS_HEADERS);
+      }
+      const widgetId = url.pathname === "/dashboard/widgets" ? null : decodeURIComponent(url.pathname.slice("/dashboard/widgets/".length));
+      try {
+        if (request.method === "GET" && !widgetId) {
+          return new Response(JSON.stringify({ widgets: await eventStore.listWidgets() }), { status: 200, headers: JSON_HEADERS });
+        }
+        if ((request.method === "POST" && !widgetId) || (request.method === "PATCH" && widgetId)) {
+          let body: Record<string, unknown> = {};
+          try { body = await request.json(); } catch { /* empty body → defaults */ }
+          if (request.method === "PATCH") {
+            const current = (await eventStore.listWidgets()).find((w) => w.uuid === widgetId);
+            if (!current) return new Response(JSON.stringify({ error: "widget not found" }), { status: 404, headers: JSON_HEADERS });
+            body = { ...current, ...body };
+          }
+          const widget = await eventStore.saveWidget({
+            title: "", type: "counter", metric: "total", position: Date.now() % 1_000_000,
+            ...body,
+            uuid: widgetId || crypto.randomUUID(),
+          } as WidgetDefinition);
+          return new Response(JSON.stringify(widget), { status: widgetId ? 200 : 201, headers: JSON_HEADERS });
+        }
+        if (request.method === "DELETE" && widgetId) {
+          const deleted = await eventStore.deleteWidget(widgetId);
+          return new Response(JSON.stringify({ deleted }), { status: deleted ? 200 : 404, headers: JSON_HEADERS });
+        }
+        return new Response(JSON.stringify({ error: "method not allowed" }), { status: 405, headers: JSON_HEADERS });
+      } catch (err) {
+        console.error("widget store failed:", err instanceof Error ? err.message : err);
+        return new Response(JSON.stringify({ error: "widget store unavailable" }), { status: 503, headers: JSON_HEADERS });
       }
     }
 

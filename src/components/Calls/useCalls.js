@@ -22,8 +22,11 @@ import { getCalls } from '../../services/callsApi';
 export const SORT_FIELD_MAP = { started_at: 'created_at' };
 
 // HTTP base for the deno-api worker endpoints (transcription / recording).
-// Deno is custom-logic only; the calls list comes from voipappz-api. '' = same-origin.
-export const EVENTS_API = import.meta.env.VITE_EVENTS_API_URL ?? '';
+// Deno is custom-logic only; the calls list comes from voipappz-api.
+// Prod: '' (same-origin — deno serves the app). Dev: Vite owns the origin, so
+// deno routes (/health, /dashboard/*) must ride the /events-api proxy prefix
+// (a bare '/dashboard' proxy would shadow the SPA route of the same name).
+export const EVENTS_API = import.meta.env.VITE_EVENTS_API_URL ?? (import.meta.env.DEV ? '/events-api' : '');
 
 // WS base for the LiveEvents dashboard widget (deno /ws/events). Same-origin by
 // default so it rides the Vite proxy.

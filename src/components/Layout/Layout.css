@@ -18,14 +18,6 @@
   padding-top: 64px;
 }
 
-.authenticated-layout .content-container {
-  transition: margin-left 180ms ease;
-}
-
-.authenticated-layout.menu-expanded .content-container {
-  margin-left: 292px;
-}
-
 /* Login page specific styles */
 .login-left-container {
   display: flex;
@@ -40,15 +32,11 @@
   height: 100vh;
 }
 
-/* Responsive layout fixes */
-@media (max-width: 768px) {
+/* Responsive layout fixes — 900px matches the rail's own breakpoint. */
+@media (max-width: 900px) {
   .content-container {
     margin-left: 0;
     padding-top: 64px; /* Space for fixed header on mobile */
-  }
-
-  .authenticated-layout.menu-expanded .content-container {
-    margin-left: 0;
   }
 
   .login-left-container {

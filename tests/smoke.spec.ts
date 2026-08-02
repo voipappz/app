@@ -22,13 +22,25 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await page.waitForURL('**/dashboard', { timeout: 15_000 });
   await expect(page.getByTestId('login-form')).toHaveCount(0);
 
-  // Desktop navigation follows the icon-rail + expandable secondary-panel UX.
+  // Desktop navigation is the icon rail ONLY — no second expandable panel
+  // duplicating it. The hamburger is a mobile-drawer affordance and must be
+  // hidden on desktop; the rail's bottom cluster carries bell + account.
   const rail = page.getByTestId('navigation-rail');
   await expect(rail).toBeVisible();
   await expect(rail.locator('[aria-current="page"]')).toContainText(/Dashboard/i);
-  await page.getByTestId('menu-button').click();
-  await expect(page.getByTestId('desktop-navigation-panel')).toBeVisible();
-  await expect(page.getByTestId('authenticated-layout')).toHaveClass(/menu-expanded/);
+  await expect(page.getByTestId('menu-button')).toBeHidden();
+  await expect(page.getByTestId('rail-notifications')).toBeVisible();
+  await page.getByTestId('rail-account').click();
+  await expect(page.getByTestId('account-logout')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('account-logout')).toBeHidden();
+
+  // The dashboard renders real local-projection content, not a bare waiting
+  // message: a KPI row (default tiles OR user-defined widgets) + calls-per-hour
+  // + recent calls.
+  await expect(page.getByTestId('dashboard-kpis')).toBeVisible();
+  await expect(page.getByText(/Calls per hour|שיחות לפי שעה/i).first()).toBeVisible();
+  await expect(page.getByText(/Recent calls|שיחות אחרונות/i).first()).toBeVisible();
 
   // The softphone must remain usable/testable even with no real SIP account.
   // Signaling lifecycle is covered by unit tests; this guards the integrated UI.
@@ -44,11 +56,14 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await page.waitForURL('**/calls');
   const appErrors = () => pageErrors.filter((message) => !message.includes('WebSocket closed'));
   await expect.poll(appErrors, { message: 'Calls route must not throw in the browser' }).toEqual([]);
-  await expect(page.getByTestId('main-content').getByRole('heading', { name: /Calls|שיחות/i })).toBeVisible();
+  // Page titles are the PageHeader h2 — level-scoped because the dashboard's
+  // widget headings ("Calls per hour", "Recent calls") also match /Calls/ and
+  // stay visible while the next route's chunk loads (React Router transition).
+  await expect(page.getByTestId('main-content').getByRole('heading', { level: 2, name: /Calls|שיחות/i })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('calls-pagination')).toBeVisible();
   await rail.locator('a[href="/reports"]').click();
   await page.waitForURL('**/reports');
-  await expect(page.getByTestId('main-content').getByRole('heading', { name: /Reports|דוחות/i })).toBeVisible();
+  await expect(page.getByTestId('main-content').getByRole('heading', { level: 2, name: /Reports|דוחות/i })).toBeVisible({ timeout: 15_000 });
 });
 
 /**

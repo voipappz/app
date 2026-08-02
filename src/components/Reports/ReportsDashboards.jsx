@@ -148,10 +148,12 @@ export default function ReportsDashboards({ period = 'd7' }) {
         </ToggleButtonGroup>
       </Box>
 
-      {loading ? (
+      {loading && !reports.length ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>
       ) : (
-        <>
+        // Keep the previous data visible (dimmed) while the engine re-runs the
+        // category — blanking to a spinner makes every switch feel slower.
+        <Box sx={loading ? { opacity: 0.5, pointerEvents: 'none' } : undefined}>
           {error && <Alert severity="warning" sx={{ mt: 2 }}>{error}</Alert>}
 
           {/* Counter strip — one big number per single-value report. */}
@@ -179,7 +181,7 @@ export default function ReportsDashboards({ period = 'd7' }) {
               No reports in this category.
             </Typography>
           )}
-        </>
+        </Box>
       )}
     </Box>
   );

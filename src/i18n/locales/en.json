@@ -359,7 +359,11 @@
     "switchToRTL": "Switch to RTL",
     "logout": "Logout",
     "notifications": "Notifications",
-    "status": "Status"
+    "status": "Status",
+    "language": "Language",
+    "navigation": "Main navigation",
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode"
   },
   "callDashboard": {
     "subtitle": "Call activity",
@@ -385,6 +389,16 @@
       "custom": "Custom",
       "from": "From",
       "to": "To"
+    },
+    "answered": "Answered",
+    "offline": "Offline",
+    "table": {
+      "time": "Time",
+      "direction": "Direction",
+      "from": "From",
+      "to": "To",
+      "status": "Status",
+      "duration": "Duration"
     }
   },
   "usageReports": {
@@ -703,6 +717,28 @@
       "registered": "up",
       "unregistered": "down",
       "failed": "failed"
+    }
+  },
+  "dashboardLive": {
+    "heading": "Live dashboard",
+    "widgetsHeading": "Live queues & agents"
+  },
+  "dashboardBuilder": {
+    "heading": "Dashboard builder",
+    "open": "Edit dashboard",
+    "hint": "Widgets are computed from this app's local call events. Without widgets the default tiles show.",
+    "newWidget": "New widget title",
+    "widgetTitle": "Title",
+    "deleteWidget": "Delete widget",
+    "confirmDelete": "Delete this widget?",
+    "empty": "No widgets defined yet.",
+    "metric": {
+      "total": "Total calls",
+      "answered": "Answered",
+      "failed": "Failed / missed",
+      "inbound": "Inbound",
+      "outbound": "Outbound",
+      "avg_duration_sec": "Avg duration"
     }
   }
 }

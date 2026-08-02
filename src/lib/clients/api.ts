@@ -63,3 +63,4 @@ export async function apiGet<T = unknown>(pathAndQuery: string): Promise<T> {
   if (!res.ok) throw new Error(`${pathAndQuery} → ${res.status}`);
   return res.json();
 }
+
