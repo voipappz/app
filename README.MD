@@ -38,6 +38,12 @@ real mothership user (or `VITE_MOCK_LOGIN=1 make up` for an offline login with
 any email + OTP `123456`). Prefer host tooling? `npm install && npm run dev`
 works too.
 
+Every push is guarded by the repository's `.githooks/pre-push` hook. `npm
+install` configures it automatically. Run the identical gate manually with
+`npm run verify:push`. It covers ESLint, frontend unit tests, Deno type-check
+and tests, a production build, and the mock-login browser flow through
+Dashboard, Calls, and Reports.
+
 ## Two ways to run
 
 | Mode | Command | When |

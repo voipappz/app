@@ -39,7 +39,7 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno check app.ts server.ts
-      - run: deno test --allow-net --allow-env --allow-read tests/
+      - run: deno test --allow-net --allow-env --allow-read --allow-write --allow-ffi tests/
       # Boot the server with no env at all and prove the health surface is up —
       # optional deps must report "disabled", never crash the boot.
       - name: Boot smoke (/test + /health with zero config)
