@@ -15,6 +15,8 @@ import CallEndIcon from '@mui/icons-material/CallEnd';
 import BackspaceIcon from '@mui/icons-material/Backspace';
 import MicIcon from '@mui/icons-material/Mic';
 import MicOffIcon from '@mui/icons-material/MicOff';
+import PauseIcon from '@mui/icons-material/Pause';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DialpadIcon from '@mui/icons-material/Dialpad';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -27,6 +29,7 @@ import { useSipPhoneCtx } from '../../context/SipPhoneContext';
 import { useDirection } from '../../context/DirectionContext';
 import SipSettingsForm from './SipSettingsForm';
 import CallToast from './CallToast';
+import { requestIncomingCallNotifications, useIncomingCallAlerts } from '../../lib/sip/useIncomingCallAlerts';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
 const DOT = { registered: '#22c55e', connecting: '#f59e0b', failed: '#ef4444', unregistered: '#94a3b8', idle: '#94a3b8', unavailable: '#ef4444' };
@@ -62,7 +65,11 @@ function useCallTimer(connectedAt) {
 export default function PhoneWidget() {
   const { t } = useTranslation();
   const { isRTL } = useDirection();
-  const { status, connected, call, muted, dial, answer, hangup, sendDtmf, setMuted, settings, logs = [], clearLogs } = useSipPhoneCtx();
+  const {
+    status, connected, call, muted, held, doNotDisturb, networkAvailable, lastError,
+    dial, answer, hangup, sendDtmf, setMuted, setHeld, setDoNotDisturb,
+    settings, logs = [], clearLogs,
+  } = useSipPhoneCtx();
   // "Stick" the dock open (persistent, no backdrop) — survives reloads.
   const [pinned, setPinned] = useState(() => { try { return localStorage.getItem('sip-phone-pinned') === '1'; } catch { return false; } });
   const [open, setOpen] = useState(pinned);
@@ -85,6 +92,7 @@ export default function PhoneWidget() {
 
   const inCall = call && call.state !== 'ended';
   const incoming = call && call.direction === 'inbound' && call.state === 'ringing';
+  useIncomingCallAlerts(call);
   const timer = useCallTimer(call?.state === 'active' ? call.connectedAt : null);
 
   // Surface the panel automatically when a call starts.
@@ -93,7 +101,9 @@ export default function PhoneWidget() {
   const ext = settings?.username || '—';
   const name = settings?.displayName || settings?.username || t('phone.guest', 'guest');
   const initial = (name?.trim()?.[0] || 'G').toUpperCase();
-  const statusText = connected
+  const statusText = !networkAvailable
+    ? t('phone.networkOffline', 'Network offline')
+    : connected
     ? t('phone.ready', 'Ready')
     : status === 'connecting' ? t('phone.connecting', 'Connecting…')
     : status === 'unavailable' ? t('phone.unavailable', 'Unavailable')
@@ -113,7 +123,7 @@ export default function PhoneWidget() {
   return (
     <>
       <Tooltip title={connected ? t('phone.ready', 'Ready') : t('phone.offline', 'Offline')}>
-        <IconButton color="inherit" onClick={() => setOpen(true)} data-testid="phone-button">
+        <IconButton color="inherit" onClick={() => { setOpen(true); void requestIncomingCallNotifications(); }} data-testid="phone-button">
           <Box sx={{ position: 'relative' }}>
             <PhoneIcon />
             <Box sx={{ position: 'absolute', right: -2, bottom: -2, width: 8, height: 8, borderRadius: '50%', bgcolor: DOT[status] || '#94a3b8', border: '1.5px solid #fff' }} />
@@ -143,13 +153,17 @@ export default function PhoneWidget() {
               {name} <Box component="span" sx={{ color: MUTED, fontWeight: 400 }}>• {ext}</Box>
             </Typography>
             <Select
-              value={presence}
-              onChange={(e) => setPresence(e.target.value)}
+              value={doNotDisturb ? 'dnd' : presence}
+              onChange={(e) => {
+                const next = e.target.value;
+                setDoNotDisturb(next === 'dnd');
+                if (next !== 'dnd') setPresence(next);
+              }}
               variant="standard"
               disableUnderline
               sx={{
                 mt: 0.5, fontSize: '0.72rem', fontWeight: 700, color: '#fff', borderRadius: 1, px: 1, py: 0.1,
-                bgcolor: presence === 'available' ? GREEN : presence === 'away' ? '#f59e0b' : '#ef4444',
+                bgcolor: doNotDisturb ? '#ef4444' : presence === 'available' ? GREEN : '#f59e0b',
                 '& .MuiSelect-select': { py: 0.2, pr: '20px !important' }, '& .MuiSvgIcon-root': { color: '#fff' },
               }}
               MenuProps={{ MenuListProps: { dense: true } }}
@@ -162,6 +176,11 @@ export default function PhoneWidget() {
               <Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: DOT[status] || '#94a3b8', display: 'inline-block' }} />
               {statusText}{settings?.domain ? ` • ${settings.domain}` : ''}
             </Typography>
+            {lastError && (
+              <Typography title={lastError} sx={{ mt: 0.4, fontSize: '0.66rem', color: '#fca5a5' }} noWrap>
+                {lastError}
+              </Typography>
+            )}
           </Box>
           <Stack direction="row" sx={{ color: MUTED }}>
             <Tooltip title={t('phone.logs', 'Logs')}>
@@ -211,6 +230,17 @@ export default function PhoneWidget() {
                 <IconButton onClick={() => setMuted(!muted)} sx={{ color: muted ? '#ef4444' : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}>
                   {muted ? <MicOffIcon /> : <MicIcon />}
                 </IconButton>
+                <Tooltip title={held ? t('phone.resume', 'Resume') : t('phone.hold', 'Hold')}>
+                  <span>
+                    <IconButton
+                      disabled={call.state !== 'active'}
+                      onClick={() => { void setHeld(!held).catch(() => {}); }}
+                      sx={{ color: held ? ACCENT : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}
+                    >
+                      {held ? <PlayArrowIcon /> : <PauseIcon />}
+                    </IconButton>
+                  </span>
+                </Tooltip>
               </Stack>
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0.5, mb: 2 }}>
                 {KEYS.map((k) => <Button key={k} sx={{ color: '#cbd5e1', fontSize: '1.1rem' }} onClick={() => press(k)}>{k}</Button>)}

@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Inviter, Invitation, Registerer, RegistererState, SessionState, TransportState,
-  UserAgent, type Session,
+  UserAgent, Web, type Session,
 } from "sip.js";
 import { loadSipConfig, type SipConfig } from "./config";
 
@@ -18,6 +18,7 @@ export interface CallInfo {
   remote: string;
   state: "ringing" | "connecting" | "active" | "ended";
   connectedAt?: number;
+  failureReason?: string;
 }
 export type CallStateEvent =
   | { type: "start"; call: CallInfo }
@@ -69,6 +70,10 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
   const [status, setStatus] = useState<RegStatus>("idle");
   const [call, setCall] = useState<CallInfo | null>(null);
   const [muted, setMutedState] = useState(false);
+  const [held, setHeldState] = useState(false);
+  const [doNotDisturb, setDoNotDisturbState] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [networkAvailable, setNetworkAvailable] = useState(() => typeof navigator === "undefined" || navigator.onLine !== false);
 
   const uaRef = useRef<UserAgent | null>(null);
   const regRef = useRef<Registerer | null>(null);
@@ -78,6 +83,10 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
   const hangupRequestedRef = useRef<Set<string>>(new Set());    // hangup while accept is settling
   const activeIdRef = useRef<string | null>(null);              // ctxSip.callActiveID
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const dndRef = useRef(false);
+  const networkAvailableRef = useRef(typeof navigator === "undefined" || navigator.onLine !== false);
+  const uaGenerationRef = useRef(0);
+  const holdChangingRef = useRef(false);
 
   // Reconnect state (mirrors webrtc-phone.ts lines 50–56).
   const credsRef = useRef<SipCredentials | null>(null);
@@ -101,6 +110,12 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     }
   }, []);
   const clearLogs = useCallback(() => { logsRef.current = []; setLogs([]); }, []);
+  const reportError = useCallback((category: string, error: unknown, fallback: string) => {
+    const message = error instanceof Error && error.message ? error.message : fallback;
+    setLastError(message);
+    addLog("error", category, message);
+    return message;
+  }, [addLog]);
 
   useEffect(() => {
     const el = document.createElement("audio");
@@ -118,6 +133,7 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     setCall((current) => reduceCallState(current, { type: "start", call: info }));
     session.stateChange.addListener((state: SessionState) => {
       if (state === SessionState.Established) {
+        setLastError(null);
         activeIdRef.current = info.id;
         if (invitationRef.current && (invitationRef.current as any).ctxid === info.id) invitationRef.current = null;
         if (audioRef.current) setupRemoteAudio(session, audioRef.current);
@@ -129,6 +145,7 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
         if (activeIdRef.current === info.id) activeIdRef.current = null;
         if (invitationRef.current && (invitationRef.current as any).ctxid === info.id) invitationRef.current = null;
         setMutedState(false);
+        setHeldState(false);
         setCall((c) => reduceCallState(c, { type: "terminated", id: info.id }));
         setTimeout(() => setCall((c) => reduceCallState(c, { type: "clear", id: info.id })), 1200);
       }
@@ -145,7 +162,11 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     (invitation as any).ctxid = callUuid;
 
     // Busy / reject-all → 486-style reject (lines 869–877).
-    if (activeIdRef.current || sessionsRef.current.size > 0) { invitation.reject().catch(() => {}); return; }
+    if (dndRef.current || activeIdRef.current || sessionsRef.current.size > 0) {
+      invitation.reject().catch(() => {});
+      addLog("log", "sip.Invitation", dndRef.current ? "incoming call rejected: do not disturb" : "incoming call rejected: busy");
+      return;
+    }
 
     invitationRef.current = invitation;
     activeIdRef.current = callUuid;
@@ -154,9 +175,9 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     if (vaMeta === "auto_answer") {
       invitation.accept({ sessionDescriptionHandlerOptions: { constraints: AUDIO_CONSTRAINTS } })
         .then(() => setCall((c) => reduceCallState(c, { type: "connecting", id: callUuid })))
-        .catch(() => {});
+        .catch((error) => { reportError("sip.Invitation", error, "Auto-answer failed"); });
     }
-  }, [wireSession]);
+  }, [wireSession, addLog, reportError]);
 
   // Reconnect (lines 807–849). Exponential backoff = delay * attempt, capped at max.
   const cancelReconnect = useCallback(() => {
@@ -168,18 +189,34 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
   const buildUA = useCallback(async () => {
     const creds = credsRef.current;
     const cfg = cfgRef.current;
-    if (!creds) return;
+    if (!creds || manualDisconnect.current) return;
+    if (!networkAvailableRef.current) {
+      setStatus("unregistered");
+      setLastError("Network offline");
+      return;
+    }
+    const generation = ++uaGenerationRef.current;
     // WebRTC must be available (secure context + browser support). If it isn't,
     // fail cleanly to 'failed' rather than throwing — the softphone is optional
     // and must never break the rest of the app.
     if (typeof RTCPeerConnection === "undefined" || typeof WebSocket === "undefined") {
       addLog("error", "sip.WebRTC", "WebRTC unavailable (insecure context or unsupported browser); softphone disabled");
+      setLastError("WebRTC is unavailable in this browser or insecure context");
       setStatus("failed");
       return;
     }
     const domain = creds.domain || cfg.domain;
     const uri = UserAgent.makeURI(`sip:${creds.username}@${domain}`);
-    if (!uri) { setStatus("failed"); return; }
+    if (!uri) { setLastError("Invalid SIP address"); setStatus("failed"); return; }
+
+    // A reconnect replaces the previous UA. Generation checks below ensure
+    // late events from the stopped transport cannot mutate the new one.
+    const previousRegisterer = regRef.current;
+    const previousUa = uaRef.current;
+    regRef.current = null;
+    uaRef.current = null;
+    try { await previousRegisterer?.unregister(); } catch { /* already disconnected */ }
+    try { await previousUa?.stop(); } catch { /* already disconnected */ }
 
     let ua: UserAgent;
     try {
@@ -198,7 +235,7 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
         delegate: { onInvite: (invitation: Invitation) => handleIncomingCall(invitation) },
       });
     } catch (err) {
-      addLog("error", "sip.UserAgent", `failed to create SIP user agent: ${err instanceof Error ? err.message : String(err)}`);
+      reportError("sip.UserAgent", err, "Failed to create SIP user agent");
       setStatus("failed");
       return;
     }
@@ -206,6 +243,7 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
 
     // Manual reconnect on unexpected transport drops (webrtc-phone.ts 723–755).
     ua.transport.stateChange.addListener((tstate: TransportState) => {
+      if (generation !== uaGenerationRef.current) return;
       if (tstate === TransportState.Connected) {
         manualDisconnect.current = false;
         cancelReconnect();
@@ -214,25 +252,45 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
       }
     });
 
-    await ua.start();
+    try {
+      await ua.start();
+    } catch (error) {
+      if (generation === uaGenerationRef.current) {
+        reportError("sip.Transport", error, "Unable to connect to the SIP server");
+        setStatus("failed");
+      }
+      return;
+    }
+    if (generation !== uaGenerationRef.current || manualDisconnect.current) { try { await ua.stop(); } catch { /* stale */ } return; }
 
     const registerer = new Registerer(ua, { expires: cfg.registerExpires });
     regRef.current = registerer;
     registerer.stateChange.addListener((s: RegistererState) => {
+      if (generation !== uaGenerationRef.current) return;
       if (s === RegistererState.Registered) {
+        setLastError(null);
         setStatus("registered");
         // Pre-prompt mic so the first call doesn't stall on permission.
-        navigator.mediaDevices?.getUserMedia?.({ audio: true }).then((st) => st.getTracks().forEach((t) => t.stop())).catch(() => {});
+        navigator.mediaDevices?.getUserMedia?.({ audio: true })
+          .then((st) => st.getTracks().forEach((t) => t.stop()))
+          .catch((error) => { reportError("sip.Media", error, "Microphone permission or device unavailable"); });
       } else if (s === RegistererState.Unregistered) {
         setStatus("unregistered");
       }
     });
-    await registerer.register().catch(() => setStatus("failed"));
-  }, [handleIncomingCall, cancelReconnect]);
+    try {
+      await registerer.register();
+    } catch (error) {
+      if (generation === uaGenerationRef.current) {
+        reportError("sip.Registerer", error, "SIP registration failed");
+        setStatus("failed");
+      }
+    }
+  }, [handleIncomingCall, cancelReconnect, addLog, reportError]);
 
   const attemptReconnect = useCallback(() => {
     const cfg = cfgRef.current;
-    if (isReconnecting.current) return;
+    if (isReconnecting.current || !networkAvailableRef.current || manualDisconnect.current) return;
     if (cfg.reconnectMax <= 0 || reconnectAttempts.current >= cfg.reconnectMax) {
       setStatus("failed");
       return;
@@ -252,12 +310,14 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     cfgRef.current = loadSipConfig({ ...overrides, ...cfgOverrides });
     manualDisconnect.current = false;
     cancelReconnect();
+    setLastError(null);
     setStatus("connecting");
     await buildUA();
   }, [overrides, buildUA, cancelReconnect]);
 
   const unregister = useCallback(async () => {
     manualDisconnect.current = true;      // suppress auto-reconnect (lines 133–150)
+    uaGenerationRef.current++;
     cancelReconnect();
     try { await regRef.current?.unregister(); } catch { /* ignore */ }
     try { await uaRef.current?.stop(); } catch { /* ignore */ }
@@ -268,12 +328,15 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     activeIdRef.current = null; invitationRef.current = null;
     setCall(null);
     setMutedState(false);
+    setHeldState(false);
+    setLastError(null);
     setStatus("idle");
   }, [cancelReconnect]);
 
   const dial = useCallback(async (target: string, cfgOverrides: Partial<SipConfig> = {}) => {
     const ua = uaRef.current;
-    if (!ua) throw new Error("not registered");
+    if (!networkAvailableRef.current) throw new Error("network offline");
+    if (!ua || status !== "registered") throw new Error("not registered");
     if (activeIdRef.current || sessionsRef.current.size > 0) throw new Error("call already in progress");
     const cfg = loadSipConfig({ ...overrides, ...cfgOverrides });
     const id = genId();
@@ -295,9 +358,11 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
       if (activeIdRef.current === id) activeIdRef.current = null;
       setCall((c) => reduceCallState(c, { type: "terminated", id }));
       setTimeout(() => setCall((c) => reduceCallState(c, { type: "clear", id })), 1200);
+      const reason = reportError("sip.Inviter", error, "Call could not be started");
+      setCall((c) => c?.id === id ? { ...c, failureReason: reason } : c);
       throw error;
     }
-  }, [overrides, wireSession]);
+  }, [overrides, wireSession, status, reportError]);
 
   const answer = useCallback(async () => {
     const inv = invitationRef.current;
@@ -309,11 +374,12 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
       await inv.accept({ sessionDescriptionHandlerOptions: { constraints: AUDIO_CONSTRAINTS } });
     } catch (error) {
       setCall((c) => reduceCallState(c, { type: "ringing", id }));
+      reportError("sip.Invitation", error, "Call could not be answered");
       throw error;
     } finally {
       answeringRef.current = false;
     }
-  }, []);
+  }, [reportError]);
 
   const hangup = useCallback(async () => {
     const id = activeIdRef.current || call?.id;
@@ -324,8 +390,8 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
       else if (session instanceof Inviter && session.state !== SessionState.Terminated) await session.cancel();
       else if (inv && inv.state === SessionState.Initial) await inv.reject();
       else if (session && session.state !== SessionState.Terminated && id) hangupRequestedRef.current.add(id);
-    } catch { /* already terminating */ }
-  }, [call]);
+    } catch (error) { reportError("sip.Session", error, "Call could not be ended cleanly"); }
+  }, [call, reportError]);
 
   // DTMF — sdh.sendDtmf, else RTCDTMFSender fallback (lines 103–122).
   const sendDtmf = useCallback((tone: string) => {
@@ -346,7 +412,57 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     setMutedState(value);
   }, []);
 
+  const setHeld = useCallback(async (value: boolean) => {
+    const id = activeIdRef.current;
+    const session = id ? sessionsRef.current.get(id) : null;
+    if (!session || session.state !== SessionState.Established || holdChangingRef.current) return;
+    holdChangingRef.current = true;
+    try {
+      await session.invite({ sessionDescriptionHandlerModifiers: value ? [Web.holdModifier] : [] });
+      setHeldState(value);
+      setLastError(null);
+    } catch (error) {
+      reportError("sip.Session", error, value ? "Call could not be put on hold" : "Call could not be resumed");
+      throw error;
+    } finally {
+      holdChangingRef.current = false;
+    }
+  }, [reportError]);
+
+  const setDoNotDisturb = useCallback((value: boolean) => {
+    dndRef.current = value;
+    setDoNotDisturbState(value);
+  }, []);
+
+  // Browser network transitions are authoritative for reconnect scheduling.
+  // Going offline cancels retry storms; coming online starts one clean rebuild.
+  useEffect(() => {
+    const offline = () => {
+      networkAvailableRef.current = false;
+      setNetworkAvailable(false);
+      cancelReconnect();
+      setLastError("Network offline");
+      if (!manualDisconnect.current) setStatus("unregistered");
+    };
+    const online = () => {
+      networkAvailableRef.current = true;
+      setNetworkAvailable(true);
+      setLastError(null);
+      if (!manualDisconnect.current && credsRef.current) {
+        setStatus("reconnecting");
+        void buildUA();
+      }
+    };
+    window.addEventListener("offline", offline);
+    window.addEventListener("online", online);
+    return () => { window.removeEventListener("offline", offline); window.removeEventListener("online", online); };
+  }, [buildUA, cancelReconnect]);
+
   useEffect(() => () => { void unregister(); }, [unregister]);
 
-  return { status, call, muted, register, unregister, dial, answer, hangup, sendDtmf, setMuted, logs, clearLogs };
+  return {
+    status, call, muted, held, doNotDisturb, networkAvailable, lastError,
+    register, unregister, dial, answer, hangup, sendDtmf, setMuted,
+    setHeld, setDoNotDisturb, logs, clearLogs,
+  };
 }
