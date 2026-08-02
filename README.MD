@@ -5,8 +5,10 @@ on top of the **voipappz-api mothership**. A tenant fork changes **env, not
 code** — repoint the mothership with one var (`MOTHERSHIP_URL`) and the same app
 lights up against that tenant's data (login, calls, reports, feature flags).
 
-- **Building a feature?** → [DEVELOPING.md](./DEVELOPING.md) (the data-access layer + "add a feature page" recipe)
+- **Documentation index** → [docs/README.md](./docs/README.md)
+- **Building a feature?** → [docs/modules.md](./docs/modules.md)
 - **How it fits together?** → [docs/architecture.md](./docs/architecture.md)
+- **What is tested?** → [docs/testing.md](./docs/testing.md)
 - **Repo conventions / gotchas?** → [CLAUDE.md](./CLAUDE.md)
 
 ---
