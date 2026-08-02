@@ -17,7 +17,6 @@ test_workflow.ts
 mock_anycable.ts
 
 # Legacy entry points
-app.ts
 app2.ts
 main.ts
 

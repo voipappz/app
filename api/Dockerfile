@@ -3,7 +3,6 @@ FROM denoland/deno:latest AS builder
 WORKDIR /app
 COPY deno.json deno.lock ./
 COPY *.ts ./
-COPY pdf/ ./pdf/
 RUN deno cache app.ts
 
 # Runtime stage

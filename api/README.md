@@ -22,8 +22,10 @@ bundle in production.
   (`engine.ts`, server-side basic auth), JWT-gated.
 - **`/health` / `/test`** — dependency report (cable, engine, event
   freshness via `health_freshness.ts`) used by verification and the Kamal
-  post-deploy hook. `/test` also exposes `tapped`, `persisted`, `duplicates`,
-  and `persistence_failures` counters for the Crystal → DuckDB path.
+  post-deploy hook. `/health.event_pipeline` exposes `received`, `persisted`,
+  `duplicates`, `persistence_failures`, and `relayed` counters for the Crystal
+  → DuckDB path; `/health.checks.event_store.events` is the current stored-row
+  count. `/test` exposes the same processing counters in a compact response.
 - **Static serving** — in production the same process serves `dist/`
   (`STATIC_DIR`), so one container runs the whole app.
 

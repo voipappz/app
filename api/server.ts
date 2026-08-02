@@ -111,6 +111,13 @@ interface HealthReport {
   healthy: boolean;
   status: "ok" | "degraded";
   checks: { cable: DepStatus; events: Freshness; event_store: EventStoreStats | DepStatus; engine: DepStatus };
+  event_pipeline: {
+    received: number;
+    persisted: number;
+    duplicates: number;
+    persistence_failures: number;
+    relayed: number;
+  };
   timestamp: string;
 }
 
@@ -145,6 +152,13 @@ async function checkHealth(): Promise<HealthReport> {
     healthy,
     status: clean ? "ok" : "degraded",
     checks,
+    event_pipeline: {
+      received: tappedCounter,
+      persisted: persistedCounter,
+      duplicates: duplicateCounter,
+      persistence_failures: persistenceFailureCounter,
+      relayed: relayedCounter,
+    },
     timestamp: new Date().toISOString(),
   };
 }
