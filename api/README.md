@@ -51,3 +51,18 @@ fake WebSocket) — no network. `tests/event_store.test.ts` sends the exact
 string-valued `message` produced by va-crystal's
 `Cable.server.publish("call_events", event_record_json)`, then verifies the
 three-event call lifecycle was persisted and projected from DuckDB.
+
+For a functional local test through the running app, set
+`MOCK_CRYSTAL_EVENTS=1`, start the API, then generate a complete call:
+
+```bash
+curl -X POST http://localhost:4001/test/crystal/events \
+  -H 'content-type: application/json' \
+  -d '{"direction":"inbound","from":"100","to":"200"}'
+curl http://localhost:4001/test
+```
+
+The endpoint is absent unless the flag is explicitly enabled. Generated events
+use Crystal's JSON-text Cable contract and follow the same normalization,
+DuckDB persistence, deduplication, WebSocket relay, and Dashboard projection as
+live events.

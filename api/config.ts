@@ -44,6 +44,10 @@ export const CABLE_ACCOUNT_UUID = Deno.env.get("CABLE_ACCOUNT_UUID") || "events-
 // SECRET_KEY (matching the cable) and that's it, or pass a ready-made
 // CABLE_TOKEN. No token ⇒ off (relay idle), which is fine for tests/demos.
 export const CABLE_ENABLED = CABLE_TOKEN !== "" || CABLE_SECRET !== "";
+// Explicit local functional-test mode. Enables POST /test/crystal/events,
+// which injects Crystal-shaped frames through the normal normalize → DuckDB →
+// relay path. Keep false/unset in production.
+export const MOCK_CRYSTAL_EVENTS = Deno.env.get("MOCK_CRYSTAL_EVENTS") === "1";
 // DashboardLive: the live agents/extensions panel is a SEPARATE cable channel
 // whose stream is `dashboard:live:{account_uuid}`. Subscribing needs the
 // dashboard's uuid (the channel's `Live_uuid` param) + a real account_uuid.

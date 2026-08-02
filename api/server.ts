@@ -12,12 +12,14 @@
 import {
   PORT, CABLE_URL, CABLE_CHANNEL, CABLE_TOKEN, CABLE_SECRET, CABLE_ACCOUNT_UUID, CABLE_ENABLED,
   CABLE_DASHBOARD_UUID, POSTGREST_URL, POSTGREST_ENABLED, ENGINE_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
+  MOCK_CRYSTAL_EVENTS,
 } from './config.ts';
 import { createJwtVerifier, unauthorizedResponse, type JwtVerifier } from './auth_middleware.ts';
 import { fetchTranscript } from './engine.ts';
 import { eventFreshness, type Freshness } from './health_freshness.ts';
-import { createCableClient, mintCableToken, type CableClient } from "./cable.ts";
+import { createCableClient, mintCableToken, normalizeCableEvent, type CableClient, type Normalized } from "./cable.ts";
 import { EventStore, type EventStoreStats } from "./event_store.ts";
+import { mockCrystalCallSequence } from "./mock_crystal_events.ts";
 import { dashboardCallsPerHour } from './influx.ts';
 import { INFLUX_ENABLED } from './config.ts';
 
@@ -128,9 +130,10 @@ async function checkHealth(): Promise<HealthReport> {
   // Event freshness — distinct from `cable` (subscribed) — surfaces a silent
   // stream as `stale`. Informational: never fails `healthy` (so quiet periods
   // don't restart the container), but degrades `status` for monitoring.
-  const events = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED);
-  const eventStoreHealth: EventStoreStats | DepStatus = !CABLE_ENABLED
-    ? { status: "disabled", detail: "cable tap off" }
+  const eventSourceEnabled = CABLE_ENABLED || MOCK_CRYSTAL_EVENTS;
+  const events = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, eventSourceEnabled);
+  const eventStoreHealth: EventStoreStats | DepStatus = !eventSourceEnabled
+    ? { status: "disabled", detail: "cable and Crystal mock are off" }
     : await eventStore.stats();
 
   const checks = { cable, events, event_store: eventStoreHealth, engine };
@@ -187,6 +190,24 @@ function emitEvent(type: string, payload: Pojo, occurredAtIso?: string): void {
   }
 }
 
+// One acceptance path for both the live Cable client and the explicit Crystal
+// mock. An event is visible to browser consumers only after DuckDB accepted it.
+async function consumeCallEvent(n: Normalized): Promise<boolean> {
+  tappedCounter++;
+  lastCallEventAt = Date.now();
+  try {
+    const result = await eventStore.ingest(n);
+    if (result.inserted) persistedCounter++;
+    else duplicateCounter++;
+  } catch (err) {
+    persistenceFailureCounter++;
+    console.error("event store write failed:", err instanceof Error ? err.message : err);
+    return false;
+  }
+  emitEvent(n.wsType, n.wsPayload, n.occurredAtIso);
+  return true;
+}
+
 type Pojo = Record<string, any>;
 
 // Subscribe to the cable server's CallEvents channel and relay broadcasts to
@@ -211,24 +232,7 @@ async function startCableClient() {
     token,
     channel: CABLE_CHANNEL,
     log: (m) => console.log(`📡 ${m}`),
-    onEvent: async (n) => {
-      tappedCounter++;
-      lastCallEventAt = Date.now();   // freshness stamp for the persisted event stream
-      try {
-        const result = await eventStore.ingest(n);
-        if (result.inserted) persistedCounter++;
-        else duplicateCounter++;
-      } catch (err) {
-        // Persistence is the contract for CallEvents. Do not show browsers an
-        // event that the local projection failed to record.
-        persistenceFailureCounter++;
-        console.error("event store write failed:", err instanceof Error ? err.message : err);
-        return;
-      }
-      // Relay the canonical event as-is to /ws subscribers (the Dashboard).
-      // occurredAtIso comes from the cable event's created_at.
-      emitEvent(n.wsType, n.wsPayload, n.occurredAtIso);
-    },
+    onEvent: async (event) => { await consumeCallEvent(event); },
   });
   console.log(`📡 cable client → ${CABLE_URL} channel=${CABLE_CHANNEL}`);
 
@@ -356,6 +360,35 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
 
     if (url.pathname === "/ws/events" && request.headers.get("upgrade") === "websocket") return handleWebSocket(request);
 
+    // Functional event-pipeline test. It is unreachable unless explicitly
+    // enabled, and uses the exact JSON-text shape published by va-crystal.
+    if (request.method === "POST" && url.pathname === "/test/crystal/events") {
+      if (!MOCK_CRYSTAL_EVENTS) {
+        return new Response(JSON.stringify({ error: "Crystal event mock disabled" }), { status: 404, headers: JSON_HEADERS });
+      }
+      let options: { call_id?: string; direction?: "inbound" | "outbound"; from?: string; to?: string } = {};
+      try { options = await request.json(); } catch { /* empty body uses defaults */ }
+      const rawEvents = mockCrystalCallSequence({
+        callId: options.call_id,
+        direction: options.direction,
+        from: options.from,
+        to: options.to,
+      });
+      let accepted = 0;
+      for (const raw of rawEvents) {
+        // Mirror the real frame: Cable message is event_record_json text.
+        const normalized = normalizeCableEvent(JSON.stringify(raw));
+        if (normalized && await consumeCallEvent(normalized)) accepted++;
+      }
+      return new Response(JSON.stringify({
+        status: accepted === rawEvents.length ? "ok" : "partial",
+        call_id: rawEvents[0].type_uuid,
+        generated: rawEvents.length,
+        accepted,
+        counters: { tapped: tappedCounter, persisted: persistedCounter, duplicates: duplicateCounter, persistence_failures: persistenceFailureCounter },
+      }), { status: accepted === rawEvents.length ? 201 : 503, headers: JSON_HEADERS });
+    }
+
     // Dashboard-only projection over consumed va-crystal events. There is no
     // generic local Calls/Reports API: those modules remain on the mothership.
     if (request.method === "GET" && url.pathname === "/dashboard/snapshot") {
@@ -423,7 +456,7 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
     }
 
     if (url.pathname === "/test") {
-      const fresh = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED);
+      const fresh = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED || MOCK_CRYSTAL_EVENTS);
       return new Response(JSON.stringify({
         status: "ok", template: "voipappz",
         cable_ready: cableClient?.ready() ?? false, cable_url: CABLE_URL, cable_channel: CABLE_CHANNEL,
@@ -471,6 +504,7 @@ export function startServer() {
     });
   }
   else console.log(`🔇 cable tap disabled (no token) — relay idle`);
+  if (MOCK_CRYSTAL_EVENTS) console.log("🧪 Crystal event mock enabled → POST /test/crystal/events");
 
   // TLS: when TLS_CERT_FILE + TLS_KEY_FILE point at readable PEM files, serve
   // HTTPS on the same PORT (the cert is read once at boot). Otherwise plain HTTP.
