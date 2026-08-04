@@ -35,6 +35,7 @@ import SipSettingsForm from './SipSettingsForm';
 import CallToast from './CallToast';
 import TransferControls from './TransferControls';
 import { ACCENT, GREEN, MUTED, PANEL, PANEL_HEADER } from './panelTheme';
+import RecentCalls from './RecentCalls';
 import { requestIncomingCallNotifications, useIncomingCallAlerts } from '../../lib/sip/useIncomingCallAlerts';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
@@ -365,18 +366,16 @@ export default function PhoneWidget() {
           ) : (
             <>
               {tab === 0 && (
-                <List dense sx={{ flex: 1, overflow: 'auto' }}>
-                  {dials.length === 0 && <Typography variant="body2" sx={{ p: 2, textAlign: 'center', color: MUTED }}>{t('phone.noHistory', 'No recent calls')}</Typography>}
-                  {dials.map((d) => (
-                    <ListItemButton key={d.at} onClick={() => { setNumber(d.n); setTab(1); }} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' } }}>
-                      <ListItemText
-                        primary={<span style={{ direction: 'ltr', color: '#e5e7eb' }}>{d.n}</span>}
-                        secondary={<span style={{ color: MUTED }}>{new Date(d.at).toLocaleString()}</span>}
-                      />
-                      <IconButton edge="end" sx={{ color: GREEN }} onClick={(e) => { e.stopPropagation(); startCall(d.n); }}><CallIcon fontSize="small" /></IconButton>
-                    </ListItemButton>
-                  ))}
-                </List>
+                // Mothership call history + this browser's dial log. `active`
+                // is what makes the fetch lazy — it only goes out once the dock
+                // is open ON this tab, never at boot.
+                <RecentCalls
+                  active={open && tab === 0}
+                  dials={dials}
+                  onDial={(n) => startCall(n)}
+                  onPickNumber={(n) => { setNumber(n); setTab(1); }}
+                  onNavigate={() => { if (!pinned) setOpen(false); }}
+                />
               )}
               {tab === 1 && (
                 <Box sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>

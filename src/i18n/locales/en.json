@@ -18,7 +18,8 @@
     "messages": {
       "noMoreToLoad": "No more items to load",
       "noItemsFound": "No items found"
-    }
+    },
+    "unknown": "Unknown"
   },
   "header": {
     "title": "Business Management Platform",
@@ -708,7 +709,16 @@
     "cancelTransfer": "Cancel",
     "transferring": "Transferring…",
     "transferCompleted": "Call transferred",
-    "transferFailed": "Transfer failed: {{reason}}"
+    "transferFailed": "Transfer failed: {{reason}}",
+    "recentCalls": "Recent calls",
+    "recentCallsError": "Couldn't load recent calls",
+    "dialed": "Dialled from here",
+    "refresh": "Refresh"
+  },
+  "notifications": {
+    "toasts": "Notifications",
+    "title": "Notification",
+    "dismiss": "Dismiss"
   },
   "status": {
     "title": "System status",
