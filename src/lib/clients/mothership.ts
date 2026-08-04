@@ -10,7 +10,7 @@
 //
 // Params ride the query string (Sinatra: query + form). The trusted-device
 // token is cached so future logins on this browser can skip OTP (30-day TTL).
-import { AuthSession, saveSession } from '../auth';
+import { AuthSession, getToken, saveSession } from '../auth';
 
 // All endpoint knobs are env-driven so tenant forks / surfaces repoint without a
 // code change. BASE defaults to RELATIVE (same origin): login rides the Vite
@@ -23,6 +23,10 @@ const BASE = (((import.meta.env.VITE_MOTHERSHIP_URL as string) || '')).replace(/
 // NB: /auth/login is the ACCOUNT surface (admin) — it 401s for real users.
 const LOGIN_PATH = ((import.meta.env.VITE_MOTHERSHIP_LOGIN_PATH as string) || '/auth/user_login');
 const OTP_PATH = ((import.meta.env.VITE_MOTHERSHIP_OTP_PATH as string) || '/auth/user/otp/verify');
+// Sign-out surface. Same-origin like the rest, so it rides the Vite proxy (dev)
+// and the deno mothership forwarder (prod) — /auth/* is forwarded verbatim with
+// the client's Authorization header, so the server sees the token it issued.
+const LOGOUT_PATH = ((import.meta.env.VITE_MOTHERSHIP_LOGOUT_PATH as string) || '/auth/logout');
 const DEVICE_TOKEN_KEY = 'va_user_device_token';
 
 // Offline USER OTP mock — models the voipappz-api USER surface (/auth/user_login
@@ -199,4 +203,48 @@ export async function verifyOtp(
   });
   if (!(data.token || data.access)) throw new Error(data?.message || 'OTP verification failed');
   return toSession(data, email);
+}
+
+/**
+ * Sign out on the SERVER — tell the mothership to revoke this session's token.
+ *
+ * Clearing localStorage only makes the browser forget the token; the token
+ * itself stays valid until it expires, so anything that captured it (a copied
+ * value, a shared machine) can keep calling the API as the user. This is the
+ * call that actually ends the session.
+ *
+ * **Best-effort by design: it never throws and never blocks.** A logout must
+ * always succeed locally — if the network is down or the surface answers 404,
+ * the user is still signed out of this browser. So callers fire it and move on.
+ *
+ * **Call it BEFORE clearing the session** (`lib/auth.logout()`): the token is
+ * the credential the server needs to know what to revoke. It's read here
+ * synchronously, before the first `await`, so `userLogout(); logout();` in that
+ * order is safe.
+ *
+ * The trusted-device token is deliberately KEPT — "sign out" ends the session,
+ * it doesn't un-trust the device, which is the whole point of skipping OTP on
+ * the next login.
+ */
+export async function userLogout(): Promise<void> {
+  const token = getToken();
+  // Nothing to revoke, and the offline mock has no server to tell.
+  if (!token || mockLoginEnabled()) return;
+  try {
+    await fetch(`${BASE}${LOGOUT_PATH}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-VA-Auth': 'user',
+      },
+      // The token rides the FORM BODY, not just the header: the API reads
+      // `params['token']` to find the session to flush. nimbus-admin learned
+      // this the hard way — with the token only in the header, the endpoint
+      // answers 200 and silently flushes nothing. Send both.
+      body: new URLSearchParams({ token }).toString(),
+    });
+  } catch {
+    // Offline / unreachable — the local sign-out still stands.
+  }
 }

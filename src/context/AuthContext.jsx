@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useCallback, useMemo, useState } from 'react';
 import { getSession, sessionUser, logout as authLogout } from '../lib/auth';
+import { userLogout } from '../lib/clients/mothership';
 import { ACLService } from '../services/aclService';
 import { getPermissionsForRole } from '../config/permissions';
 
@@ -41,6 +42,13 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback((reason) => {
+    // Revoke the session SERVER-side first, while the token is still stored —
+    // authLogout() below only clears this browser. Fire-and-forget: userLogout
+    // never throws, so a dead network can't trap the user in a logged-in UI.
+    //
+    // Skipped when the session is already gone server-side (a 401 is what told
+    // us so), which also keeps 401 → logout → POST → 401 from looping.
+    if (reason !== '401') void userLogout();
     authLogout();
     setUser(null);
     setIsAuthenticated(false);

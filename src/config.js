@@ -99,6 +99,12 @@ export const brand = {
   },
 };
 
+// The shipped build's version, baked in at build time via VITE_APP_VERSION
+// (config/deploy.yml sets it to "<date>-<short sha>"). Falls back to 'dev' so a
+// local run always renders something. One source for every surface that shows
+// it — the Layout footer and the menu's logout section.
+export const appVersion = env.VITE_APP_VERSION || 'dev';
+
 export const config = {
   // Raw base URL (no /api suffix) - use for non-api endpoints
   get baseUrl() {

@@ -32,7 +32,7 @@ import { useACL } from '../../hooks/useACL';
 import { useDirection } from '../../context/DirectionContext';
 import { useAppTranslation } from '../../i18n/useAppTranslation';
 import './MainMenu.css';
-import { brand } from '../../config';
+import { appVersion, brand } from '../../config';
 
 const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const { t } = useTranslation();
@@ -150,6 +150,15 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
           </ListItemButton>
         </ListItem>
       </List>
+
+      {/* Build version — sits under the logout row so "what am I running?" is
+          answerable from the menu, which is where support asks for it. */}
+      <Typography
+        data-testid="menu-app-version"
+        sx={{ px: 2.5, pt: 0.5, pb: 1.5, fontSize: '0.7rem', opacity: 0.6 }}
+      >
+        v{appVersion}
+      </Typography>
     </Box>
   );
 
