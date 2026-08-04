@@ -42,9 +42,14 @@ jobs:
       - run: deno test --allow-net --allow-env --allow-read --allow-write --allow-ffi tests/
       # Boot the server with no env at all and prove the health surface is up —
       # optional deps must report "disabled", never crash the boot.
+      # Permissions must match how the server is ACTUALLY run everywhere else
+      # (compose, api/Dockerfile, Dockerfile.production): the event store's
+      # DuckDB binding is native, so without --allow-ffi the boot dies before
+      # serving anything and the probe below fails with curl's exit 7. This
+      # step varies the CONFIG, not the permission set.
       - name: Boot smoke (/test + /health with zero config)
         run: |
-          deno run --allow-net --allow-env --allow-read app.ts &
+          deno run --allow-net --allow-env --allow-read --allow-write --allow-ffi app.ts &
           for i in $(seq 1 20); do
             curl -sf localhost:4001/test > /dev/null 2>&1 && break
             sleep 1
