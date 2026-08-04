@@ -33,6 +33,7 @@ import { useAppTranslation } from '../../i18n/useAppTranslation';
 import './MainMenu.css';
 import { appVersion, brand } from '../../config';
 import AccountMenu from './AccountMenu';
+import NotificationsMenu from './NotificationsMenu';
 
 const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [accountAnchor, setAccountAnchor] = useState(null);
+  const [notificationsAnchor, setNotificationsAnchor] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -225,12 +227,10 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
           {canSeeNotifications && (
             <Tooltip title={t('menu.notifications', 'Notifications')} placement="right">
               <ListItemButton
-                component={RouterLink}
-                to="/notifications"
-                onClick={(event) => go(event, '/notifications')}
                 className={`rail-item utility${location.pathname === '/notifications' ? ' active' : ''}`}
-                aria-current={location.pathname === '/notifications' ? 'page' : undefined}
+                onClick={(event) => setNotificationsAnchor(event.currentTarget)}
                 data-testid="rail-notifications"
+                aria-haspopup="menu"
               >
                 <Box className="rail-icon"><NotificationsActiveIcon /></Box>
               </ListItemButton>
@@ -247,19 +247,18 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
               aria-haspopup="menu"
             >
               <Avatar sx={{ width: 34, height: 34, fontSize: '0.95rem', bgcolor: '#2f6fed' }}>{userInitial}</Avatar>
-              {userEmail && (
-                <Typography className="rail-label rail-email" title={userEmail} data-testid="rail-account-email">
-                  {userEmail}
-                </Typography>
-              )}
             </ListItemButton>
           </Tooltip>
 
-          {/* The build, under the account — where you look when asked "what are
-              you running?", instead of floating over the far corner of a page. */}
-          <Typography className="rail-version" data-testid="menu-app-version">v{appVersion}</Typography>
         </Box>
       </Box>
+
+      <NotificationsMenu
+        anchorEl={notificationsAnchor}
+        open={Boolean(notificationsAnchor)}
+        onClose={() => setNotificationsAnchor(null)}
+        onSeeAll={() => { setNotificationsAnchor(null); navigate('/notifications'); close(); }}
+      />
 
       <AccountMenu
         anchorEl={accountAnchor}

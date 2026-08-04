@@ -99,10 +99,10 @@ export default function Filters({ fields, value, onChange }) {
             {fields.map((f) => <MenuItem key={f.name} value={f.name}>{f.label}</MenuItem>)}
           </Select>
         </FormControl>
-        {/* `marginInlineStart`, not `ml` — MUI does not flip physical margins
-            under RTL, so `ml: auto` pinned this to the wrong edge in Hebrew. */}
+        {/* No auto margin: pushing this to the trailing edge parked it under
+            the phone dock, which is anchored there and 340px wide. */}
         {filters.length > 0 && (
-          <Button size="small" onClick={() => onChange([])} sx={{ marginInlineStart: 'auto' }}>{t('filters.clear', 'Clear all')}</Button>
+          <Button size="small" onClick={() => onChange([])}>{t('filters.clear', 'Clear all')}</Button>
         )}
       </Stack>
 

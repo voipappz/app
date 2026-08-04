@@ -22,6 +22,20 @@ export interface ApiListResult<T> {
   total: number;   // from the X-Total header (falls back to rows.length)
 }
 
+// Offline mock mode hands out a token no real endpoint accepts, so EVERY
+// authenticated read 401s. Treating that as "your session ended" logged the
+// user straight back out the moment any page fetched — the app looked broken
+// and the offline suite raced its own assertions. In mock mode a 401 means
+// "no data here", nothing more.
+const mockSession = () => import.meta.env.VITE_MOCK_LOGIN === '1';
+
+function dropSession(pathAndQuery: string) {
+  if (mockSession()) return;
+  logout();
+  window.dispatchEvent(new CustomEvent(AUTH_EVENTS.UNAUTHORIZED, { detail: { reason: '401' } }));
+  void pathAndQuery;
+}
+
 function authHeaders(): Record<string, string> {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -32,8 +46,7 @@ export async function apiList<T = Record<string, unknown>>(pathAndQuery: string)
   const res = await fetch(`${BASE}${pathAndQuery}`, { headers: authHeaders() });
   if (res.status === 401) {
     // A real expired/rejected token → drop the session and signal re-login.
-    logout();
-    window.dispatchEvent(new CustomEvent(AUTH_EVENTS.UNAUTHORIZED, { detail: { reason: '401' } }));
+    dropSession(pathAndQuery);
     throw new Error(`${pathAndQuery} → 401`);
   }
   if (!res.ok) throw new Error(`${pathAndQuery} → ${res.status}`);
@@ -65,8 +78,7 @@ export async function callEvents() {
 export async function apiSend<T = unknown>(method: string, pathAndQuery: string): Promise<T> {
   const res = await fetch(`${BASE}${pathAndQuery}`, { method, headers: authHeaders() });
   if (res.status === 401) {
-    logout();
-    window.dispatchEvent(new CustomEvent(AUTH_EVENTS.UNAUTHORIZED, { detail: { reason: '401' } }));
+    dropSession(pathAndQuery);
     throw new Error(`${pathAndQuery} → 401`);
   }
   if (!res.ok) throw new Error(`${pathAndQuery} → ${res.status}`);
@@ -77,8 +89,7 @@ export async function apiSend<T = unknown>(method: string, pathAndQuery: string)
 export async function apiGet<T = unknown>(pathAndQuery: string): Promise<T> {
   const res = await fetch(`${BASE}${pathAndQuery}`, { headers: authHeaders() });
   if (res.status === 401) {
-    logout();
-    window.dispatchEvent(new CustomEvent(AUTH_EVENTS.UNAUTHORIZED, { detail: { reason: '401' } }));
+    dropSession(pathAndQuery);
     throw new Error(`${pathAndQuery} → 401`);
   }
   if (!res.ok) throw new Error(`${pathAndQuery} → ${res.status}`);

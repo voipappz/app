@@ -29,7 +29,12 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await expect(rail).toBeVisible();
   await expect(rail.locator('[aria-current="page"]')).toContainText(/Dashboard/i);
   await expect(page.getByTestId('menu-button')).toBeHidden();
+  // The bell opens a panel, like the account — a glance at what is new should
+  // not cost you the page you were on.
   await expect(page.getByTestId('rail-notifications')).toBeVisible();
+  await page.getByTestId('rail-notifications').click();
+  await expect(page.getByTestId('notifications-menu')).toBeVisible();
+  await page.keyboard.press('Escape');
   // The account block opens one popup holding everything about "me".
   await expect(page.getByTestId('rail-account')).toBeVisible();
   await page.getByTestId('rail-account').click();
@@ -190,10 +195,8 @@ test('the account popup carries details, language, status and logout', async ({ 
   await page.getByTestId('otp-verify-button').click();
   await page.waitForURL('**/dashboard', { timeout: 15_000 });
 
-  // The address is legible in the rail itself, not only inside the popup.
-  await expect(page.getByTestId('rail-account-email')).toHaveText('ci@example.com');
-  // ...and the build sits under it, not in the far corner of the page.
-  await expect(page.getByTestId('navigation-rail').getByTestId('menu-app-version')).toBeVisible();
+  // The rail carries the avatar alone; identity and the build live in the
+  // popup it opens, so the 72px rail is not asked to render an email legibly.
   await expect(page.getByTestId('app-version')).toHaveCount(0);
 
   await page.getByTestId('rail-account').click();
@@ -203,6 +206,7 @@ test('the account popup carries details, language, status and logout', async ({ 
   await expect(page.getByTestId('account-language-select')).toBeVisible();
   await expect(page.getByTestId('account-status')).toBeVisible();
   await expect(page.getByTestId('account-logout')).toBeVisible();
+  await expect(page.getByTestId('account-menu').getByTestId('menu-app-version')).toBeVisible();
 });
 
 // Language is the control; direction is a consequence. There is no RTL switch.

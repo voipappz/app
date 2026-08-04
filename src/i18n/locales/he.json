@@ -739,7 +739,10 @@
   "notifications": {
     "toasts": "התראות",
     "title": "התראה",
-    "dismiss": "סגור"
+    "dismiss": "סגור",
+    "unreadCount": "{{count}} לא נקראו",
+    "empty": "אין חדש.",
+    "seeAll": "כל ההתראות"
   },
   "status": {
     "title": "סטטוס מערכת",

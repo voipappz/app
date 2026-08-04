@@ -208,6 +208,19 @@ export default function PhoneWidget() {
               data-testid="phone-presence-select"
               onOpen={loadStatusOptions}
               value={doNotDisturb ? 'dnd' : presence}
+              // The options are fetched lazily, so until the picker is first
+              // opened there is no MenuItem matching the value and the pill
+              // renders EMPTY — which is what shipped. Label it from the value
+              // itself; the fetched list only ever improves the wording.
+              renderValue={(value) => {
+                if (value === 'dnd') return t('phone.dnd', 'Do not disturb');
+                const [type, name] = String(value).split(':');
+                const known = agentStatuses.find((s) => s.type === type);
+                const label = known
+                  ? t(`phone.status.${type}`, known.label)
+                  : t(`phone.status.${type}`, type.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()));
+                return name ? `${label} — ${name}` : label;
+              }}
               onChange={(e) => {
                 const next = e.target.value;
                 setDoNotDisturb(next === 'dnd');

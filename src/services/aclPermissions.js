@@ -16,6 +16,11 @@
 // the mothership sends; this app says `reports` everywhere. Without this map a
 // switch to real ACLs silently hides the Reports page from everyone.
 const SCREEN_ALIASES = {
+  // voipappz-api's Acl::ACL_MAPPING carries BOTH singular and plural keys for
+  // the same screen (:call AND :calls, :report AND :reports). A user granted
+  // the singular lost the page outright once ACLs started being enforced —
+  // that is exactly what happened to Calls on a real MTN login.
+  call: 'calls',
   report: 'reports',
   dashboards: 'dashboard',
   user: 'users',
