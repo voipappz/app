@@ -53,3 +53,6 @@ api/mock/captured_calls.json
 # Kamal destination secrets (registry PAT etc.) — never commit
 .kamal/secrets-common
 .kamal/secrets.*
+
+# Agent worktrees — isolated checkouts, never part of the tree
+.claude/worktrees/

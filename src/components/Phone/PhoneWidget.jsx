@@ -3,7 +3,9 @@
 // avatar header (name • extension, presence pill, ready status, pin/dock), bottom
 // tabs (Calls · Dialpad · Settings), borderless keypad, and a big green call CTA.
 // A global incoming-call dialog rings on any page. Consumes SipPhoneProvider.
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { listAgentStatuses, listBreakReasons, setAgentStatus } from '../../services/agentStatusApi';
 import {
   Box, IconButton, Drawer, Tabs, Tab, TextField, Button, Typography, Stack,
   List, ListItemButton, ListItemText, Tooltip, Avatar,
@@ -82,9 +84,28 @@ export default function PhoneWidget() {
   const [number, setNumber] = useState('');
   const [dials, setDials] = useState(loadDials);
   const [presence, setPresence] = useState('available');
+  const [statusError, setStatusError] = useState(null);
+  const [agentStatuses, setAgentStatuses] = useState([]);
+  const [breakReasons, setBreakReasons] = useState([]);
+  const { user } = useAuth();
+  const userUuid = user?.user_uuid || user?.id;
   const [logsOpen, setLogsOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [holdPending, setHoldPending] = useState(false);
+
+  // Loaded when the picker is OPENED, not on mount. These go through the shared
+  // client, so a 401 drops the session — and a boot-time enrichment fetch that
+  // can sign the user out is a trap: with a token the mothership rejects, every
+  // page load bounced straight back to the login screen.
+  //
+  // The platform owns the vocabulary (GET /statuses/agent_statuses). A status is
+  // a TYPE and a NAME; for on_break the name is the reason ("Lunch"), per-tenant,
+  // so each reason becomes its own choice rather than a second prompt.
+  const loadStatusOptions = useCallback(() => {
+    if (agentStatuses.length) return;      // already have them
+    listAgentStatuses().then(setAgentStatuses).catch(() => setAgentStatuses([]));
+    listBreakReasons().then(setBreakReasons).catch(() => setBreakReasons([]));
+  }, [agentStatuses.length]);
 
   const togglePin = () => setPinned((p) => {
     const next = !p;
@@ -184,25 +205,63 @@ export default function PhoneWidget() {
             </Typography>
             <Select
               data-testid="phone-presence-select"
+              onOpen={loadStatusOptions}
               value={doNotDisturb ? 'dnd' : presence}
               onChange={(e) => {
                 const next = e.target.value;
                 setDoNotDisturb(next === 'dnd');
-                if (next !== 'dnd') setPresence(next);
+                if (next === 'dnd') return;   // local softphone behaviour, not a platform status
+                // Optimistic: the pill moves at once, and rolls back if the
+                // platform refuses. Publishing is the point — this select used
+                // to change a local variable and nothing else.
+                const previous = presence;
+                setPresence(next);
+                setStatusError(null);
+                const [type, name] = next.split(':');
+                setAgentStatus(userUuid, type, name)
+                  .catch((error) => {
+                    setPresence(previous);
+                    setStatusError(error?.message || 'Could not change status');
+                  });
               }}
               variant="standard"
               disableUnderline
               sx={{
                 mt: 0.5, fontSize: '0.72rem', fontWeight: 700, color: '#fff', borderRadius: 1, px: 1, py: 0.1,
-                bgcolor: doNotDisturb ? '#ef4444' : presence === 'available' ? GREEN : '#f59e0b',
+                bgcolor: doNotDisturb ? '#ef4444' : presence.startsWith('available') ? GREEN : '#f59e0b',
                 '& .MuiSelect-select': { py: 0.2, pr: '20px !important' }, '& .MuiSvgIcon-root': { color: '#fff' },
               }}
               MenuProps={{ MenuListProps: { dense: true } }}
             >
-              <MenuItem value="available">{t('phone.available', 'Available')}</MenuItem>
-              <MenuItem value="away">{t('phone.away', 'Away')}</MenuItem>
+              {/* Agent::STATUSES_MAPPINGS — the wire values the platform
+                  accepts. 'away' used to sit here and matched nothing. */}
+              {agentStatuses.flatMap((s) => (
+                s.type === 'on_break' && breakReasons.length
+                  ? breakReasons.map((reason) => (
+                      <MenuItem
+                        key={`${s.type}:${reason.name}`}
+                        value={`${s.type}:${reason.name}`}
+                        data-testid={`presence-${s.type}-${reason.name}`}
+                      >
+                        {t(`phone.status.${s.type}`, s.label)} — {reason.name}
+                      </MenuItem>
+                    ))
+                  : [(
+                      <MenuItem key={s.type} value={s.type} data-testid={`presence-${s.type}`}>
+                        {t(`phone.status.${s.type}`, s.label)}
+                      </MenuItem>
+                    )]
+              ))}
+              {/* Local to this softphone: rejects incoming, publishes nothing. */}
               <MenuItem value="dnd">{t('phone.dnd', 'Do not disturb')}</MenuItem>
             </Select>
+            {/* The pill moves optimistically, so a refusal has to be visible —
+                otherwise the rollback looks like the app changing its mind. */}
+            {statusError && (
+              <Typography data-testid="presence-error" sx={{ fontSize: '0.65rem', color: '#f87171', mt: 0.25 }}>
+                {statusError}
+              </Typography>
+            )}
             <Typography sx={{ mt: 0.5, fontSize: '0.68rem', color: MUTED, display: 'flex', alignItems: 'center', gap: 0.5 }} noWrap>
               <Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: DOT[status] || '#94a3b8', display: 'inline-block' }} />
               {statusText}{settings?.domain ? ` • ${settings.domain}` : ''}
