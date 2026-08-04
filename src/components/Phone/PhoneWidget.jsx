@@ -3,7 +3,7 @@
 // avatar header (name • extension, presence pill, ready status, pin/dock), bottom
 // tabs (Calls · Dialpad · Settings), borderless keypad, and a big green call CTA.
 // A global incoming-call dialog rings on any page. Consumes SipPhoneProvider.
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { listAgentStatuses, listBreakReasons, setAgentStatus } from '../../services/agentStatusApi';
 import {
@@ -86,21 +86,19 @@ export default function PhoneWidget() {
   const userUuid = user?.user_uuid || user?.id;
   const [logsOpen, setLogsOpen] = useState(false);
 
-  // The platform owns the status list (GET /assets/agent_statuses); an empty
-  // result just means the picker offers nothing but the local DND.
-  useEffect(() => {
-    let alive = true;
-    listAgentStatuses()
-      .then((list) => { if (alive) setAgentStatuses(list); })
-      .catch(() => { if (alive) setAgentStatuses([]); });
-    // A status carries a TYPE and a NAME. For on_break the name is the reason
-    // ("Lunch"), and the reasons are per-tenant — so they are fetched, and each
-    // becomes its own choice rather than a second prompt after the first.
-    listBreakReasons()
-      .then((list) => { if (alive) setBreakReasons(list); })
-      .catch(() => { if (alive) setBreakReasons([]); });
-    return () => { alive = false; };
-  }, []);
+  // Loaded when the picker is OPENED, not on mount. These go through the shared
+  // client, so a 401 drops the session — and a boot-time enrichment fetch that
+  // can sign the user out is a trap: with a token the mothership rejects, every
+  // page load bounced straight back to the login screen.
+  //
+  // The platform owns the vocabulary (GET /statuses/agent_statuses). A status is
+  // a TYPE and a NAME; for on_break the name is the reason ("Lunch"), per-tenant,
+  // so each reason becomes its own choice rather than a second prompt.
+  const loadStatusOptions = useCallback(() => {
+    if (agentStatuses.length) return;      // already have them
+    listAgentStatuses().then(setAgentStatuses).catch(() => setAgentStatuses([]));
+    listBreakReasons().then(setBreakReasons).catch(() => setBreakReasons([]));
+  }, [agentStatuses.length]);
 
   const togglePin = () => setPinned((p) => {
     const next = !p;
@@ -177,6 +175,7 @@ export default function PhoneWidget() {
             </Typography>
             <Select
               data-testid="phone-presence-select"
+              onOpen={loadStatusOptions}
               value={doNotDisturb ? 'dnd' : presence}
               onChange={(e) => {
                 const next = e.target.value;
