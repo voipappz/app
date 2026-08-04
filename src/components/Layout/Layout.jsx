@@ -10,6 +10,7 @@ import { APP_THEME } from '../../theme/appTheme';
 import SystemHealth from '../common/SystemHealth';
 import PhoneWidget from '../Phone/PhoneWidget';
 import ErrorBoundary from '../common/ErrorBoundary';
+import { appVersion } from '../../config';
 import './Layout.css';
 
 const Layout = ({ children }) => {
@@ -33,10 +34,6 @@ const Layout = ({ children }) => {
   const handleDrawerToggle = () => {
     setMobileDrawerOpen(!mobileDrawerOpen);
   };
-
-  // Version is baked at build time via VITE_APP_VERSION (see config/deploy.yml).
-  // In dev (no env var set) we fall back to "dev" so something always renders.
-  const appVersion = import.meta.env.VITE_APP_VERSION || 'dev';
 
   return (
     <Box className="layout-container" data-testid="layout-container" sx={{direction:'inherit'}}>

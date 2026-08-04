@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { userLogin, verifyOtp, getDeviceToken, AuthError } from './mothership';
-import { getSession, getToken, logout } from '../auth';
+import { userLogin, verifyOtp, userLogout, getDeviceToken, AuthError } from './mothership';
+import { getSession, getToken, logout, saveSession } from '../auth';
 
 // Drive the mothership client with a mocked fetch (no network). Asserts the
 // two-step OTP flow, the trusted-device fast path, device-token persistence,
@@ -190,5 +190,53 @@ describe('mothership USER OTP mock (VITE_MOCK_LOGIN=1)', () => {
   it('is inert when the flag is off (falls through to the network)', async () => {
     vi.stubEnv('VITE_MOCK_LOGIN', '');
     await expect(userLogin('someone@else.com', 'pw')).rejects.toThrow('network called');
+  });
+});
+
+// Logging out has to reach the SERVER — clearing localStorage alone leaves the
+// token valid until it expires, so anyone holding a copy stays authenticated.
+describe('userLogout', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    logout();
+    vi.stubEnv('VITE_MOCK_LOGIN', '');
+  });
+  afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
+
+  it('posts the token to the logout endpoint', async () => {
+    saveSession({ access: 'tok-abc', email: 'user@x.com', user_uuid: 'u-1' });
+    global.fetch = mockFetch(200, { ok: true });
+
+    await userLogout();
+
+    const [url, init] = (global.fetch as any).mock.calls[0];
+    expect(url).toContain('/auth/logout');
+    expect(init.method).toBe('POST');
+    expect(init.headers.Authorization).toBe('Bearer tok-abc');
+    // The token must ride the FORM BODY too — the API flushes the session it
+    // finds in params['token'], so a header-only call is a silent no-op.
+    expect(init.headers['Content-Type']).toBe('application/x-www-form-urlencoded');
+    expect(init.body).toBe('token=tok-abc');
+  });
+
+  it('does not call the server when there is no session', async () => {
+    global.fetch = mockFetch(200, {});
+    await userLogout();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('never throws when the server is unreachable', async () => {
+    saveSession({ access: 'tok-abc', email: 'user@x.com', user_uuid: 'u-1' });
+    global.fetch = vi.fn().mockRejectedValue(new Error('network down'));
+    // A dead network must not trap the user in a logged-in UI.
+    await expect(userLogout()).resolves.toBeUndefined();
+  });
+
+  it('skips the network in offline mock mode', async () => {
+    vi.stubEnv('VITE_MOCK_LOGIN', '1');
+    saveSession({ access: 'mock-access-token', email: 'user@x.com', user_uuid: 'u-1' });
+    global.fetch = mockFetch(200, {});
+    await userLogout();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
