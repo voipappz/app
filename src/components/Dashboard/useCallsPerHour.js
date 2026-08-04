@@ -1,39 +1,49 @@
 import { useEffect, useState } from 'react';
-import { EVENTS_API } from '../Calls/useCalls';
-import { getToken } from '../../lib/auth';
+import { getCalls } from '../../services/callsApi';
+import { bucketCallsPerHour } from './callsPerHourBuckets';
+
+// How many calls we pull to build the series. The API pages by recency, so a
+// tenant busier than this loses the OLDEST hours of the window, not the newest.
+// Reported as `truncated` rather than silently drawing a short chart.
+const MAX_CALLS = 500;
 
 /**
- * Calls-per-hour series from InfluxDB 3, via deno-api `/dashboard/calls-per-hour`
- * (the influxdb3 client runs server-side; the apiv3 token never reaches the
- * browser). Returns `points: [{ bucket, inbound, outbound, total }]` pre-bucketed
- * by InfluxDB (date_bin per hour). `points` is null while loading or when InfluxDB
- * is unavailable — callers fall back to client-side bucketing of PostgREST calls.
+ * Calls-per-hour, derived from the mothership's own call list.
+ *
+ * It used to come from InfluxDB via deno's `/dashboard/calls-per-hour`, which
+ * answers 503 unless INFLUXDB_URL is configured — so on every install that had
+ * not provisioned a second datastore, the chart was permanently empty. The
+ * calls are already in the API this app reads for the Calls page; bucketing
+ * them needs no extra infrastructure and cannot disagree with that page.
+ *
+ * Returns `points: [{ bucket, inbound, outbound, total }]`, or null while
+ * loading / on failure.
  */
-export function useCallsPerHour({ minutes = 1440, env = [] } = {}) {
+export function useCallsPerHour({ minutes = 1440 } = {}) {
   const [points, setPoints] = useState(null);
   const [error, setError] = useState(null);
+  const [truncated, setTruncated] = useState(false);
 
-  const envKey = env.join(',');
   useEffect(() => {
     let alive = true;
-    const params = new URLSearchParams({ minutes: String(minutes) });
-    for (const e of env) if (e) params.append('env', e);
-    const token = typeof getToken === 'function' ? getToken() : null;
+    const to = Date.now();
+    const from = to - minutes * 60 * 1000;
 
-    // This endpoint is deno's (custom logic — the InfluxDB token stays
-    // server-side). Same auth as the rest of the app: the user JWT as Bearer.
-    fetch(`${EVENTS_API}/dashboard/calls-per-hour?${params.toString()}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const d = await r.json();
-        if (alive) { setPoints(Array.isArray(d.points) ? d.points : []); setError(null); }
+    getCalls({ perPage: MAX_CALLS, range: { start: from, end: to }, orderBy: 'created_at', orderType: 'desc' })
+      .then(({ rows, total }) => {
+        if (!alive) return;
+        setPoints(bucketCallsPerHour(rows, { from, to }));
+        setTruncated(Number(total) > MAX_CALLS);
+        setError(null);
       })
-      .catch((e) => { if (alive) { setError(e?.message || 'failed'); setPoints(null); } });
+      .catch((reason) => {
+        if (!alive) return;
+        setError(reason?.message || 'failed');
+        setPoints(null);
+      });
 
     return () => { alive = false; };
-  }, [minutes, envKey]);
+  }, [minutes]);
 
-  return { points, error };
+  return { points, error, truncated };
 }
