@@ -38,23 +38,30 @@ const Layout = ({ children }) => {
 
   return (
     <Box className="layout-container" data-testid="layout-container" sx={{direction:'inherit'}}>
-      <Box
-        component="footer"
-        data-testid="app-version"
-        sx={{
-          position: 'fixed',
-          bottom: 4,
-          insetInlineEnd: 8,
-          fontSize: '0.7rem',
-          color: 'text.secondary',
-          opacity: 0.6,
-          pointerEvents: 'none',
-          zIndex: 1300,
-          userSelect: 'none',
-        }}
-      >
-        v{appVersion}
-      </Box>
+      {/* Login only. Everywhere else the version sits under the account in the
+          rail — where you look when someone asks what you're running — rather
+          than floating over the far corner of the page. Login has no rail, and
+          the version is exactly what support asks for on a sign-in problem, so
+          it keeps the footer. */}
+      {isLoginPage && (
+        <Box
+          component="footer"
+          data-testid="app-version"
+          sx={{
+            position: 'fixed',
+            bottom: 4,
+            insetInlineEnd: 8,
+            fontSize: '0.7rem',
+            color: 'text.secondary',
+            opacity: 0.6,
+            pointerEvents: 'none',
+            zIndex: 1300,
+            userSelect: 'none',
+          }}
+        >
+          v{appVersion}
+        </Box>
+      )}
       {isLoginPage ? (
         // Login page layout with LoginLeft component. ALWAYS left-to-right —
         // the sign-in screen is LTR even for an RTL tenant, so it is scoped out

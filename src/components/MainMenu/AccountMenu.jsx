@@ -101,7 +101,7 @@ export default function AccountMenu({ anchorEl, open, onClose, user, onLogout })
           inputProps={{ 'aria-label': t('menu.language', 'Language') }}
         >
           {LANGUAGES.map((l) => (
-            <MenuItem key={l.code} value={l.code} data-testid={`language-option-${l.code}`}>{l.label}</MenuItem>
+            <MenuItem key={l.code} value={l.code} data-testid={`account-language-${l.code}`}>{l.label}</MenuItem>
           ))}
         </Select>
       </Box>

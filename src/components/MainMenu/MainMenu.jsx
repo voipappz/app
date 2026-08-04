@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Avatar,
   Box,
@@ -31,6 +32,7 @@ import { useDirection } from '../../context/DirectionContext';
 import { useAppTranslation } from '../../i18n/useAppTranslation';
 import './MainMenu.css';
 import { appVersion, brand } from '../../config';
+import AccountMenu from './AccountMenu';
 
 const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const { t } = useTranslation();
@@ -40,6 +42,7 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const { language, changeLanguage } = useAppTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const [accountAnchor, setAccountAnchor] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -67,7 +70,9 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const modeLabel = isDark ? t('menu.lightMode', 'Light mode') : t('menu.darkMode', 'Dark mode');
 
   const userName = user?.name || user?.email || t('phone.guest', 'guest');
-  const userInitial = (String(userName).trim()[0] || 'U').toUpperCase();
+  // Keyed to the email: the display name is often the extension ('9019'),
+  // and a rail avatar reading '9' tells you nothing about who is signed in.
+  const userInitial = ((user?.email || userName).trim()[0] || 'U').toUpperCase();
   const userEmail = user?.email || '';
 
   // Language picks the DIRECTION — Hebrew is RTL, English is LTR. There is no
@@ -217,13 +222,6 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
               <Box className="rail-icon">{isDark ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}</Box>
             </ListItemButton>
           </Tooltip>
-          {/* Language, not direction — RTL/LTR follows from the choice. */}
-          <Tooltip title={t('menu.language', 'Language')} placement="right">
-            <Box className="rail-item utility rail-language">
-              <Box className="rail-icon"><TranslateIcon /></Box>
-              {languageSelect(true)}
-            </Box>
-          </Tooltip>
           {canSeeNotifications && (
             <Tooltip title={t('menu.notifications', 'Notifications')} placement="right">
               <ListItemButton
@@ -238,47 +236,38 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
               </ListItemButton>
             </Tooltip>
           )}
-          {canSeeStatus && (
-            <Tooltip title={t('menu.status')} placement="right">
-              <ListItemButton
-                component={RouterLink}
-                to="/status"
-                onClick={(event) => go(event, '/status')}
-                className={`rail-item utility${location.pathname === '/status' ? ' active' : ''}`}
-                aria-current={location.pathname === '/status' ? 'page' : undefined}
-              >
-                <Box className="rail-icon"><MonitorHeartIcon /></Box>
-              </ListItemButton>
-            </Tooltip>
-          )}
-          {/* Who is signed in — shown outright, not behind a click. The rail is
-              72px so the address is ellipsised; the full one is on hover and in
-              the title attribute, which is also what screen readers announce. */}
-          <Tooltip title={userEmail ? `${userName} — ${userEmail}` : userName} placement="right">
-            <Box className="rail-item utility rail-account" data-testid="rail-account">
+          {/* Everything about "me" opens from here: details, language, system
+              status and the way out. Status is in the popup rather than behind
+              its own route — checking the stream is a glance, not a screen. */}
+          <Tooltip title={userEmail || userName} placement="right">
+            <ListItemButton
+              className="rail-item utility rail-account"
+              onClick={(event) => setAccountAnchor(event.currentTarget)}
+              data-testid="rail-account"
+              aria-haspopup="menu"
+            >
               <Avatar sx={{ width: 34, height: 34, fontSize: '0.95rem', bgcolor: '#2f6fed' }}>{userInitial}</Avatar>
               {userEmail && (
                 <Typography className="rail-label rail-email" title={userEmail} data-testid="rail-account-email">
                   {userEmail}
                 </Typography>
               )}
-            </Box>
-          </Tooltip>
-
-          {/* Logout is a direct action. It used to need a click to open a menu
-              and a second click inside it — two steps for the one thing people
-              come to this corner to do. */}
-          <Tooltip title={t('menu.logout')} placement="right">
-            <ListItemButton
-              className="rail-item utility"
-              onClick={handleLogout}
-              data-testid="rail-logout"
-            >
-              <Box className="rail-icon"><LogoutIcon /></Box>
             </ListItemButton>
           </Tooltip>
+
+          {/* The build, under the account — where you look when asked "what are
+              you running?", instead of floating over the far corner of a page. */}
+          <Typography className="rail-version" data-testid="menu-app-version">v{appVersion}</Typography>
         </Box>
       </Box>
+
+      <AccountMenu
+        anchorEl={accountAnchor}
+        open={Boolean(accountAnchor)}
+        onClose={() => setAccountAnchor(null)}
+        user={user}
+        onLogout={() => { setAccountAnchor(null); handleLogout(); }}
+      />
 
       {/* Mobile: the identical navigation model becomes a modal drawer. */}
       <Drawer
