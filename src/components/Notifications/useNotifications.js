@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getToken } from '../../lib/auth';
-import { apiList } from '../../lib/clients/api';
 import { config } from '../../config';
 
 const NOTIFICATIONS_PATH = '/api/notifications';
@@ -43,11 +42,17 @@ export const useNotifications = () => {
     setError(null);
 
     try {
-      // Through the app's data-access layer, which owns the Bearer header and
-      // the 401 → drop-session path. The hand-rolled fetch this replaces set
-      // `Authorization: <undefined>` and knew nothing about 401s.
-      const { rows } = await apiList(NOTIFICATIONS_PATH);
-      const data = Array.isArray(rows) ? rows : [];
+      // NOT through apiList. This runs as an app-wide BACKGROUND POLL (the
+      // toaster mounts it on every screen), and apiList treats a 401 as "the
+      // session is over" — so one unauthorised poll signed the user out from
+      // under whatever they were doing. A background feed must never have that
+      // authority: it carries the same bearer token, and on 401 it simply has
+      // nothing to show.
+      const response = await fetch(NOTIFICATIONS_PATH, { headers: authHeaders() });
+      if (response.status === 401) { setNotifications([]); return; }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = await response.json();
+      const data = Array.isArray(body) ? body : [];
 
       // Transform the API response to ensure consistent structure
       const transformedNotifications = data.map(notification => ({
