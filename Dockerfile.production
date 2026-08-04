@@ -13,8 +13,10 @@ WORKDIR /build
 # 37s against 43s cold, i.e. the cache bought us nothing.
 COPY package.json package-lock.json ./
 # The download cache persists across builds; node_modules still lands in the
-# layer, so the runtime image is unaffected.
-RUN --mount=type=cache,target=/root/.npm npm ci
+# layer, so the runtime image is unaffected. sharing=locked because CI can run
+# two builds at once (a push and a PR), and concurrent writers to one package
+# cache is how you corrupt it.
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
 
 COPY . .
 
