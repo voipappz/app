@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { expectsLoginOtp } from './customerPortal';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { expectsLoginOtp, loadCustomerPortalData } from './customerPortal';
 
 // The login screen's "expect a code" hint. OTP is the default, so the contract
 // is: show it unless the tenant explicitly opts out. The value is an hstore
@@ -44,5 +44,47 @@ describe('expectsLoginOtp', () => {
   it('survives corrupt cached data', () => {
     localStorage.setItem('customerData', '{not json');
     expect(expectsLoginOtp()).toBe(true);
+  });
+});
+
+// Boot AWAITS this call, so it must never be able to hang the app. Branding is
+// cosmetic; an unreachable mothership has to degrade to the env defaults, not
+// hold the first render hostage. CI hit exactly that — the runner could not
+// reach cloud.voipappz.io, the connect never settled, and nothing rendered.
+describe('loadCustomerPortalData must not block boot', () => {
+  beforeEach(() => { localStorage.clear(); vi.unstubAllEnvs(); });
+  afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
+
+  // Deliberately NOT skipped in mock mode: the E2E suite stubs this very route
+  // to drive tenant branding (stubPortalData), so suppressing the request took
+  // the stub with it and the tenant's OTP opt-out silently stopped applying.
+  // The deadline below is what makes it safe, not skipping it.
+  it('still requests in offline mock mode, so the route can be stubbed', async () => {
+    vi.stubEnv('VITE_MOCK_LOGIN', '1');
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ logo_title: 'mtn' }) } as Response);
+    global.fetch = fetchSpy;
+
+    await loadCustomerPortalData();
+    expect(fetchSpy).toHaveBeenCalled();
+  });
+
+  it('budgets the request so a dead host cannot stall the first render', async () => {
+    vi.stubEnv('VITE_MOCK_LOGIN', '');
+    let signal: AbortSignal | undefined;
+    global.fetch = vi.fn().mockImplementation((_url, init) => {
+      signal = init?.signal;
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ logo_title: 'mtn' }) } as Response);
+    });
+
+    await loadCustomerPortalData();
+    // An unbounded fetch is the bug — a TCP connect that never answers is not
+    // caught by a try/catch, it simply never settles.
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('falls back to null when the request aborts', async () => {
+    vi.stubEnv('VITE_MOCK_LOGIN', '');
+    global.fetch = vi.fn().mockRejectedValue(new DOMException('timeout', 'TimeoutError'));
+    expect(await loadCustomerPortalData()).toBeNull();
   });
 });

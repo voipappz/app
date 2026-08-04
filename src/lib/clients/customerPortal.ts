@@ -66,7 +66,12 @@ export function clearCustomerData(): void {
  */
 export async function loadCustomerPortalData(): Promise<CustomerPortalData | null> {
   try {
-    const res = await fetch(`${BASE}${PORTAL_PATH}`);
+    // Branding is cosmetic and boot AWAITS this, so an unreachable mothership
+    // must fail fast rather than hang: a TCP connect that never answers is not
+    // caught by the try/catch below, it just never settles, and the app renders
+    // nothing until the OS gives up minutes later. Budget it.
+    const timeout = AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined;
+    const res = await fetch(`${BASE}${PORTAL_PATH}`, timeout ? { signal: timeout } : {});
     if (!res.ok) return null;
     const data = (await res.json()) as CustomerPortalData;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
