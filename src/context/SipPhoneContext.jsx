@@ -92,11 +92,21 @@ function SipPhoneLive({ settings, setSettings, updateSettings, children }) {
   // React's dev double-mount disposes the UA (status → idle), and this re-fires to
   // rebuild it — unlike a one-shot guard, which would leave it disconnected. On a
   // real registration failure status is 'failed' (not 'idle'), so it won't storm.
+  //
+  // NEVER while logged out. Without this guard a logged-out browser kept taking
+  // calls, by two separate routes:
+  //   1. defaultSipSettings() spreads envSipOverrides() LAST, so on a build with
+  //      VITE_SIP_* creds baked in the "cleared" settings are still registerable.
+  //   2. unregister() finishes with status 'idle' — the exact trigger below — so
+  //      the teardown re-armed the very effect that undid it.
+  // Registration is a property of being signed in; gate it on that, not on the
+  // settings happening to be empty.
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (!settings.autoConnect || !sipSettingsReady(settings)) return;
     if (phone.status !== 'idle') return;
     connect(settings).catch(() => { /* surfaced via status */ });
-  }, [settings, connect, phone.status]);
+  }, [isAuthenticated, settings, connect, phone.status]);
 
   const value = {
     ...phone,                       // status, call, muted, dial, answer, hangup, sendDtmf, setMuted
