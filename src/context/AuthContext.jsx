@@ -1,6 +1,28 @@
 import { createContext, useContext, useEffect, useCallback, useMemo, useState } from 'react';
 import { getSession, sessionUser, logout as authLogout } from '../lib/auth';
 import { userLogout } from '../lib/clients/mothership';
+import { clearFeaturesCache } from '../hooks/useFeatures';
+
+// Everything cached for the SIGNED-IN user. Cleared on logout so the next
+// person at this browser inherits nothing — a different tenant must not see the
+// previous one's branding, flags or extension.
+//
+// UI preferences (app-direction, app-color-mode, app-language) are deliberately
+// NOT here: they belong to the person using the browser, not to the session.
+// The trusted-device token is kept too — signing out ends the session, it does
+// not un-trust the device, which is the whole point of skipping OTP next time.
+const SESSION_SCOPED_KEYS = [
+  'customerData',      // tenant branding from customer_portal_data
+  'sip-settings',      // the account's softphone credentials
+  'sip-phone-pinned',  // phone widget UI state, tied to that extension
+];
+
+function clearSessionCaches() {
+  clearFeaturesCache();
+  for (const key of SESSION_SCOPED_KEYS) {
+    try { localStorage.removeItem(key); } catch { /* storage disabled */ }
+  }
+}
 import { ACLService } from '../services/aclService';
 import { getPermissionsForRole } from '../config/permissions';
 
@@ -50,6 +72,10 @@ export const AuthProvider = ({ children }) => {
     // us so), which also keeps 401 → logout → POST → 401 from looping.
     if (reason !== '401') void userLogout();
     authLogout();
+    // Drop everything cached for that user. The softphone tears itself down off
+    // isAuthenticated (SipPhoneContext) — it must not keep taking calls for a
+    // session that no longer exists.
+    clearSessionCaches();
     setUser(null);
     setIsAuthenticated(false);
     setErrorState(null);
