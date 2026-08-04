@@ -28,7 +28,9 @@ export default function PageHeader({ title, subtitle, actions, sx }) {
         )}
       </Box>
       {actions && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+        // Wraps on a phone: a fixed `flexShrink: 0` row of chips and buttons is
+        // exactly what pushes a 360px page into a horizontal scroll.
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', flexShrink: { xs: 1, sm: 0 }, maxWidth: '100%' }}>
           {actions}
         </Box>
       )}

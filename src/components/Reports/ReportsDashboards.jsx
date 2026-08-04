@@ -117,7 +117,11 @@ export default function ReportsDashboards({ period = 'd7' }) {
           onChange={(_e, v) => setActive(v)}
           variant="scrollable"
           scrollButtons="auto"
+          allowScrollButtonsMobile
           data-testid="reports-tabs"
+          // `minWidth: 0` is what actually lets the scrollable tab strip shrink
+          // inside the flex row instead of forcing the page wider than the phone.
+          sx={{ minWidth: 0, maxWidth: '100%', flex: '1 1 auto' }}
         >
           {dashboards.map((d) => {
             const Icon = CATEGORY_ICONS[d.category] || AssessmentIcon;
@@ -140,6 +144,7 @@ export default function ReportsDashboards({ period = 'd7' }) {
           value={localPeriod}
           onChange={(_e, v) => v && setLocalPeriod(v)}
           data-testid="reports-period"
+          sx={{ flexWrap: 'wrap', '& .MuiToggleButton-root': { px: { xs: 1, sm: 1.5 } } }}
         >
           <ToggleButton value="today">Today</ToggleButton>
           <ToggleButton value="d7">7d</ToggleButton>
@@ -158,14 +163,28 @@ export default function ReportsDashboards({ period = 'd7' }) {
 
           {/* Counter strip — one big number per single-value report. */}
           {counters.length > 0 && (
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 2, mt: 2 }}>
+            <Box sx={{
+              display: 'grid', gap: 2, mt: 2,
+              // 130px keeps two counters per row on a 360px phone; auto-fit still
+              // spreads them out on a desktop.
+              gridTemplateColumns: { xs: 'repeat(auto-fit, minmax(130px, 1fr))', sm: 'repeat(auto-fit, minmax(150px, 1fr))' },
+            }}>
               {counters.map((r, i) => (
                 <Paper key={r.name} elevation={0}
-                  sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: SERIES_COLORS[i % SERIES_COLORS.length] }}>
+                  sx={{ p: 2, minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                  <Typography
+                    sx={{
+                      fontWeight: 700, lineHeight: 1.2, fontVariantNumeric: 'tabular-nums',
+                      fontSize: { xs: '1.6rem', sm: '2.125rem' },
+                      color: SERIES_COLORS[i % SERIES_COLORS.length],
+                    }}
+                    noWrap
+                  >
                     {counterValue(r).toLocaleString()}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">{r.name}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', wordBreak: 'break-word' }}>
+                    {r.name}
+                  </Typography>
                 </Paper>
               ))}
             </Box>

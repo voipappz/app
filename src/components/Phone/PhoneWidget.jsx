@@ -7,8 +7,9 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Box, IconButton, Drawer, Tabs, Tab, TextField, Button, Typography, Stack,
   List, ListItemButton, ListItemText, Tooltip, Avatar,
-  Select, MenuItem,
+  Select, MenuItem, useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import PhoneIcon from '@mui/icons-material/Phone';
 import CallIcon from '@mui/icons-material/Call';
 import CallEndIcon from '@mui/icons-material/CallEnd';
@@ -65,6 +66,12 @@ function useCallTimer(connectedAt) {
 export default function PhoneWidget() {
   const { t } = useTranslation();
   const { isRTL } = useDirection();
+  const theme = useTheme();
+  // On a phone the dock is the whole screen, so "stick it open" has nothing to
+  // sit beside: a persistent, backdrop-less, full-width panel would simply hide
+  // the app. Below `sm` the dock is always a temporary overlay and the pin is
+  // hidden — the stored preference is left untouched for when a desktop returns.
+  const isNarrow = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
   const {
     status, connected, call, muted, held, doNotDisturb, networkAvailable, lastError,
     dial, answer, hangup, sendDtmf, setMuted, setHeld, setDoNotDisturb,
@@ -72,7 +79,9 @@ export default function PhoneWidget() {
   } = useSipPhoneCtx();
   // "Stick" the dock open (persistent, no backdrop) — survives reloads.
   const [pinned, setPinned] = useState(() => { try { return localStorage.getItem('sip-phone-pinned') === '1'; } catch { return false; } });
-  const [open, setOpen] = useState(pinned);
+  // A dock pinned on a desktop must not re-open over the whole screen when the
+  // same session is resumed on a phone.
+  const [open, setOpen] = useState(pinned && !isNarrow);
   const [tab, setTab] = useState(1); // default to Dialpad, like the portal
   const [number, setNumber] = useState('');
   const [dials, setDials] = useState(loadDials);
@@ -134,15 +143,29 @@ export default function PhoneWidget() {
       <Drawer
         // Pinned ("stuck") ⇒ persistent dock: stays open, no backdrop, the app
         // behind it stays usable. Unpinned ⇒ a normal temporary overlay.
-        variant={pinned ? 'persistent' : 'temporary'}
+        variant={pinned && !isNarrow ? 'persistent' : 'temporary'}
         // Always dock to the PHYSICAL right edge. MUI flips anchors under RTL, so
         // pick the value that lands on the right for the current direction.
         anchor={isRTL ? 'left' : 'right'}
         open={open}
-        onClose={() => { if (!pinned) setOpen(false); }}
+        onClose={() => { if (!pinned || isNarrow) setOpen(false); }}
         // A softphone is inherently LTR (keypad 1-2-3, tab order Calls·Dialpad·Settings)
         // — force LTR inside so it reads like the portal even in a RTL app.
-        PaperProps={{ dir: 'ltr', sx: { width: 340, maxWidth: '100vw', bgcolor: PANEL, color: '#e5e7eb', borderInline: 'none', display: 'flex', flexDirection: 'column', zIndex: 1300 } }}
+        PaperProps={{
+          dir: 'ltr',
+          sx: {
+            // Full-bleed on a phone (340px next to a 360px screen leaves a
+            // useless sliver of the app behind it), fixed dock from `sm` up.
+            width: { xs: '100%', sm: 340 },
+            maxWidth: '100vw',
+            bgcolor: PANEL,
+            color: '#e5e7eb',
+            borderInline: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            zIndex: 1300,
+          },
+        }}
         data-testid="phone-panel"
       >
         {/* Header — avatar, name • ext, presence, ready status, dock/close */}
@@ -187,11 +210,13 @@ export default function PhoneWidget() {
             <Tooltip title={t('phone.logs', 'Logs')}>
               <IconButton size="small" sx={{ color: logsOpen ? ACCENT : MUTED }} onClick={() => setLogsOpen((v) => !v)}><TerminalIcon fontSize="small" /></IconButton>
             </Tooltip>
-            <Tooltip title={pinned ? t('phone.unpin', 'Unstick') : t('phone.pin', 'Keep open')}>
-              <IconButton size="small" sx={{ color: pinned ? ACCENT : MUTED }} onClick={togglePin}>
-                {pinned ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
-              </IconButton>
-            </Tooltip>
+            {!isNarrow && (
+              <Tooltip title={pinned ? t('phone.unpin', 'Unstick') : t('phone.pin', 'Keep open')}>
+                <IconButton size="small" sx={{ color: pinned ? ACCENT : MUTED }} onClick={togglePin}>
+                  {pinned ? <PushPinIcon fontSize="small" /> : <PushPinOutlinedIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title={t('phone.close', 'Close')}>
               <IconButton size="small" sx={{ color: MUTED }} onClick={closePanel}><CloseIcon fontSize="small" /></IconButton>
             </Tooltip>
@@ -285,12 +310,12 @@ export default function PhoneWidget() {
                     {KEYS.map((k) => (
                       <Box
                         key={k} role="button" onClick={() => press(k)}
-                        sx={{ textAlign: 'center', fontSize: '1.5rem', color: '#dfe5ec', cursor: 'pointer', userSelect: 'none', py: 0.5, borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }}
+                        sx={{ textAlign: 'center', fontSize: '1.5rem', color: '#dfe5ec', cursor: 'pointer', userSelect: 'none', py: { xs: 1.25, sm: 0.5 }, borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }}
                       >
                         {k}
                       </Box>
                     ))}
-                    <Box sx={{ gridColumn: '2', textAlign: 'center', fontSize: '1.5rem', color: '#dfe5ec', cursor: 'pointer', userSelect: 'none', py: 0.5, borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }} role="button" onClick={() => press('+')}>+</Box>
+                    <Box sx={{ gridColumn: '2', textAlign: 'center', fontSize: '1.5rem', color: '#dfe5ec', cursor: 'pointer', userSelect: 'none', py: { xs: 1.25, sm: 0.5 }, borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }} role="button" onClick={() => press('+')}>+</Box>
                   </Box>
                   <Box sx={{ flex: 1 }} />
                   <Button

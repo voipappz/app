@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Paper, Typography } from '@mui/material';
+import { Paper, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import {
@@ -22,6 +22,9 @@ import { statusColor, statusLabel } from './statusColors';
 export default function CallsPerHourChart({ calls = [], points = null }) {
   const theme = useTheme();
   const { t } = useTranslation();
+  // A 300px-tall chart eats most of a phone screen before the numbers below it
+  // are even reachable; shrink it (and thin the hour labels) below `sm`.
+  const isNarrow = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
 
   const useProjection = Array.isArray(points) && points.length > 0;
 
@@ -79,17 +82,22 @@ export default function CallsPerHourChart({ calls = [], points = null }) {
     : hexFor(s);
 
   return (
-    <Paper elevation={0} sx={{ p: 2.5, height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+    <Paper elevation={0} sx={{ p: { xs: 1.75, sm: 2.5 }, height: '100%', minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
       <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>{t('callDashboard.callsPerHour')}</Typography>
       {data.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
           {t('callDashboard.noCallData', 'No call data yet.')}
         </Typography>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={isNarrow ? 220 : 300}>
           <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} vertical={false} />
-            <XAxis dataKey="hour" tick={{ fontSize: 12, fill: theme.palette.text.secondary }} />
+            <XAxis
+              dataKey="hour"
+              tick={{ fontSize: isNarrow ? 10 : 12, fill: theme.palette.text.secondary }}
+              // 24 hour labels overlap into mush at phone width — show every 3rd.
+              interval={isNarrow ? 2 : 'preserveEnd'}
+            />
             <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: theme.palette.text.secondary }} />
             <Tooltip
               contentStyle={{

@@ -63,7 +63,9 @@ export default function AccountMenu({ anchorEl, open, onClose, user, onLogout })
       onClose={onClose}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      slotProps={{ paper: { sx: { width: 290, maxWidth: '92vw' } } }}
+      // 92vw left the popup flush against the screen edge on a 320px phone, and
+      // the status list could grow past the viewport with nowhere to scroll.
+      slotProps={{ paper: { sx: { width: 290, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100vh - 24px)' } } }}
       data-testid="account-menu"
     >
       {/* Who is signed in. The address is the identity, so it is not truncated. */}

@@ -59,15 +59,17 @@ function fmtTime(value: string): string {
 function RecentCallsTable({ calls }: { calls: DashboardCall[] }) {
   const { t } = useTranslation();
   return (
-    <Paper elevation={0} sx={{ p: 2.5, height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+    <Paper elevation={0} sx={{ p: { xs: 1.75, sm: 2.5 }, height: '100%', minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
       <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>{t('callDashboard.recentCalls', 'Recent calls')}</Typography>
       {calls.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
           {t('callDashboard.noCalls', 'No calls yet — events will appear here as they arrive.')}
         </Typography>
       ) : (
-        <Box sx={{ overflowX: 'auto' }}>
-          <Table size="small">
+        // Six columns never fit a phone. Rather than hide data, every cell refuses
+        // to wrap so the table keeps its shape and this box scrolls sideways.
+        <Box sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+          <Table size="small" sx={{ '& .MuiTableCell-root': { whiteSpace: 'nowrap' } }}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>{t('callDashboard.table.time', 'Time')}</TableCell>
@@ -81,10 +83,10 @@ function RecentCallsTable({ calls }: { calls: DashboardCall[] }) {
             <TableBody>
               {calls.map((call) => (
                 <TableRow key={call.id} hover>
-                  <TableCell sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{fmtTime(call.started_at)}</TableCell>
+                  <TableCell sx={{ fontVariantNumeric: 'tabular-nums' }}>{fmtTime(call.started_at)}</TableCell>
                   <TableCell>{t(`callDashboard.${call.direction}`, call.direction)}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{call.from_number || '—'}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{call.to_number || '—'}</TableCell>
+                  <TableCell sx={{ unicodeBidi: 'isolate' }}>{call.from_number || '—'}</TableCell>
+                  <TableCell sx={{ unicodeBidi: 'isolate' }}>{call.to_number || '—'}</TableCell>
                   <TableCell><StatusChip status={call.status} variant="outlined" /></TableCell>
                   <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(call.duration_sec)}</TableCell>
                 </TableRow>
@@ -174,7 +176,10 @@ export default function Dashboard() {
         )}
       </Box>
 
-      <Box sx={{ display: 'grid', gap: 2, mb: 2, gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' }, alignItems: 'stretch' }}>
+      {/* `minmax(0, …)` rather than a bare `7fr 5fr`: a grid track defaults to a
+          min-content floor, so the wide recent-calls table would otherwise
+          stretch the column and put the whole page into a horizontal scroll. */}
+      <Box sx={{ display: 'grid', gap: 2, mb: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' }, alignItems: 'stretch' }}>
         <CallsPerHourChart points={snapshot.calls_per_hour} />
         <RecentCallsTable calls={snapshot.recent_calls} />
       </Box>

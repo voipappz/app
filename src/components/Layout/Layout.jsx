@@ -112,8 +112,10 @@ const Layout = ({ children }) => {
                 // attribute (not just sx) is needed to beat the RTL root.
               }}
             >
-              {/* Left side - Hamburger (mobile drawer) + Title */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {/* Left side - Hamburger (mobile drawer) + Title.
+                  `minWidth: 0` so a long screen name is ellipsised instead of
+                  shoving the health dot and the phone button off a phone. */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, minWidth: 0 }}>
                 {/* Hamburger — mobile only. Desktop navigation is the permanent
                     icon rail; a second expandable panel would duplicate it. */}
                 <IconButton
@@ -130,9 +132,11 @@ const Layout = ({ children }) => {
                 <Typography
                   variant="h6"
                   component="h1"
+                  noWrap
                   sx={{
                     fontWeight: 600,
-                    fontSize: { xs: '1rem', sm: '1.25rem' }
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                    minWidth: 0
                   }}
                 >
                   {screenTitle}
