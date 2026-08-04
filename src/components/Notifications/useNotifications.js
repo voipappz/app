@@ -1,33 +1,54 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { getToken } from '../../lib/auth';
+import { apiList } from '../../lib/clients/api';
 import { config } from '../../config';
 
+const NOTIFICATIONS_PATH = '/api/notifications';
+
+// The bearer header, from the one credential (lib/auth). Every call here used
+// to send `Authorization: <undefined>` because it read a key off useAuth() that
+// does not exist — reads span forever and writes silently did nothing.
+const authHeaders = () => {
+  const token = getToken();
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    'Content-Type': 'application/json',
+  };
+};
+
 export const useNotifications = () => {
-  const { access } = useAuth();
+  // The session token, from the ONE place that holds it (lib/auth). This used
+  // to read `access` off useAuth(), which has never exposed such a key — so the
+  // token was permanently undefined and the guard below returned every time,
+  // leaving `loading` (initialised true) stuck on. The page could not load for
+  // anyone; it just span.
+  const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchNotifications = useCallback(async () => {
-    if (!access) return;
-    
+    // Signed out: settle the state rather than returning with `loading` still
+    // true. An early return that leaves a spinner up is indistinguishable from
+    // a hang, and that is exactly how this page presented.
+    if (!isAuthenticated) {
+      setNotifications([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch(config.api.notifications, {
-        headers: {
-          'Authorization': access,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Through the app's data-access layer, which owns the Bearer header and
+      // the 401 → drop-session path. The hand-rolled fetch this replaces set
+      // `Authorization: <undefined>` and knew nothing about 401s.
+      const { rows } = await apiList(NOTIFICATIONS_PATH);
+      const data = Array.isArray(rows) ? rows : [];
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
       // Transform the API response to ensure consistent structure
       const transformedNotifications = data.map(notification => ({
         ...notification,
@@ -100,17 +121,14 @@ export const useNotifications = () => {
     } finally {
       setLoading(false);
     }
-  }, [access]);
+  }, [isAuthenticated]);
 
   const markAsRead = useCallback(async (notificationId) => {
     try {
       // API call to mark as read
       const response = await fetch(`${config.api.notifications}/${notificationId}/read`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': access,
-          'Content-Type': 'application/json'
-        }
+        headers: authHeaders()
       });
 
       if (response.ok) {
@@ -130,17 +148,14 @@ export const useNotifications = () => {
           : notification
       ));
     }
-  }, [access]);
+  }, []);
 
   const deleteNotification = useCallback(async (notificationId) => {
     try {
       // API call to delete notification
       const response = await fetch(`${config.api.notifications}/${notificationId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': access,
-          'Content-Type': 'application/json'
-        }
+        headers: authHeaders()
       });
 
       if (response.ok) {
@@ -152,16 +167,13 @@ export const useNotifications = () => {
       // Still update local state for demo purposes
       setNotifications(prev => prev.filter(notification => notification.uuid !== notificationId));
     }
-  }, [access]);
+  }, []);
 
   const markAllAsRead = useCallback(async () => {
     try {
       const response = await fetch(`${config.api.notifications}/mark-all-read`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': access,
-          'Content-Type': 'application/json'
-        }
+        headers: authHeaders()
       });
 
       if (response.ok) {
@@ -180,7 +192,7 @@ export const useNotifications = () => {
         isRead: true
       })));
     }
-  }, [access]);
+  }, []);
 
   const refreshNotifications = useCallback(() => {
     fetchNotifications();

@@ -706,7 +706,8 @@
     "checks": {
       "cable": "Cable (realtime)",
       "events": "Event stream",
-      "engine": "Engine (mothership)"
+      "engine": "Engine (mothership)",
+      "event_store": "Event store (local)"
     },
     "state": {
       "up": "up",

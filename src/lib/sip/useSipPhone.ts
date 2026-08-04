@@ -199,9 +199,23 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     // WebRTC must be available (secure context + browser support). If it isn't,
     // fail cleanly to 'failed' rather than throwing — the softphone is optional
     // and must never break the rest of the app.
-    if (typeof RTCPeerConnection === "undefined" || typeof WebSocket === "undefined") {
-      addLog("error", "sip.WebRTC", "WebRTC unavailable (insecure context or unsupported browser); softphone disabled");
-      setLastError("WebRTC is unavailable in this browser or insecure context");
+    // getUserMedia has to be checked SEPARATELY from RTCPeerConnection. Over
+    // plain http on a LAN/public IP the browser still defines
+    // RTCPeerConnection, but drops navigator.mediaDevices — so this guard
+    // passed, REGISTER succeeded, the phone sat there saying "Available", and
+    // then every call failed at mic acquisition. Both directions: accept() and
+    // dial() each pass AUDIO_CONSTRAINTS. Refuse up front and say why, instead
+    // of registering into a phone that cannot take a call.
+    const micUnavailable = typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia;
+    if (typeof RTCPeerConnection === "undefined" || typeof WebSocket === "undefined" || micUnavailable) {
+      const insecure = typeof window !== "undefined" && window.isSecureContext === false;
+      const why = insecure
+        ? `insecure context (${window.location.origin}) — the microphone needs HTTPS or localhost`
+        : "WebRTC unavailable or unsupported browser";
+      addLog("error", "sip.WebRTC", `${why}; softphone disabled`);
+      setLastError(insecure
+        ? "Microphone blocked: open the app over HTTPS or on localhost"
+        : "WebRTC is unavailable in this browser");
       setStatus("failed");
       return;
     }
@@ -271,9 +285,12 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
         setLastError(null);
         setStatus("registered");
         // Pre-prompt mic so the first call doesn't stall on permission.
-        navigator.mediaDevices?.getUserMedia?.({ audio: true })
-          .then((st) => st.getTracks().forEach((t) => t.stop()))
-          .catch((error) => { reportError("sip.Media", error, "Microphone permission or device unavailable"); });
+        // NB: optional chaining yields undefined when mediaDevices is missing,
+        // and `.then` on undefined throws a TypeError right here — inside a
+        // listener, where it is invisible. Call it only when it exists.
+        void navigator.mediaDevices?.getUserMedia?.({ audio: true })
+          ?.then((st) => st.getTracks().forEach((t) => t.stop()))
+          ?.catch((error) => { reportError("sip.Media", error, "Microphone permission or device unavailable"); });
       } else if (s === RegistererState.Unregistered) {
         setStatus("unregistered");
       }

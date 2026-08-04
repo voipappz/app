@@ -30,10 +30,12 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await expect(rail.locator('[aria-current="page"]')).toContainText(/Dashboard/i);
   await expect(page.getByTestId('menu-button')).toBeHidden();
   await expect(page.getByTestId('rail-notifications')).toBeVisible();
-  // The bottom cluster is flat: identity and logout are on screen already, so
-  // there is no menu to open (this used to click the avatar for a popup).
+  // The account block opens one popup holding everything about "me".
   await expect(page.getByTestId('rail-account')).toBeVisible();
-  await expect(page.getByTestId('rail-logout')).toBeVisible();
+  await page.getByTestId('rail-account').click();
+  await expect(page.getByTestId('account-menu')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('account-menu')).toBeHidden();
 
   // The dashboard renders real local-projection content, not a bare waiting
   // message: a KPI row (default tiles OR user-defined widgets) + calls-per-hour
@@ -177,9 +179,9 @@ test('app returns to RTL after login', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 });
 
-// The rail's bottom cluster is FLAT: who you are and how to leave are visible,
-// not hidden behind a button that opens another menu.
-test('account identity and logout are in the rail, no popup', async ({ page }) => {
+// One popup holds everything about the signed-in user: who they are, the
+// language, how the backend is doing, and the way out.
+test('the account popup carries details, language, status and logout', async ({ page }) => {
   await page.goto('/login');
   await page.getByTestId('email-input').locator('input').fill('ci@example.com');
   await page.getByTestId('password-input').locator('input').fill('anything');
@@ -188,11 +190,19 @@ test('account identity and logout are in the rail, no popup', async ({ page }) =
   await page.getByTestId('otp-verify-button').click();
   await page.waitForURL('**/dashboard', { timeout: 15_000 });
 
-  // The signed-in address is on screen without clicking anything.
+  // The address is legible in the rail itself, not only inside the popup.
   await expect(page.getByTestId('rail-account-email')).toHaveText('ci@example.com');
-  // Logout is one click, not two — no menu to open first.
-  await expect(page.getByTestId('rail-logout')).toBeVisible();
-  await expect(page.getByTestId('rail-account')).not.toHaveAttribute('aria-haspopup', 'menu');
+  // ...and the build sits under it, not in the far corner of the page.
+  await expect(page.getByTestId('navigation-rail').getByTestId('menu-app-version')).toBeVisible();
+  await expect(page.getByTestId('app-version')).toHaveCount(0);
+
+  await page.getByTestId('rail-account').click();
+  const menu = page.getByTestId('account-menu');
+  await expect(menu).toBeVisible();
+  await expect(page.getByTestId('account-email')).toHaveText('ci@example.com');
+  await expect(page.getByTestId('account-language-select')).toBeVisible();
+  await expect(page.getByTestId('account-status')).toBeVisible();
+  await expect(page.getByTestId('account-logout')).toBeVisible();
 });
 
 // Language is the control; direction is a consequence. There is no RTL switch.
@@ -206,14 +216,16 @@ test('choosing a language sets the direction', async ({ page }) => {
   await page.waitForURL('**/dashboard', { timeout: 15_000 });
 
   // Hebrew ⇒ RTL, with no separate direction control involved.
-  await page.getByTestId('rail-language-select').click();
-  await page.getByTestId('language-option-he').click();
+  await page.getByTestId('rail-account').click();
+  await page.getByTestId('account-language-select').click();
+  await page.getByTestId('account-language-he').click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('html')).toHaveAttribute('lang', 'he');
 
-  // English ⇒ LTR.
-  await page.getByTestId('rail-language-select').click();
-  await page.getByTestId('language-option-en').click();
+  // English ⇒ LTR. The popup stays open across a change — you see it apply —
+  // so there is no trigger to click again, only the select.
+  await page.getByTestId('account-language-select').click();
+  await page.getByTestId('account-language-en').click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
