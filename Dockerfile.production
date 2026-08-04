@@ -6,6 +6,20 @@
 FROM node:24-alpine AS frontend-builder
 WORKDIR /build
 
+# NOTHING that changes per-build may sit above `npm ci`. A changed layer
+# invalidates every layer below it, and the install is the expensive one (~525
+# packages). VITE_APP_VERSION is a fresh date+sha on EVERY deploy, so while it
+# lived up here the install could never be reused — a version-only rebuild cost
+# 37s against 43s cold, i.e. the cache bought us nothing.
+COPY package.json package-lock.json ./
+# The download cache persists across builds; node_modules still lands in the
+# layer, so the runtime image is unaffected.
+RUN --mount=type=cache,target=/root/.npm npm ci
+
+COPY . .
+
+# Per-build values go BELOW the install. Both are baked into the bundle, so a
+# change here has to re-run `npm run build` — but only that.
 ARG VITE_APP_VERSION
 ENV VITE_APP_VERSION=$VITE_APP_VERSION
 
@@ -16,10 +30,6 @@ ENV VITE_APP_VERSION=$VITE_APP_VERSION
 ARG VITE_MOTHERSHIP_URL
 ENV VITE_MOTHERSHIP_URL=$VITE_MOTHERSHIP_URL
 
-COPY package.json package-lock.json ./
-RUN npm ci
-
-COPY . .
 RUN npm run build
 
 # Stage 2: Deno runtime serving React + API
