@@ -30,10 +30,10 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await expect(rail.locator('[aria-current="page"]')).toContainText(/Dashboard/i);
   await expect(page.getByTestId('menu-button')).toBeHidden();
   await expect(page.getByTestId('rail-notifications')).toBeVisible();
-  await page.getByTestId('rail-account').click();
-  await expect(page.getByTestId('account-logout')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.getByTestId('account-logout')).toBeHidden();
+  // The bottom cluster is flat: identity and logout are on screen already, so
+  // there is no menu to open (this used to click the avatar for a popup).
+  await expect(page.getByTestId('rail-account')).toBeVisible();
+  await expect(page.getByTestId('rail-logout')).toBeVisible();
 
   // The dashboard renders real local-projection content, not a bare waiting
   // message: a KPI row (default tiles OR user-defined widgets) + calls-per-hour
@@ -175,4 +175,45 @@ test('app returns to RTL after login', async ({ page }) => {
 
   await page.waitForURL('**/dashboard', { timeout: 15_000 });
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+});
+
+// The rail's bottom cluster is FLAT: who you are and how to leave are visible,
+// not hidden behind a button that opens another menu.
+test('account identity and logout are in the rail, no popup', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByTestId('email-input').locator('input').fill('ci@example.com');
+  await page.getByTestId('password-input').locator('input').fill('anything');
+  await page.getByTestId('login-button').click();
+  await page.getByTestId('otp-input').locator('input').fill('123456');
+  await page.getByTestId('otp-verify-button').click();
+  await page.waitForURL('**/dashboard', { timeout: 15_000 });
+
+  // The signed-in address is on screen without clicking anything.
+  await expect(page.getByTestId('rail-account-email')).toHaveText('ci@example.com');
+  // Logout is one click, not two — no menu to open first.
+  await expect(page.getByTestId('rail-logout')).toBeVisible();
+  await expect(page.getByTestId('rail-account')).not.toHaveAttribute('aria-haspopup', 'menu');
+});
+
+// Language is the control; direction is a consequence. There is no RTL switch.
+test('choosing a language sets the direction', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByTestId('email-input').locator('input').fill('ci@example.com');
+  await page.getByTestId('password-input').locator('input').fill('anything');
+  await page.getByTestId('login-button').click();
+  await page.getByTestId('otp-input').locator('input').fill('123456');
+  await page.getByTestId('otp-verify-button').click();
+  await page.waitForURL('**/dashboard', { timeout: 15_000 });
+
+  // Hebrew ⇒ RTL, with no separate direction control involved.
+  await page.getByTestId('rail-language-select').click();
+  await page.getByTestId('language-option-he').click();
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'he');
+
+  // English ⇒ LTR.
+  await page.getByTestId('rail-language-select').click();
+  await page.getByTestId('language-option-en').click();
+  await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });

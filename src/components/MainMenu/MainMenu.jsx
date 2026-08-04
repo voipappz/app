@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Avatar,
   Box,
@@ -10,8 +9,8 @@ import {
   ListItemIcon,
   ListItemText,
   ListItemAvatar,
-  Menu,
   MenuItem,
+  Select,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -23,7 +22,6 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import TranslateIcon from '@mui/icons-material/Translate';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -38,11 +36,10 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const { t } = useTranslation();
   const { isAuthenticated, user, logout } = useAuth();
   const { can } = useACL();
-  const { direction, toggleDirection, isDark, toggleMode } = useDirection();
+  const { isDark, toggleMode } = useDirection();
   const { language, changeLanguage } = useAppTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const [accountAnchor, setAccountAnchor] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -71,6 +68,38 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
 
   const userName = user?.name || user?.email || t('phone.guest', 'guest');
   const userInitial = (String(userName).trim()[0] || 'U').toUpperCase();
+  const userEmail = user?.email || '';
+
+  // Language picks the DIRECTION — Hebrew is RTL, English is LTR. There is no
+  // separate RTL switch any more: direction is a consequence of the language,
+  // not an independent thing to get out of sync with it (changeLanguage sets
+  // both — see i18n/useAppTranslation).
+  const LANGUAGES = [
+    { code: 'en', label: 'English', short: 'EN' },
+    { code: 'he', label: 'עברית', short: 'עב' },
+  ];
+
+  const languageSelect = (compact) => (
+    <Select
+      value={LANGUAGES.some((l) => l.code === language) ? language : 'en'}
+      onChange={(event) => changeLanguage(event.target.value)}
+      variant="standard"
+      disableUnderline
+      data-testid={compact ? 'rail-language-select' : 'drawer-language-select'}
+      inputProps={{ 'aria-label': t('menu.language', 'Language') }}
+      renderValue={(value) => {
+        const entry = LANGUAGES.find((l) => l.code === value) || LANGUAGES[0];
+        return compact ? entry.short : entry.label;
+      }}
+      sx={compact
+        ? { fontSize: '0.72rem', fontWeight: 700, '& .MuiSelect-select': { p: 0, pr: '14px !important', textAlign: 'center' } }
+        : { fontSize: '0.9rem', width: '100%' }}
+    >
+      {LANGUAGES.map((l) => (
+        <MenuItem key={l.code} value={l.code} data-testid={`language-option-${l.code}`}>{l.label}</MenuItem>
+      ))}
+    </Select>
+  );
 
   // Mobile drawer — the same navigation model as the rail, in one list.
   const drawerContent = (
@@ -128,19 +157,14 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
             <ListItemText primary={modeLabel} />
           </ListItemButton>
         </ListItem>
-        {/* Language toggle (he ⇄ en) */}
-        <ListItem disablePadding>
-          <ListItemButton onClick={() => changeLanguage(language === 'he' ? 'en' : 'he')}>
-            <ListItemIcon><TranslateIcon /></ListItemIcon>
-            <ListItemText primary={t('menu.language', 'Language')} secondary={language === 'he' ? 'עברית' : 'English'} />
-          </ListItemButton>
-        </ListItem>
-        {/* Direction toggle (RTL ⇄ LTR) */}
-        <ListItem disablePadding>
-          <ListItemButton onClick={toggleDirection}>
-            <ListItemIcon><SwapHorizIcon /></ListItemIcon>
-            <ListItemText primary={direction === 'rtl' ? t('menu.switchToLTR', 'Left-to-right') : t('menu.switchToRTL', 'Right-to-left')} />
-          </ListItemButton>
+        {/* Language — and with it the direction. No separate RTL switch. */}
+        <ListItem>
+          <ListItemIcon><TranslateIcon /></ListItemIcon>
+          <ListItemText
+            primary={t('menu.language', 'Language')}
+            secondary={languageSelect(false)}
+            secondaryTypographyProps={{ component: 'div' }}
+          />
         </ListItem>
         {/* Logout */}
         <ListItem disablePadding>
@@ -193,11 +217,12 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
               <Box className="rail-icon">{isDark ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}</Box>
             </ListItemButton>
           </Tooltip>
+          {/* Language, not direction — RTL/LTR follows from the choice. */}
           <Tooltip title={t('menu.language', 'Language')} placement="right">
-            <ListItemButton className="rail-item utility" onClick={() => changeLanguage(language === 'he' ? 'en' : 'he')}>
+            <Box className="rail-item utility rail-language">
               <Box className="rail-icon"><TranslateIcon /></Box>
-              <Typography className="rail-label">{language.toUpperCase()}</Typography>
-            </ListItemButton>
+              {languageSelect(true)}
+            </Box>
           </Tooltip>
           {canSeeNotifications && (
             <Tooltip title={t('menu.notifications', 'Notifications')} placement="right">
@@ -226,41 +251,34 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
               </ListItemButton>
             </Tooltip>
           )}
-          <Tooltip title={userName} placement="right">
-            <ListItemButton
-              className="rail-item utility rail-account"
-              onClick={(event) => setAccountAnchor(event.currentTarget)}
-              data-testid="rail-account"
-              aria-haspopup="menu"
-            >
+          {/* Who is signed in — shown outright, not behind a click. The rail is
+              72px so the address is ellipsised; the full one is on hover and in
+              the title attribute, which is also what screen readers announce. */}
+          <Tooltip title={userEmail ? `${userName} — ${userEmail}` : userName} placement="right">
+            <Box className="rail-item utility rail-account" data-testid="rail-account">
               <Avatar sx={{ width: 34, height: 34, fontSize: '0.95rem', bgcolor: '#2f6fed' }}>{userInitial}</Avatar>
+              {userEmail && (
+                <Typography className="rail-label rail-email" title={userEmail} data-testid="rail-account-email">
+                  {userEmail}
+                </Typography>
+              )}
+            </Box>
+          </Tooltip>
+
+          {/* Logout is a direct action. It used to need a click to open a menu
+              and a second click inside it — two steps for the one thing people
+              come to this corner to do. */}
+          <Tooltip title={t('menu.logout')} placement="right">
+            <ListItemButton
+              className="rail-item utility"
+              onClick={handleLogout}
+              data-testid="rail-logout"
+            >
+              <Box className="rail-icon"><LogoutIcon /></Box>
             </ListItemButton>
           </Tooltip>
         </Box>
       </Box>
-
-      {/* Account menu — profile summary + the drawer-only actions on desktop. */}
-      <Menu
-        anchorEl={accountAnchor}
-        open={Boolean(accountAnchor)}
-        onClose={() => setAccountAnchor(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      >
-        <Box sx={{ px: 2, py: 1, maxWidth: 240 }}>
-          <Typography sx={{ fontWeight: 700 }} noWrap>{userName}</Typography>
-          {user?.email && <Typography variant="body2" color="text.secondary" noWrap>{user.email}</Typography>}
-        </Box>
-        <Divider />
-        <MenuItem onClick={() => { toggleDirection(); setAccountAnchor(null); }}>
-          <ListItemIcon><SwapHorizIcon fontSize="small" /></ListItemIcon>
-          {direction === 'rtl' ? t('menu.switchToLTR', 'Left-to-right') : t('menu.switchToRTL', 'Right-to-left')}
-        </MenuItem>
-        <MenuItem data-testid="account-logout" onClick={() => { setAccountAnchor(null); handleLogout(); }}>
-          <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
-          {t('menu.logout')}
-        </MenuItem>
-      </Menu>
 
       {/* Mobile: the identical navigation model becomes a modal drawer. */}
       <Drawer

@@ -211,6 +211,26 @@
 .navigation-rail .rail-item.rail-account {
   min-height: 56px;
   align-items: center;
+  cursor: default;      /* identity, not a control — nothing opens from here */
+}
+
+/* The signed-in address, shown outright rather than behind a menu. The rail is
+   72px, so it ellipsises; the full address is the tooltip and title attribute. */
+.navigation-rail .rail-email {
+  max-width: 64px;
+  white-space: nowrap;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+/* Language picker sits in the rail like any other utility, but it is a select
+   rather than a button — so it lays out as a column and takes no hover state. */
+.navigation-rail .rail-language {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
 }
 
 /* Dark scheme — driven by <html data-theme>, set by DirectionContext to match
