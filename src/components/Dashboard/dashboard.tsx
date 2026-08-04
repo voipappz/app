@@ -13,6 +13,7 @@ import StatusChip from '../common/StatusChip';
 import CallsPerHourChart from '../common/CallsPerHourChart';
 import { DashboardWidgets } from './widgets';
 import { useDashboardSnapshot, type DashboardCall } from './useDashboardSnapshot';
+import { useCallsPerHour } from './useCallsPerHour';
 import DashboardBuilder from '../DashboardBuilder/DashboardBuilder';
 import { formatWidgetValue, resolveIcon, thresholdColor } from '../DashboardBuilder/widgetPresentation';
 import { getWidgets } from '../../services/dashboardsApi';
@@ -123,6 +124,12 @@ export default function Dashboard() {
     return { from: new Date(now - 24 * 3_600_000), to: new Date(now + 3_600_000) };
   });
   const { snapshot, status } = useDashboardSnapshot(range);
+  // Calls-per-hour comes from the MOTHERSHIP's call list, not the local DuckDB
+  // projection: that projection is fed by the cable tap, which is unconfigured
+  // on most installs, so the chart sat empty while the Calls page showed the
+  // very same calls. Falls back to the projection if the API series is absent.
+  const { points: apiCallsPerHour } = useCallsPerHour({ minutes: 1440 });
+  const callsPerHour = apiCallsPerHour ?? snapshot.calls_per_hour;
   const { stats } = snapshot;
   const { can } = useACL();
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -207,7 +214,7 @@ export default function Dashboard() {
           <>
             {trends.map((widget) => (
               <CallsPerHourChart
-                key={widget.uuid} points={snapshot.calls_per_hour}
+                key={widget.uuid} points={callsPerHour}
                 series={widget.fields} title={widget.title}
               />
             ))}
@@ -220,7 +227,7 @@ export default function Dashboard() {
           </>
         ) : (
           <>
-            <CallsPerHourChart points={snapshot.calls_per_hour} />
+            <CallsPerHourChart points={callsPerHour} />
             <RecentCallsTable calls={snapshot.recent_calls} />
           </>
         )}
