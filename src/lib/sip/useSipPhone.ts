@@ -505,7 +505,22 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
         refuse("A call is already in progress");
       }
     }
-    const cfg = loadSipConfig({ ...overrides, ...cfgOverrides });
+    // Start from the config the UA actually REGISTERED with, not a fresh read
+    // of the environment. dial() is called with no overrides, so re-loading gave
+    // us VITE_SIP_DOMAIN — unset on every real deployment, because the domain
+    // comes from the logged-in user's environment and is passed to register()
+    // explicitly. The host came out empty, the URI was `sip:<number>@`, and
+    // every outgoing call died as "invalid dial target" while registration sat
+    // there working.
+    const envCfg = loadSipConfig({ ...overrides, ...cfgOverrides });
+    const cfg = {
+      ...envCfg,
+      domain: cfgOverrides.domain || cfgRef.current.domain || envCfg.domain,
+    };
+    // Without a host there is no URI to build, and sipTargetAddress returns
+    // null — which surfaced as "invalid dial target", blaming the number the
+    // user typed for a configuration problem.
+    if (!cfg.domain) refuse("No SIP domain configured — cannot place a call");
     const id = genId();
     const address = sipTargetAddress(target, cfg.domain);
     const targetUri = address ? UserAgent.makeURI(address) : null;
