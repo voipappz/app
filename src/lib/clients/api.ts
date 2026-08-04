@@ -52,6 +52,27 @@ export async function callEvents() {
   return [];
 }
 
+/**
+ * Write to a resource (PATCH/POST/PUT/DELETE), with the same credential and the
+ * same 401 handling as the reads. Components and services must not hand-roll
+ * fetch for writes: that is how `Authorization` drifts and how a 401 stops
+ * dropping the session.
+ *
+ * voipappz-api takes these params on the QUERY STRING (Sinatra reads `params`
+ * from query and form alike), so there is deliberately no JSON body here —
+ * callers put everything in the path.
+ */
+export async function apiSend<T = unknown>(method: string, pathAndQuery: string): Promise<T> {
+  const res = await fetch(`${BASE}${pathAndQuery}`, { method, headers: authHeaders() });
+  if (res.status === 401) {
+    logout();
+    window.dispatchEvent(new CustomEvent(AUTH_EVENTS.UNAUTHORIZED, { detail: { reason: '401' } }));
+    throw new Error(`${pathAndQuery} → 401`);
+  }
+  if (!res.ok) throw new Error(`${pathAndQuery} → ${res.status}`);
+  return res.status === 204 ? (undefined as T) : res.json();
+}
+
 /** GET a single resource (object). Throws on non-2xx. */
 export async function apiGet<T = unknown>(pathAndQuery: string): Promise<T> {
   const res = await fetch(`${BASE}${pathAndQuery}`, { headers: authHeaders() });
