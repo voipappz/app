@@ -706,7 +706,7 @@
     "dialpad": "חיוג",
     "history": "היסטוריה",
     "settings": "הגדרות",
-    "enterNumber": "הזן מספר",
+    "enterNumber": "הזינו מספר לחיוג",
     "call": "חייג",
     "hangup": "נתק",
     "answer": "ענה",
@@ -734,7 +734,9 @@
     "recentCalls": "שיחות אחרונות",
     "recentCallsError": "לא ניתן לטעון שיחות אחרונות",
     "dialed": "חויגו מכאן",
-    "refresh": "רענן"
+    "refresh": "רענן",
+    "notRegistered": "הטלפון אינו רשום",
+    "callFailed": "לא ניתן להתחיל שיחה"
   },
   "notifications": {
     "toasts": "התראות",

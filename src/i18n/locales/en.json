@@ -685,7 +685,7 @@
     "dialpad": "Dialpad",
     "history": "History",
     "settings": "Settings",
-    "enterNumber": "Enter number",
+    "enterNumber": "Enter a number to call",
     "call": "Call",
     "hangup": "Hang up",
     "answer": "Answer",
@@ -713,7 +713,9 @@
     "recentCalls": "Recent calls",
     "recentCallsError": "Couldn't load recent calls",
     "dialed": "Dialled from here",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "notRegistered": "Phone is not registered",
+    "callFailed": "Call could not be started"
   },
   "notifications": {
     "toasts": "Notifications",

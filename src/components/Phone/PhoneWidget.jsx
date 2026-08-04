@@ -151,11 +151,23 @@ export default function PhoneWidget() {
     try { await setHeld(!held); } catch { /* surfaced via lastError */ }
     finally { setHoldPending(false); }
   };
+  const [dialError, setDialError] = useState(null);
   const startCall = async (target) => {
     const n = (target || number).trim();
-    if (!n || !connected) return;
+    // Silence was the bug: an empty number or an unregistered phone returned
+    // here with no feedback whatsoever, so the green button looked dead.
+    if (!n) { setDialError(t('phone.enterNumber', 'Enter a number to call')); return; }
+    if (!connected) { setDialError(t('phone.notRegistered', 'Phone is not registered')); return; }
+
+    setDialError(null);
     setDials(pushDial(n));
-    try { await dial(n); } catch { /* status/UI reflects */ }
+    try {
+      await dial(n);
+    } catch (error) {
+      // dial() reports through lastError too, but the CTA is where the user is
+      // looking when they press it.
+      setDialError(error?.message || t('phone.callFailed', 'Call could not be started'));
+    }
   };
 
   return (
@@ -423,6 +435,17 @@ export default function PhoneWidget() {
                   >
                     <CallIcon />
                   </Button>
+                  {/* Why the call did not happen, next to the button that was
+                      pressed — this is where the user is looking. */}
+                  {dialError && (
+                    <Typography
+                      data-testid="dial-error"
+                      variant="caption"
+                      sx={{ display: 'block', mt: 1, textAlign: 'center', color: '#fca5a5' }}
+                    >
+                      {dialError}
+                    </Typography>
+                  )}
                   {!connected && <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', color: MUTED }}>{t('phone.notConnected', 'Not connected — see Settings')}</Typography>}
                 </Box>
               )}
