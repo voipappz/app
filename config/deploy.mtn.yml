@@ -37,6 +37,11 @@ env:
   clear:
     TLS_CERT_FILE: /certs/mtn.crt
     TLS_KEY_FILE: /certs/mtn.key
+    # Where DENO forwards /api|/auth|/tasks. Server-side, so it is not subject
+    # to the browser's origin rules — and it must be stated, or the forwarder
+    # falls back to its cloud.voipappz.io default and MTN users would log in
+    # against the wrong tenant.
+    MOTHERSHIP_URL: https://mtnunicom.mtn.com.gh
 
 ssh:
   user: voipappz
@@ -46,6 +51,16 @@ ssh:
 
 builder:
   arch: amd64
-  args:
-    # Same-origin: the app is served from the MTN host and talks to its own API.
-    VITE_MOTHERSHIP_URL: https://mtnunicom.mtn.com.gh
+  # NO VITE_MOTHERSHIP_URL here, deliberately.
+  #
+  # It used to be set to https://mtnunicom.mtn.com.gh with a comment claiming
+  # "same-origin". It is not: this container publishes on :8888, that URL is
+  # :443, and a different port is a different origin. Every call the browser
+  # made to the mothership was therefore cross-origin and blocked:
+  #
+  #   Access to fetch at 'https://mtnunicom.mtn.com.gh/api/calls'
+  #   from origin 'https://mtnunicom.mtn.com.gh:8888' has been blocked by CORS
+  #
+  # which took out Calls, call history and calls-per-hour together. Unset, the
+  # bundle uses RELATIVE urls, they stay on :8888, and deno forwards them from
+  # MOTHERSHIP_URL above — the arrangement the app is designed around.

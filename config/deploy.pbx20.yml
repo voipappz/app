@@ -3,8 +3,10 @@
 # pbx20 (freeswitch-20) runs the live VoIP stack with KONG on 80/443. So we do
 # NOT run kamal-proxy (proxy: false) and publish ONLY on 127.0.0.1:8888 — the
 # host's 80/443 (Kong) are never touched. itdroot is in the docker group, so no
-# root is needed. The browser logs in against the MTN API directly
-# (VITE_MOTHERSHIP_URL baked below); deno just serves the bundle.
+# root is needed. The browser talks only to THIS container; deno forwards to the
+# MTN API from MOTHERSHIP_URL below. It used to reach the MTN API straight from
+# the browser via a baked VITE_MOTHERSHIP_URL, which cannot work: a request from
+# this host to mtnunicom.mtn.com.gh is cross-origin and CORS blocks it.
 #
 #     kamal config -d pbx20     # render + verify (read-only)
 #     kamal deploy -d pbx20
@@ -30,7 +32,14 @@ ssh:
   keys:
     - "~/.ssh/kamal_deploy"
 
+env:
+  clear:
+    # Deno forwards /api|/auth|/tasks here, server-side, where the browser's
+    # origin rules do not apply.
+    MOTHERSHIP_URL: https://mtnunicom.mtn.com.gh
+
 builder:
   arch: amd64
-  args:
-    VITE_MOTHERSHIP_URL: https://mtnunicom.mtn.com.gh
+  # No VITE_MOTHERSHIP_URL: baking it puts the BROWSER on a cross-origin call to
+  # another host, which CORS blocks. Same tenant, same API — reached through the
+  # forwarder instead.
