@@ -4,6 +4,8 @@ import { DirectionProvider } from './context/DirectionContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import SipPhoneProvider from './context/SipPhoneContext';
 import { FireberryProvider } from './context/FireberryContext';
+import { ToastProvider } from './context/ToastContext';
+import NotificationToasts from './components/Toaster/NotificationToasts.jsx';
 import { useACL } from './hooks/useACL';
 import { ROUTE_PERMISSIONS } from './config/permissions';
 import Layout from './components/Layout/Layout.jsx';
@@ -65,7 +67,14 @@ function App() {
       <AuthProvider>
         <SipPhoneProvider>
           <FireberryProvider>
-            <AppContent />
+            {/* One toast surface for the whole app. NotificationToasts is the
+                only thing feeding it today (the bell feed); the incoming-call
+                toast stays inside the phone widget. Both are inside
+                AuthProvider — the feed is silent while signed out. */}
+            <ToastProvider>
+              <NotificationToasts />
+              <AppContent />
+            </ToastProvider>
           </FireberryProvider>
         </SipPhoneProvider>
       </AuthProvider>

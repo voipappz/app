@@ -18,7 +18,8 @@
     "messages": {
       "noMoreToLoad": "אין עוד פריטים לטעינה",
       "noItemsFound": "לא נמצאו פריטים"
-    }
+    },
+    "unknown": "לא ידוע"
   },
   "header": {
     "title": "פלטפורמת ניהול עסקי",
@@ -729,7 +730,16 @@
     "cancelTransfer": "ביטול",
     "transferring": "מעביר…",
     "transferCompleted": "השיחה הועברה",
-    "transferFailed": "ההעברה נכשלה: {{reason}}"
+    "transferFailed": "ההעברה נכשלה: {{reason}}",
+    "recentCalls": "שיחות אחרונות",
+    "recentCallsError": "לא ניתן לטעון שיחות אחרונות",
+    "dialed": "חויגו מכאן",
+    "refresh": "רענן"
+  },
+  "notifications": {
+    "toasts": "התראות",
+    "title": "התראה",
+    "dismiss": "סגור"
   },
   "status": {
     "title": "סטטוס מערכת",
