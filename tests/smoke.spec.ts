@@ -139,3 +139,40 @@ test('unauthenticated /calls redirects to login', async ({ page }) => {
   await page.waitForURL('**/login', { timeout: 10_000 });
   await expect(page.getByTestId('login-form')).toBeVisible();
 });
+
+// Sign-in is ALWAYS left-to-right, even though the app defaults to Hebrew/RTL.
+test('login page is left-to-right', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.getByTestId('login-form')).toBeVisible();
+
+  // The whole document flips, not just a wrapper — MUI portals its overlays to
+  // document.body, so a scoped subtree would leave those RTL.
+  await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+
+  // Computed style, not just the attribute: DirectionProvider flips the CSS
+  // itself via stylis-plugin-rtl, so a dir attribute alone would not prove the
+  // stylesheet followed.
+  await expect(page.getByTestId('login-layout')).toHaveCSS('direction', 'ltr');
+  await expect(page.getByTestId('login-content')).toHaveCSS('direction', 'ltr');
+  await expect(page.getByTestId('login-form')).toHaveCSS('direction', 'ltr');
+
+  // The stored PREFERENCE is untouched — login overrides how it renders, it
+  // does not silently rewrite the tenant's setting.
+  expect(await page.evaluate(() => localStorage.getItem('app-direction'))).not.toBe('ltr');
+});
+
+// ...and the app returns to RTL once past login, so the override is scoped to
+// the screen rather than leaking into the authenticated app.
+test('app returns to RTL after login', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+
+  await page.getByTestId('email-input').locator('input').fill('ci@example.com');
+  await page.getByTestId('password-input').locator('input').fill('anything');
+  await page.getByTestId('login-button').click();
+  await page.getByTestId('otp-input').locator('input').fill('123456');
+  await page.getByTestId('otp-verify-button').click();
+
+  await page.waitForURL('**/dashboard', { timeout: 15_000 });
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+});
