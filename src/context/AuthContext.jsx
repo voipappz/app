@@ -24,7 +24,7 @@ function clearSessionCaches() {
   }
 }
 import { ACLService } from '../services/aclService';
-import { getPermissionsForRole } from '../config/permissions';
+import { permissionsFromAcl } from '../services/aclPermissions';
 
 const AuthContext = createContext();
 
@@ -104,13 +104,20 @@ export const AuthProvider = ({ children }) => {
     setErrorState(error);
   }, []);
 
-  // ACL from the user's app role (accounts default to the wildcard `admin`
-  // template until per-account app-roles exist — see lib/auth.ts sessionUser).
+  // Permissions come from the user's OWN ACL (`user.acl.data`, which the
+  // mothership sends — verified live on MTN). It is the ONLY source.
+  //
+  // There is no role to fall back to. sessionUser() synthesises
+  // `role: u.app_role || claims.app_role || 'admin'`, but no user carries an
+  // app_role, so it always resolved to 'admin' — whose template is ['*']. Every
+  // signed-in user therefore held every permission while their real ACL sat
+  // unread on the session. A fallback that always says "admin" is not a
+  // fallback, it is the bug.
+  //
+  // So: no ACL ⇒ no permissions. Deny by default, as nimbus-admin does.
   const aclService = useMemo(() => {
-    if (!user?.role) return null;
-    const permissions = getPermissionsForRole(user.role);
-    if (!permissions || permissions.length === 0) return null;
-    return new ACLService(permissions);
+    if (!user) return null;
+    return new ACLService(permissionsFromAcl(user.raw?.acl));
   }, [user]);
 
   // AUTH GATE: don't render children until auth state is determined.
