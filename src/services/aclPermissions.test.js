@@ -72,3 +72,17 @@ describe('permissionsFromAcl', () => {
     expect(granted).toContain('calls:read');
   });
 });
+
+// Regression: a real MTN login lost the Calls page. voipappz-api's
+// Acl::ACL_MAPPING defines :call AND :calls as separate keys, and the singular
+// had no alias — so deny-by-default hid the screen instead of granting it.
+describe('singular screen keys from the platform', () => {
+  it('maps the server\'s `call` onto this app\'s `calls`', () => {
+    expect(permissionsFromAcl({ data: { call: { main: 'read' } } })).toEqual(['calls:read']);
+  });
+
+  it('keeps the plural working too, and does not duplicate when both are sent', () => {
+    const granted = permissionsFromAcl({ data: { call: { main: 'read' }, calls: { main: 'read' } } });
+    expect(granted).toEqual(['calls:read']);
+  });
+});

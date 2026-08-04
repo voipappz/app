@@ -1,8 +1,8 @@
 import { Box, Typography } from '@mui/material';
 
 /**
- * PageHeader — consistent page title block: title + optional subtitle on the
- * left, an actions slot (and/or a live-status chip) on the right. RTL-safe.
+ * PageHeader — consistent page title block: title + optional subtitle, then an
+ * actions slot (and/or a live-status chip) beside it. RTL-safe.
  */
 export default function PageHeader({ title, subtitle, actions, sx }) {
   return (
@@ -11,7 +11,10 @@ export default function PageHeader({ title, subtitle, actions, sx }) {
         display: 'flex',
         flexDirection: { xs: 'column', sm: 'row' },
         alignItems: { xs: 'flex-start', sm: 'center' },
-        justifyContent: 'space-between',
+        // Controls sit NEXT TO the title, not pushed to the far edge: the phone
+        // dock is 340px anchored to the physical right, and anything parked at
+        // that edge disappears underneath it while the dock is open.
+        justifyContent: 'flex-start',
         gap: 1.5,
         mb: 3,
         ...sx,

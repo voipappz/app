@@ -718,7 +718,10 @@
   "notifications": {
     "toasts": "Notifications",
     "title": "Notification",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "unreadCount": "{{count}} unread",
+    "empty": "Nothing new.",
+    "seeAll": "See all notifications"
   },
   "status": {
     "title": "System status",

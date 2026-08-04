@@ -7,6 +7,7 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import { useTranslation } from 'react-i18next';
 import { useAppTranslation } from '../../i18n/useAppTranslation';
 import { EVENTS_API } from '../Calls/useCalls';
+import { appVersion } from '../../config';
 
 // Language picks the DIRECTION too — Hebrew is RTL, English is LTR — so there
 // is no separate RTL switch to fall out of sync with it.
@@ -133,6 +134,16 @@ export default function AccountMenu({ anchorEl, open, onClose, user, onLogout })
         <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>
         {t('menu.logout')}
       </MenuItem>
+
+      {/* The build. It sits with identity rather than in the rail, because the
+          question it answers ("what am I running?") is asked about this account
+          on this machine — and the rail had no room to show it legibly. */}
+      <Typography
+        data-testid="menu-app-version"
+        sx={{ px: 2, pt: 0.5, pb: 1, fontSize: '0.7rem', color: 'text.secondary', opacity: 0.8 }}
+      >
+        v{appVersion}
+      </Typography>
     </Menu>
   );
 }
