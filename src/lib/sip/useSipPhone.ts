@@ -231,6 +231,14 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     sessionsRef.current.set(info.id, session);
     setCall((current) => reduceCallState(current, { type: "start", call: info }));
     session.stateChange.addListener((state: SessionState) => {
+      // Establishing is sip.js telling us the far end is ringing. We used to
+      // infer that from invite() resolving, which only means the INVITE was
+      // written to the wire — the Ionic app publishes 'progress' from this
+      // state for the same reason.
+      if (state === SessionState.Establishing) {
+        addLog("log", "sip.Session", `${info.direction} call ringing (${info.remote})`);
+        setCall((c) => reduceCallState(c, { type: "ringing", id: info.id }));
+      }
       if (state === SessionState.Established) {
         setLastError(null);
         activeIdRef.current = info.id;
@@ -465,9 +473,38 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
 
   const dial = useCallback(async (target: string, cfgOverrides: Partial<SipConfig> = {}) => {
     const ua = uaRef.current;
-    if (!networkAvailableRef.current) throw new Error("network offline");
-    if (!ua || status !== "registered") throw new Error("not registered");
-    if (activeIdRef.current || sessionsRef.current.size > 0) throw new Error("call already in progress");
+
+    // These used to be bare throws. Nothing called reportError, so lastError
+    // never moved and no call state appeared — pressing Call did LITERALLY
+    // nothing visible, on any of the three paths. A refusal the user cannot
+    // see is indistinguishable from a broken button.
+    const refuse = (reason: string): never => {
+      const error = new Error(reason);
+      reportError("sip.Dial", error, reason);
+      throw error;
+    };
+
+    if (!networkAvailableRef.current) refuse("Network offline — cannot place a call");
+    if (!ua || status !== "registered") {
+      refuse(`Not registered (status: ${status}) — cannot place a call`);
+    }
+
+    // A call that ended badly could leave activeIdRef or the sessions map
+    // populated, and then EVERY later dial was refused for a call that no
+    // longer existed — dead until reload. Reconcile before refusing.
+    if (activeIdRef.current || sessionsRef.current.size > 0) {
+      const live = [...sessionsRef.current.entries()].filter(
+        ([, session]) => session.state !== SessionState.Terminated,
+      );
+      if (live.length === 0) {
+        addLog("warn", "sip.Dial", "clearing a stale call slot before dialling");
+        sessionsRef.current.clear();
+        activeIdRef.current = null;
+        invitationRef.current = null;
+      } else {
+        refuse("A call is already in progress");
+      }
+    }
     const cfg = loadSipConfig({ ...overrides, ...cfgOverrides });
     const id = genId();
     const address = sipTargetAddress(target, cfg.domain);
