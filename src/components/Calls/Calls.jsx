@@ -1,9 +1,9 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Paper, Typography, Chip, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, TableSortLabel, CircularProgress, Alert, ToggleButton,
-  ToggleButtonGroup, Button, TablePagination,
+  Box, Chip, CircularProgress, Alert, ToggleButton,
+  ToggleButtonGroup, Button, TablePagination, useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
@@ -12,103 +12,33 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PhoneMissedIcon from '@mui/icons-material/PhoneMissed';
 import TimerIcon from '@mui/icons-material/Timer';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
-import SubtitlesIcon from '@mui/icons-material/Subtitles';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useCalls, computeCallStats } from './useCalls';
 import Filters from '../common/Filters';
 import { applyFilters } from '../common/filterModel';
 import PageHeader from '../common/PageHeader';
 import StatCard from '../common/StatCard';
-import StatusChip from '../common/StatusChip';
 import CallDetailDrawer from './CallDetailDrawer';
-import { fmtDuration, fmtClock, asDate } from './callFormat';
-
-// Transcription job status → compact chip for the grid. Unknown/none renders a dash.
-const TX_COLOR = { completed: 'success', processing: 'warning', queued: 'default', failed: 'error' };
-const TX_LABEL_KEY = { completed: 'transcript', processing: 'transcribing', queued: 'queued', failed: 'failed' };
-function TranscriptionChip({ status }) {
-  const { t } = useTranslation();
-  const color = TX_COLOR[status];
-  if (!color) return <span style={{ color: 'var(--mui-palette-text-disabled, #aaa)' }}>—</span>;
-  return <Chip size="small" icon={<SubtitlesIcon sx={{ fontSize: 15 }} />} label={t(`calls.tx.${TX_LABEL_KEY[status]}`)}
-    color={color} variant="outlined" sx={{ borderRadius: '6px', fontSize: '0.7rem', unicodeBidi: 'isolate' }} />;
-}
+import { CallsTable, CallsCardList } from './CallsList';
+import { buildSections, STATUS_ORDER } from './callsGrouping';
+import { fmtClock } from './callFormat';
 
 /**
  * End-user Calls page. History and search come from the mature mothership Calls
  * API; DuckDB remains dashboard-only. Friendly filters map to Nimbus's proven
  * server-side search contract, so they apply to the complete result set.
+ *
+ * The page owns the query, the filters and the grouping model (callsGrouping.js);
+ * CallsList owns how that model is drawn — a sortable table on md+, tappable
+ * cards below it. Exactly one of the two is mounted.
  */
-
-function timeBucket(startedAt) {
-  const d = asDate(startedAt);
-  if (!d || isNaN(d)) return 'Older';
-  const now = new Date();
-  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dayMs = 86_400_000;
-  if (d >= startToday) return 'Today';
-  if (d >= new Date(startToday - dayMs)) return 'Yesterday';
-  if (d >= new Date(startToday - 7 * dayMs)) return 'This week';
-  return 'Older';
-}
-const TIME_ORDER = ['Today', 'Yesterday', 'This week', 'Older'];
-const STATUS_ORDER = ['in_progress', 'ringing', 'completed', 'no_answer', 'busy', 'failed'];
-
-// `hide` columns drop out below the md breakpoint to keep the table usable on phones.
-const COLUMNS = [
-  { key: 'direction', labelKey: null, sortable: false },
-  { key: 'from_number', labelKey: 'from', sortable: true },
-  { key: 'to_number', labelKey: 'to', sortable: true },
-  { key: 'duration_seconds', labelKey: 'duration', sortable: true, align: 'right' },
-  { key: 'status', labelKey: 'status', sortable: true },
-  { key: 'started_at', labelKey: 'started', sortable: true, hide: true },
-  { key: 'leg_count', labelKey: 'legs', sortable: true, align: 'right', hide: true },
-  { key: 'event_count', labelKey: 'events', sortable: true, align: 'right', hide: true },
-  { key: 'transcription_status', labelKey: 'transcript', sortable: true },
-];
-const colDisplay = (col) => (col.hide ? { display: { xs: 'none', md: 'table-cell' } } : null);
-
-function cmp(a, b, key, order) {
-  let va = a[key], vb = b[key];
-  if (key === 'started_at') { va = asDate(va)?.getTime() || 0; vb = asDate(vb)?.getTime() || 0; }
-  if (key === 'duration_seconds' || key === 'leg_count' || key === 'event_count') { va = Number(va) || 0; vb = Number(vb) || 0; }
-  va = va ?? ''; vb = vb ?? '';
-  const r = va < vb ? -1 : va > vb ? 1 : 0;
-  return order === 'asc' ? r : -r;
-}
-
-function CallRow({ c, onClick }) {
-  return (
-    <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => onClick(c)}>
-      <TableCell sx={{ width: 40 }}>{c.direction === 'inbound'
-        ? <CallReceivedIcon fontSize="small" sx={{ color: 'info.main' }} />
-        : <CallMadeIcon fontSize="small" sx={{ color: 'success.main' }} />}</TableCell>
-      <TableCell sx={{ fontWeight: 500, unicodeBidi: 'isolate' }}>{c.from_number}</TableCell>
-      <TableCell sx={{ unicodeBidi: 'isolate' }}>{c.to_number}</TableCell>
-      <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums', unicodeBidi: 'isolate' }}>{fmtDuration(c.duration_seconds)}</TableCell>
-      <TableCell><StatusChip status={c.status} /></TableCell>
-      <TableCell sx={{ color: 'text.secondary', ...colDisplay(COLUMNS[5]) }}>{c.started_at ? asDate(c.started_at).toLocaleString() : '—'}</TableCell>
-      <TableCell align="right" sx={{ color: 'text.secondary', ...colDisplay(COLUMNS[6]) }}>{c.leg_count ?? '—'}</TableCell>
-      <TableCell align="right" sx={{ color: 'text.secondary', ...colDisplay(COLUMNS[7]) }}>{c.event_count ?? '—'}</TableCell>
-      <TableCell><TranscriptionChip status={c.transcription_status} /></TableCell>
-    </TableRow>
-  );
-}
-
-function GroupHeader({ label, count, level, colSpan }) {
-  return (
-    <TableRow>
-      <TableCell colSpan={colSpan} sx={{ bgcolor: level === 0 ? 'action.hover' : 'action.selected', py: 0.5, borderBottom: 'none' }}>
-        <Typography variant={level === 0 ? 'subtitle2' : 'caption'} sx={{ fontWeight: level === 0 ? 700 : 600 }}>
-          {label} <Chip size="small" label={count} sx={{ mx: 1, height: 18, borderRadius: '6px' }} />
-        </Typography>
-      </TableCell>
-    </TableRow>
-  );
-}
 
 export default function Calls() {
   const { t } = useTranslation();
+  const theme = useTheme();
+  // Below `md` the table becomes the card list. `noSsr` keeps the first paint
+  // correct (this app is client-rendered, so there is nothing to hydrate).
+  const isPhone = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   const {
     calls, total, page, perPage, loading, error, source,
     setPage, setPerPage, handleSortChange, applyRange, applySearch, refresh, patchCall,
@@ -167,10 +97,6 @@ export default function Calls() {
   const stats = useMemo(() => computeCallStats(filtered), [filtered]);
   const answerRate = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
 
-  // Visible column count drives group-header colSpan (so it spans the table even
-  // when the hide-on-mobile columns are collapsed). md+ shows all; phone hides 3.
-  const visibleColSpan = COLUMNS.length;
-
   // Sort: mapped columns (started_at) sort on the SERVER across all pages;
   // handleSortChange returns false for unmapped ones, which then sort the
   // current page client-side (the API's other sortable fields are unverified).
@@ -186,25 +112,10 @@ export default function Calls() {
 
   // Build grouped sections. groupBy: 'time' → time bucket then status; 'status'
   // → status only; 'none' → flat. Rows within the innermost group are sorted.
-  const sections = useMemo(() => {
-    const rows = [...filtered].sort((a, b) => cmp(a, b, orderBy, order));
-    if (groupBy === 'none') return [{ label: null, count: rows.length, subs: [{ label: null, rows }] }];
-
-    const byKey = (arr, keyFn) => arr.reduce((m, c) => { const k = keyFn(c); (m[k] ||= []).push(c); return m; }, {});
-
-    if (groupBy === 'status') {
-      const g = byKey(rows, (c) => c.status || 'queued');
-      return STATUS_ORDER.filter((s) => g[s]).concat(Object.keys(g).filter((s) => !STATUS_ORDER.includes(s)))
-        .map((s) => ({ label: s, kind: 'status', count: g[s].length, subs: [{ label: null, rows: g[s] }] }));
-    }
-    // time → status
-    const gt = byKey(rows, (c) => timeBucket(c.started_at));
-    return TIME_ORDER.filter((tk) => gt[tk]).map((tk) => {
-      const gs = byKey(gt[tk], (c) => c.status || 'queued');
-      const subs = STATUS_ORDER.filter((s) => gs[s]).map((s) => ({ label: s, kind: 'status', rows: gs[s] }));
-      return { label: tk, kind: 'time', count: gt[tk].length, subs };
-    });
-  }, [filtered, groupBy, orderBy, order]);
+  const sections = useMemo(
+    () => buildSections(filtered, { groupBy, orderBy, order }),
+    [filtered, groupBy, orderBy, order],
+  );
 
   // Translate a group label (time bucket or status) for display.
   const groupLabel = (label, kind) =>
@@ -254,60 +165,41 @@ export default function Calls() {
       {/* Filters (ported from va-voipbox-portal report-filters) */}
       <Filters fields={filterFields} value={filters} onChange={setFilters} />
 
-      {/* Group toggle */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+      {/* Group toggle — wraps rather than overflowing on a narrow phone, and
+          sits at the start edge there (nothing to right-align against). */}
+      <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' }, mb: 1.5 }}>
         <ToggleButtonGroup size="small" exclusive value={groupBy} onChange={(_, v) => v && setGroupBy(v)}
-          sx={{ '& .MuiToggleButton-root': { textTransform: 'none', fontWeight: 600 } }}>
+          sx={{
+            flexWrap: 'wrap',
+            '& .MuiToggleButton-root': {
+              textTransform: 'none', fontWeight: 600,
+              px: { xs: 1, sm: 1.5 }, fontSize: { xs: '0.7rem', sm: '0.8125rem' },
+            },
+          }}>
           <ToggleButton value="time">{t('calls.group.timeStatus')}</ToggleButton>
           <ToggleButton value="status">{t('calls.group.status')}</ToggleButton>
           <ToggleButton value="none">{t('calls.group.flat')}</ToggleButton>
         </ToggleButtonGroup>
       </Box>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, maxWidth: '100%', overflowX: 'auto' }}>
-        {loading ? (
-          <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>
-        ) : (
-          <Table size="small" stickyHeader>
-            <TableHead>
-              <TableRow>
-                {COLUMNS.map((col) => (
-                  <TableCell key={col.key} align={col.align} sx={{ fontWeight: 600, bgcolor: 'background.paper', ...colDisplay(col) }}>
-                    {col.sortable ? (
-                      <TableSortLabel active={orderBy === col.key} direction={orderBy === col.key ? order : 'asc'}
-                        onClick={() => onSort(col.key)}>{col.labelKey ? t(`calls.col.${col.labelKey}`) : ''}</TableSortLabel>
-                    ) : (col.labelKey ? t(`calls.col.${col.labelKey}`) : '')}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sections.map((sec, si) => (
-                <Fragment key={`g-${sec.label ?? si}`}>
-                  {sec.label && <GroupHeader label={groupLabel(sec.label, sec.kind)} count={sec.count} level={0} colSpan={visibleColSpan} />}
-                  {sec.subs.map((sub, sj) => (
-                    <Fragment key={`s-${sec.label ?? si}-${sub.label ?? sj}`}>
-                      {sub.label && groupBy === 'time' &&
-                        <GroupHeader label={groupLabel(sub.label, sub.kind)} count={sub.rows.length} level={1} colSpan={visibleColSpan} />}
-                      {sub.rows.map((c) => <CallRow key={c.id} c={c} onClick={setSelected} />)}
-                    </Fragment>
-                  ))}
-                </Fragment>
-              ))}
-              {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={visibleColSpan} align="center">
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 4 }}>
-                    {t('calls.noCalls')}
-                  </Typography>
-                </TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        )}
-      </TableContainer>
+      {loading ? (
+        <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>
+      ) : isPhone ? (
+        <CallsCardList
+          sections={sections} groupBy={groupBy} groupLabel={groupLabel}
+          onSelect={setSelected} isEmpty={filtered.length === 0}
+        />
+      ) : (
+        <CallsTable
+          sections={sections} groupBy={groupBy} groupLabel={groupLabel}
+          orderBy={orderBy} order={order} onSort={onSort}
+          onSelect={setSelected} isEmpty={filtered.length === 0}
+        />
+      )}
 
       {/* Server-side pagination — `total` is the API's X-Total (all rows), not
-          just what's loaded, so the whole history is reachable. */}
+          just what's loaded, so the whole history is reachable. The toolbar wraps
+          on a phone instead of pushing the page into a horizontal scroll. */}
       <TablePagination
         component="div"
         count={total}
@@ -317,6 +209,14 @@ export default function Calls() {
         onRowsPerPageChange={(e) => { setPerPage(parseInt(e.target.value, 10)); setPage(0); }}
         rowsPerPageOptions={[10, 20, 50, 100]}
         data-testid="calls-pagination"
+        sx={{
+          '& .MuiTablePagination-toolbar': {
+            flexWrap: 'wrap', rowGap: 0.5, justifyContent: 'flex-end',
+            paddingInline: { xs: 0, sm: 2 },
+          },
+          '& .MuiTablePagination-spacer': { display: { xs: 'none', sm: 'block' } },
+          '& .MuiTablePagination-actions': { marginInlineStart: { xs: 1, sm: 2.5 } },
+        }}
       />
 
       <CallDetailDrawer

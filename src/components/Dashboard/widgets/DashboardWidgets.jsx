@@ -90,7 +90,7 @@ function TableWidget({ widget, t }) {
     return <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>{t('dashboardLive.empty', 'No rows')}</Typography>;
   }
   return (
-    <Box sx={{ overflowX: 'auto' }}>
+    <Box sx={{ maxWidth: '100%', overflowX: 'auto' }}>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
@@ -124,11 +124,20 @@ function CounterWidget({ widget }) {
 function WidgetCard({ widget, t }) {
   // Honor the portal's grid placement when the stream provides it; otherwise
   // default to full width (a lone table shouldn't collapse to 1/12).
-  const gridSx = (widget.col && widget.sizeX)
-    ? { gridColumn: `${widget.col} / span ${widget.sizeX}`, gridRow: widget.row ? `${widget.row} / span ${widget.sizeY || 1}` : undefined }
+  //
+  // The placement is ONLY applied from `md` up, where the 12-column track
+  // actually exists. On a phone the grid is one column, so a stream-supplied
+  // `gridColumn: 5 / span 4` used to conjure implicit columns and shove the page
+  // off-screen; every widget is simply full width there.
+  const placed = Boolean(widget.col && widget.sizeX);
+  const gridSx = placed
+    ? {
+      gridColumn: { xs: '1 / -1', md: `${widget.col} / span ${widget.sizeX}` },
+      gridRow: { xs: 'auto', md: widget.row ? `${widget.row} / span ${widget.sizeY || 1}` : 'auto' },
+    }
     : { gridColumn: '1 / -1' };
   return (
-    <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden', ...gridSx }}>
+    <Paper elevation={0} sx={{ minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden', ...gridSx }}>
       <Box sx={{
         px: 2, py: 1.25, display: 'flex', alignItems: 'center', gap: 1,
         bgcolor: widget.header_background_color || 'transparent',
@@ -168,7 +177,7 @@ export default function DashboardWidgets() {
           color={live ? 'success' : 'warning'} variant={live ? 'filled' : 'outlined'}
         />
       </Box>
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(12, 1fr)' } }}>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(12, minmax(0, 1fr))' } }}>
         {entries.map(([uuid, widget]) => <WidgetCard key={uuid} widget={widget} t={t} />)}
       </Box>
     </Box>

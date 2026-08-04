@@ -45,18 +45,30 @@ function toChartData(rows, label, series) {
   });
 }
 
+// A report table has an unknown, server-defined column count, so it owns its own
+// horizontal scroller and refuses to wrap cells: on a phone that turns an
+// unreadable squashed grid into a normal swipe-sideways table, and it keeps
+// working wherever ReportChart is embedded, not just inside ReportCard.
 function ReportTable({ columns, rows }) {
   return (
-    <Table size="small">
-      <TableHead>
-        <TableRow>{columns.map((c) => <TableCell key={c}>{c}</TableCell>)}</TableRow>
-      </TableHead>
-      <TableBody>
-        {rows.map((r, i) => (
-          <TableRow key={i}>{columns.map((c) => <TableCell key={c}>{String(r?.[c] ?? '')}</TableCell>)}</TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <Box sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            {columns.map((c) => <TableCell key={c} sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{c}</TableCell>)}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {rows.map((r, i) => (
+            <TableRow key={i}>
+              {columns.map((c) => (
+                <TableCell key={c} sx={{ whiteSpace: 'nowrap' }}>{String(r?.[c] ?? '')}</TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Box>
   );
 }
 
@@ -115,9 +127,11 @@ export default function ReportChart({ report, height = 260 }) {
 /** A report in a titled card — the unit the dashboards grid lays out. */
 export function ReportCard({ report, height }) {
   return (
-    <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>{report?.name}</Typography>
-      <Box sx={{ overflowX: 'auto' }}><ReportChart report={report} height={height} /></Box>
+    // `minWidth: 0` — without it a wide table makes this grid item refuse to
+    // shrink and pushes the whole page into a horizontal scroll on a phone.
+    <Paper elevation={0} sx={{ p: { xs: 1.5, sm: 2 }, minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, wordBreak: 'break-word' }}>{report?.name}</Typography>
+      <ReportChart report={report} height={height} />
     </Paper>
   );
 }
