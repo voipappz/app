@@ -55,13 +55,17 @@ describe('loadCustomerPortalData must not block boot', () => {
   beforeEach(() => { localStorage.clear(); vi.unstubAllEnvs(); });
   afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
-  it('makes no request at all in offline mock mode', async () => {
+  // Deliberately NOT skipped in mock mode: the E2E suite stubs this very route
+  // to drive tenant branding (stubPortalData), so suppressing the request took
+  // the stub with it and the tenant's OTP opt-out silently stopped applying.
+  // The deadline below is what makes it safe, not skipping it.
+  it('still requests in offline mock mode, so the route can be stubbed', async () => {
     vi.stubEnv('VITE_MOCK_LOGIN', '1');
-    const fetchSpy = vi.fn();
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ logo_title: 'mtn' }) } as Response);
     global.fetch = fetchSpy;
 
-    expect(await loadCustomerPortalData()).toBeNull();
-    expect(fetchSpy).not.toHaveBeenCalled();
+    await loadCustomerPortalData();
+    expect(fetchSpy).toHaveBeenCalled();
   });
 
   it('budgets the request so a dead host cannot stall the first render', async () => {

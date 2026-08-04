@@ -65,12 +65,6 @@ export function clearCustomerData(): void {
  * callers fall back to the env-driven defaults in src/config.js.
  */
 export async function loadCustomerPortalData(): Promise<CustomerPortalData | null> {
-  // Offline mode is meant to need no network at all (VITE_MOCK_LOGIN — "no
-  // credentials, no network"), and this was the one call still reaching out.
-  // In CI the runner cannot reach the mothership, so it hung and took the whole
-  // boot down with it.
-  if (import.meta.env.VITE_MOCK_LOGIN === '1') return null;
-
   try {
     // Branding is cosmetic and boot AWAITS this, so an unreachable mothership
     // must fail fast rather than hang: a TCP connect that never answers is not
