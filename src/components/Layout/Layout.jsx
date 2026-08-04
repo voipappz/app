@@ -10,6 +10,7 @@ import { APP_THEME } from '../../theme/appTheme';
 import SystemHealth from '../common/SystemHealth';
 import PhoneWidget from '../Phone/PhoneWidget';
 import ErrorBoundary from '../common/ErrorBoundary';
+import { ForceLtr } from '../../context/DirectionContext';
 import { appVersion } from '../../config';
 import './Layout.css';
 
@@ -55,15 +56,19 @@ const Layout = ({ children }) => {
         v{appVersion}
       </Box>
       {isLoginPage ? (
-        // Login page layout with LoginLeft component
-        <Box sx={{ display: 'flex', width: '100%', height: '100vh' }} data-testid="login-layout">
-          <Box className="login-left-container" sx={{ width: '40%', minWidth: '320px' }}>
-            <LoginLeft />
+        // Login page layout with LoginLeft component. ALWAYS left-to-right —
+        // the sign-in screen is LTR even for an RTL tenant, so it is scoped out
+        // of the app's direction (ForceLtr owns the unflipped emotion cache).
+        <ForceLtr>
+          <Box dir="ltr" sx={{ display: 'flex', width: '100%', height: '100vh', direction: 'ltr' }} data-testid="login-layout">
+            <Box className="login-left-container" sx={{ width: '40%', minWidth: '320px' }}>
+              <LoginLeft />
+            </Box>
+            <Box className="login-content-container" sx={{ flexGrow: 1 }} data-testid="login-content">
+              {children}
+            </Box>
           </Box>
-          <Box className="login-content-container" sx={{ flexGrow: 1 }} data-testid="login-content">
-            {children}
-          </Box>
-        </Box>
+        </ForceLtr>
       ) : (
         // Regular layout with MainMenu for authenticated pages
         <Box className="authenticated-layout" data-testid="authenticated-layout">
