@@ -5,7 +5,11 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'cypress/videos', 'cypress/screenshots','src/context/AuthContext.jsx', 'OLD/**/*'] },
+  // .claude/worktrees holds isolated agent checkouts — whole copies of this
+  // repo. Linting them reports their problems as ours and fails the push gate
+  // on code that is not in the tree. eslint does not read .gitignore, so it
+  // has to be said here too.
+  { ignores: ['dist', 'cypress/videos', 'cypress/screenshots','src/context/AuthContext.jsx', 'OLD/**/*', '.claude/worktrees/**'] },
   // Apply TypeScript recommended config to all files
   ...tseslint.configs.recommended,
   // JavaScript/JSX files
