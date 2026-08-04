@@ -49,5 +49,11 @@ export function useDashboardBuilder(open, onChange) {
   const saveWidget = useCallback((uuid, patch) => mutate(() => updateWidget(uuid, patch)), [mutate]);
   const removeWidget = useCallback((uuid) => mutate(() => deleteWidget(uuid)), [mutate]);
 
-  return { widgets, loading, saving, error, addWidget, saveWidget, removeWidget };
+  // Import: create the drafts in order (the store assigns uuids). One refetch
+  // at the end via `mutate`, so the drawer doesn't flicker per widget.
+  const importWidgets = useCallback((drafts) => mutate(async () => {
+    for (const draft of drafts) await createWidget(draft);
+  }), [mutate]);
+
+  return { widgets, loading, saving, error, addWidget, saveWidget, removeWidget, importWidgets, refresh };
 }

@@ -776,16 +776,77 @@
     "hint": "הרכיבים מחושבים מאירועי השיחות המקומיים של האפליקציה. ללא רכיבים יוצגו האריחים המובנים.",
     "newWidget": "כותרת רכיב חדש",
     "widgetTitle": "כותרת",
+    "addWidget": "הוספת רכיב",
+    "editWidget": "עריכת רכיב",
     "deleteWidget": "מחיקת רכיב",
     "confirmDelete": "למחוק את הרכיב?",
     "empty": "עדיין לא הוגדרו רכיבים.",
+    "count": "{{count}} רכיבים",
+    "count_one": "רכיב אחד",
+    "export": "ייצוא JSON",
+    "import": "ייבוא JSON",
+    "importFailed": "לא ניתן לקרוא את קובץ הלוח.",
     "metric": {
       "total": "סה״כ שיחות",
       "answered": "נענו",
       "failed": "נכשלו / לא נענו",
       "inbound": "נכנסות",
       "outbound": "יוצאות",
-      "avg_duration_sec": "משך ממוצע"
+      "avg_duration_sec": "משך ממוצע",
+      "started_at": "שעה",
+      "direction": "כיוון",
+      "from_number": "מאת",
+      "to_number": "אל",
+      "status": "סטטוס",
+      "duration_sec": "משך"
+    },
+    "type": {
+      "counter": "מונה",
+      "gauge": "מד",
+      "trend": "שיחות לפי שעה",
+      "table": "טבלת שיחות"
+    },
+    "fields": {
+      "pickOne": "מדד",
+      "pickMany": "שדות",
+      "hint": "נקראים מהתמונה המקומית — מוצגים רק שדות שהאפליקציה באמת מייצרת.",
+      "none": "אין שדות זמינים."
+    },
+    "template": {
+      "totalCalls": "סה״כ שיחות",
+      "answeredCalls": "נענו",
+      "failedCalls": "נכשלו / לא נענו",
+      "inboundCalls": "נכנסות",
+      "outboundCalls": "יוצאות",
+      "avgDuration": "משך ממוצע",
+      "failureGauge": "מד כשלים",
+      "handleTimeGauge": "מד זמן טיפול",
+      "callsPerHour": "שיחות לפי שעה",
+      "inboundPerHour": "נכנסות לפי שעה",
+      "recentCalls": "שיחות אחרונות",
+      "recentFailures": "שיחות אחרונות (מקוצר)"
+    },
+    "editor": {
+      "add": "הוספת רכיב",
+      "edit": "עריכת רכיב",
+      "general": "כללי",
+      "appearance": "עיצוב",
+      "thresholds": "ספים",
+      "templates": "התחלה מהירה",
+      "type": "סוג",
+      "icon": "אייקון",
+      "unit": "יחידה",
+      "unitHint": "שיחות, %, שניות",
+      "color": "צבע הדגשה",
+      "colorHint": "בחרו צבע, או חזרו לצבע ערכת הנושא.",
+      "clearColor": "צבע ערכת הנושא",
+      "min": "מינימום",
+      "max": "מקסימום",
+      "noAppearance": "רכיבי מגמה וטבלה מקבלים את העיצוב מערכת הנושא.",
+      "thresholdHint": "ערכים מעל הספים יצבעו את האריח בכתום ולאחר מכן באדום.",
+      "warning": "אזהרה",
+      "critical": "קריטי",
+      "inverse": "היפוך — ערכים נמוכים גרועים יותר"
     }
   }
 }

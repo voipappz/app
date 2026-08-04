@@ -755,16 +755,77 @@
     "hint": "Widgets are computed from this app's local call events. Without widgets the default tiles show.",
     "newWidget": "New widget title",
     "widgetTitle": "Title",
+    "addWidget": "Add widget",
+    "editWidget": "Edit widget",
     "deleteWidget": "Delete widget",
     "confirmDelete": "Delete this widget?",
     "empty": "No widgets defined yet.",
+    "count": "{{count}} widgets",
+    "count_one": "{{count}} widget",
+    "export": "Export JSON",
+    "import": "Import JSON",
+    "importFailed": "Could not read that dashboard file.",
     "metric": {
       "total": "Total calls",
       "answered": "Answered",
       "failed": "Failed / missed",
       "inbound": "Inbound",
       "outbound": "Outbound",
-      "avg_duration_sec": "Avg duration"
+      "avg_duration_sec": "Avg duration",
+      "started_at": "Time",
+      "direction": "Direction",
+      "from_number": "From",
+      "to_number": "To",
+      "status": "Status",
+      "duration_sec": "Duration"
+    },
+    "type": {
+      "counter": "Counter",
+      "gauge": "Gauge",
+      "trend": "Calls per hour",
+      "table": "Call table"
+    },
+    "fields": {
+      "pickOne": "Metric",
+      "pickMany": "Fields",
+      "hint": "Read from the local snapshot — only fields this app actually produces are listed.",
+      "none": "No fields available."
+    },
+    "template": {
+      "totalCalls": "Total calls",
+      "answeredCalls": "Answered",
+      "failedCalls": "Failed / missed",
+      "inboundCalls": "Inbound",
+      "outboundCalls": "Outbound",
+      "avgDuration": "Avg duration",
+      "failureGauge": "Failure gauge",
+      "handleTimeGauge": "Handle-time gauge",
+      "callsPerHour": "Calls per hour",
+      "inboundPerHour": "Inbound per hour",
+      "recentCalls": "Recent calls",
+      "recentFailures": "Recent calls (compact)"
+    },
+    "editor": {
+      "add": "Add widget",
+      "edit": "Edit widget",
+      "general": "General",
+      "appearance": "Appearance",
+      "thresholds": "Thresholds",
+      "templates": "Quick start",
+      "type": "Type",
+      "icon": "Icon",
+      "unit": "Unit",
+      "unitHint": "calls, %, sec",
+      "color": "Accent colour",
+      "colorHint": "Pick a colour, or fall back to the theme.",
+      "clearColor": "Use theme colour",
+      "min": "Minimum",
+      "max": "Maximum",
+      "noAppearance": "Trend and table widgets take their styling from the theme.",
+      "thresholdHint": "Values past these limits tint the tile amber, then red.",
+      "warning": "Warning",
+      "critical": "Critical",
+      "inverse": "Inverse — lower values are worse"
     }
   }
 }
