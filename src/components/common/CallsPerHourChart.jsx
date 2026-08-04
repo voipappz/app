@@ -19,7 +19,7 @@ import { statusColor, statusLabel } from './statusColors';
  *
  * Recharts; bar colors from the shared status→theme-color map (brand-aware).
  */
-export default function CallsPerHourChart({ calls = [], points = null }) {
+export default function CallsPerHourChart({ calls = [], points = null, series: only = null, title = null }) {
   const theme = useTheme();
   const { t } = useTranslation();
   // A 300px-tall chart eats most of a phone screen before the numbers below it
@@ -47,6 +47,7 @@ export default function CallsPerHourChart({ calls = [], points = null }) {
           hour: Number.isNaN(d.getTime()) ? String(p.bucket) : fmtHour(d),
           inbound: p.inbound || 0,
           outbound: p.outbound || 0,
+          total: p.total || 0,
         };
       })
       .sort((a, b) => String(a._ts).localeCompare(String(b._ts)))
@@ -75,15 +76,21 @@ export default function CallsPerHourChart({ calls = [], points = null }) {
   }, [calls]);
 
   const data = useProjection ? projectionData : callsData;
-  const series = useProjection ? ['inbound', 'outbound'] : statuses;
+  // A dashboard-builder `trend` widget may pin the stacks it wants (its field
+  // select); otherwise show the projection's inbound/outbound split.
+  const defaultSeries = useProjection ? ['inbound', 'outbound'] : statuses;
+  const series = Array.isArray(only) && only.length
+    ? only.filter((s) => data.some((row) => row[s] !== undefined))
+    : defaultSeries;
   const seriesLabel = (s) => useProjection ? t(`callDashboard.${s}`, s) : t(`usageReports.status.${s}`, statusLabel(s));
+  const PROJECTION_PALETTE = { inbound: 'info', outbound: 'success', total: 'primary' };
   const seriesColor = (s) => useProjection
-    ? (theme.palette[s === 'inbound' ? 'info' : 'success']?.main || theme.palette.grey[500])
+    ? (theme.palette[PROJECTION_PALETTE[s] || 'primary']?.main || theme.palette.grey[500])
     : hexFor(s);
 
   return (
     <Paper elevation={0} sx={{ p: { xs: 1.75, sm: 2.5 }, height: '100%', minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-      <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>{t('callDashboard.callsPerHour')}</Typography>
+      <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>{title || t('callDashboard.callsPerHour')}</Typography>
       {data.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
           {t('callDashboard.noCallData', 'No call data yet.')}

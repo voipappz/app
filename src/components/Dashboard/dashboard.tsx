@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState, type ElementType } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Box, Button, Chip, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import InsightsIcon from '@mui/icons-material/Insights';
 import CallIcon from '@mui/icons-material/Call';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PhoneMissedIcon from '@mui/icons-material/PhoneMissed';
@@ -15,24 +14,24 @@ import CallsPerHourChart from '../common/CallsPerHourChart';
 import { DashboardWidgets } from './widgets';
 import { useDashboardSnapshot, type DashboardCall } from './useDashboardSnapshot';
 import DashboardBuilder from '../DashboardBuilder/DashboardBuilder';
+import { formatWidgetValue, resolveIcon, thresholdColor } from '../DashboardBuilder/widgetPresentation';
 import { getWidgets } from '../../services/dashboardsApi';
 import { useACL } from '../../hooks/useACL';
 
 interface LocalWidget {
   uuid: string;
   title: string;
+  type?: string;
   metric: string;
+  fields?: string[];
+  icon?: string;
+  color?: string;
+  unit?: string;
+  thresholds?: { warning?: number; critical?: number };
+  inverse?: boolean;
+  min?: number;
+  max?: number;
 }
-
-// metric → tile accent for user-defined counters.
-const METRIC_STYLE: Record<string, { icon: ElementType; color?: string }> = {
-  total: { icon: CallIcon },
-  answered: { icon: CheckCircleOutlineIcon, color: 'success.main' },
-  failed: { icon: PhoneMissedIcon, color: 'error.main' },
-  inbound: { icon: CallIcon, color: 'info.main' },
-  outbound: { icon: CallIcon, color: 'warning.main' },
-  avg_duration_sec: { icon: TimerOutlinedIcon, color: 'info.main' },
-};
 
 /**
  * End-user live dashboard.
@@ -56,11 +55,27 @@ function fmtTime(value: string): string {
   return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function RecentCallsTable({ calls }: { calls: DashboardCall[] }) {
+// recent_calls column → header key + cell renderer. A `table` widget picks a
+// subset of these by field name; unknown names fall back to the raw value.
+type Translate = (key: string, fallback?: string) => string;
+
+const CALL_COLUMNS: Record<string, { key: string; align?: 'right'; cell: (c: DashboardCall, t: Translate) => ReactNode }> = {
+  started_at: { key: 'time', cell: (c) => fmtTime(c.started_at) },
+  direction: { key: 'direction', cell: (c, t) => t(`callDashboard.${c.direction}`, c.direction) },
+  from_number: { key: 'from', cell: (c) => c.from_number || '—' },
+  to_number: { key: 'to', cell: (c) => c.to_number || '—' },
+  status: { key: 'status', cell: (c) => <StatusChip status={c.status} variant="outlined" /> },
+  duration_sec: { key: 'duration', align: 'right', cell: (c) => fmtDuration(c.duration_sec) },
+};
+const DEFAULT_CALL_FIELDS = Object.keys(CALL_COLUMNS);
+
+function RecentCallsTable({ calls, fields, title }: { calls: DashboardCall[]; fields?: string[]; title?: string }) {
   const { t } = useTranslation();
+  const tr = t as unknown as Translate;
+  const columns = (fields?.length ? fields : DEFAULT_CALL_FIELDS).filter((f) => CALL_COLUMNS[f]);
   return (
     <Paper elevation={0} sx={{ p: { xs: 1.75, sm: 2.5 }, height: '100%', minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-      <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>{t('callDashboard.recentCalls', 'Recent calls')}</Typography>
+      <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>{title || t('callDashboard.recentCalls', 'Recent calls')}</Typography>
       {calls.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
           {t('callDashboard.noCalls', 'No calls yet — events will appear here as they arrive.')}
@@ -72,23 +87,24 @@ function RecentCallsTable({ calls }: { calls: DashboardCall[] }) {
           <Table size="small" sx={{ '& .MuiTableCell-root': { whiteSpace: 'nowrap' } }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>{t('callDashboard.table.time', 'Time')}</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>{t('callDashboard.table.direction', 'Direction')}</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>{t('callDashboard.table.from', 'From')}</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>{t('callDashboard.table.to', 'To')}</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>{t('callDashboard.table.status', 'Status')}</TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="right">{t('callDashboard.table.duration', 'Duration')}</TableCell>
+                {columns.map((field) => (
+                  <TableCell key={field} sx={{ fontWeight: 700 }} align={CALL_COLUMNS[field].align}>
+                    {t(`callDashboard.table.${CALL_COLUMNS[field].key}`, field)}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
               {calls.map((call) => (
                 <TableRow key={call.id} hover>
-                  <TableCell sx={{ fontVariantNumeric: 'tabular-nums' }}>{fmtTime(call.started_at)}</TableCell>
-                  <TableCell>{t(`callDashboard.${call.direction}`, call.direction)}</TableCell>
-                  <TableCell sx={{ unicodeBidi: 'isolate' }}>{call.from_number || '—'}</TableCell>
-                  <TableCell sx={{ unicodeBidi: 'isolate' }}>{call.to_number || '—'}</TableCell>
-                  <TableCell><StatusChip status={call.status} variant="outlined" /></TableCell>
-                  <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(call.duration_sec)}</TableCell>
+                  {columns.map((field) => (
+                    <TableCell
+                      key={field} align={CALL_COLUMNS[field].align}
+                      sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', unicodeBidi: 'isolate' }}
+                    >
+                      {CALL_COLUMNS[field].cell(call, tr)}
+                    </TableCell>
+                  ))}
                 </TableRow>
               ))}
             </TableBody>
@@ -119,10 +135,17 @@ export default function Dashboard() {
   }, []);
   useEffect(() => { loadWidgets(); }, [loadWidgets]);
 
-  const metricValue = (metric: string): string | number => {
-    const value = (stats as unknown as Record<string, number>)[metric] ?? 0;
-    return metric === 'avg_duration_sec' ? fmtDuration(value) : value;
-  };
+  // A definition's type decides which snapshot section renders it: counters and
+  // gauges read `stats`, trends read `calls_per_hour`, tables read `recent_calls`.
+  const { tiles, trends, tables } = useMemo(() => ({
+    tiles: customWidgets.filter((w) => !w.type || w.type === 'counter' || w.type === 'gauge'),
+    trends: customWidgets.filter((w) => w.type === 'trend'),
+    tables: customWidgets.filter((w) => w.type === 'table'),
+  }), [customWidgets]);
+  const customPanels = trends.length > 0 || tables.length > 0;
+
+  const rawValue = (metric: string): number =>
+    (stats as unknown as Record<string, number>)[metric] ?? 0;
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, width: '100%', maxWidth: 1440, mx: 'auto' }}>
@@ -150,23 +173,23 @@ export default function Dashboard() {
           </>
         }
       />
-      <DashboardBuilder open={builderOpen} onClose={() => setBuilderOpen(false)} onChange={loadWidgets} />
+      <DashboardBuilder
+        open={builderOpen} onClose={() => setBuilderOpen(false)}
+        onChange={loadWidgets} snapshot={snapshot}
+      />
 
       <Box data-testid="dashboard-kpis" sx={{ display: 'grid', gap: 2, mb: 2, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' } }}>
-        {customWidgets.length > 0 ? (
-          customWidgets.map((widget) => {
-            const style = METRIC_STYLE[widget.metric] || { icon: InsightsIcon };
-            return (
-              <StatCard
-                key={widget.uuid}
-                label={widget.title || t(`dashboardBuilder.metric.${widget.metric}`, widget.metric)}
-                value={metricValue(widget.metric)}
-                icon={style.icon}
-                color={style.color}
-              />
-            );
-          })
-        ) : (
+        {tiles.length > 0 ? (
+          tiles.map((widget) => (
+            <StatCard
+              key={widget.uuid}
+              label={widget.title || t(`dashboardBuilder.metric.${widget.metric}`, widget.metric)}
+              value={formatWidgetValue(widget, rawValue(widget.metric))}
+              icon={resolveIcon(widget.icon)}
+              color={thresholdColor(widget, rawValue(widget.metric))}
+            />
+          ))
+        ) : customPanels ? null : (
           <>
             <StatCard label={t('callDashboard.callsTotal', 'Total calls')} value={stats.total} icon={CallIcon} />
             <StatCard label={t('callDashboard.answered', 'Answered')} value={stats.answered} icon={CheckCircleOutlineIcon} color="success.main" />
@@ -180,8 +203,27 @@ export default function Dashboard() {
           min-content floor, so the wide recent-calls table would otherwise
           stretch the column and put the whole page into a horizontal scroll. */}
       <Box sx={{ display: 'grid', gap: 2, mb: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' }, alignItems: 'stretch' }}>
-        <CallsPerHourChart points={snapshot.calls_per_hour} />
-        <RecentCallsTable calls={snapshot.recent_calls} />
+        {customPanels ? (
+          <>
+            {trends.map((widget) => (
+              <CallsPerHourChart
+                key={widget.uuid} points={snapshot.calls_per_hour}
+                series={widget.fields} title={widget.title}
+              />
+            ))}
+            {tables.map((widget) => (
+              <RecentCallsTable
+                key={widget.uuid} calls={snapshot.recent_calls}
+                fields={widget.fields} title={widget.title}
+              />
+            ))}
+          </>
+        ) : (
+          <>
+            <CallsPerHourChart points={snapshot.calls_per_hour} />
+            <RecentCallsTable calls={snapshot.recent_calls} />
+          </>
+        )}
       </Box>
 
       <DashboardWidgets />
