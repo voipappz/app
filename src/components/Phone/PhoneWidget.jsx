@@ -17,6 +17,7 @@ import MicIcon from '@mui/icons-material/Mic';
 import MicOffIcon from '@mui/icons-material/MicOff';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PhoneForwardedIcon from '@mui/icons-material/PhoneForwarded';
 import DialpadIcon from '@mui/icons-material/Dialpad';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -29,19 +30,14 @@ import { useSipPhoneCtx } from '../../context/SipPhoneContext';
 import { useDirection } from '../../context/DirectionContext';
 import SipSettingsForm from './SipSettingsForm';
 import CallToast from './CallToast';
+import TransferControls from './TransferControls';
+import { ACCENT, GREEN, MUTED, PANEL, PANEL_HEADER } from './panelTheme';
 import { requestIncomingCallNotifications, useIncomingCallAlerts } from '../../lib/sip/useIncomingCallAlerts';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
 const DOT = { registered: '#22c55e', connecting: '#f59e0b', failed: '#ef4444', unregistered: '#94a3b8', idle: '#94a3b8', unavailable: '#ef4444' };
 const LOG_COLOR = { error: '#f87171', warn: '#fbbf24', debug: '#94a3b8', log: '#cbd5e1' };
 const LOG_KEY = 'sip-recent-dials';
-
-// Portal palette (matches the old WebRTC admin's right-hand phone dock).
-const PANEL = '#3b4350';      // panel body
-const PANEL_HEADER = '#2f3640'; // darker header strip
-const ACCENT = '#f5a623';     // active-tab orange
-const GREEN = '#34c759';      // presence + call CTA
-const MUTED = '#9aa6b6';      // secondary text on dark
 
 const loadDials = () => { try { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch { return []; } };
 const pushDial = (n) => {
@@ -68,7 +64,7 @@ export default function PhoneWidget() {
   const {
     status, connected, call, muted, held, doNotDisturb, networkAvailable, lastError,
     dial, answer, hangup, sendDtmf, setMuted, setHeld, setDoNotDisturb,
-    settings, logs = [], clearLogs,
+    transfer, consult, settings, logs = [], clearLogs,
   } = useSipPhoneCtx();
   // "Stick" the dock open (persistent, no backdrop) — survives reloads.
   const [pinned, setPinned] = useState(() => { try { return localStorage.getItem('sip-phone-pinned') === '1'; } catch { return false; } });
@@ -78,6 +74,8 @@ export default function PhoneWidget() {
   const [dials, setDials] = useState(loadDials);
   const [presence, setPresence] = useState('available');
   const [logsOpen, setLogsOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [holdPending, setHoldPending] = useState(false);
 
   const togglePin = () => setPinned((p) => {
     const next = !p;
@@ -92,6 +90,8 @@ export default function PhoneWidget() {
 
   const inCall = call && call.state !== 'ended';
   const incoming = call && call.direction === 'inbound' && call.state === 'ringing';
+  // A live transfer owns the hold state and keeps the panel on screen.
+  const transferBusy = Boolean(transfer) || Boolean(consult && consult.state !== 'ended');
   useIncomingCallAlerts(call);
   const timer = useCallTimer(call?.state === 'active' ? call.connectedAt : null);
 
@@ -112,6 +112,13 @@ export default function PhoneWidget() {
   const press = (k) => {
     if (call?.state === 'active') sendDtmf(k);
     else setNumber((n) => n + k);
+  };
+  // setHeld resolves only when the PBX answers the re-INVITE, so keep the button
+  // disabled for the round trip rather than letting it flip and flip back.
+  const toggleHold = async () => {
+    setHoldPending(true);
+    try { await setHeld(!held); } catch { /* surfaced via lastError */ }
+    finally { setHoldPending(false); }
   };
   const startCall = async (target) => {
     const n = (target || number).trim();
@@ -227,23 +234,44 @@ export default function PhoneWidget() {
               <Typography variant="body2" sx={{ mb: 2, color: MUTED }}>
                 {call.state === 'active' ? timer : call.state === 'ringing' ? t('phone.ringing', 'Ringing…') : t('phone.connecting', 'Connecting…')}
               </Typography>
-              <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 2 }}>
+              <Stack direction="row" spacing={1} justifyContent="center">
                 <IconButton onClick={() => setMuted(!muted)} sx={{ color: muted ? '#ef4444' : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}>
                   {muted ? <MicOffIcon /> : <MicIcon />}
                 </IconButton>
                 <Tooltip title={held ? t('phone.resume', 'Resume') : t('phone.hold', 'Hold')}>
                   <span>
                     <IconButton
-                      disabled={call.state !== 'active'}
-                      onClick={() => { void setHeld(!held).catch(() => {}); }}
+                      data-testid="phone-hold"
+                      // Hold now waits for the PBX's 2xx, so it stays disabled
+                      // until the re-INVITE settles. During a transfer the hold
+                      // belongs to the transfer, not to the user.
+                      disabled={call.state !== 'active' || holdPending || transferBusy}
+                      onClick={toggleHold}
                       sx={{ color: held ? ACCENT : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}
                     >
                       {held ? <PlayArrowIcon /> : <PauseIcon />}
                     </IconButton>
                   </span>
                 </Tooltip>
+                <Tooltip title={t('phone.transfer', 'Transfer')}>
+                  <span>
+                    <IconButton
+                      data-testid="phone-transfer-open"
+                      disabled={call.state !== 'active'}
+                      onClick={() => setTransferOpen((v) => !v)}
+                      sx={{ color: transferOpen || transferBusy ? ACCENT : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}
+                    >
+                      <PhoneForwardedIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
               </Stack>
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0.5, mb: 2 }}>
+              <TransferControls
+                open={transferOpen}
+                onClose={() => setTransferOpen(false)}
+                callActive={call.state === 'active'}
+              />
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0.5, mt: 2, mb: 2 }}>
                 {KEYS.map((k) => <Button key={k} sx={{ color: '#cbd5e1', fontSize: '1.1rem' }} onClick={() => press(k)}>{k}</Button>)}
               </Box>
               <Button fullWidth variant="contained" color="error" startIcon={<CallEndIcon />} onClick={() => hangup()} sx={{ borderRadius: 2, py: 1.1 }}>

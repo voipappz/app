@@ -693,7 +693,22 @@
     "outbound": "Calling",
     "ringing": "Ringing…",
     "notConnected": "Not connected — see Settings",
-    "noHistory": "No recent calls"
+    "noHistory": "No recent calls",
+    "hold": "Hold",
+    "resume": "Resume",
+    "close": "Close",
+    "transfer": "Transfer",
+    "transferTo": "Transfer to",
+    "transferTarget": "Extension or number",
+    "blindTransfer": "Transfer now",
+    "attendedTransfer": "Consult",
+    "consulting": "Consulting {{target}}",
+    "consultConnected": "Connected — announce the call",
+    "completeTransfer": "Complete transfer",
+    "cancelTransfer": "Cancel",
+    "transferring": "Transferring…",
+    "transferCompleted": "Call transferred",
+    "transferFailed": "Transfer failed: {{reason}}"
   },
   "status": {
     "title": "System status",

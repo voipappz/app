@@ -714,7 +714,22 @@
     "outbound": "מחייג",
     "ringing": "מצלצל…",
     "notConnected": "לא מחובר — ראה הגדרות",
-    "noHistory": "אין שיחות אחרונות"
+    "noHistory": "אין שיחות אחרונות",
+    "hold": "המתנה",
+    "resume": "חידוש",
+    "close": "סגור",
+    "transfer": "העברה",
+    "transferTo": "העבר אל",
+    "transferTarget": "שלוחה או מספר",
+    "blindTransfer": "העבר עכשיו",
+    "attendedTransfer": "התייעצות",
+    "consulting": "מתייעץ עם {{target}}",
+    "consultConnected": "מחובר — הכרז על השיחה",
+    "completeTransfer": "השלם העברה",
+    "cancelTransfer": "ביטול",
+    "transferring": "מעביר…",
+    "transferCompleted": "השיחה הועברה",
+    "transferFailed": "ההעברה נכשלה: {{reason}}"
   },
   "status": {
     "title": "סטטוס מערכת",

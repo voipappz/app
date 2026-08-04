@@ -7,9 +7,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Inviter, Invitation, Registerer, RegistererState, SessionState, TransportState,
-  UserAgent, Web, type Session,
+  UserAgent, Web, type Session, type SessionReferOptions,
 } from "sip.js";
 import { loadSipConfig, type SipConfig } from "./config";
+import {
+  parseReferNotify, reduceTransferState, sipTargetAddress,
+  type TransferEvent, type TransferInfo, type TransferKind,
+} from "./transfer";
 
 export type RegStatus = "idle" | "connecting" | "registered" | "unregistered" | "reconnecting" | "failed";
 export interface CallInfo {
@@ -53,7 +57,15 @@ export interface SipLogEntry {
 }
 
 const AUDIO_CONSTRAINTS = { audio: true, video: false };
+// How long a finished call/transfer stays on screen before the UI drops it.
+const CLEAR_DELAY_MS = 1200;
+// A re-INVITE with no response leaves the hold button permanently disabled, so
+// give up on it. Shorter than SIP Timer B (32s) — a dead PBX shouldn't wedge
+// the UI for half a minute.
+const REINVITE_TIMEOUT_MS = 20000;
 const genId = () => `c-${Math.random().toString(36).slice(2)}-${performance.now().toString(36)}`;
+const statusLine = (response: { message: { statusCode?: number; reasonPhrase?: string } }) =>
+  `${response.message.statusCode ?? "?"} ${response.message.reasonPhrase ?? ""}`.trim();
 
 // Remote audio → hidden <audio>. Matches webrtc-phone.ts setupRemoteAudio:
 // collect receiver tracks into a MediaStream and play.
@@ -66,12 +78,80 @@ function setupRemoteAudio(session: Session, audioEl: HTMLAudioElement) {
   audioEl.play().catch(() => { /* autoplay may defer until a user gesture */ });
 }
 
+const peerConnectionOf = (session: Session | null | undefined) =>
+  ((session?.sessionDescriptionHandler as any)?.peerConnection as RTCPeerConnection | undefined);
+
+// Local media gating for hold/mute. The SDP direction is what the PBX acts on
+// (music-on-hold, billing); this is the local half — stop pushing the mic and
+// stop playing whatever is still arriving, so the browser agrees with the SDP
+// immediately instead of only after renegotiation completes. Mirrors what
+// sip.js's own SessionManager.setHold does around its re-INVITE.
+function applyTrackState(session: Session | null | undefined, held: boolean, muted: boolean) {
+  const pc = peerConnectionOf(session);
+  if (!pc) return;
+  pc.getReceivers().forEach((r) => { if (r.track) r.track.enabled = !held; });
+  pc.getSenders().forEach((s) => { if (s.track?.kind === "audio") s.track.enabled = !held && !muted; });
+}
+
+// End a leg whatever state it is in: BYE once established, CANCEL while the
+// INVITE is still outstanding. Never throws — callers use it during teardown.
+async function endSession(session: Session | null | undefined): Promise<void> {
+  if (!session || session.state === SessionState.Terminated) return;
+  try {
+    if (session.state === SessionState.Established) await (session as any).bye();
+    else if (session instanceof Inviter) await session.cancel();
+    else if (session instanceof Invitation && session.state === SessionState.Initial) await session.reject();
+  } catch { /* the dialog is already gone */ }
+}
+
+// Hold/unhold is a re-INVITE that changes the SDP direction (sendrecv →
+// sendonly, recvonly → inactive). In sip.js 0.21 that belongs to the Web
+// SessionDescriptionHandler's `hold` option, which rewrites the TRANSCEIVER
+// directions — so the offer and the peer connection agree. (Web.holdModifier,
+// the older path this used, only regex-patched the SDP text: the PBX saw
+// sendonly while the browser happily kept sending and receiving media.)
+//
+// Resolves on the 2xx, rejects on a non-2xx or timeout, so the caller can flip
+// the UI only once the dialog has actually moved.
+function reinviteHold(session: Session, hold: boolean): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error); else resolve();
+    };
+    const timer = setTimeout(() => finish(new Error("No response to the hold re-INVITE")), REINVITE_TIMEOUT_MS);
+    // `hold` belongs to the WEB SessionDescriptionHandler's options; Session
+    // types the field with the platform-agnostic subset (constraints only), so
+    // the concrete type has to be named for the property to be allowed through.
+    const sdhOptions: Web.SessionDescriptionHandlerOptions = {
+      ...session.sessionDescriptionHandlerOptionsReInvite,
+      constraints: AUDIO_CONSTRAINTS,
+      hold,
+    };
+    session.invite({
+      sessionDescriptionHandlerOptions: sdhOptions,
+      requestDelegate: {
+        onAccept: () => finish(),
+        onReject: (response) => finish(new Error(`re-INVITE rejected: ${statusLine(response)}`)),
+      },
+    }).catch((error) => finish(error instanceof Error ? error : new Error(String(error))));
+  });
+}
+
 export function useSipPhone(overrides: Partial<SipConfig> = {}) {
   const [status, setStatus] = useState<RegStatus>("idle");
   const [call, setCall] = useState<CallInfo | null>(null);
   const [muted, setMutedState] = useState(false);
   const [held, setHeldState] = useState(false);
   const [doNotDisturb, setDoNotDisturbState] = useState(false);
+  // Transfer bookkeeping. `transfer` is the REFER's own lifecycle; `consult` is
+  // the second leg of an attended transfer, tracked with the same CallInfo shape
+  // (and the same reducer) as the primary call.
+  const [transfer, setTransferInfo] = useState<TransferInfo | null>(null);
+  const [consult, setConsultInfo] = useState<CallInfo | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const [networkAvailable, setNetworkAvailable] = useState(() => typeof navigator === "undefined" || navigator.onLine !== false);
 
@@ -87,6 +167,13 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
   const networkAvailableRef = useRef(typeof navigator === "undefined" || navigator.onLine !== false);
   const uaGenerationRef = useRef(0);
   const holdChangingRef = useRef(false);
+  // held/muted are read from inside SIP callbacks, where the state values are
+  // stale — the track gating needs the live pair, not a render's snapshot.
+  const heldRef = useRef(false);
+  const mutedRef = useRef(false);
+  const transferRef = useRef<TransferInfo | null>(null);
+  const consultRef = useRef<CallInfo | null>(null);
+  const consultSessionRef = useRef<Inviter | null>(null);
 
   // Reconnect state (mirrors webrtc-phone.ts lines 50–56).
   const credsRef = useRef<SipCredentials | null>(null);
@@ -117,6 +204,18 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     return message;
   }, [addLog]);
 
+  // Reducer dispatch for the transfer + consultation state. The ref is the
+  // source of truth (SIP callbacks read it synchronously); React state is the
+  // render mirror. Kept out of the setState updater so the updater stays pure.
+  const dispatchTransfer = useCallback((event: TransferEvent) => {
+    transferRef.current = reduceTransferState(transferRef.current, event);
+    setTransferInfo(transferRef.current);
+  }, []);
+  const dispatchConsult = useCallback((event: CallStateEvent) => {
+    consultRef.current = reduceCallState(consultRef.current, event);
+    setConsultInfo(consultRef.current);
+  }, []);
+
   useEffect(() => {
     const el = document.createElement("audio");
     el.autoplay = true; el.style.display = "none";
@@ -144,13 +243,23 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
         hangupRequestedRef.current.delete(info.id);
         if (activeIdRef.current === info.id) activeIdRef.current = null;
         if (invitationRef.current && (invitationRef.current as any).ctxid === info.id) invitationRef.current = null;
-        setMutedState(false);
-        setHeldState(false);
+        mutedRef.current = false; setMutedState(false);
+        heldRef.current = false; setHeldState(false);
+        holdChangingRef.current = false;
+        // A consultation leg outlives nothing: if the call it was going to be
+        // transferred into is gone, so is the reason for it.
+        const consultSession = consultSessionRef.current;
+        consultSessionRef.current = null;
+        void endSession(consultSession);
+        // A completed transfer ENDS this call — that's the success path, so let
+        // its "transferred" message run out its own clear timer. Anything else
+        // pending is now meaningless.
+        if (transferRef.current?.phase !== "completed") dispatchTransfer({ type: "cancel" });
         setCall((c) => reduceCallState(c, { type: "terminated", id: info.id }));
-        setTimeout(() => setCall((c) => reduceCallState(c, { type: "clear", id: info.id })), 1200);
+        setTimeout(() => setCall((c) => reduceCallState(c, { type: "clear", id: info.id })), CLEAR_DELAY_MS);
       }
     });
-  }, []);
+  }, [dispatchTransfer]);
 
   // Incoming INVITE — port of handleIncomingCall (lines 851–891).
   const handleIncomingCall = useCallback((invitation: Invitation) => {
@@ -343,12 +452,16 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     hangupRequestedRef.current.clear();
     answeringRef.current = false;
     activeIdRef.current = null; invitationRef.current = null;
+    consultSessionRef.current = null;
+    holdChangingRef.current = false;
     setCall(null);
-    setMutedState(false);
-    setHeldState(false);
+    mutedRef.current = false; setMutedState(false);
+    heldRef.current = false; setHeldState(false);
+    dispatchTransfer({ type: "cancel" });
+    consultRef.current = null; setConsultInfo(null);
     setLastError(null);
     setStatus("idle");
-  }, [cancelReconnect]);
+  }, [cancelReconnect, dispatchTransfer]);
 
   const dial = useCallback(async (target: string, cfgOverrides: Partial<SipConfig> = {}) => {
     const ua = uaRef.current;
@@ -357,7 +470,8 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     if (activeIdRef.current || sessionsRef.current.size > 0) throw new Error("call already in progress");
     const cfg = loadSipConfig({ ...overrides, ...cfgOverrides });
     const id = genId();
-    const targetUri = UserAgent.makeURI(target.startsWith("sip:") ? target : `sip:${target}@${cfg.domain}`);
+    const address = sipTargetAddress(target, cfg.domain);
+    const targetUri = address ? UserAgent.makeURI(address) : null;
     if (!targetUri) throw new Error(`invalid dial target: ${target}`);
     const inviter = new Inviter(ua, targetUri, {
       sessionDescriptionHandlerOptions: { constraints: AUDIO_CONSTRAINTS },
@@ -402,6 +516,11 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     const id = activeIdRef.current || call?.id;
     const session = id ? sessionsRef.current.get(id) : null;
     const inv = invitationRef.current;
+    // Hanging up abandons any transfer in progress — drop the consultation leg
+    // first so it can't survive as an orphaned dialog.
+    const consultSession = consultSessionRef.current;
+    consultSessionRef.current = null;
+    await endSession(consultSession);
     try {
       if (session && session.state === SessionState.Established) await (session as any).bye();
       else if (session instanceof Inviter && session.state !== SessionState.Terminated) await session.cancel();
@@ -423,28 +542,211 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
   }, []);
 
   const setMuted = useCallback((value: boolean) => {
+    mutedRef.current = value;
     const id = activeIdRef.current;
-    const pc = (id && sessionsRef.current.get(id)?.sessionDescriptionHandler as any)?.peerConnection as RTCPeerConnection | undefined;
-    pc?.getSenders().forEach((s) => { if (s.track?.kind === "audio") s.track.enabled = !value; });
+    // Mute must not undo hold: on a held call the mic stays off either way, so
+    // the two gates are applied together rather than each owning the track.
+    applyTrackState(id ? sessionsRef.current.get(id) : null, heldRef.current, value);
     setMutedState(value);
   }, []);
 
+  // Hold/resume the current call. Only reports held once the PBX has answered
+  // the re-INVITE with a 2xx — an optimistic flip would show "on hold" on a
+  // call the far end is still talking on.
   const setHeld = useCallback(async (value: boolean) => {
     const id = activeIdRef.current;
     const session = id ? sessionsRef.current.get(id) : null;
-    if (!session || session.state !== SessionState.Established || holdChangingRef.current) return;
+    if (!session || session.state !== SessionState.Established) return;
+    if (holdChangingRef.current || heldRef.current === value) return;
     holdChangingRef.current = true;
     try {
-      await session.invite({ sessionDescriptionHandlerModifiers: value ? [Web.holdModifier] : [] });
+      await reinviteHold(session, value);
+      heldRef.current = value;
       setHeldState(value);
+      applyTrackState(session, value, mutedRef.current);
       setLastError(null);
     } catch (error) {
+      // The dialog is unchanged, so leave the UI on the state it already had.
       reportError("sip.Session", error, value ? "Call could not be put on hold" : "Call could not be resumed");
       throw error;
     } finally {
       holdChangingRef.current = false;
     }
   }, [reportError]);
+
+  // ── Transfer (RFC 3515 REFER) ───────────────────────────────────────────────
+  // The REFER's 202 only means "request taken". The real outcome arrives as an
+  // in-dialog NOTIFY carrying a message/sipfrag status line, which sip.js routes
+  // to `onNotify` for the duration of the transfer. Both are wired: the request
+  // delegate catches an outright rejection, the NOTIFY handler decides success.
+  const referOptions = useCallback((kind: TransferKind, target: string): SessionReferOptions => {
+    // A REFER outliving its UA (reconnect, logout) must not touch the new one.
+    const generation = uaGenerationRef.current;
+    const settle = (ok: boolean, reason: string) => {
+      if (generation !== uaGenerationRef.current) return;
+      if (ok) {
+        addLog("log", "sip.Refer", `transfer to ${target} completed`);
+        dispatchTransfer({ type: "completed" });
+        // The target owns the call now. Release both of our legs — the far end
+        // may BYE us first, in which case endSession is a no-op.
+        const consultSession = consultSessionRef.current;
+        consultSessionRef.current = null;
+        void endSession(consultSession);
+        const id = activeIdRef.current;
+        void endSession(id ? sessionsRef.current.get(id) : null);
+        setTimeout(() => dispatchTransfer({ type: "clear" }), CLEAR_DELAY_MS);
+        return;
+      }
+      addLog("warn", "sip.Refer", `transfer to ${target} failed: ${reason}`);
+      setLastError(reason);
+      dispatchTransfer({ type: "failed", reason });
+      // Nothing moved: the caller is still on our line, held by the transfer we
+      // just failed to make. Give them back a live call.
+      if (kind === "attended") void setHeld(false).catch(() => { /* surfaced via lastError */ });
+    };
+    return {
+      requestDelegate: {
+        onAccept: () => addLog("log", "sip.Refer", `REFER to ${target} accepted`),
+        onReject: (response) => settle(false, `REFER rejected: ${statusLine(response)}`),
+      },
+      onNotify: (notification) => {
+        void notification.accept().catch(() => { /* the subscription may already be gone */ });
+        const result = parseReferNotify(notification.request.body);
+        addLog("log", "sip.Refer", `transfer NOTIFY ${result.code ?? "unparsed"} ${result.reason}`.trim());
+        if (!result.final) {
+          if (result.code !== null) dispatchTransfer({ type: "progress", code: result.code });
+          return;
+        }
+        settle(result.success, `${result.code} ${result.reason}`.trim());
+      },
+    };
+  }, [addLog, dispatchTransfer, setHeld]);
+
+  // Refusals are as user-visible as failures: report them before throwing, so
+  // the widget's error line explains why nothing happened.
+  const refuse = useCallback((message: string): never => {
+    setLastError(message);
+    addLog("warn", "sip.Refer", message);
+    throw new Error(message);
+  }, [addLog]);
+
+  // Resolve a user-typed target against the registered domain.
+  const resolveTarget = useCallback((target: string) => {
+    const address = sipTargetAddress(target, cfgRef.current.domain);
+    const uri = address ? UserAgent.makeURI(address) : null;
+    return uri || refuse(`Not a valid transfer target: ${target}`);
+  }, [refuse]);
+
+  // sip.js rejects refer() outside Established, and so do we.
+  const establishedCall = useCallback(() => {
+    const id = activeIdRef.current;
+    const session = id ? sessionsRef.current.get(id) : null;
+    if (!session || session.state !== SessionState.Established) refuse("No connected call to transfer");
+    return session as Session;
+  }, [refuse]);
+
+  /** Blind (unattended) transfer: REFER the caller straight to `target`. */
+  const transferBlind = useCallback(async (target: string) => {
+    const session = establishedCall();
+    if (transferRef.current?.phase === "referring") refuse("A transfer is already in progress");
+    const uri = resolveTarget(target);
+    dispatchTransfer({ type: "refer", kind: "blind", target });
+    try {
+      await session.refer(uri, referOptions("blind", target));
+    } catch (error) {
+      const reason = reportError("sip.Refer", error, "Transfer could not be started");
+      dispatchTransfer({ type: "failed", reason });
+      throw error;
+    }
+  }, [establishedCall, resolveTarget, referOptions, dispatchTransfer, reportError, refuse]);
+
+  /**
+   * Attended transfer, step 1: hold the caller and ring the target so the user
+   * can announce the call. The REFER (with Replaces) is sent by
+   * completeAttendedTransfer once the consultation leg is answered — sip.js
+   * refuses an attended REFER before the second dialog is confirmed.
+   */
+  const startAttendedTransfer = useCallback(async (target: string) => {
+    const ua = uaRef.current;
+    establishedCall();
+    if (!ua) { refuse("Not registered"); return; }   // refuse throws; the return is for the narrowing
+    if (consultSessionRef.current) refuse("A consultation call is already in progress");
+    const uri = resolveTarget(target);
+    // Hold first: the caller must not hear the consultation. If the PBX refuses
+    // the re-INVITE, abandon the transfer rather than dial over a live call.
+    await setHeld(true);
+
+    const consultId = genId();
+    const inviter = new Inviter(ua, uri, {
+      sessionDescriptionHandlerOptions: { constraints: AUDIO_CONSTRAINTS },
+      extraHeaders: [`X-Va-Call-Uuid: ${consultId}`, "X-Va-Call-Direction: outgoing"],
+    });
+    (inviter as any).ctxid = consultId;
+    consultSessionRef.current = inviter;
+    dispatchTransfer({ type: "consult", target });
+    dispatchConsult({ type: "start", call: { id: consultId, direction: "outbound", remote: target, state: "connecting" } });
+
+    inviter.stateChange.addListener((state: SessionState) => {
+      if (state === SessionState.Established) {
+        // One audio element, two legs: the consultation is what the user is
+        // talking on now, so it takes the speaker from the held call.
+        if (audioRef.current) setupRemoteAudio(inviter, audioRef.current);
+        dispatchConsult({ type: "established", id: consultId });
+      } else if (state === SessionState.Terminated) {
+        if (consultSessionRef.current === inviter) consultSessionRef.current = null;
+        dispatchConsult({ type: "terminated", id: consultId });
+        setTimeout(() => dispatchConsult({ type: "clear", id: consultId }), CLEAR_DELAY_MS);
+        // Hand the speaker back to the original call if it is still up.
+        const id = activeIdRef.current;
+        const primary = id ? sessionsRef.current.get(id) : null;
+        if (primary && primary.state === SessionState.Established && audioRef.current) {
+          setupRemoteAudio(primary, audioRef.current);
+        }
+      }
+    });
+
+    try {
+      await inviter.invite();
+      dispatchConsult({ type: "ringing", id: consultId });
+    } catch (error) {
+      consultSessionRef.current = null;
+      dispatchConsult({ type: "terminated", id: consultId });
+      setTimeout(() => dispatchConsult({ type: "clear", id: consultId }), CLEAR_DELAY_MS);
+      const reason = reportError("sip.Inviter", error, "Consultation call could not be started");
+      dispatchTransfer({ type: "failed", reason });
+      await setHeld(false).catch(() => { /* surfaced via lastError */ });
+      throw error;
+    }
+  }, [establishedCall, resolveTarget, setHeld, dispatchTransfer, dispatchConsult, reportError, refuse]);
+
+  /** Attended transfer, step 2: REFER the caller into the consultation dialog. */
+  const completeAttendedTransfer = useCallback(async () => {
+    const session = establishedCall();
+    const consultSession = consultSessionRef.current;
+    if (!consultSession || consultSession.state !== SessionState.Established) {
+      refuse("The consultation call has not been answered yet");
+      return;
+    }
+    const target = consultRef.current?.remote || "";
+    dispatchTransfer({ type: "refer", kind: "attended", target });
+    try {
+      // Session (not URI) ⇒ sip.js builds Refer-To with ?Replaces=<consult dialog>.
+      await session.refer(consultSession, referOptions("attended", target));
+    } catch (error) {
+      const reason = reportError("sip.Refer", error, "Transfer could not be completed");
+      dispatchTransfer({ type: "failed", reason });
+      throw error;
+    }
+  }, [establishedCall, referOptions, dispatchTransfer, reportError, refuse]);
+
+  /** Abandon an attended transfer: drop the consultation and resume the caller. */
+  const cancelAttendedTransfer = useCallback(async () => {
+    const consultSession = consultSessionRef.current;
+    consultSessionRef.current = null;
+    await endSession(consultSession);
+    dispatchTransfer({ type: "cancel" });
+    await setHeld(false).catch(() => { /* surfaced via lastError */ });
+  }, [dispatchTransfer, setHeld]);
 
   const setDoNotDisturb = useCallback((value: boolean) => {
     dndRef.current = value;
@@ -481,5 +783,6 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     status, call, muted, held, doNotDisturb, networkAvailable, lastError,
     register, unregister, dial, answer, hangup, sendDtmf, setMuted,
     setHeld, setDoNotDisturb, logs, clearLogs,
+    transfer, consult, transferBlind, startAttendedTransfer, completeAttendedTransfer, cancelAttendedTransfer,
   };
 }
