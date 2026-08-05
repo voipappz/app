@@ -12,21 +12,38 @@ export function normalizeApiCall(row) {
   // whole Calls page while normalizing them.
   const safeRow = row && typeof row === 'object' ? row : {};
   const m = safeRow.meta && typeof safeRow.meta === 'object' ? safeRow.meta : {};
-  const dir = (m._direction || '').toLowerCase();
+  // `profile` is where the API actually keeps the human-facing fields. Measured
+  // over 50 live MTN calls: profile present on 50, caller+callee on 49 —
+  // whereas meta._contact_number/_did_number appeared on FOUR (inbound only).
+  // Reading meta first left From/To blank on 46 of 50 rows.
+  const p = safeRow.profile && typeof safeRow.profile === 'object' ? safeRow.profile : {};
+  const dir = (m._direction || p.direction || '').toLowerCase();
   const startedAt = safeRow.created_at || null;
   const endedAt = safeRow.updated_at || null;
-  let duration = Number(m._duration ?? m._billsec ?? 0);
-  if ((!duration || Number.isNaN(duration)) && startedAt && endedAt) {
-    duration = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 1000));
+
+  // profile.duration is the call; talk_duration is answered-to-hangup. Neither
+  // _duration nor _billsec existed on ANY of the 50 sampled rows, so the old
+  // code always fell through to updated_at − created_at — which measures when
+  // the RECORD was last written, not the call. A 2m53s call rendered as 4h58m.
+  const durations = [p.duration, p.talk_duration, m._duration, m._billsec]
+    .map(Number)
+    .filter((n) => Number.isFinite(n) && n >= 0);
+  let duration = durations.length ? durations[0] : 0;
+  // Only fall back to the record timestamps when nothing authoritative exists,
+  // and cap it: an unbounded delta is worse than admitting we do not know.
+  if (!duration && startedAt && endedAt) {
+    const delta = Math.round((new Date(endedAt) - new Date(startedAt)) / 1000);
+    duration = delta > 0 && delta <= 4 * 3600 ? delta : 0;
   }
+
   return {
     id: safeRow.uuid,
     started_at: startedAt,
     direction: dir === 'incoming' ? 'inbound' : dir === 'outgoing' ? 'outbound' : dir,
-    status: m._leg_a_cause || (m._ended === 'true' ? 'completed' : m._ended === 'false' ? 'in_progress' : ''),
+    status: p.state || m._leg_a_cause || (m._ended === 'true' ? 'completed' : m._ended === 'false' ? 'in_progress' : ''),
     duration_seconds: duration,
-    from_number: m._contact_number || m._did_number || '',
-    to_number: m._did_number || m._contact_number || '',
+    from_number: p.caller || m._contact_number || m._did_number || '',
+    to_number: p.callee || m._did_number || m._contact_number || '',
     recording_url: safeRow.recording?.url || null,
     // Legs/events aren't in the list row — default so the table doesn't render '—' wrongly.
     leg_count: [safeRow.leg_a_type, safeRow.leg_b_type].filter(Boolean).length || null,
