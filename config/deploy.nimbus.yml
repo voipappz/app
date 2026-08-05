@@ -1,0 +1,51 @@
+# Kamal DESTINATION override for nimbus — nimbus-prod.voipappz.io (194.36.89.216).
+#
+# The API and this app share the box: nimbus-prod.voipappz.io resolves to
+# 194.36.89.216, and Kong already owns 80/443 there (its default cert,
+# X-RateLimit-* headers). So we do NOT run kamal-proxy — the container publishes
+# on 8888 and is reached directly, per instruction. Kong is left untouched.
+#
+#     kamal config -d nimbus     # render + verify (read-only)
+#     kamal deploy -d nimbus
+
+servers:
+  web:
+    hosts:
+      - 194.36.89.216
+    # Kong owns 80/443 — role-level `proxy: false` runs the container directly.
+    proxy: false
+    options:
+      # Runtime secrets. This file must EXIST ON THE HOST before the first
+      # deploy: Kamal mounts it, it does not create it, and a missing --env-file
+      # stops the container from starting at all.
+      env-file: /home/voipappz/voipappz-app.env
+      publish:
+        - "0.0.0.0:8888:3000"   # https://nimbus-prod.voipappz.io:8888/
+
+# Persist the Dashboard event store across container replacements.
+volumes:
+  - "voipappz-events:/data"
+
+env:
+  clear:
+    # Where DENO forwards /api|/auth|/tasks — server-side, so the browser's
+    # origin rules never apply. Stated explicitly and never inherited: the
+    # forwarder's default is cloud.voipappz.io, and inheriting it would quietly
+    # authenticate this tenant's users against the wrong mothership.
+    MOTHERSHIP_URL: https://nimbus-prod.voipappz.io
+
+ssh:
+  user: voipappz
+  port: 22
+  keys:
+    - "~/.ssh/kamal_deploy"
+
+builder:
+  arch: amd64
+  # NO VITE_MOTHERSHIP_URL, deliberately.
+  #
+  # Baking it puts the BROWSER on an absolute URL. The app is served from
+  # :8888 and the API answers on :443 — a different port is a different origin,
+  # so every call would be blocked by CORS. That is exactly what happened on
+  # MTN. Unset, the bundle uses RELATIVE urls, they stay on :8888, and deno
+  # forwards them from MOTHERSHIP_URL above.

@@ -131,7 +131,7 @@ KAMAL_DEST := $(if $(DEST),-d $(DEST),)
 # externally reachable URL smoke-tests this app; verify on the host instead:
 #   ssh <host> 'curl -sk -o /dev/null -w "%{http_code}\n" https://127.0.0.1:8888/test'
 # Kamal's own container healthcheck still gates the deploy either way.
-HEALTHCHECK_URL ?= $(if $(filter mtn pbx20,$(DEST)),,$(PROD_URL))
+HEALTHCHECK_URL ?= $(if $(filter mtn pbx20 nimbus,$(DEST)),,$(PROD_URL))
 
 # Destinations that run `proxy: false` on a FIXED host port (mtn, pbx20) cannot
 # have two containers alive at once: the outgoing one still holds 8888, so the
@@ -145,7 +145,7 @@ HEALTHCHECK_URL ?= $(if $(filter mtn pbx20,$(DEST)),,$(PROD_URL))
 # This can't live in a kamal hook: hooks run INSIDE the kamal image on the
 # DEPLOY box, where `docker` talks to the local daemon and there is no ssh
 # binary to reach the target host. `kamal app stop` uses kamal's own net-ssh.
-STOP_FIRST := $(if $(filter mtn pbx20,$(DEST)),1,)
+STOP_FIRST := $(if $(filter mtn pbx20 nimbus,$(DEST)),1,)
 
 push: ## git push current branch to origin
 	git push
