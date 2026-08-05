@@ -22,10 +22,10 @@ servers:
       # Runtime secrets. This file must EXIST ON THE HOST before the first
       # deploy: Kamal mounts it, it does not create it, and a missing --env-file
       # stops the container from starting at all.
-      env-file: /home/voipappz/voipappz-app.env
-      # Run as root so deno can read the host key, which is typically 0600 and
-      # owned by a uid that is not the image's `deno` user. Container-root is
-      # namespaced, and the cert mount is read-only.
+      env-file: /etc/voipappz/secrets.env
+      # Run as root so deno can read the host key: /opt/va/certs/server.key is
+      # root-owned there, and the image's `deno` user could not read it.
+      # Container-root is namespaced, and the cert mount is read-only.
       user: "0:0"
       publish:
         - "0.0.0.0:8888:3000"   # https://nimbus-prod.voipappz.io:8888/
@@ -49,10 +49,13 @@ env:
     MOTHERSHIP_URL: https://nimbus-prod.voipappz.io
 
 ssh:
-  user: voipappz
+  # Verified against the host: this key/user pair is the one authorised there
+  # (kamal_deploy is not, under any user — it falls back to a password prompt
+  # the containerised kamal has no tty to answer).
+  user: root
   port: 22
   keys:
-    - "~/.ssh/kamal_deploy"
+    - "~/.ssh/connectix_deploy_new"
 
 builder:
   arch: amd64

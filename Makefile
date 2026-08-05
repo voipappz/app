@@ -103,7 +103,14 @@ test-crystal: ## Build API and verify Crystal mock → DuckDB → health/dashboa
 # box with Docker can deploy, and everyone runs the same kamal version.
 # .kamal/secrets is sourced for ERB substitution in config/deploy.yml (Kamal
 # only auto-sources it for the registry password).
-KAMAL ?= docker run --rm \
+# Attach a TTY when we have one. Without it, any prompt inside the container —
+# an ssh password, a host-key confirmation — dies as
+#   ERROR (Errno::ENOTTY): Exception while executing on host …: Not a tty
+# with no way to answer. Conditional so CI, where stdin is not a terminal,
+# keeps working: `docker run -it` fails outright there.
+KAMAL_TTY := $(shell test -t 0 && echo "-it")
+
+KAMAL ?= docker run --rm $(KAMAL_TTY) \
   -v "$(CURDIR):/workdir" \
   -v "$(HOME)/.ssh:/root/.ssh:ro" \
   -v /var/run/docker.sock:/var/run/docker.sock \
