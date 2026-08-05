@@ -69,13 +69,30 @@ const statusLine = (response: { message: { statusCode?: number; reasonPhrase?: s
 
 // Remote audio → hidden <audio>. Matches webrtc-phone.ts setupRemoteAudio:
 // collect receiver tracks into a MediaStream and play.
-function setupRemoteAudio(session: Session, audioEl: HTMLAudioElement) {
-  const pc = (session.sessionDescriptionHandler as any)?.peerConnection as RTCPeerConnection | undefined;
-  if (!pc) return;
+function attachRemoteStream(pc: RTCPeerConnection, audioEl: HTMLAudioElement, onBlocked?: (reason: string) => void) {
   const remote = new MediaStream();
   pc.getReceivers().forEach((r) => { if (r.track) remote.addTrack(r.track); });
   audioEl.srcObject = remote;
-  audioEl.play().catch(() => { /* autoplay may defer until a user gesture */ });
+  audioEl.play().catch((error) => {
+    // Swallowing this meant a blocked autoplay presented as "the call connected
+    // and I hear nothing", with no clue anywhere. Say it out loud instead.
+    const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    onBlocked?.(reason);
+  });
+  return remote.getAudioTracks().length;
+}
+
+function setupRemoteAudio(session: Session, audioEl: HTMLAudioElement, onBlocked?: (reason: string) => void) {
+  const pc = (session.sessionDescriptionHandler as any)?.peerConnection as RTCPeerConnection | undefined;
+  if (!pc) return;
+
+  attachRemoteStream(pc, audioEl, onBlocked);
+
+  // Re-attach whenever a track arrives later. This ran ONCE, snapshotting the
+  // receivers at Established — so a track that appears afterwards (the
+  // renegotiation an unhold performs replaces the receiver) left the element
+  // bound to a stale, silent stream for the rest of the call.
+  pc.addEventListener("track", () => attachRemoteStream(pc, audioEl, onBlocked));
 }
 
 const peerConnectionOf = (session: Session | null | undefined) =>
@@ -266,7 +283,7 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
         setLastError(null);
         activeIdRef.current = info.id;
         if (invitationRef.current && (invitationRef.current as any).ctxid === info.id) invitationRef.current = null;
-        if (audioRef.current) setupRemoteAudio(session, audioRef.current);
+        if (audioRef.current) setupRemoteAudio(session, audioRef.current, (why) => reportError("sip.Media", new Error(why), "Browser blocked call audio — click the page and try again"));
         setCall((c) => reduceCallState(c, { type: "established", id: info.id }));
         if (hangupRequestedRef.current.delete(info.id)) void (session as any).bye().catch(() => {});
       } else if (state === SessionState.Terminated) {
