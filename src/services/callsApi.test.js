@@ -97,3 +97,61 @@ describe('normalizeApiCall', () => {
     expect(call.status).toBe('');
   });
 });
+
+// Fixtures taken verbatim from live MTN calls (GET /api/calls). The Calls page
+// was reading meta fields that real rows mostly do not carry, so From/To were
+// blank on 46 of 50 sampled rows and every duration was rendered in hours.
+describe('normalizeApiCall against real API rows', () => {
+  const outgoing = {
+    uuid: '57237181-9b21-4ab9-8545-6e67bdc0ee4e',
+    created_at: '2026-08-03T10:57:24+00:00',
+    updated_at: '2026-08-03T15:55:42+00:00',   // ~5h after the call — record write, not call length
+    leg_a_type: 'extension', leg_b_type: 'number',
+    meta: { _type: 'extension_to_number', _ended: 'false', _direction: 'outgoing' },
+    profile: { caller: 'name', callee: '0593911389', direction: 'outgoing',
+               state: 'complete', duration: 173, talk_duration: 163 },
+    recording: { url: 'https://mtnunicom.mtn.com.gh/recordings/57237181' },
+  };
+
+  it('reads From/To from profile, which real rows actually carry', () => {
+    const c = normalizeApiCall(outgoing);
+    expect(c.from_number).toBe('name');
+    expect(c.to_number).toBe('0593911389');
+  });
+
+  it('uses profile.duration instead of the record-timestamp delta', () => {
+    // The delta here is 17,878s (4h58m). The call was 173s.
+    expect(normalizeApiCall(outgoing).duration_seconds).toBe(173);
+  });
+
+  it('takes the call state from profile', () => {
+    expect(normalizeApiCall(outgoing).status).toBe('complete');
+  });
+
+  // Inbound rows DO carry the meta numbers; those must still work.
+  it('still reads meta numbers when profile has none', () => {
+    const inbound = {
+      uuid: 'x', created_at: '2026-08-03T10:00:00+00:00', updated_at: '2026-08-03T10:01:00+00:00',
+      meta: { _direction: 'incoming', _contact_number: '0245475455', _did_number: '+233308013883' },
+      profile: {},
+    };
+    const c = normalizeApiCall(inbound);
+    expect(c.direction).toBe('inbound');
+    expect(c.from_number).toBe('0245475455');
+    expect(c.to_number).toBe('+233308013883');
+  });
+
+  // Better to show nothing than to show a 5-hour call that lasted seconds.
+  it('refuses an implausible timestamp fallback rather than inventing hours', () => {
+    const noDuration = { ...outgoing, profile: { caller: 'a', callee: 'b', state: 'complete' } };
+    expect(normalizeApiCall(noDuration).duration_seconds).toBe(0);
+  });
+
+  it('accepts a plausible fallback when nothing authoritative exists', () => {
+    const short = {
+      uuid: 'y', created_at: '2026-08-03T10:00:00+00:00', updated_at: '2026-08-03T10:00:45+00:00',
+      meta: { _direction: 'outgoing' }, profile: { caller: 'a', callee: 'b' },
+    };
+    expect(normalizeApiCall(short).duration_seconds).toBe(45);
+  });
+});
