@@ -34,7 +34,7 @@ describe('loadSipConfig', () => {
 
   it('register interval + reconnect knobs match voipappz-app (300 / 5 / 3000)', () => {
     const c = loadSipConfig();
-    expect(c.registerExpires).toBe(300);
+    expect(c.registerExpires).toBe(600);
     expect(c.reconnectMax).toBe(5);
     expect(c.reconnectDelayMs).toBe(3000);
   });

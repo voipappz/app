@@ -61,8 +61,13 @@ export function loadSipConfig(overrides: Partial<SipConfig> = {}): SipConfig {
     wssUrl,
     domain,
     iceServers: overrides.iceServers || parseIce(),
+    // 600s, not the 300s we shipped first: every refresh is a REGISTER round
+    // trip, and at 5 minutes it was frequent enough to be noticeable in a SIP
+    // trace. The transport is WSS, so the TCP connection — not the refresh —
+    // is what holds the NAT binding open, and 10 minutes stays far inside the
+    // registrar's usual 3600s ceiling.
     registerExpires: overrides.registerExpires
-      ?? parseInt((import.meta.env.VITE_SIP_REGISTER_EXPIRES as string | undefined) || "300", 10),
+      ?? parseInt((import.meta.env.VITE_SIP_REGISTER_EXPIRES as string | undefined) || "600", 10),
     logLevel: overrides.logLevel
       || ((import.meta.env.VITE_SIP_LOG_LEVEL as SipConfig["logLevel"] | undefined) || "warn"),
     reconnectMax: overrides.reconnectMax
