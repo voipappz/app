@@ -1,8 +1,26 @@
 import { useEffect } from "react";
 import type { CallInfo } from "./useSipPhone";
+import { RINGBACK, RINGTONE, primeAudioOnGesture, startTone, type TonePattern } from "./tones";
 
 export function incomingAlertKey(call: CallInfo | null): string | null {
   return call?.direction === "inbound" && call.state === "ringing" ? call.id : null;
+}
+
+/**
+ * Which progress tone the current call warrants, if any.
+ *
+ * Outbound gets one too: `ringing` here means a 180 came back, so the far end
+ * really is alerting. Without it an outgoing call is dead silence until answer,
+ * and the caller cannot tell a ringing phone from a broken one.
+ *
+ * The returned `key` changes only when the tone should change, so the effect
+ * below does not restart the oscillator on every unrelated re-render.
+ */
+export function toneForCall(call: CallInfo | null): { key: string; pattern: TonePattern } | null {
+  if (call?.state !== "ringing") return null;
+  return call.direction === "inbound"
+    ? { key: `in:${call.id}`, pattern: RINGTONE }
+    : { key: `out:${call.id}`, pattern: RINGBACK };
 }
 
 export async function requestIncomingCallNotifications(): Promise<void> {
@@ -13,45 +31,35 @@ export async function requestIncomingCallNotifications(): Promise<void> {
 // Ringtone and system notification are derived effects of the canonical call
 // state. They never mutate SIP state and always stop when the UUID/state changes.
 export function useIncomingCallAlerts(call: CallInfo | null): void {
-  const key = incomingAlertKey(call);
-  useEffect(() => {
-    if (!key || !call) return;
+  const tone = toneForCall(call);
+  const toneKey = tone?.key ?? null;
+  const notifyKey = incomingAlertKey(call);
+  const remote = call?.remote ?? "";
 
-    let context: AudioContext | null = null;
-    let oscillator: OscillatorNode | null = null;
-    let gain: GainNode | null = null;
-    let pulse: ReturnType<typeof setInterval> | null = null;
-    try {
-      const AudioCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (AudioCtor) {
-        context = new AudioCtor();
-        oscillator = context.createOscillator();
-        gain = context.createGain();
-        oscillator.frequency.value = 440;
-        gain.gain.value = 0.08;
-        oscillator.connect(gain).connect(context.destination);
-        oscillator.start();
-        void context.resume().catch(() => {});
-        pulse = setInterval(() => {
-          if (!context || !gain) return;
-          gain.gain.setValueAtTime(gain.gain.value > 0 ? 0 : 0.08, context.currentTime);
-        }, 700);
-      }
-    } catch { /* visual toast remains available when audio is blocked */ }
+  // Arm the audio unlock on mount, not on the call: `resume()` only succeeds
+  // from a user gesture, and there is no gesture when an INVITE arrives.
+  useEffect(() => { primeAudioOnGesture(); }, []);
+
+  // Keyed on the string alone, never on `tone`: the object is rebuilt every
+  // render, and depending on it would tear down and restart the oscillator each
+  // time an unrelated field of `call` changed. The key already encodes the
+  // direction, so the pattern is recovered from it rather than closed over.
+  useEffect(() => {
+    if (!toneKey) return;
+    return startTone(toneKey.startsWith("in:") ? RINGTONE : RINGBACK);
+  }, [toneKey]);
+
+  useEffect(() => {
+    if (!notifyKey) return;
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    if (document.visibilityState === "visible") return;
 
     let notification: Notification | null = null;
-    if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.visibilityState !== "visible") {
-      try {
-        notification = new Notification("Incoming call", { body: call.remote, tag: `sip-call-${key}`, requireInteraction: true });
-        notification.onclick = () => { window.focus(); notification?.close(); };
-      } catch { /* browser/policy may block notifications */ }
-    }
+    try {
+      notification = new Notification("Incoming call", { body: remote, tag: `sip-call-${notifyKey}`, requireInteraction: true });
+      notification.onclick = () => { window.focus(); notification?.close(); };
+    } catch { /* browser/policy may block notifications */ }
 
-    return () => {
-      if (pulse) clearInterval(pulse);
-      try { oscillator?.stop(); } catch { /* already stopped */ }
-      void context?.close().catch(() => {});
-      notification?.close();
-    };
-  }, [key, call]);
+    return () => notification?.close();
+  }, [notifyKey, remote]);
 }
