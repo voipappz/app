@@ -138,7 +138,13 @@ KAMAL_DEST := $(if $(DEST),-d $(DEST),)
 # externally reachable URL smoke-tests this app; verify on the host instead:
 #   ssh <host> 'curl -sk -o /dev/null -w "%{http_code}\n" https://127.0.0.1:8888/test'
 # Kamal's own container healthcheck still gates the deploy either way.
-HEALTHCHECK_URL ?= $(if $(filter mtn pbx20 nimbus,$(DEST)),,$(PROD_URL))
+#
+# nimbus IS probed: unlike mtn/pbx20 its 8888 answers from outside — measured,
+# not assumed (http 200, /health {"healthy":true}). Skipping it is what let the
+# TLS downgrade ship unnoticed, so it gets the checks the others cannot have.
+NIMBUS_URL ?= https://nimbus-prod.voipappz.io:8888
+
+HEALTHCHECK_URL ?= $(if $(filter nimbus,$(DEST)),$(NIMBUS_URL),$(if $(filter mtn pbx20,$(DEST)),,$(PROD_URL)))
 
 # Destinations that run `proxy: false` on a FIXED host port (mtn, pbx20) cannot
 # have two containers alive at once: the outgoing one still holds 8888, so the
