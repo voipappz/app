@@ -5,6 +5,10 @@
 # X-RateLimit-* headers). So we do NOT run kamal-proxy — the container publishes
 # on 8888 and is reached directly, per instruction. Kong is left untouched.
 #
+# TLS terminates IN THIS CONTAINER on 8888, using the host's own certificate
+# mounted read-only — so the app is https://nimbus-prod.voipappz.io:8888/ and
+# nothing of Kong's is borrowed or touched.
+#
 #     kamal config -d nimbus     # render + verify (read-only)
 #     kamal deploy -d nimbus
 
@@ -19,15 +23,25 @@ servers:
       # deploy: Kamal mounts it, it does not create it, and a missing --env-file
       # stops the container from starting at all.
       env-file: /home/voipappz/voipappz-app.env
+      # Run as root so deno can read the host key, which is typically 0600 and
+      # owned by a uid that is not the image's `deno` user. Container-root is
+      # namespaced, and the cert mount is read-only.
+      user: "0:0"
       publish:
         - "0.0.0.0:8888:3000"   # https://nimbus-prod.voipappz.io:8888/
 
-# Persist the Dashboard event store across container replacements.
+# The live TLS certificate (read-only) plus the persistent Dashboard event store.
 volumes:
+  - "/opt/va/certs:/certs:ro"
   - "voipappz-events:/data"
 
 env:
   clear:
+    # deno serves HTTPS when both point at readable PEM files, and falls back to
+    # plain HTTP with a warning if they are not — so a bad mount downgrades
+    # silently rather than failing loudly. Worth checking the logs on first boot.
+    TLS_CERT_FILE: /certs/server.crt
+    TLS_KEY_FILE: /certs/server.key
     # Where DENO forwards /api|/auth|/tasks — server-side, so the browser's
     # origin rules never apply. Stated explicitly and never inherited: the
     # forwarder's default is cloud.voipappz.io, and inheriting it would quietly
