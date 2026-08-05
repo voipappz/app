@@ -31,8 +31,21 @@ servers:
         - "0.0.0.0:8888:3000"   # https://nimbus-prod.voipappz.io:8888/
 
 # The live TLS certificate (read-only) plus the persistent Dashboard event store.
+#
+# BOTH cert mounts are required. /opt/va/certs/server.{crt,key} are Let's
+# Encrypt symlinks pointing OUTSIDE that directory:
+#     server.crt -> ../../archive/nimbus-prod.voipappz.io/fullchain1.pem
+# Mounting only /opt/va/certs leaves them dangling in the container and deno
+# gives up with "Too many levels of symbolic links (os error 40)" — then falls
+# back to plain HTTP, so the site answers but https does not.
+#
+# The link is RELATIVE, so from /certs it resolves to /archive/... — mounting
+# /opt/archive there makes it resolve. Following the symlink rather than naming
+# fullchain1.pem directly is deliberate: certbot renewals write fullchain2.pem
+# and repoint the link, which a hardcoded filename would not survive.
 volumes:
   - "/opt/va/certs:/certs:ro"
+  - "/opt/archive:/archive:ro"
   - "voipappz-events:/data"
 
 env:
