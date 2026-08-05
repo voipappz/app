@@ -50,6 +50,32 @@ echo "=== Post-deploy: Waiting 5s for proxy to settle ==="
 sleep 5
 
 echo "=== Post-deploy: Smoke checks against $BASE_URL ==="
+
+# TLS is checked FIRST and by itself, because deno DOWNGRADES rather than
+# failing: with unreadable certs it logs a warning, serves plain HTTP, and the
+# deploy goes green while https is quietly dead. That is exactly how nimbus
+# shipped — health 200 over http, ERR_SSL_PROTOCOL_ERROR in the browser.
+# Without this, the downgrade shows up only as a puzzling "expected 200, got
+# 000" on every other probe.
+case "$BASE_URL" in
+  https://*)
+    _tls=$(http_code "$BASE_URL/health")
+    if [ "$_tls" = "000" ]; then
+      _plain=$(http_code "$(echo "$BASE_URL" | sed 's|^https://|http://|')/health")
+      if [ "$_plain" = "200" ]; then
+        echo "  ✗  TLS NOT SERVED — the same port answers over plain HTTP."
+        echo "     deno fell back: certs unreadable in the container. Check its"
+        echo "     log for 'falling back to HTTP', and that the cert symlinks'"
+        echo "     TARGET is mounted, not just the directory holding them."
+      else
+        echo "  ✗  TLS handshake failed and http did not answer either — is the container up?"
+      fi
+      FAIL=1
+    else
+      echo "  ✓  TLS handshake                → serving https"
+    fi
+    ;;
+esac
 # Health probe — cable + events freshness + engine. 200 = every required dep
 # reachable (degraded-but-up is still 200); 503 = one is down.
 probe "GET  /health                  (deps health)" "/health" 200

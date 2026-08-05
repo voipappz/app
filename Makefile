@@ -103,7 +103,14 @@ test-crystal: ## Build API and verify Crystal mock → DuckDB → health/dashboa
 # box with Docker can deploy, and everyone runs the same kamal version.
 # .kamal/secrets is sourced for ERB substitution in config/deploy.yml (Kamal
 # only auto-sources it for the registry password).
-KAMAL ?= docker run --rm \
+# Attach a TTY when we have one. Without it, any prompt inside the container —
+# an ssh password, a host-key confirmation — dies as
+#   ERROR (Errno::ENOTTY): Exception while executing on host …: Not a tty
+# with no way to answer. Conditional so CI, where stdin is not a terminal,
+# keeps working: `docker run -it` fails outright there.
+KAMAL_TTY := $(shell test -t 0 && echo "-it")
+
+KAMAL ?= docker run --rm $(KAMAL_TTY) \
   -v "$(CURDIR):/workdir" \
   -v "$(HOME)/.ssh:/root/.ssh:ro" \
   -v /var/run/docker.sock:/var/run/docker.sock \
@@ -131,7 +138,13 @@ KAMAL_DEST := $(if $(DEST),-d $(DEST),)
 # externally reachable URL smoke-tests this app; verify on the host instead:
 #   ssh <host> 'curl -sk -o /dev/null -w "%{http_code}\n" https://127.0.0.1:8888/test'
 # Kamal's own container healthcheck still gates the deploy either way.
-HEALTHCHECK_URL ?= $(if $(filter mtn pbx20,$(DEST)),,$(PROD_URL))
+#
+# nimbus IS probed: unlike mtn/pbx20 its 8888 answers from outside — measured,
+# not assumed (http 200, /health {"healthy":true}). Skipping it is what let the
+# TLS downgrade ship unnoticed, so it gets the checks the others cannot have.
+NIMBUS_URL ?= https://nimbus-prod.voipappz.io:8888
+
+HEALTHCHECK_URL ?= $(if $(filter nimbus,$(DEST)),$(NIMBUS_URL),$(if $(filter mtn pbx20,$(DEST)),,$(PROD_URL)))
 
 # Destinations that run `proxy: false` on a FIXED host port (mtn, pbx20) cannot
 # have two containers alive at once: the outgoing one still holds 8888, so the
@@ -145,7 +158,7 @@ HEALTHCHECK_URL ?= $(if $(filter mtn pbx20,$(DEST)),,$(PROD_URL))
 # This can't live in a kamal hook: hooks run INSIDE the kamal image on the
 # DEPLOY box, where `docker` talks to the local daemon and there is no ssh
 # binary to reach the target host. `kamal app stop` uses kamal's own net-ssh.
-STOP_FIRST := $(if $(filter mtn pbx20,$(DEST)),1,)
+STOP_FIRST := $(if $(filter mtn pbx20 nimbus,$(DEST)),1,)
 
 push: ## git push current branch to origin
 	git push
