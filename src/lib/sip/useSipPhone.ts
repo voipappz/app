@@ -113,6 +113,29 @@ async function endSession(session: Session | null | undefined): Promise<void> {
 //
 // Resolves on the 2xx, rejects on a non-2xx or timeout, so the caller can flip
 // the UI only once the dialog has actually moved.
+// sip.js refuses a re-INVITE while the previous one is still settling, with
+// "Reinvite in progress. Please wait until complete, then try again." — and it
+// throws rather than queueing. onAccept fires on the 200 OK, before that
+// bookkeeping clears, so a quick hold → unhold hit the guard and the call stayed
+// ON HOLD with the UI insisting it was not. Seen on a live PBX, not in theory.
+//
+// There is no public "re-invite finished" signal to await, so this retries that
+// one error briefly. Any other failure is returned untouched.
+const REINVITE_BUSY = /reinvite in progress/i;
+
+async function reinviteHoldWithRetry(session: Session, hold: boolean, attempts = 6): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await reinviteHold(session, hold);
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (attempt >= attempts || !REINVITE_BUSY.test(message)) throw error;
+      await new Promise((r) => setTimeout(r, 200 * attempt));
+    }
+  }
+}
+
 function reinviteHold(session: Session, hold: boolean): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     let settled = false;
@@ -612,7 +635,7 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     if (holdChangingRef.current || heldRef.current === value) return;
     holdChangingRef.current = true;
     try {
-      await reinviteHold(session, value);
+      await reinviteHoldWithRetry(session, value);
       heldRef.current = value;
       setHeldState(value);
       applyTrackState(session, value, mutedRef.current);
