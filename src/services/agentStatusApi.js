@@ -28,6 +28,16 @@ export async function listAgentStatuses() {
     .map(([type, label]) => ({ type, label }));
 }
 
+/**
+ * Current agents for the signed-in user's environment. The user-authenticated
+ * API scopes this request to that environment (the `action` is retained for
+ * parity with Nimbus Admin, while the API returns the user's agent rows).
+ */
+export async function listLiveAgents() {
+  const { rows } = await apiList('/api/users?action=agents');
+  return rows;
+}
+
 // Used only to keep a bad value from costing a round-trip; the authoritative
 // list is the one above. Kept in sync with Agent::STATUSES_MAPPINGS.keys.
 const KNOWN = new Set(['available', 'available_on_demand', 'on_break', 'logged_out']);

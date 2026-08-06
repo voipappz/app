@@ -10,7 +10,7 @@ vi.mock('../lib/clients/api', () => ({
 }));
 
 import { apiSend, apiList, apiGet } from '../lib/clients/api';
-import { setAgentStatus, listBreakReasons, listAgentStatuses } from './agentStatusApi';
+import { setAgentStatus, listBreakReasons, listAgentStatuses, listLiveAgents } from './agentStatusApi';
 
 describe('agentStatusApi', () => {
   beforeEach(() => { apiSend.mockClear(); apiList.mockClear(); apiGet.mockClear(); });
@@ -65,6 +65,12 @@ describe('agentStatusApi', () => {
   it('survives a malformed vocabulary rather than breaking the picker', async () => {
     apiGet.mockResolvedValueOnce(null);
     expect(await listAgentStatuses()).toEqual([]);
+  });
+
+  it('reads current agent status rows from the user-scoped API', async () => {
+    apiList.mockResolvedValueOnce({ rows: [{ uuid: 'u-1', status_name: 'Available', state: 'Waiting' }], total: 1 });
+    expect(await listLiveAgents()).toEqual([{ uuid: 'u-1', status_name: 'Available', state: 'Waiting' }]);
+    expect(apiList).toHaveBeenCalledWith('/api/users?action=agents');
   });
 
   it('reads break reasons from the tenant, dropping unusable rows', async () => {

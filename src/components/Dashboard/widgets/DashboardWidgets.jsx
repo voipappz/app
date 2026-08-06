@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Paper, Typography, Chip, Table, TableHead, TableBody, TableRow, TableCell, Link } from '@mui/material';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import { useTranslation } from 'react-i18next';
 import { useDashboardLive } from '../useDashboardLive';
+import { listLiveAgents } from '../../../services/agentStatusApi';
 
 /**
  * DashboardWidgets — renders the live dashboard exactly as the cable stream
@@ -121,6 +122,49 @@ function CounterWidget({ widget }) {
   );
 }
 
+function rawValue(row, names) {
+  for (const name of names) {
+    const value = row?.[name];
+    if (value !== undefined && value !== null) {
+      return value && typeof value === 'object' && 'data' in value ? value.data : value;
+    }
+  }
+  return '';
+}
+
+export function summarizeLiveRows(rows) {
+  return rows.reduce((counts, row) => {
+    const state = String(rawValue(row, ['user.state', 'state', 'call_state'])).toLowerCase().replace(/\s+/g, '_');
+    const status = String(rawValue(row, ['user.status', 'status', 'status_name'])).toLowerCase().replace(/\s+/g, '_');
+    if (state === 'answer' || state === 'answered' || state === 'on_call' || state === 'in_a_queue_call' || status === 'busy') counts.onCall += 1;
+    else if (status === 'on_break' || status === 'break') counts.onBreak += 1;
+    else if (status === 'available' || state === 'waiting') counts.available += 1;
+    else if (state === 'ringing' || state === 'waiting' || status === 'waiting') counts.waiting += 1;
+    return counts;
+  }, { available: 0, onCall: 0, onBreak: 0, waiting: 0 });
+}
+
+function LiveSummary({ rows, loading, t }) {
+  const counts = summarizeLiveRows(rows);
+  const items = [
+    ['available', counts.available, 'success'],
+    ['onCall', counts.onCall, 'error'],
+    ['onBreak', counts.onBreak, 'warning'],
+    ['waiting', counts.waiting, 'default'],
+  ];
+  return (
+    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }} data-testid="dashboard-live-summary">
+      {items.map(([key, value, color]) => (
+        <Chip
+          key={key} size="small" color={color}
+          variant={value ? 'filled' : 'outlined'}
+          label={`${t(`dashboardLive.summary.${key}`, key === 'onCall' ? 'On Call' : key === 'onBreak' ? 'On Break' : key[0].toUpperCase() + key.slice(1))}: ${loading ? '—' : value}`}
+        />
+      ))}
+    </Box>
+  );
+}
+
 function WidgetCard({ widget, t }) {
   // Honor the portal's grid placement when the stream provides it; otherwise
   // default to full width (a lone table shouldn't collapse to 1/12).
@@ -161,25 +205,42 @@ export default function DashboardWidgets() {
   // Stream payload is a { uuid: descriptor } map — render in arrival order.
   const entries = useMemo(() => Object.entries(widgets), [widgets]);
   const live = status === 'open';
+  const [agentRows, setAgentRows] = useState([]);
+  const [agentsLoading, setAgentsLoading] = useState(true);
 
-  // No frames yet (cable unconfigured or quiet) → render nothing. The page's
-  // main content is the local projection; an empty "waiting" panel here only
-  // advertises plumbing the end user can't act on.
-  if (entries.length === 0) return null;
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const rows = await listLiveAgents();
+        if (alive) setAgentRows(Array.isArray(rows) ? rows : []);
+      } catch {
+        if (alive) setAgentRows([]);
+      } finally {
+        if (alive) setAgentsLoading(false);
+      }
+    };
+    load();
+    const timer = window.setInterval(load, 10000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, []);
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('dashboardLive.widgetsHeading', 'Live queues & agents')}</Typography>
-        <Chip
-          size="small" icon={<RadioButtonCheckedIcon fontSize="small" />}
-          label={live ? t('callDashboard.live', 'Live') : status}
-          color={live ? 'success' : 'warning'} variant={live ? 'filled' : 'outlined'}
-        />
-      </Box>
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(12, minmax(0, 1fr))' } }}>
-        {entries.map(([uuid, widget]) => <WidgetCard key={uuid} widget={widget} t={t} />)}
-      </Box>
+      <LiveSummary rows={agentRows} loading={agentsLoading} t={t} />
+      {entries.length > 0 && <>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('dashboardLive.widgetsHeading', 'Live queues & agents')}</Typography>
+          <Chip
+            size="small" icon={<RadioButtonCheckedIcon fontSize="small" />}
+            label={live ? t('callDashboard.live', 'Live') : status}
+            color={live ? 'success' : 'warning'} variant={live ? 'filled' : 'outlined'}
+          />
+        </Box>
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(12, minmax(0, 1fr))' } }}>
+          {entries.map(([uuid, widget]) => <WidgetCard key={uuid} widget={widget} t={t} />)}
+        </Box>
+      </>}
     </Box>
   );
 }

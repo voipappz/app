@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCallsQuery, normalizeApiCall } from './callsApi';
+import { buildCallsQuery, normalizeApiCall, sortCalls } from './callsApi';
 
 describe('buildCallsQuery', () => {
   it('always sends paging + sort', () => {
@@ -95,6 +95,22 @@ describe('normalizeApiCall', () => {
     expect(call.id).toBe('partial');
     expect(call.direction).toBe('');
     expect(call.status).toBe('');
+  });
+});
+
+describe('sortCalls', () => {
+  const rows = [
+    { started_at: '2026-08-03T12:00:00Z' },
+    { started_at: '2026-08-03T10:00:00Z' },
+  ];
+
+  it('provides deterministic client ordering when the API ignores order_type', () => {
+    expect(sortCalls(rows, 'asc').map((r) => r.started_at)).toEqual([
+      '2026-08-03T10:00:00Z', '2026-08-03T12:00:00Z',
+    ]);
+    expect(sortCalls(rows, 'desc').map((r) => r.started_at)).toEqual([
+      '2026-08-03T12:00:00Z', '2026-08-03T10:00:00Z',
+    ]);
   });
 });
 

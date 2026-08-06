@@ -86,8 +86,50 @@ export function buildCallsQuery({ page = 1, perPage = 20, orderBy = 'created_at'
   return params.toString();
 }
 
+function callTimestamp(call) {
+  const value = Date.parse(String(call?.started_at || ''));
+  return Number.isFinite(value) ? value : 0;
+}
+
+export function sortCalls(rows, orderType = 'desc') {
+  const direction = orderType === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => (callTimestamp(a) - callTimestamp(b)) * direction);
+}
+
+function inRange(call, range) {
+  if (!range?.start || !range?.end) return true;
+  const at = callTimestamp(call);
+  return at >= range.start && at <= range.end;
+}
+
 /** GET a page of calls. Returns { rows: normalized[], total }. */
 export async function getCalls(opts = {}) {
-  const { rows, total } = await apiList(`/api/calls?${buildCallsQuery(opts)}`);
-  return { rows: (Array.isArray(rows) ? rows : []).map(normalizeApiCall), total };
+  const requested = { ...opts };
+  const first = await apiList(`/api/calls?${buildCallsQuery(requested)}`);
+  let rows = (Array.isArray(first.rows) ? first.rows : []).map(normalizeApiCall);
+  let total = first.total;
+
+  // Some deployed voipappz-api versions return an empty page for the valid
+  // Nimbus-compatible search[created_at] range. Retry only that case, without
+  // changing the normal server-side contract, then apply the same range in the
+  // portal so the Calls page and dashboard remain useful for those tenants.
+  if (requested.range?.start && requested.range?.end && total === 0) {
+    const fallback = await apiList(`/api/calls?${buildCallsQuery({
+      ...requested, page: 1, perPage: Math.max(Number(requested.perPage) || 20, 500), range: undefined,
+    })}`);
+    const filtered = (Array.isArray(fallback.rows) ? fallback.rows : [])
+      .map(normalizeApiCall)
+      .filter((call) => inRange(call, requested.range));
+    total = filtered.length;
+    const page = Math.max(Number(requested.page) || 1, 1);
+    const perPage = Math.max(Number(requested.perPage) || 20, 1);
+    rows = filtered.slice((page - 1) * perPage, page * perPage);
+  }
+
+  // Nimbus asks the API to order rows. Affected deployments ignore order_type,
+  // so keep the visible page deterministic while the backend is being upgraded.
+  if (requested.orderBy === 'created_at' || !requested.orderBy) {
+    rows = sortCalls(rows, requested.orderType);
+  }
+  return { rows, total };
 }
