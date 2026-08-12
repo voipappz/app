@@ -256,6 +256,54 @@ exactly like §5 — components should not care which plane the data came from.
   boundary; never hit the network.
 - **E2E (Playwright):** `tests/` — Input → Submit → capture response → assert.
 - **Build gate:** `npm run build` must be clean before shipping.
+- **Deno/API:** `docker compose --profile test run --rm deno-tests` exercises
+  normalization, DuckDB, reconciliation, health and routes.
+- **Cable and Core NATS CI locally:** `make act-api`. The job opens a real
+  ActionCable WebSocket against a hermetic va-crystal-compatible fixture,
+  consumes a complete call into DuckDB, publishes the real va-crystal
+  `cdr.write.bulk` shape through Core NATS, and separately proves committed
+  EventCdr replay. The helper installs `act` into
+  `/tmp` when needed and passes an empty env file so tenant secrets from `.env`
+  never enter CI containers.
+- **Complete pre-push gate:** `npm run verify:push` (lint, Vitest, Deno,
+  production build and Playwright smoke).
+
+### Changing the local event pipeline
+
+The current Dashboard path is:
+
+```text
+va-crystal cdr.write.bulk → Core NATS ┬→ voipappz-api EventCdr insertion
+                                      └→ Deno raw row → DuckDB → Dashboard
+
+optional: voipappz-api events.cdr → Deno; events.cdr.replay closes gaps
+```
+
+Keep these invariants when changing `api/`:
+
+- Preserve every `cdr.write`/`cdr.write.bulk` row exactly in `raw_payload`; custom
+  solutions depend on the original `data` and `metadata` fields.
+- Treat Core NATS delivery as a live signal, not durable storage. In optional
+  `events.cdr` mode, reconciliation must page from the last producer `event_id`
+  and atomically persist the page with its checkpoint.
+- Preserve a committed producer `event_id` as the DuckDB idempotency key; raw
+  pre-commit rows use a stable hash of the untouched row.
+- Persist a live event before relaying it to `/ws/events`.
+- Update the Dashboard projection and its regression test whenever the
+  `EventCdr` data contract changes.
+- Keep `/health` liveness-compatible; `/health/ready` requires NATS and requires
+  replay only when `events.cdr` is selected. Stale streams do not restart the app.
+- Never log `NATS_URL`; it may contain credentials.
+
+For local inspection, development Compose enables the read-only `/events`
+surface used by `/event-explorer`. MCP-capable development tools can use the
+separate read-only `/mcp` surface directly from the host with no extra setup;
+Compose enables it only for loopback TCP peers. Container, LAN, and remote MCP
+clients use the private `.mcp.env` token generated on first `make dev`/`make
+up`; `make mcp-token` displays the connection details. See `docs/mcp.md`.
+Production only exposes
+either surface when an operator opts in; event payloads can contain tenant call
+data.
 
 ---
 

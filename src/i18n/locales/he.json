@@ -375,6 +375,7 @@
   },
   "menu": {
     "dashboard": "לוח בקרה",
+    "events": "אירועים גולמיים",
     "calls": "שיחות",
     "reports": "דוחות",
     "switchToLTR": "מעבר ל-LTR",
@@ -424,33 +425,37 @@
     }
   },
   "usageReports": {
-    "subtitle": "ניתוח שימוש בשיחות",
+    "subtitle": "הפעל וייצא דוחות שמורים",
+    "availableReports": "דוחות זמינים",
+    "selectPrompt": "בחר דוח כדי להציג את התוצאות שלו.",
+    "noReports": "אין דוחות זמינים.",
+    "untitledReport": "דוח ללא שם",
+    "listError": "לא ניתן לטעון את הדוחות.",
+    "runError": "לא ניתן להפעיל את הדוח.",
+    "loadingReport": "הדוח מופעל…",
+    "dateRange": "טווח תאריכים",
+    "startDate": "תאריך התחלה",
+    "endDate": "תאריך סיום",
+    "invalidDateRange": "תאריך הסיום חייב להיות זהה לתאריך ההתחלה או מאוחר ממנו.",
+    "groupBy": "קיבוץ לפי",
+    "group": {
+      "day": "יום",
+      "week": "שבוע",
+      "month": "חודש"
+    },
+    "runReport": "הפעל דוח",
+    "view": "תצוגת תוצאות",
+    "table": "טבלה",
+    "chart": "תרשים",
+    "downloadCsv": "הורדת CSV",
+    "rowCount_one": "שורה אחת",
+    "rowCount_other": "{{count}} שורות",
     "period": {
       "today": "היום",
       "d7": "7 ימים",
-      "d30": "30 יום",
-      "all": "הכל"
+      "d30": "30 יום"
     },
-    "totalCalls": "סך השיחות",
-    "answerRate": "אחוז מענה",
-    "avgDuration": "משך ממוצע",
-    "talkTime": "זמן שיחה כולל",
-    "inbound": "נכנסות",
-    "outbound": "יוצאות",
-    "callsOverTime": "שיחות לאורך זמן",
-    "byStatus": "התפלגות לפי סטטוס",
-    "busiestHours": "שעות עומס",
-    "topDestinations": "יעדים מובילים",
-    "noData": "אין נתונים לתקופה זו",
-    "calls": "שיחות",
-    "status": {
-      "completed": "הושלמו",
-      "failed": "נכשלו",
-      "no_answer": "לא נענו",
-      "busy": "תפוס",
-      "ringing": "מצלצל",
-      "in_progress": "בשיחה"
-    }
+    "noData": "אין נתונים לתקופה זו."
   },
   "calls": {
     "subtitle_one": "שיחה אחת",
@@ -754,8 +759,16 @@
     "healthUnreachable": "לא ניתן להגיע לנקודת הבריאות.",
     "lastEvent": "אירוע אחרון לפני {{age}}",
     "updated": "עודכן",
+    "apiCdrEvents": {
+      "title": "אירועי CDR מ-API האם",
+      "summary": "מוצגות {{shown}} רשומות EventCdr החדשות ביותר מתוך {{total}} עבור לקוח זה.",
+      "empty": "ה-API לא החזיר אירועי CDR עבור לקוח זה.",
+      "error": "לא ניתן לטעון אירועי CDR מה-API"
+    },
     "checks": {
       "cable": "כבל (זמן אמת)",
+      "nats": "Core NATS",
+      "cdr_sync": "סנכרון CDR",
       "events": "זרם אירועים",
       "engine": "מנוע (אם)",
       "event_store": "מאגר אירועים מקומי"
@@ -770,6 +783,27 @@
       "unregistered": "נפל",
       "failed": "נכשל"
     }
+  },
+  "eventExplorer": {
+    "title": "אירועים גולמיים מ-DuckDB",
+    "subtitle": "אירועי NATS/Cable המקוריים שנשמרו על ידי Deno. בחירת שורה מציגה את ה-JSON הגולמי.",
+    "refresh": "רענון",
+    "search": "חיפוש ב-JSON או במזהים",
+    "eventType": "סוג אירוע",
+    "action": "פעולה",
+    "callId": "מזהה שיחה",
+    "eventId": "מזהה אירוע",
+    "occurredAt": "זמן האירוע",
+    "apply": "החל",
+    "clear": "נקה",
+    "disabled": "מציג DuckDB מושבת. יש להגדיר EVENT_INSPECTOR_ENABLED=1 ב-Deno.",
+    "error": "לא ניתן לטעון אירועים מ-DuckDB",
+    "empty": "לא נמצאו אירועים שמורים התואמים למסננים.",
+    "table": "רשומות אירועים מ-DuckDB",
+    "rawPayload": "האירוע הגולמי כפי שנשמר",
+    "normalizedPayload": "ההקרנה המנורמלת של Deno",
+    "copyRaw": "העתקת JSON גולמי",
+    "copied": "הועתק"
   },
   "dashboardLive": {
     "heading": "לוח בקרה חי",

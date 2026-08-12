@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { EVENTS_API } from './useCalls';
+import { DENO_API_BASE } from '../../lib/clients/denoApi';
 import { getStoredMockTranscript } from './conversation-mocks';
 
 /**
@@ -14,7 +14,7 @@ export async function loadTranscript(callId) {
   const stored = getStoredMockTranscript(callId);
   if (stored) return stored;
   try {
-    const r = await fetch(`${EVENTS_API}/calls/${encodeURIComponent(callId)}/transcript`);
+    const r = await fetch(`${DENO_API_BASE}/calls/${encodeURIComponent(callId)}/transcript`);
     return await r.json();
   } catch {
     return { status: 'none', segments: [] };

@@ -18,12 +18,14 @@ deno-api forwarder in prod). A tenant fork changes **env, not code**.
 
 | Command | Description |
 |---|---|
-| `make env` | Create `.env` from the template (never overwrites an existing one) — then set `MOTHERSHIP_URL` |
+| `make env` | Create `.env` plus the private git-ignored development MCP token (never overwrites either) — then set `MOTHERSHIP_URL` |
 | `make dev` | Run the app in Docker — Vite HMR :4200 + deno-api :4001, attached logs. The usual loop; needs only Docker. |
 | `make up` / `make down` | Same stack, detached |
+| `make mcp-token` | Display the generated MCP host/container URLs, bearer token and header |
 | `make lint` / `make unit` | ESLint / Vitest one-shot — run in Docker (host `npm run lint` / `npm test` also work if you have node) |
 | `make test` | Playwright E2E in Docker — needs the app running; use `VITE_MOCK_LOGIN=1 make up` first for the offline suite |
 | `docker compose --profile test run --rm deno-tests` | Deno API tests (or natively: `deno test --allow-net --allow-env --allow-read api/tests`) |
+| `make act-api` / `make act` | Run the Deno/Cable/Core-NATS/DuckDB/MCP job / complete CI workflow locally with `act` (auto-installs to `/tmp` when absent; never imports `.env`) |
 | `make build` | Production bundle → `dist/`, built in Docker. Must be clean before shipping. |
 | `make verify` | Health check: deno-api, web, and the `/health` dependency report |
 | `make prod` / `make prod-down` | Run the production image on this box via docker compose (:8000) |
@@ -47,7 +49,11 @@ Two runtime pieces:
    **optional** thin BFF. It only powers Dashboard extras: the `/ws` live
    call-event relay (cable client to va-crystal ActionCable), calls-per-hour
    from the local DuckDB event projection, engine-backed transcript reads, and the
-   `/auth/login` proxy. Without it those widgets simply stay quiet. In
+   `/auth/login` proxy. In development, `/event-explorer` exposes the local
+   DuckDB table and untouched raw rows through the opt-in `GET /events`
+   inspector, while loopback developer tools can use read-only `POST /mcp`.
+   Non-loopback MCP clients require a server-side token. Without deno these
+   surfaces simply stay quiet. In
    production the same process serves `dist/` (one container — `make prod`
    locally, `make deploy` to the server).
    Runs `network_mode: host` in compose.

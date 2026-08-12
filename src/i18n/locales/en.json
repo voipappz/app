@@ -354,6 +354,7 @@
   },
   "menu": {
     "dashboard": "Dashboard",
+    "events": "Raw events",
     "calls": "Calls",
     "reports": "Reports",
     "switchToLTR": "Switch to LTR",
@@ -403,33 +404,37 @@
     }
   },
   "usageReports": {
-    "subtitle": "Call usage analytics",
+    "subtitle": "Run and export saved reports",
+    "availableReports": "Available reports",
+    "selectPrompt": "Select a report to view its results.",
+    "noReports": "No reports are available.",
+    "untitledReport": "Untitled report",
+    "listError": "Reports could not be loaded.",
+    "runError": "This report could not be run.",
+    "loadingReport": "Running report…",
+    "dateRange": "Date range",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "invalidDateRange": "End date must be on or after start date.",
+    "groupBy": "Group by",
+    "group": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "runReport": "Run report",
+    "view": "Result view",
+    "table": "Table",
+    "chart": "Chart",
+    "downloadCsv": "Download CSV",
+    "rowCount_one": "1 row",
+    "rowCount_other": "{{count}} rows",
     "period": {
       "today": "Today",
       "d7": "7 days",
-      "d30": "30 days",
-      "all": "All"
+      "d30": "30 days"
     },
-    "totalCalls": "Total calls",
-    "answerRate": "Answer rate",
-    "avgDuration": "Avg duration",
-    "talkTime": "Total talk time",
-    "inbound": "Inbound",
-    "outbound": "Outbound",
-    "callsOverTime": "Calls over time",
-    "byStatus": "By status",
-    "busiestHours": "Busiest hours",
-    "topDestinations": "Top destinations",
-    "noData": "No data for this period",
-    "calls": "Calls",
-    "status": {
-      "completed": "Completed",
-      "failed": "Failed",
-      "no_answer": "No answer",
-      "busy": "Busy",
-      "ringing": "Ringing",
-      "in_progress": "In progress"
-    }
+    "noData": "No data for this period."
   },
   "calls": {
     "subtitle_one": "1 call",
@@ -733,8 +738,16 @@
     "healthUnreachable": "Cannot reach the health endpoint.",
     "lastEvent": "last event {{age}} ago",
     "updated": "Updated",
+    "apiCdrEvents": {
+      "title": "Mothership API CDR events",
+      "summary": "Showing the newest {{shown}} of {{total}} tenant-scoped EventCdr rows.",
+      "empty": "The API returned no CDR events for this tenant.",
+      "error": "Could not load API CDR events"
+    },
     "checks": {
       "cable": "Cable (realtime)",
+      "nats": "Core NATS",
+      "cdr_sync": "CDR reconciliation",
       "events": "Event stream",
       "engine": "Engine (mothership)",
       "event_store": "Event store (local)"
@@ -749,6 +762,27 @@
       "unregistered": "down",
       "failed": "failed"
     }
+  },
+  "eventExplorer": {
+    "title": "Raw DuckDB events",
+    "subtitle": "Original NATS/Cable events persisted by Deno. Select a row to inspect its raw JSON.",
+    "refresh": "Refresh",
+    "search": "Search raw JSON or IDs",
+    "eventType": "Event type",
+    "action": "Action",
+    "callId": "Call ID",
+    "eventId": "Event ID",
+    "occurredAt": "Occurred",
+    "apply": "Apply",
+    "clear": "Clear",
+    "disabled": "The DuckDB inspector is disabled. Set EVENT_INSPECTOR_ENABLED=1 on Deno.",
+    "error": "Could not load DuckDB events",
+    "empty": "No stored events match these filters.",
+    "table": "DuckDB event rows",
+    "rawPayload": "Raw event as stored",
+    "normalizedPayload": "Normalized Deno projection",
+    "copyRaw": "Copy raw JSON",
+    "copied": "Copied"
   },
   "dashboardLive": {
     "heading": "Live dashboard",

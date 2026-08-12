@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { EVENTS_API } from '../Calls/useCalls';
+import { DENO_API_BASE } from '../../lib/clients/denoApi';
 import { getToken } from '../../lib/auth';
 
 export interface DashboardStats {
@@ -56,7 +56,7 @@ export function useDashboardSnapshot({ from, to }: { from: Date; to: Date }) {
       try {
         const token = typeof getToken === 'function' ? getToken() : null;
         const params = new URLSearchParams({ from: String(fromEpoch), to: String(toEpoch) });
-        const response = await fetch(`${EVENTS_API}/dashboard/snapshot?${params}`, {
+        const response = await fetch(`${DENO_API_BASE}/dashboard/snapshot?${params}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);

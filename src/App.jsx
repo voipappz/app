@@ -16,6 +16,7 @@ import Reports from './components/Reports/UsageReports.jsx';
 import Calls from './components/Calls/Calls.jsx';
 import Notifications from './components/Notifications/Notifications.jsx';
 import SystemStatus from './components/Status/SystemStatus.jsx';
+import EventExplorer from './components/EventExplorer/EventExplorer.jsx';
 
 function getPermissionForPath(pathname) {
   if (ROUTE_PERMISSIONS[pathname]) return ROUTE_PERMISSIONS[pathname];
@@ -55,6 +56,7 @@ function AppContent() {
         <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>} />
         <Route path="/status" element={<ProtectedRoute><Layout><SystemStatus /></Layout></ProtectedRoute>} />
+        <Route path="/event-explorer" element={<ProtectedRoute><Layout><EventExplorer /></Layout></ProtectedRoute>} />
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>

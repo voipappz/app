@@ -5,6 +5,7 @@
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^0.218.2",
-    "@duckdb/node-api": "npm:@duckdb/node-api@1.5.3-r.2"
+    "@duckdb/node-api": "npm:@duckdb/node-api@1.5.3-r.2",
+    "@nats-io/transport-deno": "jsr:@nats-io/transport-deno@3.4.0"
   }
 }

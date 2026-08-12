@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { eventsWsBase } from '../Calls/useCalls';
+import { eventsWsProtocols, eventsWsUrl } from '../Calls/useCalls';
 
 /**
  * useDashboardLive — the live agents/extensions panel, streamed from the
@@ -21,10 +21,10 @@ export function useDashboardLive() {
   const reconnectTimer = useRef(null);
 
   useEffect(() => {
-    const url = `${eventsWsBase()}?topics=dashboard.%23`;
+    const url = eventsWsUrl('dashboard.#');
 
     function connect() {
-      const ws = new WebSocket(url);
+      const ws = new WebSocket(url, eventsWsProtocols());
       wsRef.current = ws;
       setStatus('connecting');
       ws.addEventListener('open', () => setStatus('open'));

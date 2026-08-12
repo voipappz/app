@@ -21,6 +21,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import PhoneIcon from '@mui/icons-material/Phone';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import StorageIcon from '@mui/icons-material/Storage';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import TranslateIcon from '@mui/icons-material/Translate';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
@@ -34,6 +35,7 @@ import './MainMenu.css';
 import { appVersion, brand } from '../../config';
 import AccountMenu from './AccountMenu';
 import NotificationsMenu from './NotificationsMenu';
+import SystemHealth from '../common/SystemHealth';
 
 const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const { t } = useTranslation();
@@ -61,6 +63,7 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   // rail's bottom utility cluster (with the bell), not the main list.
   const allMenuItems = [
     { icon: <DashboardIcon />, text: t('menu.dashboard'), path: '/dashboard', permission: 'dashboard:read' },
+    { icon: <StorageIcon />, text: t('menu.events', 'Raw events'), path: '/event-explorer', permission: 'dashboard:read' },
     { icon: <PhoneIcon />, text: t('menu.calls'), path: '/calls', permission: 'calls:read' },
     { icon: <BarChartIcon />, text: t('menu.reports'), path: '/reports', permission: 'reports:read' },
   ];
@@ -219,6 +222,18 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
         </Box>
         {/* Bottom cluster (reference UX): dark mode, language, bell, status, avatar. */}
         <Box className="rail-utilities">
+          {canSeeStatus && (
+            <Tooltip title={t('menu.status', 'System status')} placement="right">
+              <ListItemButton
+                className={`rail-item utility${location.pathname === '/status' ? ' active' : ''}`}
+                onClick={(event) => go(event, '/status')}
+                data-testid="rail-health-button"
+                aria-label={t('menu.status', 'System status')}
+              >
+                <Box className="rail-icon"><SystemHealth compact /></Box>
+              </ListItemButton>
+            </Tooltip>
+          )}
           <Tooltip title={modeLabel} placement="right">
             <ListItemButton className="rail-item utility" onClick={toggleMode} data-testid="rail-theme-toggle">
               <Box className="rail-icon">{isDark ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}</Box>

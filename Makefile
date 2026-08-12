@@ -1,8 +1,10 @@
-.PHONY: help env dev check-mothership up down build lint unit verify test test-crystal push deploy ship status tmux module prod prod-down
+.PHONY: help env mcp-env mcp-token dev check-mothership up down build lint unit verify test test-crystal act act-api push deploy ship status tmux module prod prod-down
 
 # Everything runs in Docker — no host node/npm/ruby required. One-off npm/node
 # commands reuse the react-app service (repo mount + cached node_modules volume).
 NPM_RUN := docker compose run --rm --no-deps react-app bash -c
+ACT ?= act
+ACT_PLATFORM ?= catthehacker/ubuntu:act-latest
 
 # ── Config (override on the CLI or in .env) ─────────────────────────────────
 # The mothership base, resolved exactly as vite.config.js does so the preflight
@@ -26,16 +28,24 @@ help: ## Show this help
 	@awk 'BEGIN{FS=":.*## ";printf "\nmake \033[36m<target>\033[0m\n\n"} \
 	      /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n",$$1,$$2}' $(MAKEFILE_LIST)
 
-env: ## Create .env from the template (never overwrites an existing one)
+env: mcp-env ## Create .env and the local MCP token (never overwrites existing files)
 	@if [ -f .env ]; then \
 	  echo ".env exists — leaving it alone. Mothership: $(MOTHERSHIP)"; \
 	else \
 	  cp .env.example .env && echo "wrote .env — set MOTHERSHIP_URL to point at your tenant"; \
 	fi
 
-dev: check-mothership ## Run the app in Docker (Vite HMR :4200 + deno-api :4001), attached logs
+mcp-env: ## Ensure the git-ignored development MCP token exists
+	@bash scripts/dev-mcp-token.sh
+
+mcp-token: ## Show the development MCP token and client connection details
+	@bash scripts/dev-mcp-token.sh --show
+
+dev: mcp-env check-mothership ## Run the app in Docker (Vite HMR :4200 + deno-api :4001), attached logs
 	docker compose up -d react-app deno-api
-	@echo "deno-api → :4001 · Vite → $(WEB_APP) (proxies /api → mothership $(MOTHERSHIP)) — Ctrl-C detaches, stack keeps running"
+	@echo "deno-api → :4001 · MCP → $(DENO_API)/mcp · Vite → $(WEB_APP) (proxies /api → mothership $(MOTHERSHIP))"
+	@echo "MCP token → make mcp-token (needed outside this host's loopback interface)"
+	@echo "Ctrl-C detaches; stack keeps running"
 	docker compose logs -f react-app
 
 check-mothership: ## Verify the mothership (MOTHERSHIP_URL) is reachable
@@ -44,9 +54,10 @@ check-mothership: ## Verify the mothership (MOTHERSHIP_URL) is reachable
 	  case $$code in [234]*) s="OK ($$code)";; *) s="UNREACHABLE ($$code) — set MOTHERSHIP_URL in .env";; esac; \
 	  printf "  %-11s %-34s %s\n" "mothership" "$(MOTHERSHIP)" "$$s"
 
-up: ## Start the full Docker stack (web + deno-api)
+up: mcp-env ## Start the full Docker stack (web + deno-api)
 	docker compose up -d react-app deno-api
-	@echo "web → $(WEB_APP)   deno-api → $(DENO_API)"
+	@echo "web → $(WEB_APP)   deno-api → $(DENO_API)   MCP → $(DENO_API)/mcp"
+	@echo "MCP token → make mcp-token (needed outside this host's loopback interface)"
 
 down: ## Stop all services
 	docker compose down --remove-orphans
@@ -98,6 +109,12 @@ test: ## Playwright E2E in Docker (needs the app running — make up / make dev)
 
 test-crystal: ## Build API and verify Crystal mock → DuckDB → health/dashboard
 	npm run test:crystal
+
+act-api: ## Run the Deno/Cable/Core-NATS/DuckDB/MCP CI job locally with act
+	ACT_BIN="$(ACT)" ACT_RUNNER_IMAGE="$(ACT_PLATFORM)" scripts/ci-local.sh api
+
+act: ## Run the complete GitHub Actions workflow locally (same pattern as ../cli)
+	ACT_BIN="$(ACT)" ACT_RUNNER_IMAGE="$(ACT_PLATFORM)" scripts/ci-local.sh all
 
 # Kamal — ALWAYS via the official Docker image (no native/rvm install): any
 # box with Docker can deploy, and everyone runs the same kamal version.

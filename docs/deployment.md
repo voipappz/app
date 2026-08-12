@@ -13,8 +13,11 @@ make prod        # build the production image + run it (:8000), probes /,/test,/
 make prod-down   # stop it
 ```
 
-Runtime env comes from `.env` beside the compose file (`ENGINE_URL`, Cable,
-and the local DuckDB event-store settings—see `.env.example`). Compose does not re-read env on
+Runtime env comes from `.env` beside the compose file (`ENGINE_URL`, `NATS_URL`,
+`NATS_CDR_SUBJECTS`,
+optional Cable, and the local DuckDB event-store settings—see `.env.example`).
+The event inspector is off in production unless `EVENT_INSPECTOR_ENABLED=1` is
+deliberately supplied; when enabled it appears at `/event-explorer`. Compose does not re-read env on
 restart — use `docker compose --profile prod up -d --force-recreate
 production` after editing.
 

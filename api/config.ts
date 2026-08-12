@@ -22,10 +22,11 @@ export const ENGINE_EMAIL = Deno.env.get("ENGINE_EMAIL") || Deno.env.get("ACCOUN
 export const ENGINE_PASSWORD = Deno.env.get("ENGINE_PASSWORD") || Deno.env.get("ACCOUNT_PASSWORD") || "";
 export const ENGINE_ENABLED = ENGINE_EMAIL !== "" && ENGINE_PASSWORD !== "";
 
-// ── Cable (va-crystal ActionCable server) — the event source ───────────────
-// deno-api subscribes to the cable server's CallEvents channel as a WS client
-// persists CallEvents for Dashboard queries, and relays broadcasts to browser
-// /ws/events subscribers. Connection auth is an HS256 JWT
+// ── Cable (va-crystal ActionCable server) — optional live UI data ──────────
+// When NATS_URL is unset, CallEvents remains a legacy CDR fallback. Once a
+// Core-NATS CDR stream is enabled, the server does not consume CDRs from
+// Cable; Cable may still bridge DashboardLive agent/extension state.
+// Connection auth is an HS256 JWT
 // (?token=) carrying an account_uuid claim, signed with the cable SECRET_KEY.
 // Provide either a ready-made CABLE_TOKEN, or CABLE_SECRET (= cable's SECRET_KEY)
 // + CABLE_ACCOUNT_UUID to mint one at boot. Server-side only — NEVER expose as VITE_*.
@@ -40,20 +41,69 @@ export const CABLE_SECRET = Deno.env.get("CABLE_SECRET") || Deno.env.get("SECRET
 // to be present (cable rejects an empty one) — it doesn't filter events. So it
 // defaults to a label and the operator normally only sets SECRET_KEY.
 export const CABLE_ACCOUNT_UUID = Deno.env.get("CABLE_ACCOUNT_UUID") || "events-consumer";
-// The cable subscription is on as soon as a token can be resolved — set
-// SECRET_KEY (matching the cable) and that's it, or pass a ready-made
-// CABLE_TOKEN. No token ⇒ off (relay idle), which is fine for tests/demos.
+// Cable clients can start as soon as a token resolves. The server decides
+// whether that means legacy CallEvents, DashboardLive only, or both.
 export const CABLE_ENABLED = CABLE_TOKEN !== "" || CABLE_SECRET !== "";
 // Explicit local functional-test mode. Enables POST /test/crystal/events,
 // which injects Crystal-shaped frames through the normal normalize → DuckDB →
 // relay path. Keep false/unset in production.
 export const MOCK_CRYSTAL_EVENTS = Deno.env.get("MOCK_CRYSTAL_EVENTS") === "1";
+// Read-only operational inspector for the local DuckDB event rows. Keep it
+// opt-in outside the development compose stack because CDR payloads can carry
+// phone numbers and other tenant data.
+export const EVENT_INSPECTOR_ENABLED = Deno.env.get("EVENT_INSPECTOR_ENABLED") === "1";
+// Read-only Model Context Protocol endpoint over the same local DuckDB. It is
+// independently opt-in and requires a dedicated bearer token because raw CDR
+// payloads can contain tenant data. Never expose this token through VITE_*.
+export const MCP_ENABLED = Deno.env.get("MCP_ENABLED") === "1";
+export const MCP_AUTH_TOKEN = Deno.env.get("MCP_AUTH_TOKEN") || "";
+// Development Compose enables this localhost-only escape hatch so a host MCP
+// client works with zero setup. It is intentionally unset in production.
+export const MCP_ALLOW_LOCALHOST_WITHOUT_TOKEN =
+  Deno.env.get("MCP_ALLOW_LOCALHOST_WITHOUT_TOKEN") === "1";
 // DashboardLive: the live agents/extensions panel is a SEPARATE cable channel
 // whose stream is `dashboard:live:{account_uuid}`. Subscribing needs the
 // dashboard's uuid (the channel's `Live_uuid` param) + a real account_uuid.
 // Set both to bridge the live dashboard to /ws/events as `dashboard.live`
 // frames; unset ⇒ the dashboard bridge stays off (calls/transcripts unaffected).
 export const CABLE_DASHBOARD_UUID = Deno.env.get("CABLE_DASHBOARD_UUID") || "";
+// DashboardLive can contain full widget tables. Coalesce bursts before browser
+// fan-out, and stop writing to a client whose socket queue is already backed up.
+const dashboardRelayMs = Number.parseInt(Deno.env.get("DASHBOARD_RELAY_INTERVAL_MS") || "250", 10);
+export const DASHBOARD_RELAY_INTERVAL_MS = Number.isFinite(dashboardRelayMs)
+  ? Math.max(50, dashboardRelayMs)
+  : 250;
+const wsMaxBufferedBytes = Number.parseInt(Deno.env.get("WS_MAX_BUFFERED_BYTES") || "1048576", 10);
+export const WS_MAX_BUFFERED_BYTES = Number.isFinite(wsMaxBufferedBytes)
+  ? Math.max(65_536, wsMaxBufferedBytes)
+  : 1_048_576;
+const wsMaxEventBytes = Number.parseInt(Deno.env.get("WS_MAX_EVENT_BYTES") || "2097152", 10);
+export const WS_MAX_EVENT_BYTES = Number.isFinite(wsMaxEventBytes)
+  ? Math.max(65_536, wsMaxEventBytes)
+  : 2_097_152;
+const cableMaxFrameBytes = Number.parseInt(Deno.env.get("CABLE_MAX_FRAME_BYTES") || "2097152", 10);
+export const CABLE_MAX_FRAME_BYTES = Number.isFinite(cableMaxFrameBytes)
+  ? Math.max(65_536, cableMaxFrameBytes)
+  : 2_097_152;
+const wsMaxClients = Number.parseInt(Deno.env.get("WS_MAX_CLIENTS") || "200", 10);
+export const WS_MAX_CLIENTS = Number.isFinite(wsMaxClients) ? Math.max(1, wsMaxClients) : 200;
+
+// Core-NATS CDR input. The current va-crystal writer publishes batches on
+// cdr.write.bulk; deno observes the same message that voipappz-api consumes to
+// create EventCdr rows. A deployment with a committed-event producer
+// can instead select events.cdr, which also enables RubyEventStore replay.
+export const NATS_URL = Deno.env.get("NATS_URL") || "";
+export const NATS_ENABLED = NATS_URL !== "";
+const configuredCdrSubjects = Deno.env.get("NATS_CDR_SUBJECTS") || "cdr.write.bulk";
+export const NATS_CDR_SUBJECTS = [...new Set(
+  configuredCdrSubjects.split(",").map((subject) => subject.trim()).filter(Boolean),
+)];
+export const NATS_REPLAY_ENABLED = NATS_CDR_SUBJECTS.includes("events.cdr");
+export const NATS_REPLAY_SUBJECT = "events.cdr.replay";
+const reconcileSeconds = Number.parseInt(Deno.env.get("NATS_RECONCILE_SECONDS") || "30", 10);
+export const NATS_RECONCILE_SECONDS = Number.isFinite(reconcileSeconds)
+  ? Math.max(5, reconcileSeconds)
+  : 30;
 
 // Optional InfluxDB connector retained for tenant-specific analytics. The
 // current Dashboard uses DuckDB and does not require these settings.
@@ -62,10 +112,13 @@ export const INFLUX_TOKEN = Deno.env.get("INFLUXDB_TOKEN") || "";
 export const INFLUX_DATABASE = Deno.env.get("INFLUXDB_DATABASE") || Deno.env.get("INFLUXDB_BUCKET") || "telegraf";
 export const INFLUX_ENABLED = INFLUX_URL !== "" && INFLUX_TOKEN !== "";
 
-// Event freshness alarm — `cable_ready` only means "subscribed", not "events are
-// flowing". This is how long (seconds) the cable can go WITHOUT a single event
+// Event freshness alarm. This is how long (seconds) the active source can go
+// WITHOUT a single event
 // before /health reports the stream `stale` (so a silent broker/CDR feed is
 // visible instead of showing green). Informational: it degrades status but does
 // NOT 503 the container (legitimately-quiet periods shouldn't trigger restarts).
 // 0 disables the alarm. Default 15 min.
-export const EVENTS_STALE_SECONDS = parseInt(Deno.env.get("EVENTS_STALE_SECONDS") || "900");
+const staleSeconds = Number.parseInt(Deno.env.get("EVENTS_STALE_SECONDS") || "900", 10);
+export const EVENTS_STALE_SECONDS = Number.isFinite(staleSeconds)
+  ? Math.max(0, staleSeconds)
+  : 900;

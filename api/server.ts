@@ -1,27 +1,36 @@
 // HTTP + WebSocket server — thin BFF over the engine with a Dashboard-only
 // local DuckDB event store. Data plane split:
 //   - calls / reports  → mothership voipappz-api via the same-origin forwarder
-//   - Dashboard          → consumed Cable events in DuckDB + direct live relay
+//   - Dashboard          → consumed CDR records in DuckDB + direct live relay
 //   - transcripts       → read on request from the engine (api/engine.ts)
 //   - auth              → mothership /auth/*; optional PostgREST login is isolated
 //
-// Pipeline (live relay only):
-//   FreeSWITCH → LavinMQ → va-crystal cable (CallEvents) → deno cable client
-//   → normalizeCableEvent → fan out to /ws/events subscribers (the Dashboard).
-//   DuckDB retains the consumed envelope only; PBX/business logic stays upstream.
+// CDR pipeline (current system):
+//   va-crystal → Core NATS cdr.write.bulk → voipappz-api EventCdr insertion
+//                                  └──────→ this Deno observer → DuckDB.
+// The optional events.cdr mode consumes committed envelopes and closes gaps by
+// request/reply replay.
 import {
   PORT, CABLE_URL, CABLE_CHANNEL, CABLE_TOKEN, CABLE_SECRET, CABLE_ACCOUNT_UUID, CABLE_ENABLED,
   CABLE_DASHBOARD_UUID, POSTGREST_URL, POSTGREST_ENABLED, ENGINE_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
-  MOCK_CRYSTAL_EVENTS,
+  MOCK_CRYSTAL_EVENTS, EVENT_INSPECTOR_ENABLED, NATS_URL, NATS_CDR_SUBJECTS, NATS_ENABLED,
+  NATS_REPLAY_ENABLED, NATS_REPLAY_SUBJECT, NATS_RECONCILE_SECONDS, MCP_ENABLED, MCP_AUTH_TOKEN,
+  MCP_ALLOW_LOCALHOST_WITHOUT_TOKEN, DASHBOARD_RELAY_INTERVAL_MS, WS_MAX_BUFFERED_BYTES, WS_MAX_EVENT_BYTES,
+  CABLE_MAX_FRAME_BYTES, WS_MAX_CLIENTS,
 } from './config.ts';
 import { createJwtVerifier, unauthorizedResponse, type JwtVerifier } from './auth_middleware.ts';
 import { fetchTranscript } from './engine.ts';
 import { eventFreshness, type Freshness } from './health_freshness.ts';
 import { createCableClient, mintCableToken, normalizeCableEvent, type CableClient, type Normalized } from "./cable.ts";
+import { normalizeNatsMessage } from "./event_ingestion.ts";
+import { createNatsConsumer, type NatsConsumer } from './nats.ts';
 import { EventStore, type EventStoreStats, type WidgetDefinition } from "./event_store.ts";
+import { CDR_SYNC_SOURCE, reconcileEventCdr } from './cdr_reconciliation.ts';
 import { mockCrystalCallSequence } from "./mock_crystal_events.ts";
 import { dashboardCallsPerHour } from './influx.ts';
 import { INFLUX_ENABLED } from './config.ts';
+import { createDuckDbMcpHandler, type DuckDbMcpReader } from "./mcp.ts";
+import { canSendRealtime, createCoalescingRelay } from './realtime_relay.ts';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +38,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 const JSON_HEADERS = { "Content-Type": "application/json", ...CORS_HEADERS };
+const CALL_EVENTS_CABLE_ENABLED = CABLE_ENABLED && !NATS_ENABLED;
 
 // Mothership (voipappz-api) paths the BFF forwards same-origin — see the
 // forwarder block in the request handler.
@@ -106,17 +116,25 @@ const STATIC_DIR = Deno.env.get("STATIC_DIR") || "./dist";
 // configured at all is "disabled" and does NOT fail the check. Overall
 // `healthy` is false iff any required dependency is down — callers map that
 // to HTTP 503.
-interface DepStatus { status: "up" | "down" | "disabled"; detail?: string }
+interface DepStatus { status: "up" | "down" | "stale" | "idle" | "disabled"; detail?: string; [key: string]: unknown }
 interface HealthReport {
   healthy: boolean;
+  ready: boolean;
   status: "ok" | "degraded";
-  checks: { cable: DepStatus; events: Freshness; event_store: EventStoreStats | DepStatus; engine: DepStatus };
+  checks: {
+    cable: DepStatus; nats: DepStatus; cdr_sync: DepStatus;
+    events: Freshness; event_store: EventStoreStats | DepStatus; engine: DepStatus;
+  };
   event_pipeline: {
     received: number;
     persisted: number;
     duplicates: number;
     persistence_failures: number;
     relayed: number;
+    websocket_backpressure_drops: number;
+    websocket_oversized_drops: number;
+    dashboard_frames_received: number;
+    dashboard_frames_coalesced: number;
   };
   timestamp: string;
 }
@@ -125,8 +143,8 @@ async function checkHealth(): Promise<HealthReport> {
   // Cable — the WS client reconnects on its own; the flag reflects whether the
   // CallEvents subscription is currently confirmed. Not enabled (no token) ⇒
   // disabled, which does NOT fail the check (seed-only / mock runs).
-  const cable: DepStatus = !CABLE_ENABLED
-    ? { status: "disabled", detail: "cable tap off (no token)" }
+  const cable: DepStatus = !CALL_EVENTS_CABLE_ENABLED
+    ? { status: "disabled", detail: NATS_ENABLED ? "CallEvents replaced by Core NATS CDR input" : "cable tap off (no token)" }
     : (cableClient?.ready() ? { status: "up" } : { status: "down", detail: "cable not subscribed" });
 
   // Engine — backfill source for transcripts. Not configured ⇒ disabled.
@@ -137,19 +155,50 @@ async function checkHealth(): Promise<HealthReport> {
   // Event freshness — distinct from `cable` (subscribed) — surfaces a silent
   // stream as `stale`. Informational: never fails `healthy` (so quiet periods
   // don't restart the container), but degrades `status` for monitoring.
-  const eventSourceEnabled = CABLE_ENABLED || MOCK_CRYSTAL_EVENTS;
+  const eventSourceEnabled = CALL_EVENTS_CABLE_ENABLED || NATS_ENABLED || MOCK_CRYSTAL_EVENTS;
   const events = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, eventSourceEnabled);
   const eventStoreHealth: EventStoreStats | DepStatus = !eventSourceEnabled
-    ? { status: "disabled", detail: "cable and Crystal mock are off" }
+    ? { status: "disabled", detail: "CDR source and Crystal mock are off" }
     : await eventStore.stats();
 
-  const checks = { cable, events, event_store: eventStoreHealth, engine };
-  // Only a hard "down" fails the container healthcheck. `stale`/`idle` are
-  // visible-but-not-fatal so a legitimately-quiet stream never triggers restarts.
-  const healthy = Object.values(checks).every((c) => c.status !== "down");
-  const clean = healthy && Object.values(checks).every((c) => c.status !== "stale" && c.status !== "idle");
+  const nats: DepStatus = !NATS_ENABLED
+    ? { status: "disabled", detail: "CDR stream disabled (NATS_URL unset)" }
+    : (natsConsumer?.ready()
+      ? { status: "up", detail: `subscribed to ${NATS_CDR_SUBJECTS.join(", ")}` }
+      : { status: "down", detail: "Core NATS not connected" });
+  const syncState = NATS_ENABLED && NATS_REPLAY_ENABLED ? await eventStore.syncState(CDR_SYNC_SOURCE) : null;
+  const syncAge = syncState?.last_reconciled_at
+    ? Math.max(0, Math.round((Date.now() - Date.parse(`${syncState.last_reconciled_at}Z`.replace('ZZ', 'Z'))) / 1000))
+    : null;
+  const cdrSync: DepStatus = !NATS_ENABLED
+    ? { status: "disabled", detail: "EventCdr reconciliation disabled" }
+    : !NATS_REPLAY_ENABLED
+    ? { status: "disabled", detail: "raw cdr.write input has no replay service" }
+    : !syncState
+    ? { status: "idle", detail: "waiting for first EventCdr reconciliation" }
+    : syncState.last_error
+    ? { status: "down", detail: syncState.last_error, cursor_event_id: syncState.cursor_event_id, head_event_id: syncState.head_event_id }
+    : !syncState.caught_up
+    ? { status: "stale", detail: "EventCdr replay is catching up", cursor_event_id: syncState.cursor_event_id, head_event_id: syncState.head_event_id }
+    : syncAge != null && syncAge > NATS_RECONCILE_SECONDS * 3
+    ? { status: "stale", detail: `last reconciliation ${syncAge}s ago`, age_seconds: syncAge,
+        cursor_event_id: syncState.cursor_event_id, head_event_id: syncState.head_event_id }
+    : { status: "up", detail: "RubyEventStore reconciled", age_seconds: syncAge,
+        cursor_event_id: syncState.cursor_event_id, head_event_id: syncState.head_event_id };
+
+  const checks = { cable, nats, cdr_sync: cdrSync, events, event_store: eventStoreHealth, engine };
+  // /health is liveness-compatible: a broker outage must not restart the
+  // process and erase diagnostic state. /health/ready is the strict data gate.
+  const healthy = [cable, eventStoreHealth, engine].every((c) => c.status !== "down");
+  const ready = healthy && (!NATS_ENABLED || (
+    nats.status === "up" && (!NATS_REPLAY_ENABLED || cdrSync.status === "up")
+  ));
+  const clean = ready && Object.values(checks).every((check) =>
+    check.status !== "stale" && check.status !== "idle"
+  );
   return {
     healthy,
+    ready,
     status: clean ? "ok" : "degraded",
     checks,
     event_pipeline: {
@@ -158,6 +207,10 @@ async function checkHealth(): Promise<HealthReport> {
       duplicates: duplicateCounter,
       persistence_failures: persistenceFailureCounter,
       relayed: relayedCounter,
+      websocket_backpressure_drops: websocketBackpressureDropCounter,
+      websocket_oversized_drops: websocketOversizedDropCounter,
+      dashboard_frames_received: dashboardFramesReceived,
+      dashboard_frames_coalesced: dashboardFramesCoalesced,
     },
     timestamp: new Date().toISOString(),
   };
@@ -185,8 +238,14 @@ let tappedCounter = 0;    // everything received from cable
 let persistedCounter = 0; // newly inserted DuckDB events
 let duplicateCounter = 0; // idempotent Cable redeliveries
 let persistenceFailureCounter = 0;
+let websocketBackpressureDropCounter = 0;
+let websocketOversizedDropCounter = 0;
+let dashboardFramesReceived = 0;
+let dashboardFramesCoalesced = 0;
 let cableClient: CableClient | null = null;
 let dashboardCableClient: CableClient | null = null;  // DashboardLive (agents/extensions stream)
+let natsConsumer: NatsConsumer | null = null;
+let reconciliationRunning = false;
 let lastCallEventAt: number | null = null;    // last accepted CallEvents message; DashboardLive does not mask silence
 const eventStore = new EventStore();
 
@@ -197,12 +256,28 @@ function emitEvent(type: string, payload: Pojo, occurredAtIso?: string): void {
   const occurred_at = occurredAtIso ?? new Date().toISOString();
   const event = { type, ts: occurred_at, seq: relayedCounter, payload };
   const json = JSON.stringify(event);
+  const bytes = new TextEncoder().encode(json).byteLength;
+  if (bytes > WS_MAX_EVENT_BYTES) {
+    websocketOversizedDropCounter++;
+    console.warn(`websocket event dropped: type=${type} bytes=${bytes} limit=${WS_MAX_EVENT_BYTES}`);
+    return;
+  }
   for (const sub of subscribers.values()) {
     if ([...sub.topics].some((pat) => routingKeyMatches(pat, type))) {
-      try { sub.ws.send(json); } catch { /* dead socket */ }
+      if (!canSendRealtime(sub.ws, WS_MAX_BUFFERED_BYTES)) {
+        websocketBackpressureDropCounter++;
+        continue;
+      }
+      try { sub.ws.send(json); } catch { websocketBackpressureDropCounter++; }
     }
   }
 }
+
+const dashboardRelay = createCoalescingRelay<Pojo>(
+  (payload) => emitEvent("dashboard.live", payload),
+  (pending, next) => ({ ...pending, ...next }),
+  DASHBOARD_RELAY_INTERVAL_MS,
+);
 
 // One acceptance path for both the live Cable client and the explicit Crystal
 // mock. An event is visible to browser consumers only after DuckDB accepted it.
@@ -241,19 +316,26 @@ async function startCableClient() {
     return;
   }
 
-  cableClient = createCableClient({
-    url: CABLE_URL,
-    token,
-    channel: CABLE_CHANNEL,
-    log: (m) => console.log(`📡 ${m}`),
-    onEvent: async (event) => { await consumeCallEvent(event); },
-  });
-  console.log(`📡 cable client → ${CABLE_URL} channel=${CABLE_CHANNEL}`);
+  if (CALL_EVENTS_CABLE_ENABLED) {
+    cableClient = createCableClient({
+      url: CABLE_URL,
+      token,
+      channel: CABLE_CHANNEL,
+      maxFrameBytes: CABLE_MAX_FRAME_BYTES,
+      log: (m) => console.log(`📡 ${m}`),
+      onEvent: async (event) => { await consumeCallEvent(event); },
+    });
+    console.log(`📡 legacy CallEvents cable → ${CABLE_URL} channel=${CABLE_CHANNEL}`);
+  } else {
+    console.log(`📡 CallEvents cable off — Core NATS is the exclusive CDR source`);
+  }
 
   // DashboardLive — the live agents/extensions panel. Separate channel; its
-  // stream is dashboard:live:{account_uuid}. The broadcast is a value map
-  // { "<widget_uuid>": { type:"table", table:[ {uuid, …fields} ] } } produced
-  // by va-crystal from the voipappz-api dashboard structure (saved in Redis).
+  // stream is dashboard:live:{account_uuid}. When an upstream state projector
+  // is installed, the broadcast is a render-ready widget value map:
+  // { "<widget_uuid>": { type:"table", table:[ {uuid, …fields} ] } }.
+  // va-crystal itself now publishes state.<scope>.<id> operations and does not
+  // assemble this DashboardLive snapshot inside the stateless node.
   // We pass it through untouched as a `dashboard.live` /ws frame — the browser
   // renders it. Needs a real account_uuid + the dashboard uuid (Live_uuid).
   if (CABLE_DASHBOARD_UUID && CABLE_ACCOUNT_UUID && CABLE_ACCOUNT_UUID !== "events-consumer") {
@@ -261,10 +343,14 @@ async function startCableClient() {
       url: CABLE_URL,
       token,
       identifier: { channel: "DashboardLive", account_uuid: CABLE_ACCOUNT_UUID, Live_uuid: CABLE_DASHBOARD_UUID },
+      maxFrameBytes: CABLE_MAX_FRAME_BYTES,
       log: (m) => console.log(`📊 ${m}`),
       onRaw: (message) => {
-        // payload = widget_uuid → { type, table }. Render-ready for the client.
-        emitEvent("dashboard.live", (message && typeof message === "object") ? message as Pojo : { raw: message });
+        // payload = widget_uuid → { type, table }. Bursts are merged latest-per-
+        // widget before browser fan-out, bounding timers and outbound pressure.
+        dashboardFramesReceived++;
+        const payload = (message && typeof message === "object") ? message as Pojo : { raw: message };
+        if (dashboardRelay.push(payload)) dashboardFramesCoalesced++;
       },
     });
     console.log(`📊 dashboard cable client → ${CABLE_URL} channel=DashboardLive dashboard=${CABLE_DASHBOARD_UUID}`);
@@ -273,9 +359,59 @@ async function startCableClient() {
   }
 }
 
+async function startNatsClient() {
+  await eventStore.open();
+  natsConsumer = await createNatsConsumer({
+    url: NATS_URL,
+    subjects: NATS_CDR_SUBJECTS,
+    log: (message) => console.log(`📨 ${message}`),
+    onMessage: async ({ subject, data }) => {
+      const text = new TextDecoder().decode(data);
+      for (const event of normalizeNatsMessage(subject, text)) await consumeCallEvent(event);
+    },
+  });
+  console.log(`📨 Core NATS CDR source ready — subjects=${NATS_CDR_SUBJECTS.join(",")}`);
+  if (NATS_REPLAY_ENABLED) {
+    void reconcileCdrEvents();
+    setInterval(() => { void reconcileCdrEvents(); }, NATS_RECONCILE_SECONDS * 1000);
+  }
+}
+
+async function reconcileCdrEvents(): Promise<void> {
+  if (reconciliationRunning || !NATS_ENABLED || !NATS_REPLAY_ENABLED) return;
+  reconciliationRunning = true;
+  try {
+    const result = await reconcileEventCdr(eventStore, async (request) => {
+      if (!natsConsumer) throw new Error('Core NATS connection is not ready');
+      const reply = await natsConsumer.request(NATS_REPLAY_SUBJECT, JSON.stringify(request));
+      return JSON.parse(new TextDecoder().decode(reply.data));
+    });
+    tappedCounter += result.inserted + result.duplicates;
+    persistedCounter += result.inserted;
+    duplicateCounter += result.duplicates;
+    if (result.inserted + result.duplicates > 0) lastCallEventAt = Date.now();
+    console.log(`🔄 EventCdr reconciled pages=${result.pages} inserted=${result.inserted} duplicates=${result.duplicates}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    try { await eventStore.recordSyncError(CDR_SYNC_SOURCE, message); } catch { /* store health reports this */ }
+    console.error(`EventCdr reconciliation failed: ${message}`);
+  } finally {
+    reconciliationRunning = false;
+  }
+}
+
 // ── WS lifecycle ──────────────────────────────────────────────────────
 function handleWebSocket(request: Request): Response {
-  const { socket, response } = Deno.upgradeWebSocket(request);
+  // Authentication already validated this private offered protocol. Echo it as
+  // the selected subprotocol; browsers reject an upgrade when they offered a
+  // protocol and the server silently selects none.
+  const authProtocol = (request.headers.get('sec-websocket-protocol') || '')
+    .split(',').map((value) => value.trim())
+    .find((value) => value.startsWith('voipappz-bearer.'));
+  const { socket, response } = Deno.upgradeWebSocket(
+    request,
+    authProtocol ? { protocol: authProtocol } : undefined,
+  );
   const url = new URL(request.url);
   const initialTopics = (url.searchParams.get("topics") || "#").split(',').map((s) => s.trim()).filter(Boolean);
   socket.addEventListener("open", () => {
@@ -327,14 +463,58 @@ async function serveStatic(pathname: string): Promise<Response | null> {
   return null;
 }
 
-export function createRequestHandler(jwtVerifier?: JwtVerifier) {
+interface RequestHandlerOptions {
+  eventInspectorEnabled?: boolean;
+  eventReader?: Pick<EventStore, "page">;
+  mcpEnabled?: boolean;
+  mcpAuthToken?: string;
+  mcpAllowLocalhostWithoutToken?: boolean;
+  mcpReader?: DuckDbMcpReader;
+}
+
+interface RequestConnectionInfo {
+  remoteAddr?: { hostname?: string };
+}
+
+function isLoopbackConnection(info?: RequestConnectionInfo): boolean {
+  const hostname = info?.remoteAddr?.hostname?.toLowerCase() ?? "";
+  return hostname.startsWith("127.") || hostname === "::1" ||
+    hostname === "0:0:0:0:0:0:0:1" || hostname.startsWith("::ffff:127.");
+}
+
+export function createRequestHandler(jwtVerifier?: JwtVerifier, options: RequestHandlerOptions = {}) {
   const verifyJwt = jwtVerifier || createJwtVerifier();
-  return async (request: Request): Promise<Response> => {
+  const eventInspectorEnabled = options.eventInspectorEnabled ?? EVENT_INSPECTOR_ENABLED;
+  const eventReader = options.eventReader ?? eventStore;
+  const mcpEnabled = options.mcpEnabled ?? MCP_ENABLED;
+  const mcpAuthToken = options.mcpAuthToken ?? MCP_AUTH_TOKEN;
+  const mcpAllowLocalhostWithoutToken = options.mcpAllowLocalhostWithoutToken ??
+    MCP_ALLOW_LOCALHOST_WITHOUT_TOKEN;
+  const mcpHandler = createDuckDbMcpHandler(options.mcpReader ?? eventStore, {
+    authToken: mcpAuthToken,
+  });
+  return async (request: Request, connectionInfo?: RequestConnectionInfo): Promise<Response> => {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
 
     // (forwarded prefixes are matched at the bottom, after deno's own routes)
+
+    // Read-only MCP Streamable HTTP endpoint over local DuckDB only. A separate
+    // opt-in flag and bearer token protect raw tenant event payloads.
+    if (url.pathname === "/mcp") {
+      if (!mcpEnabled) {
+        return new Response(JSON.stringify({ error: "DuckDB MCP disabled" }), { status: 404, headers: JSON_HEADERS });
+      }
+      const localWithoutToken = mcpAllowLocalhostWithoutToken && isLoopbackConnection(connectionInfo);
+      if (!mcpAuthToken && mcpAllowLocalhostWithoutToken && !localWithoutToken) {
+        return new Response(JSON.stringify({ error: "DuckDB MCP is localhost-only without a token" }), {
+          status: 403,
+          headers: JSON_HEADERS,
+        });
+      }
+      return mcpHandler(request, { allowUnauthenticated: localWithoutToken });
+    }
 
     // ── Optional PostgREST connector login ───────────────────────────────
     // Proxies to PostgREST's users-backed `api.login` RPC and returns the
@@ -372,7 +552,19 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
       }
     }
 
-    if (url.pathname === "/ws/events" && request.headers.get("upgrade") === "websocket") return handleWebSocket(request);
+    if (url.pathname === "/ws/events" && request.headers.get("upgrade") === "websocket") {
+      const authResult = await verifyJwt(request);
+      if (!authResult.authenticated) {
+        return unauthorizedResponse(authResult.error || "Unauthorized", CORS_HEADERS);
+      }
+      if (subscribers.size >= WS_MAX_CLIENTS) {
+        return new Response(JSON.stringify({ error: "realtime client limit reached" }), {
+          status: 503,
+          headers: JSON_HEADERS,
+        });
+      }
+      return handleWebSocket(request);
+    }
 
     // Functional event-pipeline test. It is unreachable unless explicitly
     // enabled, and uses the exact JSON-text shape published by va-crystal.
@@ -403,6 +595,34 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
       }), { status: accepted === rawEvents.length ? 201 : 503, headers: JSON_HEADERS });
     }
 
+    // Functional NATS-pipeline test. This uses the exact va-crystal payload
+    // contracts, but never opens a broker connection; production NATS wiring
+    // will call the same normalizeNatsMessage → consumeCallEvent path.
+    if (request.method === "POST" && url.pathname === "/test/nats/events") {
+      if (!MOCK_CRYSTAL_EVENTS) {
+        return new Response(JSON.stringify({ error: "NATS event mock disabled" }), { status: 404, headers: JSON_HEADERS });
+      }
+      let body: { subject?: string; message?: unknown } = {};
+      try { body = await request.json(); } catch { /* malformed body handled below */ }
+      const subject = String(body.subject || "");
+      const normalized = normalizeNatsMessage(subject, body.message);
+      if (normalized.length === 0) {
+        return new Response(JSON.stringify({ error: "no valid NATS events", subject }), {
+          status: 400,
+          headers: JSON_HEADERS,
+        });
+      }
+      let accepted = 0;
+      for (const event of normalized) if (await consumeCallEvent(event)) accepted++;
+      return new Response(JSON.stringify({
+        status: accepted === normalized.length ? "ok" : "partial",
+        subject,
+        generated: normalized.length,
+        accepted,
+        counters: { tapped: tappedCounter, persisted: persistedCounter, duplicates: duplicateCounter, persistence_failures: persistenceFailureCounter },
+      }), { status: accepted === normalized.length ? 201 : 503, headers: JSON_HEADERS });
+    }
+
     // Dashboard-only projection over consumed va-crystal events. There is no
     // generic local Calls/Reports API: those modules remain on the mothership.
     if (request.method === "GET" && url.pathname === "/dashboard/snapshot") {
@@ -420,6 +640,44 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
         return new Response(JSON.stringify(await eventStore.dashboardSnapshot(from, to)), { status: 200, headers: JSON_HEADERS });
       } catch (err) {
         console.error("dashboard event projection failed:", err instanceof Error ? err.message : err);
+        return new Response(JSON.stringify({ error: "event store unavailable" }), { status: 503, headers: JSON_HEADERS });
+      }
+    }
+
+    // Read-only operational view over the rows actually stored in DuckDB.
+    // Explicitly opt-in because payloads may include tenant call metadata.
+    if (request.method === "GET" && url.pathname === "/events") {
+      if (!eventInspectorEnabled) {
+        return new Response(JSON.stringify({ error: "event inspector disabled" }), { status: 404, headers: JSON_HEADERS });
+      }
+      const authResult = await verifyJwt(request);
+      if (!authResult.authenticated && authResult.error !== "Auth not configured") {
+        return unauthorizedResponse(authResult.error || "Unauthorized", CORS_HEADERS);
+      }
+      const requestedLimit = Number(url.searchParams.get("limit") || 25);
+      const requestedOffset = Number(url.searchParams.get("offset") || 0);
+      if (!Number.isInteger(requestedLimit) || !Number.isInteger(requestedOffset) || requestedLimit < 1 || requestedOffset < 0) {
+        return new Response(JSON.stringify({ error: "invalid event page" }), { status: 400, headers: JSON_HEADERS });
+      }
+      const limit = Math.min(1000, requestedLimit);
+      const offset = requestedOffset;
+      const filters = {
+        q: url.searchParams.get("q")?.trim() || undefined,
+        eventType: url.searchParams.get("event_type")?.trim() || undefined,
+        action: url.searchParams.get("action")?.trim() || undefined,
+        callId: url.searchParams.get("call_id")?.trim() || undefined,
+      };
+      if (Object.values(filters).some((value) => value && value.length > 200)) {
+        return new Response(JSON.stringify({ error: "event filter too long" }), { status: 400, headers: JSON_HEADERS });
+      }
+      try {
+        const page = await eventReader.page({ limit, offset, ...filters });
+        return new Response(JSON.stringify({ ...page, limit, offset }), {
+          status: 200,
+          headers: JSON_HEADERS,
+        });
+      } catch (err) {
+        console.error("event inspector failed:", err instanceof Error ? err.message : err);
         return new Response(JSON.stringify({ error: "event store unavailable" }), { status: 503, headers: JSON_HEADERS });
       }
     }
@@ -497,6 +755,15 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
       }
     }
 
+    if (url.pathname === "/health/live") {
+      return new Response(JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }), { status: 200, headers: JSON_HEADERS });
+    }
+
+    if (url.pathname === "/health/ready") {
+      const report = await checkHealth();
+      return new Response(JSON.stringify(report), { status: report.ready ? 200 : 503, headers: JSON_HEADERS });
+    }
+
     // Health probe (cable + events freshness + engine). Used by Kamal's
     // container healthcheck — returns 503 when any required dep is down.
     if (url.pathname === "/health") {
@@ -508,13 +775,17 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
     }
 
     if (url.pathname === "/test") {
-      const fresh = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED || MOCK_CRYSTAL_EVENTS);
+      const fresh = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED || NATS_ENABLED || MOCK_CRYSTAL_EVENTS);
       return new Response(JSON.stringify({
         status: "ok", template: "voipappz",
         cable_ready: cableClient?.ready() ?? false, cable_url: CABLE_URL, cable_channel: CABLE_CHANNEL,
         dashboard_cable_ready: dashboardCableClient?.ready() ?? false,
         ws_clients: subscribers.size, relayed: relayedCounter, tapped: tappedCounter,
         persisted: persistedCounter, duplicates: duplicateCounter, persistence_failures: persistenceFailureCounter,
+        websocket_backpressure_drops: websocketBackpressureDropCounter,
+        websocket_oversized_drops: websocketOversizedDropCounter,
+        dashboard_frames_received: dashboardFramesReceived,
+        dashboard_frames_coalesced: dashboardFramesCoalesced,
         last_event_at: fresh.last_event_at, seconds_since_last_event: fresh.age_seconds, events_status: fresh.status,
         engine: ENGINE_ENABLED, timestamp: new Date().toISOString(),
       }), { status: 200, headers: JSON_HEADERS });
@@ -546,7 +817,7 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier) {
 
 export function startServer() {
   console.log(`🎯 voipappz app — http://localhost:${PORT}  (ws: ws://localhost:${PORT}/ws/events)`);
-  console.log(`🧠 Dashboard → cable + local DuckDB; calls/reports/transcripts → mothership (${ENGINE_ENABLED ? "on" : "off"})`);
+  console.log(`🧠 Dashboard → EventCdr + local DuckDB; calls/reports/transcripts → mothership (${ENGINE_ENABLED ? "on" : "off"})`);
 
   // Live cable subscription (default ON when a token resolves) → relayed to /ws
   // for the Dashboard. No token ⇒ relay idle (fine for tests/demos).
@@ -556,7 +827,19 @@ export function startServer() {
     });
   }
   else console.log(`🔇 cable tap disabled (no token) — relay idle`);
+  if (NATS_ENABLED) {
+    void startNatsClient().catch((err) => {
+      console.error("nats/event-store startup failed:", err instanceof Error ? err.message : err);
+    });
+  } else console.log(`🔇 nats consumer disabled (set NATS_URL)`);
   if (MOCK_CRYSTAL_EVENTS) console.log("🧪 Crystal event mock enabled → POST /test/crystal/events");
+  if (MCP_ENABLED && MCP_ALLOW_LOCALHOST_WITHOUT_TOKEN) {
+    console.log("🔎 DuckDB MCP enabled → POST /mcp (read-only, localhost direct + bearer beyond localhost)");
+  } else if (MCP_ENABLED && MCP_AUTH_TOKEN) {
+    console.log("🔎 DuckDB MCP enabled → POST /mcp (read-only, bearer protected)");
+  } else if (MCP_ENABLED) {
+    console.warn("⚠️ MCP_ENABLED=1 but MCP_AUTH_TOKEN is empty — /mcp will remain unavailable");
+  }
 
   // TLS: when TLS_CERT_FILE + TLS_KEY_FILE point at readable PEM files, serve
   // HTTPS on the same PORT (the cert is read once at boot). Otherwise plain HTTP.

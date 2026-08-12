@@ -21,6 +21,7 @@ Calls is the reference implementation for new list modules.
 | Navigation/Layout | `src/components/MainMenu/`, `src/components/Layout/` | Frontend | End-user menu, responsive hamburger behavior and authenticated layout. |
 | Notifications | `src/components/Notifications/` | Frontend | Application notifications and notification state. |
 | System status | `src/components/Status/`, `src/components/common/SystemHealth.jsx` | Local API health | Connector and event-pipeline visibility. |
+| Raw event explorer | `src/components/EventExplorer/`, `src/services/duckdbEventsApi.js` | Local DuckDB | Server-paged/searchable table and untouched raw JSON inspection for custom solutions. |
 | PostgREST table | `src/components/PostgrestTable/`, `src/lib/clients/postgrest.ts` | Optional PostgREST | Reusable server-paged table for tenant-specific data. |
 
 ## Shared frontend layers
@@ -41,11 +42,15 @@ Calls is the reference implementation for new list modules.
 |---|---|---|
 | Server/BFF | `api/app.ts`, `api/server.ts` | Static production app, same-origin mothership forwarding, local routes and WebSocket clients. |
 | Configuration | `api/config.ts` | Environment decoding; secrets remain server-side. |
-| Crystal Cable | `api/cable.ts` | ActionCable subscription, Crystal JSON-text normalization and reconnect behavior. |
-| Event store | `api/event_store.ts` | DuckDB persistence and event-id deduplication for consumed events only. |
-| Dashboard projection | `api/dashboard_store.ts` | Builds call lifecycle rows and Dashboard snapshots from local events. |
+| Core NATS | `api/nats.ts` | One reconnecting connection for current `cdr.write.bulk` input and optional committed EventCdr/replay mode. |
+| Event ingestion | `api/event_ingestion.ts` | Preserves and normalizes real `cdr.write` rows plus optional committed EventCdr envelopes. |
+| CDR reconciliation | `api/cdr_reconciliation.ts` | Ordered replay paging from the last producer event id. |
+| Crystal Cable | `api/cable.ts` | Optional DashboardLive/legacy ActionCable subscription and normalization. |
+| Event store + Dashboard projection | `api/event_store.ts` | Permanent DuckDB persistence, producer-id deduplication, atomic replay checkpoints and Dashboard snapshots. |
 | Crystal mock | `api/mock_crystal_events.ts` | Test-only ringing, answered and completed frames matching va-crystal's contract. |
-| Event freshness | `api/health_freshness.ts` | Disabled, idle, current and stale Cable-event health states. |
+| Event freshness | `api/health_freshness.ts` | Disabled, idle, current and stale active-source health states. |
+| Event inspector | `GET /events`, `src/components/EventExplorer/` | Opt-in filtered/paginated read-only view of DuckDB rows and raw payloads; enabled in development Compose. |
+| DuckDB MCP | `api/mcp.ts`, `POST /mcp` | Read-only MCP tools/resources over the local event store; loopback-only by default in development, token-protected elsewhere, with no upstream or event-transport access. |
 | Engine connector | `api/engine.ts` | Optional authenticated transcript reads; no local transcript/log duplication. |
 | Influx connector | `api/influx.ts` | Optional tenant analytics retained for later use. |
 | PostgREST connector | API routes plus frontend client | Optional tenant-custom relational data plane. |
@@ -58,7 +63,8 @@ Calls is the reference implementation for new list modules.
 | Calls list and call metadata | Mothership | No. |
 | Reports and report definitions | Mothership | No. |
 | Transcripts/logs | Engine/mothership service | No; read on demand. |
-| Crystal events received by this app | va-crystal via Cable | Yes, in DuckDB. |
+| CDR events received by this app | Current va-crystal bulk input; optional committed API stream/replay | Yes, permanently in DuckDB with the original raw row. |
+| DashboardLive values | va-crystal via Cable | Runtime relay only. |
 | Dashboard projections | Consumed local events | Derived in DuckDB. |
 | SIP credentials/settings | Authenticated user payload | Runtime only. |
 
@@ -78,4 +84,3 @@ module.
 Webhooks are deliberately not generated now. If added later, keep their
 configuration UI separate from call processing and support transport-specific
 adapters without coupling Calls, Reports or Dashboard to webhook logic.
-

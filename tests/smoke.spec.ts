@@ -71,6 +71,31 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await rail.locator('a[href="/reports"]').click();
   await page.waitForURL('**/reports');
   await expect(page.getByTestId('main-content').getByRole('heading', { level: 2, name: /Reports|דוחות/i })).toBeVisible({ timeout: 15_000 });
+
+  // Raw-event tooling is a real authenticated screen. Mock only the Deno
+  // boundary and prove the row opens with the original writer payload intact.
+  await page.route(/\/events\?/, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      total: 1, limit: 25, offset: 0,
+      events: [{
+        event_id: 'browser-raw-1', call_id: 'browser-call-1', event_type: 'call.cdr', action: 'call.cdr',
+        occurred_at: '2026-08-07 12:01:00', received_at: '2026-08-07 12:01:01',
+        payload: { call_id: 'browser-call-1' },
+        raw_payload: {
+          call_uuid: 'browser-call-1',
+          data: { hangup_cause: 'NORMAL_CLEARING' },
+          metadata: { 'Event-Name': 'CHANNEL_HANGUP_COMPLETE' },
+        },
+      }],
+    }),
+  }));
+  await rail.locator('a[href="/event-explorer"]').click();
+  await page.waitForURL('**/event-explorer');
+  await expect(page.getByTestId('event-row-browser-raw-1')).toBeVisible();
+  await page.getByTestId('event-row-browser-raw-1').click();
+  await expect(page.getByTestId('raw-event-dialog')).toContainText('CHANNEL_HANGUP_COMPLETE');
 });
 
 /**

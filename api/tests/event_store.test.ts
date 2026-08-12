@@ -6,6 +6,7 @@ import {
   type WebSocketLike,
 } from "../cable.ts";
 import { VA_CRYSTAL_CALL_SEQUENCE } from "./fixtures/va_crystal_events.ts";
+import { normalizeNatsMessage } from "../event_ingestion.ts";
 
 class FakeCableSocket implements WebSocketLike {
   sent: string[] = [];
@@ -55,6 +56,121 @@ Deno.test("EventStore persists a Cable event and deduplicates redelivery", async
     assertEquals(rows[0].call_id, "call-local-1");
     assertEquals(rows[0].action, "number.answer");
     assertEquals((rows[0].raw_payload as Record<string, unknown>).type, "call");
+    assertEquals(rows[0].received_at.length > 0, true);
+  } finally {
+    await store.close();
+    await Deno.remove(dir, { recursive: true });
+  }
+});
+
+Deno.test("EventStore pages and searches the raw DuckDB rows", async () => {
+  const dir = await Deno.makeTempDir({ prefix: "voipappz-event-browser-" });
+  const store = new EventStore(`${dir}/events.duckdb`);
+  try {
+    for (const [event] of [
+      normalizeNatsMessage("cdr.write.bulk", [{
+        call_uuid: "call-search-1", data: { va_call_uuid: "call-search-1", duration: "42" },
+        metadata: { "Event-Name": "CHANNEL_HANGUP_COMPLETE", marker: "custom-solution" },
+      }]),
+      normalizeNatsMessage("events.cdr", {
+        schema: "cdr.recorded.v1", event_id: "producer-event-2", event_type: "EventCdr",
+        timestamp: "2026-08-07T12:00:00Z", call_id: "call-search-2",
+        data: { va_call_uuid: "call-search-2" }, metadata: {},
+      }),
+    ]) await store.ingest(event);
+
+    const rawMatch = await store.page({ q: "custom-solution", limit: 10 });
+    assertEquals(rawMatch.total, 1);
+    assertEquals(rawMatch.events[0].call_id, "call-search-1");
+    assertEquals(rawMatch.events[0].raw_payload?.call_uuid, "call-search-1");
+
+    const exactMatch = await store.page({ eventType: "call.cdr", callId: "call-search-2", limit: 10 });
+    assertEquals(exactMatch.total, 1);
+    assertEquals(exactMatch.events[0].event_id, "producer-event-2");
+  } finally {
+    await store.close();
+    await Deno.remove(dir, { recursive: true });
+  }
+});
+
+Deno.test("EventStore keeps producer IDs and atomically advances the replay checkpoint", async () => {
+  const dir = await Deno.makeTempDir({ prefix: "voipappz-cdr-replay-" });
+  const store = new EventStore(`${dir}/events.duckdb`);
+  const event = {
+    wsType: "call.cdr",
+    wsPayload: { call_id: "call-api-1", duration: "42" },
+    occurredAtIso: "2026-08-07T12:00:00.000Z",
+    sourceEventId: "019fdca0-4c80-7644-ac73-ee7ba4e90e27",
+    raw: { schema: "cdr.recorded.v1" },
+  };
+  try {
+    const first = await store.ingestReplayPage([event], {
+      source: "event_cdr", cursorEventId: event.sourceEventId,
+      headEventId: event.sourceEventId, caughtUp: true,
+    });
+    const second = await store.ingestReplayPage([event], {
+      source: "event_cdr", cursorEventId: event.sourceEventId,
+      headEventId: event.sourceEventId, caughtUp: true,
+    });
+    assertEquals(first, { inserted: 1, duplicates: 0 });
+    assertEquals(second, { inserted: 0, duplicates: 1 });
+    assertEquals((await store.list())[0].event_id, event.sourceEventId);
+    assertEquals(await store.syncState("event_cdr"), {
+      source: "event_cdr",
+      cursor_event_id: event.sourceEventId,
+      head_event_id: event.sourceEventId,
+      caught_up: true,
+      last_reconciled_at: (await store.syncState("event_cdr"))?.last_reconciled_at ?? null,
+      last_error: null,
+    });
+    assertEquals((await store.stats()).retention, "forever");
+  } finally {
+    await store.close();
+    await Deno.remove(dir, { recursive: true });
+  }
+});
+
+Deno.test("committed EventCdr rows project a completed Dashboard call", async () => {
+  const dir = await Deno.makeTempDir({ prefix: "voipappz-cdr-dashboard-" });
+  const store = new EventStore(`${dir}/events.duckdb`);
+  const [event] = normalizeNatsMessage("events.cdr", {
+    schema: "cdr.recorded.v1",
+    event_id: "019fdca0-4c80-7644-ac73-ee7ba4e90e28",
+    event_type: "EventCdr",
+    timestamp: "2026-08-07T12:00:42Z",
+    call_id: "call-api-dashboard-1",
+    data: {
+      va_call_uuid: "call-api-dashboard-1",
+      direction: "outbound",
+      caller_id_number: "100",
+      destination_number: "200",
+      duration: "42",
+      billsec: "30",
+    },
+    metadata: { source: "crystal" },
+  });
+  try {
+    await store.ingest(event);
+    const dashboard = await store.dashboardSnapshot(1_786_100_000, 1_786_200_000);
+    assertEquals(dashboard.stats, {
+      total: 1,
+      answered: 1,
+      failed: 0,
+      inbound: 0,
+      outbound: 1,
+      avg_duration_sec: 30,
+    });
+    assertEquals(dashboard.recent_calls[0], {
+      id: "call-api-dashboard-1",
+      direction: "outbound",
+      from_number: "100",
+      to_number: "200",
+      status: "completed",
+      started_at: "2026-08-07T12:00:00.000Z",
+      answered_at: "2026-08-07T12:00:12.000Z",
+      ended_at: "2026-08-07T12:00:42.000Z",
+      duration_sec: 30,
+    });
   } finally {
     await store.close();
     await Deno.remove(dir, { recursive: true });

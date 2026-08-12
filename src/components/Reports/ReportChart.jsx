@@ -1,6 +1,5 @@
-// ReportChart — renders ANY report from the engine's {columns, rows, chart}
-// payload with zero per-report config. Port of nimbus-admin's
-// ReportsPanel/ReportsPanel.jsx (ReportChart + splitColumns), on recharts.
+// ReportChart renders the normalized {columns, rows, chart} result from the
+// simple saved-report workspace with zero per-report configuration.
 //
 // The trick is `splitColumns`: pick the first non-numeric column as the label
 // axis and treat every numeric column as a series. That's what lets one
@@ -73,8 +72,7 @@ function ReportTable({ columns, rows }) {
 }
 
 /**
- * @param report {{ name, type, columns, rows, chart, error }} — straight from
- *   GET /api/reports/dashboards/:category
+ * @param report {{ name, columns, rows, chart, error }} normalized report data
  * @param height chart height in px
  */
 export default function ReportChart({ report, height = 260 }) {
@@ -124,7 +122,7 @@ export default function ReportChart({ report, height = 260 }) {
   );
 }
 
-/** A report in a titled card — the unit the dashboards grid lays out. */
+/** A report in a titled card, retained for small reusable report summaries. */
 export function ReportCard({ report, height }) {
   return (
     // `minWidth: 0` — without it a wide table makes this grid item refuse to

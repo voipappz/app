@@ -1,7 +1,7 @@
-// Local append-only event store. va-crystal owns event production and Cable/NATS
-// owns delivery; this module only persists the canonical event received by the
-// ActionCable consumer. Only local Dashboard projections read this table;
-// Calls/Reports remain mothership-backed so their business logic is not copied.
+// Local append-only event store. va-crystal/API own event production and
+// Cable/Core-NATS own delivery; this module persists both Deno's normalized
+// projection and the untouched received object. The Dashboard and Raw events
+// screen read this table; Calls/Reports remain mothership-backed.
 import { DuckDBInstance } from "@duckdb/node-api";
 import type { Normalized } from "./cable.ts";
 
@@ -12,17 +12,41 @@ export interface StoredEvent {
   action: string;
   occurred_at: string;
   occurred_at_epoch: number | null;
+  received_at: string;
   payload: Record<string, unknown>;
   raw_payload: Record<string, unknown> | null;
+}
+
+export interface EventListQuery {
+  limit?: number;
+  offset?: number;
+  q?: string;
+  eventType?: string;
+  action?: string;
+  callId?: string;
+}
+
+export interface StoredEventPage {
+  events: StoredEvent[];
+  total: number;
 }
 
 export interface EventStoreStats {
   status: "up" | "down";
   path: string;
-  retention_days: number;
+  retention: "forever";
   events: number;
   last_received_at: string | null;
   last_error?: string;
+}
+
+export interface EventSyncState {
+  source: string;
+  cursor_event_id: string | null;
+  head_event_id: string | null;
+  caught_up: boolean;
+  last_reconciled_at: string | null;
+  last_error: string | null;
 }
 
 export interface DashboardCall {
@@ -82,7 +106,25 @@ function jsonObject(value: unknown): Record<string, unknown> | null {
   }
 }
 
+function eventWhere(query: EventListQuery): string {
+  const conditions: string[] = [];
+  if (query.eventType) conditions.push(`event_type = ${sqlString(query.eventType)}`);
+  if (query.action) conditions.push(`action = ${sqlString(query.action)}`);
+  if (query.callId) conditions.push(`call_id = ${sqlString(query.callId)}`);
+  if (query.q) {
+    const pattern = sqlString(`%${query.q}%`);
+    conditions.push(`(
+      event_id ILIKE ${pattern} OR COALESCE(call_id, '') ILIKE ${pattern}
+      OR event_type ILIKE ${pattern} OR action ILIKE ${pattern}
+      OR CAST(payload AS VARCHAR) ILIKE ${pattern}
+      OR COALESCE(CAST(raw_payload AS VARCHAR), '') ILIKE ${pattern}
+    )`);
+  }
+  return conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+}
+
 async function stableEventId(event: Normalized): Promise<string> {
+  if (event.sourceEventId) return event.sourceEventId;
   const source = JSON.stringify(event.raw ?? { type: event.wsType, payload: event.wsPayload });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(source));
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
@@ -94,18 +136,10 @@ export class EventStore {
   private openPromise: Promise<void> | null = null;
   private writeQueue: Promise<void> = Promise.resolve();
   private readonly path: string;
-  private readonly retentionDays: number;
-  private writesSincePrune = 0;
   private lastError: string | null = null;
 
-  constructor(
-    path = Deno.env.get("EVENT_STORE_PATH") || "./data/events.duckdb",
-    retentionDays = Number(Deno.env.get("EVENT_RETENTION_DAYS") || "7"),
-  ) {
+  constructor(path = Deno.env.get("EVENT_STORE_PATH") || "./data/events.duckdb") {
     this.path = path;
-    this.retentionDays = Number.isFinite(retentionDays)
-      ? Math.max(1, Math.min(365, Math.floor(retentionDays)))
-      : 7;
   }
 
   async open(): Promise<void> {
@@ -142,6 +176,16 @@ export class EventStore {
     await this.connection.run("CREATE INDEX IF NOT EXISTS events_call_id ON events(call_id)");
     await this.connection.run("CREATE INDEX IF NOT EXISTS events_occurred_at ON events(occurred_at)");
     await this.connection.run("CREATE INDEX IF NOT EXISTS events_action ON events(action)");
+    await this.connection.run(`
+      CREATE TABLE IF NOT EXISTS event_sync_state (
+        source VARCHAR PRIMARY KEY,
+        cursor_event_id VARCHAR,
+        head_event_id VARCHAR,
+        caught_up BOOLEAN NOT NULL DEFAULT false,
+        last_reconciled_at TIMESTAMP,
+        last_error VARCHAR
+      )
+    `);
     // Dashboard widget definitions (the builder). Same local DB file — the
     // dashboard is entirely a local-projection feature.
     await this.connection.run(`
@@ -152,7 +196,6 @@ export class EventStore {
         updated_at TIMESTAMP DEFAULT current_timestamp
       )
     `);
-    await this.pruneUnlocked();
     this.lastError = null;
   }
 
@@ -203,6 +246,76 @@ export class EventStore {
     return operation;
   }
 
+  /** Persist an ordered replay page and its cursor in one DuckDB transaction. */
+  async ingestReplayPage(
+    events: Normalized[],
+    state: { source: string; cursorEventId: string | null; headEventId: string | null; caughtUp: boolean },
+  ): Promise<{ inserted: number; duplicates: number }> {
+    const operation = this.writeQueue.then(async () => {
+      await this.open();
+      await this.connection.run("BEGIN TRANSACTION");
+      let inserted = 0;
+      try {
+        for (const event of events) {
+          const result = await this.ingestUnlocked(event);
+          if (result.inserted) inserted++;
+        }
+        await this.connection.run(`
+          INSERT OR REPLACE INTO event_sync_state
+            (source, cursor_event_id, head_event_id, caught_up, last_reconciled_at, last_error)
+          VALUES (${sqlString(state.source)},
+            ${state.cursorEventId ? sqlString(state.cursorEventId) : "NULL"},
+            ${state.headEventId ? sqlString(state.headEventId) : "NULL"},
+            ${state.caughtUp ? "true" : "false"}, current_timestamp, NULL)
+        `);
+        await this.connection.run("COMMIT");
+        this.lastError = null;
+        return { inserted, duplicates: events.length - inserted };
+      } catch (error) {
+        try { await this.connection.run("ROLLBACK"); } catch { /* original error wins */ }
+        throw error;
+      }
+    }).catch((error) => {
+      this.lastError = error instanceof Error ? error.message : String(error);
+      throw error;
+    });
+    this.writeQueue = operation.then(() => undefined, () => undefined);
+    return operation;
+  }
+
+  async recordSyncError(source: string, error: string): Promise<void> {
+    const operation = this.writeQueue.then(async () => {
+      await this.open();
+      await this.connection.run(`
+        INSERT INTO event_sync_state (source, caught_up, last_error)
+        VALUES (${sqlString(source)}, false, ${sqlString(error)})
+        ON CONFLICT (source) DO UPDATE SET caught_up = false, last_error = ${sqlString(error)}
+      `);
+    });
+    this.writeQueue = operation.then(() => undefined, () => undefined);
+    return operation;
+  }
+
+  async syncState(source: string): Promise<EventSyncState | null> {
+    await this.open();
+    await this.writeQueue;
+    const result = await this.connection.runAndReadAll(`
+      SELECT source, cursor_event_id, head_event_id, caught_up,
+        CAST(last_reconciled_at AS VARCHAR) AS last_reconciled_at, last_error
+      FROM event_sync_state WHERE source = ${sqlString(source)}
+    `);
+    const row = result.getRowObjects()?.[0];
+    if (!row) return null;
+    return {
+      source: String(row.source),
+      cursor_event_id: row.cursor_event_id == null ? null : String(row.cursor_event_id),
+      head_event_id: row.head_event_id == null ? null : String(row.head_event_id),
+      caught_up: Boolean(row.caught_up),
+      last_reconciled_at: row.last_reconciled_at == null ? null : String(row.last_reconciled_at),
+      last_error: row.last_error == null ? null : String(row.last_error),
+    };
+  }
+
   private async ingestUnlocked(event: Normalized): Promise<{ eventId: string; inserted: boolean }> {
     await this.open();
     const eventId = await stableEventId(event);
@@ -224,16 +337,7 @@ export class EventStore {
     `;
     await this.connection.run(sql);
     this.lastError = null;
-    if (++this.writesSincePrune >= 1000) await this.pruneUnlocked();
     return { eventId, inserted: true };
-  }
-
-  private async pruneUnlocked(): Promise<void> {
-    await this.connection.run(`
-      DELETE FROM events
-      WHERE received_at < current_timestamp - INTERVAL '${this.retentionDays} days'
-    `);
-    this.writesSincePrune = 0;
   }
 
   async stats(): Promise<EventStoreStats> {
@@ -248,7 +352,7 @@ export class EventStore {
       return {
         status: this.lastError ? "down" : "up",
         path: this.path,
-        retention_days: this.retentionDays,
+        retention: "forever",
         events: Number(row.events ?? 0),
         last_received_at: row.last_received_at == null ? null : String(row.last_received_at),
         ...(this.lastError ? { last_error: this.lastError } : {}),
@@ -257,7 +361,7 @@ export class EventStore {
       return {
         status: "down",
         path: this.path,
-        retention_days: this.retentionDays,
+        retention: "forever",
         events: 0,
         last_received_at: null,
         last_error: error instanceof Error ? error.message : String(error),
@@ -266,24 +370,35 @@ export class EventStore {
   }
 
   async list(limit = 100, offset = 0): Promise<StoredEvent[]> {
+    return (await this.page({ limit, offset })).events;
+  }
+
+  /** Read a filtered page directly from DuckDB without altering raw payloads. */
+  async page(query: EventListQuery = {}): Promise<StoredEventPage> {
     await this.open();
     await this.writeQueue;
+    const limit = Math.max(1, Math.min(1000, Math.floor(query.limit ?? 100)));
+    const offset = Math.max(0, Math.floor(query.offset ?? 0));
+    const where = eventWhere(query);
+    const countResult = await this.connection.runAndReadAll(`SELECT COUNT(*) AS total FROM events ${where}`);
     const result = await this.connection.runAndReadAll(`
       SELECT event_id, call_id, event_type, action, CAST(occurred_at AS VARCHAR) AS occurred_at,
-        occurred_at_epoch, payload, raw_payload
-      FROM events ORDER BY occurred_at_epoch DESC NULLS LAST, received_at DESC
-      LIMIT ${Math.max(1, Math.min(1000, Math.floor(limit)))} OFFSET ${Math.max(0, Math.floor(offset))}
+        occurred_at_epoch, CAST(received_at AS VARCHAR) AS received_at, payload, raw_payload
+      FROM events ${where} ORDER BY occurred_at_epoch DESC NULLS LAST, received_at DESC
+      LIMIT ${limit} OFFSET ${offset}
     `);
-    return result.getRowObjects().map((row: Record<string, unknown>) => ({
+    const events = result.getRowObjects().map((row: Record<string, unknown>) => ({
       event_id: String(row.event_id),
       call_id: row.call_id == null ? null : String(row.call_id),
       event_type: String(row.event_type),
       action: String(row.action),
       occurred_at: row.occurred_at == null ? "" : String(row.occurred_at),
       occurred_at_epoch: row.occurred_at_epoch == null ? null : Number(row.occurred_at_epoch),
+      received_at: row.received_at == null ? "" : String(row.received_at),
       payload: jsonObject(row.payload) ?? {},
       raw_payload: jsonObject(row.raw_payload),
     }));
+    return { events, total: Number(countResult.getRowObjects()?.[0]?.total ?? 0) };
   }
 
   async dashboardSnapshot(fromEpoch: number, toEpoch: number, recentLimit = 6): Promise<DashboardSnapshot> {
@@ -295,16 +410,45 @@ export class EventStore {
     const callsCte = `
       WITH call_events AS (
         SELECT call_id, event_type, occurred_at_epoch,
-          json_extract_string(payload, '$.direction') AS direction,
-          json_extract_string(payload, '$.from') AS from_number,
-          json_extract_string(payload, '$.to') AS to_number
+          COALESCE(
+            json_extract_string(payload, '$.direction'),
+            json_extract_string(payload, '$.call_direction'),
+            json_extract_string(payload, '$.va_call_type'),
+            json_extract_string(payload, '$.metadata.call_type')
+          ) AS direction,
+          COALESCE(
+            json_extract_string(payload, '$.from'),
+            json_extract_string(payload, '$.caller_id_number'),
+            json_extract_string(payload, '$.caller_caller_id_number'),
+            json_extract_string(payload, '$.user_from')
+          ) AS from_number,
+          COALESCE(
+            json_extract_string(payload, '$.to'),
+            json_extract_string(payload, '$.destination_number'),
+            json_extract_string(payload, '$.caller_destination_number'),
+            json_extract_string(payload, '$.user_to')
+          ) AS to_number,
+          TRY_CAST(json_extract_string(payload, '$.duration') AS BIGINT) AS cdr_duration,
+          TRY_CAST(json_extract_string(payload, '$.billsec') AS BIGINT) AS cdr_billsec
         FROM events
         WHERE call_id IS NOT NULL AND event_type LIKE 'call.%'
       ), calls AS (
         SELECT call_id,
-          MIN(occurred_at_epoch) AS started_epoch,
-          MIN(occurred_at_epoch) FILTER (WHERE event_type = 'call.answered') AS answered_epoch,
-          MAX(occurred_at_epoch) FILTER (WHERE event_type = 'call.completed') AS ended_epoch,
+          MIN(CASE
+            WHEN event_type = 'call.cdr' AND cdr_duration >= 0
+              THEN GREATEST(0, occurred_at_epoch - cdr_duration)
+            ELSE occurred_at_epoch
+          END) AS started_epoch,
+          COALESCE(
+            MIN(occurred_at_epoch) FILTER (WHERE event_type = 'call.answered'),
+            MIN(occurred_at_epoch - COALESCE(cdr_billsec, cdr_duration)) FILTER (
+              WHERE event_type = 'call.cdr'
+                AND COALESCE(cdr_billsec, cdr_duration, 0) > 0
+            )
+          ) AS answered_epoch,
+          MAX(occurred_at_epoch) FILTER (
+            WHERE event_type IN ('call.completed', 'call.cdr')
+          ) AS ended_epoch,
           arg_max(direction, occurred_at_epoch) FILTER (WHERE direction IS NOT NULL) AS direction,
           arg_max(from_number, occurred_at_epoch) FILTER (WHERE from_number IS NOT NULL) AS from_number,
           arg_max(to_number, occurred_at_epoch) FILTER (WHERE to_number IS NOT NULL) AS to_number

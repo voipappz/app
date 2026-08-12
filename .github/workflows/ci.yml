@@ -24,12 +24,18 @@ jobs:
       - name: Module scaffolding round-trip
         run: |
           node scripts/new-module.mjs CiSmoke
-          npx vitest run src/services/ciSmokeApi.test.js
+          npx vitest run --configLoader runner src/services/ciSmokeApi.test.js
           rm -rf src/components/CiSmoke src/services/ciSmokeApi.js src/services/ciSmokeApi.test.js
 
   api:
     name: Deno API (check + tests + boot smoke)
     runs-on: ubuntu-latest
+    services:
+      # Core NATS only. The app deliberately does not use JetStream.
+      nats:
+        image: nats:2-alpine
+        ports:
+          - 14222:4222
     defaults:
       run:
         working-directory: api
@@ -38,8 +44,86 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      - name: Development MCP token onboarding
+        working-directory: .
+        run: |
+          token_file="$RUNNER_TEMP/voipappz-mcp.env"
+          first_run="$(MCP_TOKEN_FILE="$token_file" bash scripts/dev-mcp-token.sh)"
+          token="$(sed -n 's/^MCP_AUTH_TOKEN=//p' "$token_file")"
+          test "$(stat -c '%a' "$token_file")" = 600
+          [[ "$token" =~ ^[a-fA-F0-9]{64}$ ]]
+          [[ "$first_run" == *"show it again: make mcp-token"* ]]
+          second_run="$(MCP_TOKEN_FILE="$token_file" bash scripts/dev-mcp-token.sh --show)"
+          test "$(sed -n 's/^MCP_AUTH_TOKEN=//p' "$token_file")" = "$token"
+          [[ "$second_run" == *"MCP URL (host):"* ]]
+          [[ "$second_run" == *"Authorization: Bearer $token"* ]]
       - run: deno check app.ts server.ts
       - run: deno test --allow-net --allow-env --allow-read --allow-write --allow-ffi tests/
+        env:
+          NATS_TEST_URL: nats://127.0.0.1:14222
+      - name: Current cdr.write.bulk + committed replay → DuckDB → ready
+        run: |
+          export NATS_TEST_URL=nats://127.0.0.1:14222
+          nats_tmp=$(mktemp -d)
+          fixture_ready="$nats_tmp/fixture-ready"
+          NATS_FIXTURE_READY_FILE="$fixture_ready" \
+            deno run --allow-net --allow-env --allow-write tests/fixtures/nats_cdr_service.ts &
+          replay_pid=$!
+          for i in $(seq 1 20); do
+            kill -0 "$replay_pid"
+            test -s "$fixture_ready" && break
+            sleep 0.25
+          done
+          test -s "$fixture_ready"
+          NATS_URL="$NATS_TEST_URL" PORT=14002 EVENT_STORE_PATH="$nats_tmp/events.duckdb" \
+            NATS_CDR_SUBJECTS=events.cdr,cdr.write.bulk EVENT_INSPECTOR_ENABLED=1 \
+            deno run --allow-net --allow-env --allow-read --allow-write --allow-ffi app.ts &
+          server_pid=$!
+          trap 'kill "$server_pid" "$replay_pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            kill -0 "$server_pid"
+            curl -sf localhost:14002/health/ready > /dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -sf localhost:14002/health/ready | python3 -c 'import json,sys; h=json.load(sys.stdin); assert h["ready"] is True; assert h["status"] == "ok"; assert h["checks"]["nats"]["status"] == "up"; assert h["checks"]["cdr_sync"]["status"] == "up"; assert h["checks"]["cable"]["status"] == "disabled"; assert h["checks"]["event_store"]["retention"] == "forever"; assert h["event_pipeline"]["persisted"] == 1'
+          deno run --allow-net --allow-env tests/fixtures/publish_nats_cdr.ts
+          for i in $(seq 1 20); do
+            curl -sf 'localhost:14002/events?limit=10&call_id=ci-live-cdr-call' | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["total"] == 1; assert d["events"][0]["raw_payload"]["metadata"]["Event-Name"] == "CHANNEL_HANGUP_COMPLETE"' && break
+            sleep 0.25
+          done
+          curl -sf 'localhost:14002/events?limit=10' | python3 -c 'import json,sys; d=json.load(sys.stdin); by_call={e["call_id"]: e for e in d["events"]}; assert d["total"] == 2; assert set(by_call) == {"ci-cdr-call", "ci-live-cdr-call"}; live=by_call["ci-live-cdr-call"]; assert live["raw_payload"]["call_uuid"] == "ci-live-cdr-call"; assert live["raw_payload"]["data"]["hangup_cause"] == "NORMAL_CLEARING"'
+          curl -sf 'localhost:14002/dashboard/snapshot?from=1786100000&to=1786200000' | python3 -c 'import json,sys; d=json.load(sys.stdin); calls={c["id"]: c for c in d["recent_calls"]}; assert d["stats"]["total"] == 2; assert d["stats"]["answered"] == 2; assert calls["ci-cdr-call"]["status"] == "completed"; assert calls["ci-cdr-call"]["duration_sec"] == 30; assert calls["ci-live-cdr-call"]["status"] == "completed"; assert calls["ci-live-cdr-call"]["duration_sec"] == 18'
+      - name: Live ActionCable CallEvents → DuckDB → MCP + Dashboard
+        run: |
+          cable_tmp=$(mktemp -d)
+          fixture_ready="$cable_tmp/ready"
+          CABLE_FIXTURE_READY_FILE="$fixture_ready" CABLE_FIXTURE_PORT=14223 \
+            CABLE_FIXTURE_TOKEN=ci-cable-token CABLE_FIXTURE_CALL_ID=ci-cable-call \
+            deno run --allow-net --allow-env --allow-write tests/fixtures/cable_service.ts &
+          fixture_pid=$!
+          for i in $(seq 1 20); do
+            kill -0 "$fixture_pid"
+            test -s "$fixture_ready" && break
+            sleep 0.25
+          done
+          test -s "$fixture_ready"
+          NATS_URL='' CABLE_URL=ws://127.0.0.1:14223/cable CABLE_TOKEN=ci-cable-token \
+            PORT=14003 EVENT_STORE_PATH="$cable_tmp/events.duckdb" EVENT_INSPECTOR_ENABLED=1 \
+            MCP_ENABLED=1 MCP_AUTH_TOKEN=ci-mcp-token EVENTS_STALE_SECONDS=300 \
+            deno run --allow-net --allow-env --allow-read --allow-write --allow-ffi app.ts &
+          server_pid=$!
+          trap 'kill "$server_pid" "$fixture_pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 40); do
+            kill -0 "$server_pid" "$fixture_pid"
+            if curl -sf localhost:14003/test | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["cable_ready"] is True; assert d["persisted"] == 3' > /dev/null 2>&1; then break; fi
+            sleep 0.25
+          done
+          curl -sf localhost:14003/health/ready | python3 -c 'import json,sys; h=json.load(sys.stdin); p=h["event_pipeline"]; assert h["ready"] is True; assert h["status"] == "ok"; assert h["checks"]["cable"]["status"] == "up"; assert h["checks"]["nats"]["status"] == "disabled"; assert h["checks"]["event_store"]["events"] == 3; assert {k:p[k] for k in ("received","persisted","duplicates","persistence_failures","relayed")} == {"received":3,"persisted":3,"duplicates":0,"persistence_failures":0,"relayed":3}; assert p["websocket_backpressure_drops"] == 0; assert p["websocket_oversized_drops"] == 0'
+          curl -sf 'localhost:14003/events?limit=10&call_id=ci-cable-call' | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["total"] == 3; assert {e["event_type"] for e in d["events"]} == {"call.ringing","call.answered","call.completed"}; assert {e["raw_payload"]["action"] for e in d["events"]} == {"number.ringing","number.answer","number.hangup"}; assert all(e["raw_payload"]["type_uuid"] == "ci-cable-call" for e in d["events"])'
+          curl -sf localhost:14003/dashboard/snapshot | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["stats"]["total"] == 1; assert d["stats"]["answered"] == 1; assert d["recent_calls"][0]["id"] == "ci-cable-call"; assert d["recent_calls"][0]["status"] == "completed"; assert d["recent_calls"][0]["duration_sec"] == 60'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:14003/mcp)" = 401
+          curl -sf localhost:14003/mcp -H 'Authorization: Bearer ci-mcp-token' -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["result"]["protocolVersion"] == "2025-06-18"; assert d["result"]["serverInfo"]["name"] == "voipappz-duckdb"'
+          curl -sf localhost:14003/mcp -H 'Authorization: Bearer ci-mcp-token' -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"duckdb_call_timeline","arguments":{"call_id":"ci-cable-call"}}}' | python3 -c 'import json,sys; d=json.load(sys.stdin)["result"]["structuredContent"]; assert d["source"] == "duckdb"; assert d["total"] == 3; assert [e["raw_payload"]["action"] for e in d["events"]] == ["number.ringing","number.answer","number.hangup"]'
       # Boot the server with no env at all and prove the health surface is up —
       # optional deps must report "disabled", never crash the boot.
       # Permissions must match how the server is ACTUALLY run everywhere else
@@ -49,14 +133,25 @@ jobs:
       # step varies the CONFIG, not the permission set.
       - name: Boot smoke (/test + /health with zero config)
         run: |
-          deno run --allow-net --allow-env --allow-read --allow-write --allow-ffi app.ts &
+          # Keep this isolated from the Crystal pipeline job, which also uses
+          # the host network under act. Track this exact child so a stale
+          # process can never make the probe pass while this boot failed.
+          ci_port=14001
+          PORT="$ci_port" deno run --allow-net --allow-env --allow-read --allow-write --allow-ffi app.ts &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 20); do
-            curl -sf localhost:4001/test > /dev/null 2>&1 && break
+            kill -0 "$server_pid"
+            curl -sf "localhost:$ci_port/test" > /dev/null 2>&1 && break
             sleep 1
           done
-          curl -sf localhost:4001/test
+          curl -sf "localhost:$ci_port/test"
           echo
-          curl -sf localhost:4001/health
+          curl -sf "localhost:$ci_port/health"
+          echo
+          curl -sf "localhost:$ci_port/health/live"
+          echo
+          curl -sf "localhost:$ci_port/health/ready"
 
   crystal-pipeline:
     name: Crystal mock → DuckDB → health/dashboard

@@ -6,7 +6,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { useTranslation } from 'react-i18next';
 import { useAppTranslation } from '../../i18n/useAppTranslation';
-import { EVENTS_API } from '../Calls/useCalls';
+import { DENO_API_BASE } from '../../lib/clients/denoApi';
 import { appVersion } from '../../config';
 
 // Language picks the DIRECTION too — Hebrew is RTL, English is LTR — so there
@@ -41,7 +41,7 @@ export default function AccountMenu({ anchorEl, open, onClose, user, onLogout })
     let alive = true;
     const load = async () => {
       try {
-        const res = await fetch(`${EVENTS_API}/health`);
+        const res = await fetch(`${DENO_API_BASE}/health`);
         const body = await res.json();
         if (alive) setChecks(Object.entries(body?.checks ?? {}));
       } catch {

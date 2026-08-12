@@ -41,7 +41,7 @@ echo '==> Production build'
 VITE_MOCK_LOGIN=1 VITE_USE_MOCK=1 npm run build -- --outDir "$build_dir"
 
 echo '==> End-user module smoke (login, Dashboard, Calls, Reports)'
-npx vite preview --host 127.0.0.1 --port 4200 --strictPort --outDir "$build_dir" > /tmp/voipappz-verify-preview.log 2>&1 &
+npx vite preview --configLoader runner --host 127.0.0.1 --port 4200 --strictPort --outDir "$build_dir" > /tmp/voipappz-verify-preview.log 2>&1 &
 preview_pid=$!
 npx wait-on -t 30000 http://127.0.0.1:4200
 

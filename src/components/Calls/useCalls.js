@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MOCK_CALLS } from './mock-data';
 import { getStoredMockTranscript } from './conversation-mocks';
 import { getCalls } from '../../services/callsApi';
+import { getToken } from '../../lib/auth';
 
 /**
  * useCalls — a page of calls from voipappz-api (GET /api/calls).
@@ -26,8 +27,6 @@ export const SORT_FIELD_MAP = { started_at: 'created_at' };
 // Prod: '' (same-origin — deno serves the app). Dev: Vite owns the origin, so
 // deno routes (/health, /dashboard/*) must ride the /events-api proxy prefix
 // (a bare '/dashboard' proxy would shadow the SPA route of the same name).
-export const EVENTS_API = import.meta.env.VITE_EVENTS_API_URL ?? (import.meta.env.DEV ? '/events-api' : '');
-
 // WS base for the LiveEvents dashboard widget (deno /ws/events). Same-origin by
 // default so it rides the Vite proxy.
 export function eventsWsBase() {
@@ -37,6 +36,22 @@ export function eventsWsBase() {
     return `${proto}://${window.location.host}/ws/events`;
   }
   return 'ws://localhost:4001/ws/events';
+}
+
+export function eventsWsUrl(topics) {
+  const url = new URL(eventsWsBase());
+  url.searchParams.set('topics', topics);
+  return url.toString();
+}
+
+export function eventsWsProtocols() {
+  const token = getToken();
+  if (!token) return [];
+  const bytes = new TextEncoder().encode(token);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  const encoded = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return [`voipappz-bearer.${encoded}`];
 }
 
 export function useCalls() {

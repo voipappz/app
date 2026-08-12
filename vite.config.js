@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import { dirname, resolve } from 'path'
+import { fileURLToPath } from 'url'
 import fs from 'fs'
 
 // Dev HTTPS: WebRTC getUserMedia (the softphone mic) only works in a SECURE
@@ -8,8 +9,9 @@ import fs from 'fs'
 // browser blocks the mic and calls fail ("Media devices not available in insecure
 // contexts"). If a self-signed dev cert exists (certs/, openssl-generated), serve
 // over HTTPS so the phone can dial from any host.
-const DEV_KEY = resolve(__dirname, 'certs/dev-key.pem')
-const DEV_CRT = resolve(__dirname, 'certs/dev-cert.pem')
+const ROOT_DIR = dirname(fileURLToPath(import.meta.url))
+const DEV_KEY = resolve(ROOT_DIR, 'certs/dev-key.pem')
+const DEV_CRT = resolve(ROOT_DIR, 'certs/dev-cert.pem')
 const devHttps = fs.existsSync(DEV_KEY) && fs.existsSync(DEV_CRT)
   ? { key: fs.readFileSync(DEV_KEY), cert: fs.readFileSync(DEV_CRT) }
   : undefined
@@ -87,7 +89,7 @@ export default defineConfig(({ mode }) => {
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
+      '@': resolve(ROOT_DIR, 'src')
     }
   }
   }

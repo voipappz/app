@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { listAgentStatuses, listBreakReasons, setAgentStatus } from '../../services/agentStatusApi';
 import {
   Box, IconButton, Drawer, Tabs, Tab, TextField, Button, Typography, Stack,
-  List, ListItemButton, ListItemText, Tooltip, Avatar,
+  Tooltip, Avatar,
   Select, MenuItem, useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';

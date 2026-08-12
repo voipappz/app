@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Box, Paper, Typography, Chip, List, ListItem, ListItemText, Divider } from '@mui/material';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import { useTranslation } from 'react-i18next';
-import { eventsWsBase } from '../../Calls/useCalls';
+import { eventsWsProtocols, eventsWsUrl } from '../../Calls/useCalls';
 
 interface EventMsg {
   type: string;
@@ -30,10 +30,10 @@ export default function LiveEvents({ from, to }: { from?: Date; to?: Date } = {}
   const reconnectTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    const wsUrl = `${eventsWsBase()}?topics=call.%23`;
+    const wsUrl = eventsWsUrl('call.#');
 
     function connect() {
-      const ws = new WebSocket(wsUrl);
+      const ws = new WebSocket(wsUrl, eventsWsProtocols());
       wsRef.current = ws;
       setStatus('connecting');
 

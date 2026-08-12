@@ -42,6 +42,8 @@ export interface Normalized {
   wsType: string;
   wsPayload: Pojo;
   occurredAtIso?: string;
+  /** Stable producer identity. Mature EventCdr envelopes supply this directly. */
+  sourceEventId?: string;
   /** Original va-crystal event, retained for lossless local persistence. */
   raw?: Pojo;
 }
@@ -150,6 +152,8 @@ export interface CableClientOpts {
   onRaw?: (message: unknown) => void | Promise<void>;
   log?: (m: string) => void;
   reconnectMs?: number;
+  /** Reject oversized ActionCable frames before JSON parsing. */
+  maxFrameBytes?: number;
   socketFactory?: (url: string, protocol: string) => WebSocketLike; // DI for tests
 }
 
@@ -160,6 +164,7 @@ export function createCableClient(opts: CableClientOpts): CableClient {
   const identifier = JSON.stringify(opts.identifier ?? { channel });
   const log = opts.log ?? (() => {});
   const reconnectMs = opts.reconnectMs ?? 3000;
+  const maxFrameBytes = opts.maxFrameBytes ?? 2_097_152;
   const factory = opts.socketFactory ?? ((u, p) => new WebSocket(u, p) as unknown as WebSocketLike);
   let ws: WebSocketLike | null = null;
   let ready = false;
@@ -176,8 +181,13 @@ export function createCableClient(opts: CableClientOpts): CableClient {
   }
 
   async function onFrame(data: unknown) {
+    if (typeof data !== "string") return;
+    if (enc.encode(data).byteLength > maxFrameBytes) {
+      log(`cable frame dropped — exceeds ${maxFrameBytes} bytes`);
+      return;
+    }
     let frame: any;
-    try { frame = JSON.parse(typeof data === "string" ? data : ""); } catch { return; }
+    try { frame = JSON.parse(data); } catch { return; }
     switch (frame?.type) {
       case "welcome":
         ws?.send(JSON.stringify({ command: "subscribe", identifier }));

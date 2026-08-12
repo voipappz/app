@@ -69,7 +69,11 @@ env:
     DENO_ENV: production
     STATIC_DIR: /app/dist
     EVENT_STORE_PATH: /data/events.duckdb
-    EVENT_RETENTION_DAYS: 7
+    # NATS_URL is secret and comes from the host env-file. The current system
+    # writes EventCdr from cdr.write.bulk; switch to events.cdr only after its
+    # producer/replay responder is deployed.
+    NATS_CDR_SUBJECTS: cdr.write.bulk
+    NATS_RECONCILE_SECONDS: 30
 
 ssh:
   user: root

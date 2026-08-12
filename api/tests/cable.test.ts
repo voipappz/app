@@ -127,6 +127,23 @@ Deno.test("createCableClient — reject_subscription leaves it not ready", () =>
   client.stop();
 });
 
+Deno.test("createCableClient — drops oversized frames before parsing or delivery", async () => {
+  let sock!: FakeSocket;
+  const events: Normalized[] = [];
+  const logs: string[] = [];
+  const client = createCableClient({
+    url: "ws://x/cable", token: "tok", maxFrameBytes: 32,
+    onEvent: (event) => { events.push(event); },
+    log: (message) => logs.push(message),
+    socketFactory: () => (sock = new FakeSocket()),
+  });
+  sock.emit("message", JSON.stringify({ message: { action: "number.answer", type_uuid: "C1" } }));
+  await Promise.resolve();
+  assertEquals(events.length, 0);
+  assert(logs.some((message) => message.includes("frame dropped")));
+  client.stop();
+});
+
 Deno.test("normalizeCableEvent — transcribe.done maps to transcription.completed", () => {
   const n = normalizeCableEvent({
     type: "call", type_uuid: "c-1", action: "transcribe.done", created_at: "1750000000",

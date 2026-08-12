@@ -1,4 +1,4 @@
-import { EVENTS_API } from '../components/Calls/useCalls';
+import { DENO_API_BASE } from '../lib/clients/denoApi';
 import { getToken } from '../lib/auth';
 
 /**
@@ -15,7 +15,7 @@ export const COUNTER_METRICS = ['total', 'answered', 'failed', 'inbound', 'outbo
 
 async function send(method, path, body) {
   const token = typeof getToken === 'function' ? getToken() : null;
-  const response = await fetch(`${EVENTS_API}${path}`, {
+  const response = await fetch(`${DENO_API_BASE}${path}`, {
     method,
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
