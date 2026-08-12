@@ -11,7 +11,7 @@ URLs**. The app server in front owns the actual upstream:
 
 ```
                     dev                                prod (single container, Kamal)
-  Browser ──► Vite :4200 ─┬─ /api, /auth/*, /tasks ──►  Browser ──► deno-api ─┬─ /api, /auth/*, /tasks ──► MOTHERSHIP_URL
+  Browser ──► Vite :4200 ──► deno-api ─┬─ /api, /auth/*, /tasks ──► MOTHERSHIP_URL
               (proxy)     │        (mothership)                    (serves     │        (mothership)
                           └─ /dashboard/*, /events, /ws ─► deno-api  dist/)    ├─ /ws/events (event relay)
                                                                                 └─ /dashboard/*, /calls/*/transcript
@@ -30,7 +30,7 @@ bundle.
 | Mothership (voipappz-api) | external, env-pointed | Accounts + login (`/auth/user_login` + optional per-customer OTP), calls, reports, feature flags, portal branding. The source of truth. |
 | PostgREST | external, **optional** | A second, direct-SQL data plane (`/rest/v1/*`) for tenant-custom tables/views — see below. |
 | Core NATS | external, optional | Current `cdr.write.bulk` batches feed both the API EventCdr writer and Deno's raw-event store. Optional `events.cdr` deployments add committed IDs and replay. One connection, no JetStream. |
-| Cable (va-crystal) | external, optional | `DashboardLive` agent/extension values, plus the legacy CallEvents fallback when Core-NATS CDR ingestion is disabled. |
+| Cable (va-crystal/Nimbus WS) | external, optional | `DashboardLive` agent/extension values, plus the legacy CallEvents fallback when Core-NATS CDR ingestion is disabled. Configured independently with `CABLE_URL`; bounded connection failures disable only Cable. |
 
 ## Event pipeline and readiness
 

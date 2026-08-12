@@ -15,7 +15,8 @@ bundle in production.
   committed IDs and reconciles gaps over `events.cdr.replay`. No JetStream.
 - **`/ws/events`** — relays accepted live events to browser subscribers.
 - **Optional Cable bridge** — `DashboardLive` agent/extension values, or legacy
-  `CallEvents` when `NATS_URL` is unset.
+  `CallEvents` when `NATS_URL` is unset. `CABLE_URL` selects the endpoint;
+  protected endpoints use a ready-made token or the shared signing secret.
 - **`POST /connectors/postgrest/auth/login`** — optional PostgREST connector login.
 - **`/auth/*`** — forwarded unchanged to the mothership user login/OTP API.
 - **Dashboard snapshot** — KPIs, hourly call buckets, and recent calls projected
@@ -62,6 +63,8 @@ The optional DashboardLive relay merges burst updates over
 `WS_MAX_BUFFERED_BYTES`; `CABLE_MAX_FRAME_BYTES` bounds upstream parsing and
 `WS_MAX_CLIENTS` caps authenticated browser sockets. `/health` and `/test`
 expose the associated counters.
+An unavailable Cable endpoint retries five times and then disables itself; the
+Deno process and mothership-backed portal continue running.
 Development Compose sets `MCP_ENABLED=1` and
 `MCP_ALLOW_LOCALHOST_WITHOUT_TOKEN=1`; native/production runs do not. Set a
 non-empty `MCP_AUTH_TOKEN` for container, LAN, remote, or production access.

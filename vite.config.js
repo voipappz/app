@@ -34,24 +34,13 @@ export default defineConfig(({ mode }) => {
       https: devHttps,
     proxy: (() => {
       const DENO = process.env.VITE_DENO_API_TARGET || 'http://localhost:4001';
-      // The mothership (voipappz-api). ONE knob repoints a tenant: MOTHERSHIP_URL
-      // in .env — unprefixed on purpose, so it can never land in the browser
-      // bundle or flip the client into cross-origin direct mode. VITE_API_TARGET
-      // overrides it for this proxy alone. The browser only ever sees relative
-      // URLs — this proxy (dev) / the deno forwarder (prod) owns the actual host.
-      //
-      // VITE_MOTHERSHIP_URL is deliberately NOT read here: it means direct mode
-      // to the browser clients (api.ts / mothership.ts / customerPortal.ts), and
-      // a static-hosting fork that sets it must not silently retarget this proxy.
-      const MOTHERSHIP = process.env.VITE_API_TARGET || env.MOTHERSHIP_URL || 'https://cloud.voipappz.io';
       return {
-        // Mothership surfaces: data reads (/api/*), the user login/OTP surface
-        // (/auth/user_login, /auth/user/otp/verify), and public portal branding
-        // (/tasks/customer_portal_data).
-        '/api':   { target: MOTHERSHIP, changeOrigin: true, secure: true },
-        '/tasks': { target: MOTHERSHIP, changeOrigin: true, secure: true },
-        // All /auth routes belong to the mothership user login/OTP surface.
-        '/auth':         { target: MOTHERSHIP, changeOrigin: true, secure: true },
+        // All portal traffic enters the Deno BFF in development, matching the
+        // production topology. Deno owns the Nimbus target and forwards
+        // /api, /auth and /tasks server-side; the browser remains same-origin.
+        '/api':   { target: DENO, changeOrigin: true },
+        '/tasks': { target: DENO, changeOrigin: true },
+        '/auth':  { target: DENO, changeOrigin: true },
         // Optional PostgREST plane — rides deno (strips /rest/v1, 503 when off).
         '/connectors/postgrest': { target: DENO, changeOrigin: true },
         '/rest/v1':      { target: DENO, changeOrigin: true },

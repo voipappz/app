@@ -1,6 +1,7 @@
 // Calls API module — server-side list against voipappz-api /api/calls.
 // Mirrors nimbus-admin's services/api/callsApi.js + buildSearchQueryParams, using
-// this app's apiList (Basic + X-VA-Auth, X-Total pagination, 401→logout).
+// this app's apiList (Nimbus login Bearer token, X-Total pagination,
+// rejected-session → local login).
 import { apiList } from '../lib/clients/api';
 
 // Map a voipappz-api /api/calls row → the flat shape the Calls UI expects. The

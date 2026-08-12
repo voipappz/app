@@ -115,9 +115,9 @@ const STATIC_DIR = Deno.env.get("STATIC_DIR") || "./dist";
 //   - engine   (voipappz-api)              → transcript reads
 //
 // A dependency that is configured-but-unreachable is "down"; one that isn't
-// configured at all is "disabled" and does NOT fail the check. Overall
-// `healthy` is false iff any required dependency is down — callers map that
-// to HTTP 503.
+// configured at all is "disabled". Cable is an optional event source, so its
+// connection state degrades diagnostics but never takes the API out of service.
+// Required local dependencies still map a failed `healthy` result to HTTP 503.
 interface DepStatus { status: "up" | "down" | "stale" | "idle" | "disabled"; detail?: string; [key: string]: unknown }
 interface HealthReport {
   healthy: boolean;
@@ -143,11 +143,13 @@ interface HealthReport {
 
 async function checkHealth(): Promise<HealthReport> {
   // Cable — the WS client reconnects on its own; the flag reflects whether the
-  // CallEvents subscription is currently confirmed. Not enabled (no token) ⇒
+  // CallEvents subscription is currently confirmed. Not enabled ⇒
   // disabled, which does NOT fail the check (seed-only / mock runs).
   const cable: DepStatus = !CALL_EVENTS_CABLE_ENABLED
-    ? { status: "disabled", detail: NATS_ENABLED ? "CallEvents replaced by Core NATS CDR input" : "cable tap off (no token)" }
-    : (cableClient?.ready() ? { status: "up" } : { status: "down", detail: "cable not subscribed" });
+    ? { status: "disabled", detail: NATS_ENABLED ? "CallEvents replaced by Core NATS CDR input" : "cable tap off (endpoint/auth unset)" }
+    : cableClient?.disabled()
+    ? { status: "disabled", detail: "cable unavailable; retries exhausted" }
+    : cableClient?.ready() ? { status: "up" } : { status: "down", detail: "cable connecting" };
 
   // Engine — backfill source for transcripts. Not configured ⇒ disabled.
   const engine: DepStatus = !ENGINE_ENABLED
@@ -157,7 +159,7 @@ async function checkHealth(): Promise<HealthReport> {
   // Event freshness — distinct from `cable` (subscribed) — surfaces a silent
   // stream as `stale`. Informational: never fails `healthy` (so quiet periods
   // don't restart the container), but degrades `status` for monitoring.
-  const eventSourceEnabled = CALL_EVENTS_CABLE_ENABLED || NATS_ENABLED || MOCK_CRYSTAL_EVENTS;
+  const eventSourceEnabled = (CALL_EVENTS_CABLE_ENABLED && !cableClient?.disabled()) || NATS_ENABLED || MOCK_CRYSTAL_EVENTS;
   const events = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, eventSourceEnabled);
   const eventStoreHealth: EventStoreStats | DepStatus = !eventSourceEnabled
     ? { status: "disabled", detail: "CDR source and Crystal mock are off" }
@@ -189,9 +191,11 @@ async function checkHealth(): Promise<HealthReport> {
         cursor_event_id: syncState.cursor_event_id, head_event_id: syncState.head_event_id };
 
   const checks = { cable, nats, cdr_sync: cdrSync, events, event_store: eventStoreHealth, engine };
-  // /health is liveness-compatible: a broker outage must not restart the
-  // process and erase diagnostic state. /health/ready is the strict data gate.
-  const healthy = [cable, eventStoreHealth, engine].every((c) => c.status !== "down");
+  // /health is liveness-compatible: a Cable/broker outage must not restart the
+  // process and erase diagnostic state. Cable remains visible as down while it
+  // retries, then disabled, but API/DuckDB availability owns liveness.
+  // /health/ready is the strict Core-NATS data gate when NATS is configured.
+  const healthy = [eventStoreHealth, engine].every((c) => c.status !== "down");
   const ready = healthy && (!NATS_ENABLED || (
     nats.status === "up" && (!NATS_REPLAY_ENABLED || cdrSync.status === "up")
   ));
@@ -313,10 +317,7 @@ async function startCableClient() {
 
   const token = CABLE_TOKEN ||
     (CABLE_SECRET && CABLE_ACCOUNT_UUID ? await mintCableToken(CABLE_SECRET, CABLE_ACCOUNT_UUID) : "");
-  if (!token) {
-    console.log("🔇 cable tap off — set CABLE_TOKEN, or CABLE_SECRET + CABLE_ACCOUNT_UUID");
-    return;
-  }
+  if (!token) console.log("📡 cable auth → endpoint-managed/anonymous");
 
   if (CALL_EVENTS_CABLE_ENABLED) {
     cableClient = createCableClient({
@@ -867,7 +868,7 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier, options: Request
     }
 
     if (url.pathname === "/test") {
-      const fresh = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, CABLE_ENABLED || NATS_ENABLED || MOCK_CRYSTAL_EVENTS);
+      const fresh = eventFreshness(lastCallEventAt, Date.now(), EVENTS_STALE_SECONDS, (CABLE_ENABLED && !cableClient?.disabled()) || NATS_ENABLED || MOCK_CRYSTAL_EVENTS);
       return new Response(JSON.stringify({
         status: "ok", template: "voipappz",
         cable_ready: cableClient?.ready() ?? false, cable_url: CABLE_URL, cable_channel: CABLE_CHANNEL,
@@ -909,16 +910,16 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier, options: Request
 
 export function startServer() {
   console.log(`🎯 voipappz app — http://localhost:${PORT}  (ws: ws://localhost:${PORT}/ws/events)`);
-  console.log(`🧠 Dashboard → EventCdr + local DuckDB; calls/reports/transcripts → mothership (${ENGINE_ENABLED ? "on" : "off"})`);
+  console.log(`🧠 Dashboard → local DuckDB; calls/reports/auth → MOTHERSHIP_URL; transcript engine auth → ${ENGINE_ENABLED ? "on" : "off"}`);
 
-  // Live cable subscription (default ON when a token resolves) → relayed to /ws
-  // for the Dashboard. No token ⇒ relay idle (fine for tests/demos).
+  // Live cable subscription (explicit endpoint or cable auth) → relayed to /ws
+  // for the Dashboard. Unavailable endpoints disable after bounded retries.
   if (CABLE_ENABLED) {
     void startCableClient().catch((err) => {
       console.error("cable/event-store startup failed:", err instanceof Error ? err.message : err);
     });
   }
-  else console.log(`🔇 cable tap disabled (no token) — relay idle`);
+  else console.log(`🔇 cable tap disabled (set CABLE_URL or cable auth) — relay idle`);
   if (NATS_ENABLED) {
     void startNatsClient().catch((err) => {
       console.error("nats/event-store startup failed:", err instanceof Error ? err.message : err);

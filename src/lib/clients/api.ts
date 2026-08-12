@@ -29,11 +29,21 @@ export interface ApiListResult<T> {
 // "no data here", nothing more.
 const mockSession = () => import.meta.env.VITE_MOCK_LOGIN === '1';
 
-function dropSession(pathAndQuery: string) {
+function dropSession(pathAndQuery: string, status: 401 | 403) {
   if (mockSession()) return;
   logout();
-  window.dispatchEvent(new CustomEvent(AUTH_EVENTS.UNAUTHORIZED, { detail: { reason: '401' } }));
+  window.dispatchEvent(new CustomEvent(AUTH_EVENTS.UNAUTHORIZED, { detail: { reason: String(status) } }));
   void pathAndQuery;
+}
+
+function rejectAuthentication(res: Response, pathAndQuery: string): void {
+  // Nimbus returns 403 when a syntactically valid token belongs to a different
+  // tenant/user context. Keeping that token traps the local portal in a broken
+  // signed-in screen, so both authentication failures return to local login.
+  if (res.status === 401 || res.status === 403) {
+    dropSession(pathAndQuery, res.status);
+    throw new Error(`${pathAndQuery} → ${res.status}`);
+  }
 }
 
 function authHeaders(): Record<string, string> {
@@ -44,11 +54,7 @@ function authHeaders(): Record<string, string> {
 /** GET a list resource, returning rows + total (X-Total). Throws on non-2xx. */
 export async function apiList<T = Record<string, unknown>>(pathAndQuery: string): Promise<ApiListResult<T>> {
   const res = await fetch(`${BASE}${pathAndQuery}`, { headers: authHeaders() });
-  if (res.status === 401) {
-    // A real expired/rejected token → drop the session and signal re-login.
-    dropSession(pathAndQuery);
-    throw new Error(`${pathAndQuery} → 401`);
-  }
+  rejectAuthentication(res, pathAndQuery);
   if (!res.ok) throw new Error(`${pathAndQuery} → ${res.status}`);
   const rows = (await res.json()) as T[];
   const total = Number(res.headers.get('x-total')) || (Array.isArray(rows) ? rows.length : 0);
@@ -77,10 +83,7 @@ export async function callEvents() {
  */
 export async function apiSend<T = unknown>(method: string, pathAndQuery: string): Promise<T> {
   const res = await fetch(`${BASE}${pathAndQuery}`, { method, headers: authHeaders() });
-  if (res.status === 401) {
-    dropSession(pathAndQuery);
-    throw new Error(`${pathAndQuery} → 401`);
-  }
+  rejectAuthentication(res, pathAndQuery);
   if (!res.ok) throw new Error(`${pathAndQuery} → ${res.status}`);
   return res.status === 204 ? (undefined as T) : res.json();
 }
@@ -88,11 +91,7 @@ export async function apiSend<T = unknown>(method: string, pathAndQuery: string)
 /** GET a single resource (object). Throws on non-2xx. */
 export async function apiGet<T = unknown>(pathAndQuery: string): Promise<T> {
   const res = await fetch(`${BASE}${pathAndQuery}`, { headers: authHeaders() });
-  if (res.status === 401) {
-    dropSession(pathAndQuery);
-    throw new Error(`${pathAndQuery} → 401`);
-  }
+  rejectAuthentication(res, pathAndQuery);
   if (!res.ok) throw new Error(`${pathAndQuery} → ${res.status}`);
   return res.json();
 }
-

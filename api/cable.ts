@@ -154,30 +154,67 @@ export interface CableClientOpts {
   reconnectMs?: number;
   /** Reject oversized ActionCable frames before JSON parsing. */
   maxFrameBytes?: number;
+  /** Stop reconnecting after this many failed retries. */
+  maxReconnectAttempts?: number;
   socketFactory?: (url: string, protocol: string) => WebSocketLike; // DI for tests
 }
 
-export interface CableClient { stop(): void; ready(): boolean; }
+export interface CableClient { stop(): void; ready(): boolean; disabled(): boolean; }
 
 export function createCableClient(opts: CableClientOpts): CableClient {
   const channel = opts.channel ?? "CallEvents";
   const identifier = JSON.stringify(opts.identifier ?? { channel });
   const log = opts.log ?? (() => {});
   const reconnectMs = opts.reconnectMs ?? 3000;
+  const maxReconnectAttempts = opts.maxReconnectAttempts ?? 5;
   const maxFrameBytes = opts.maxFrameBytes ?? 2_097_152;
   const factory = opts.socketFactory ?? ((u, p) => new WebSocket(u, p) as unknown as WebSocketLike);
   let ws: WebSocketLike | null = null;
   let ready = false;
   let stopped = false;
+  let disabled = false;
+  let reconnectAttempts = 0;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function scheduleReconnect() {
+    ready = false;
+    if (stopped || disabled) return;
+    if (reconnectAttempts >= maxReconnectAttempts) {
+      disabled = true;
+      log(`cable disabled — unavailable after ${maxReconnectAttempts} retries`);
+      return;
+    }
+    reconnectAttempts++;
+    log(`cable reconnect ${reconnectAttempts}/${maxReconnectAttempts} in ${reconnectMs}ms`);
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connect();
+    }, reconnectMs);
+  }
 
   function connect() {
-    if (stopped) return;
+    if (stopped || disabled) return;
     const u = opts.token ? `${opts.url}?token=${encodeURIComponent(opts.token)}` : opts.url;
-    ws = factory(u, "actioncable-v1-json");
+    let failed = false;
+    const fail = () => {
+      if (failed) return;
+      failed = true;
+      scheduleReconnect();
+    };
+    try {
+      ws = factory(u, "actioncable-v1-json");
+    } catch (error) {
+      log(`cable connection failed — ${error instanceof Error ? error.message : String(error)}`);
+      fail();
+      return;
+    }
     ws.addEventListener("open", () => log(`cable ws open → ${opts.url}`));
     ws.addEventListener("message", (ev: any) => { void onFrame(ev?.data); });
-    ws.addEventListener("close", () => { ready = false; if (!stopped) setTimeout(connect, reconnectMs); });
-    ws.addEventListener("error", () => { /* close handler schedules reconnect */ });
+    ws.addEventListener("close", fail);
+    ws.addEventListener("error", () => {
+      try { ws?.close(); } catch { /* close/fail below owns the retry */ }
+      fail();
+    });
   }
 
   async function onFrame(data: unknown) {
@@ -193,10 +230,12 @@ export function createCableClient(opts: CableClientOpts): CableClient {
         ws?.send(JSON.stringify({ command: "subscribe", identifier }));
         return;
       case "confirm_subscription":
-        ready = true; log(`cable subscribed → ${identifier}`);
+        ready = true; reconnectAttempts = 0; log(`cable subscribed → ${identifier}`);
         return;
       case "reject_subscription":
-        ready = false; log(`cable REJECTED → ${identifier} (check JWT/account)`);
+        ready = false; disabled = true;
+        log(`cable disabled — subscription rejected → ${identifier} (check channel/JWT/account)`);
+        try { ws?.close(); } catch { /* already closed */ }
         return;
       case "ping":
       case "disconnect":
@@ -214,7 +253,13 @@ export function createCableClient(opts: CableClientOpts): CableClient {
 
   connect();
   return {
-    stop() { stopped = true; ready = false; try { ws?.close(); } catch { /* ignore */ } },
+    stop() {
+      stopped = true; ready = false;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+      try { ws?.close(); } catch { /* ignore */ }
+    },
     ready: () => ready,
+    disabled: () => disabled,
   };
 }

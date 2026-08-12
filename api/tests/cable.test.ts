@@ -124,6 +124,27 @@ Deno.test("createCableClient — reject_subscription leaves it not ready", () =>
   sock.emit("message", JSON.stringify({ type: "welcome" }));
   sock.emit("message", JSON.stringify({ type: "reject_subscription" }));
   assert(!client.ready());
+  assert(client.disabled());
+  client.stop();
+});
+
+Deno.test("createCableClient — connection failure is bounded and disables without throwing", async () => {
+  let attempts = 0;
+  const logs: string[] = [];
+  const client = createCableClient({
+    url: "ws://unavailable/ws", token: "", reconnectMs: 1, maxReconnectAttempts: 2,
+    log: (message) => logs.push(message),
+    socketFactory: () => {
+      attempts++;
+      throw new Error("endpoint unavailable");
+    },
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assertEquals(attempts, 3); // initial connection + two bounded retries
+  assert(!client.ready());
+  assert(client.disabled());
+  assert(logs.some((message) => message.includes("cable disabled")));
   client.stop();
 });
 

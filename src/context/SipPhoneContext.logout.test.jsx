@@ -8,7 +8,7 @@
 //      VITE_SIP_* creds baked in the "cleared" settings still register.
 //   2. unregister() ends with status 'idle' — the exact trigger auto-connect
 //      waits for — so teardown re-armed the effect that undid it.
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 
 const register = vi.fn().mockResolvedValue(undefined);
@@ -57,6 +57,7 @@ const renderApp = () => render(
 
 describe('logout takes the softphone off the wire', () => {
   beforeEach(() => {
+    vi.stubEnv('VITE_SIP_ENABLED', 'true');
     register.mockClear();
     unregister.mockClear();
     status = 'idle';
@@ -67,6 +68,7 @@ describe('logout takes the softphone off the wire', () => {
     }));
     localStorage.setItem('sip-settings', JSON.stringify(READY_SETTINGS));
   });
+  afterEach(() => vi.unstubAllEnvs());
 
   it('registers while signed in', () => {
     renderApp();

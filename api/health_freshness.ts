@@ -12,15 +12,15 @@ export interface Freshness {
 }
 
 // lastAtMs / nowMs are epoch ms. thresholdSec = 0 disables the stale verdict
-// (still reports last_event_at + age). cableEnabled false → disabled.
+// (still reports last_event_at + age). eventSourceEnabled false → disabled.
 export function eventFreshness(
   lastAtMs: number | null,
   nowMs: number,
   thresholdSec: number,
-  cableEnabled: boolean,
+  eventSourceEnabled: boolean,
 ): Freshness {
-  if (!cableEnabled) {
-    return { status: "disabled", detail: "cable tap off (no token)", last_event_at: null, age_seconds: null };
+  if (!eventSourceEnabled) {
+    return { status: "disabled", detail: "event source disabled", last_event_at: null, age_seconds: null };
   }
   if (lastAtMs == null) {
     return { status: "idle", detail: "no events since boot", last_event_at: null, age_seconds: null };

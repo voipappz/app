@@ -33,7 +33,8 @@ export const ENGINE_ENABLED = ENGINE_EMAIL !== "" && ENGINE_PASSWORD !== "";
 // va-crystal's node serves the ActionCable endpoint on port 4000 by default.
 // Its Cable backend transports broadcasts over NATS; this consumer speaks the
 // stable ActionCable WebSocket protocol rather than coupling to NATS internals.
-export const CABLE_URL = Deno.env.get("CABLE_URL") || "ws://127.0.0.1:4000/cable";
+const configuredCableUrl = (Deno.env.get("CABLE_URL") || "").trim();
+export const CABLE_URL = configuredCableUrl || "ws://127.0.0.1:4000/cable";
 export const CABLE_CHANNEL = Deno.env.get("CABLE_CHANNEL") || "CallEvents";
 export const CABLE_TOKEN = Deno.env.get("CABLE_TOKEN") || "";
 export const CABLE_SECRET = Deno.env.get("CABLE_SECRET") || Deno.env.get("SECRET_KEY") || "";
@@ -41,9 +42,14 @@ export const CABLE_SECRET = Deno.env.get("CABLE_SECRET") || Deno.env.get("SECRET
 // to be present (cable rejects an empty one) — it doesn't filter events. So it
 // defaults to a label and the operator normally only sets SECRET_KEY.
 export const CABLE_ACCOUNT_UUID = Deno.env.get("CABLE_ACCOUNT_UUID") || "events-consumer";
-// Cable clients can start as soon as a token resolves. The server decides
-// whether that means legacy CallEvents, DashboardLive only, or both.
-export const CABLE_ENABLED = CABLE_TOKEN !== "" || CABLE_SECRET !== "";
+// Cable clients can start from an explicit endpoint or as soon as cable auth
+// resolves. The server decides whether that means CallEvents, DashboardLive,
+// or both.
+// An explicitly configured URL enables the connection even when authentication
+// is handled by the endpoint. Protected va-crystal endpoints still require a
+// valid token/secret and will safely disable after bounded failures. If no URL
+// is configured, the legacy local default stays dormant unless auth is present.
+export const CABLE_ENABLED = configuredCableUrl !== "" || CABLE_TOKEN !== "" || CABLE_SECRET !== "";
 // Explicit local functional-test mode. Enables POST /test/crystal/events,
 // which injects Crystal-shaped frames through the normal normalize → DuckDB →
 // relay path. Keep false/unset in production.

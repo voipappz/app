@@ -32,6 +32,11 @@ ENV VITE_APP_VERSION=$VITE_APP_VERSION
 ARG VITE_MOTHERSHIP_URL
 ENV VITE_MOTHERSHIP_URL=$VITE_MOTHERSHIP_URL
 
+# Browser SIP/WebRTC is tenant-specific. Keep it enabled by default; tenant
+# builds without a usable SIP WebSocket can disable the subsystem entirely.
+ARG VITE_SIP_ENABLED=true
+ENV VITE_SIP_ENABLED=$VITE_SIP_ENABLED
+
 RUN npm run build
 
 # Stage 2: Deno runtime serving React + API

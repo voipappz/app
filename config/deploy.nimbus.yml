@@ -60,6 +60,9 @@ env:
     # forwarder's default is cloud.voipappz.io, and inheriting it would quietly
     # authenticate this tenant's users against the wrong mothership.
     MOTHERSHIP_URL: https://nimbus-prod.voipappz.io
+    # va-crystal's ActionCable endpoint is independent of the HTTPS API. A
+    # matching CABLE_TOKEN/SECRET_KEY remains in the host-only secrets.env.
+    CABLE_URL: ws://nimbus-prod.voipappz.io:4000/cable
 
 ssh:
   # Verified against the host: this key/user pair is the one authorised there
@@ -72,6 +75,10 @@ ssh:
 
 builder:
   arch: amd64
+  args:
+    # Nimbus currently has no usable browser SIP/WebRTC endpoint. Cable remains
+    # enabled server-side and is unaffected by this frontend-only switch.
+    VITE_SIP_ENABLED: "false"
   # NO VITE_MOTHERSHIP_URL, deliberately.
   #
   # Baking it puts the BROWSER on an absolute URL. The app is served from

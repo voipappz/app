@@ -50,11 +50,6 @@ const Login = () => {
         elevation={0}
         className="login-paper"
       >
-        {/* Mobile-only logo — dark wordmark on the white card */}
-        <Box className="mobile-login-logo">
-          <img src={brand.logo} alt={brand.name} style={{ height: 40 }} />
-        </Box>
-
         <Typography variant="overline" className="login-eyebrow">
           {t('login.secureAccess')}
         </Typography>

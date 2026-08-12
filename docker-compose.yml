@@ -51,9 +51,9 @@ services:
     environment:
       NODE_ENV: development
       TERM: xterm
-      # The app talks to the mothership (MOTHERSHIP_URL, from .env) for /api/*.
-      # deno-api runs network_mode: host (:4001 on the host); this container is on
-      # the bridge, so the Vite proxy reaches it via the host gateway (extra_hosts).
+      # Every same-origin browser request enters deno-api first. Deno forwards
+      # /api, /auth and /tasks to MOTHERSHIP_URL and owns the Cable connection.
+      # deno-api uses host networking, so Vite reaches it via the host gateway.
       VITE_DENO_API_TARGET: ${VITE_DENO_API_TARGET:-http://host.docker.internal:4001}
       # Offline mock login passthrough (see CLAUDE.md) — lets `make test` run
       # the E2E suite against the dev stack: VITE_MOCK_LOGIN=1 make up
@@ -114,13 +114,11 @@ services:
         required: false   # generated local MCP bearer token; never loaded by Vite
     environment:
       PORT: 4001
-      # Live cable subscription consumes call events from the va-crystal cable
-      # server's CallEvents channel (ActionCable WS) and relays them to browser
-      # /ws subscribers and persists them for Dashboard-only local queries. On as soon as SECRET_KEY
-      # (= cable's SECRET_KEY) is set — deno mints the HS256 JWT itself; or pass
-      # a ready-made CABLE_TOKEN.
+      # Live ActionCable endpoint. An explicit CABLE_URL enables the client;
+      # protected va-crystal endpoints additionally need SECRET_KEY or a
+      # ready-made CABLE_TOKEN.
       SECRET_KEY: ${SECRET_KEY:-}
-      CABLE_URL: ${CABLE_URL:-ws://127.0.0.1:4000/cable}
+      CABLE_URL: ${CABLE_URL:-}
       CABLE_TOKEN: ${CABLE_TOKEN:-}
       # Engine (voipappz-api, "the brain") — transcripts are read on request from
       # its event store. Server-side basic-auth creds, NEVER VITE_-prefixed.
