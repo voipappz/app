@@ -38,7 +38,14 @@ trigger=json.load(open("/tmp/voipappz-crystal-trigger.json"))
 health=json.load(open("/tmp/voipappz-crystal-health.json"))
 dashboard=json.load(open("/tmp/voipappz-crystal-dashboard.json"))
 assert trigger["accepted"] == 3, trigger
-assert health["event_pipeline"] == {"received":3,"persisted":3,"duplicates":0,"persistence_failures":0,"relayed":3}, health
+# Project the counters under test rather than comparing the whole dict: the
+# pipeline gains new gauges over time (websocket drops, dashboard frames) and a
+# strict equality here fails on shape alone, with every value still correct.
+pipeline=health["event_pipeline"]
+counted={k:pipeline[k] for k in ("received","persisted","duplicates","persistence_failures","relayed")}
+assert counted == {"received":3,"persisted":3,"duplicates":0,"persistence_failures":0,"relayed":3}, health
+assert pipeline["websocket_backpressure_drops"] == 0, health
+assert pipeline["websocket_oversized_drops"] == 0, health
 assert health["checks"]["event_store"]["events"] == 3, health
 assert dashboard["stats"]["total"] == 1, dashboard
 assert dashboard["stats"]["answered"] == 1, dashboard

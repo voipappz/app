@@ -41,6 +41,19 @@ mode="${1:-all}"
 job_args=()
 if [[ "$mode" != "all" ]]; then job_args=(-j "$mode"); fi
 
+# The e2e job serves its OWN build on :4200 and waits for it. act's runner shares
+# the host network, so a dev stack already holding that port (make dev / make up,
+# or a leaked `vite preview`) answers the wait instead — and that server is built
+# WITHOUT VITE_MOCK_LOGIN, so every post-login spec dies at the OTP step against a
+# real mothership. The job "fails" with nothing wrong in the code. Refuse to start.
+if [[ "$mode" == "e2e" || "$mode" == "all" ]]; then
+  if ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE ':4200$'; then
+    echo "!! port 4200 is already in use — the e2e job would test THAT server, not its own build." >&2
+    echo "   stop it first (make down, or pkill -f 'vite preview'), then re-run." >&2
+    exit 1
+  fi
+fi
+
 echo ">> running workflow: $mode"
 exec "$act_bin" push -W .github/workflows/ci.yml \
   "${job_args[@]}" \
