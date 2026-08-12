@@ -849,6 +849,7 @@
     "buildHint": "בחרו סוג רכיב וחברו אותו לשיחות או לאירועים השמורים ב-DuckDB.",
     "copySuffix": "עותק",
     "duplicateWidget": "שכפול רכיב",
+    "widgetActions": "פעולות רכיב",
     "refresh": "רענון",
     "saving": "שומר…",
     "last24Hours": "24 השעות האחרונות",

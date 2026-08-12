@@ -828,6 +828,7 @@
     "buildHint": "Choose a widget type and connect it to the calls or events stored in DuckDB.",
     "copySuffix": "copy",
     "duplicateWidget": "Duplicate widget",
+    "widgetActions": "Widget actions",
     "refresh": "Refresh",
     "saving": "Saving…",
     "last24Hours": "Last 24 hours",

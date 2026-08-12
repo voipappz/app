@@ -57,6 +57,19 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await expect(page.getByTestId('dashboard-builder')).toBeVisible();
   await expect(page.getByTestId('create-dashboard')).toBeVisible();
   await expect(page.getByTestId('add-widget')).toBeVisible();
+
+  // The restored Nimbus interaction starts with an explicit type chooser.
+  // Keep every supported DuckDB-backed choice reachable from the builder.
+  await page.getByTestId('add-widget').click();
+  for (const type of ['counter', 'table', 'pie', 'line', 'bar', 'gauge', 'stat']) {
+    await expect(page.getByTestId(`widget-type-${type}`)).toBeVisible();
+  }
+  await page.getByTestId('widget-type-counter').click();
+  const widgetEditor = page.getByTestId('widget-editor');
+  await expect(widgetEditor).toBeVisible();
+  await widgetEditor.getByRole('button', { name: /Cancel|ביטול/i }).click();
+  await expect(widgetEditor).toBeHidden();
+
   await page.getByTestId('builder-events-tab').click();
   await expect(page.getByTestId('dashboard-event-views')).toBeVisible();
   await expect(page.getByTestId('create-event-counter')).toBeVisible();

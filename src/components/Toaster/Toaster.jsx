@@ -37,7 +37,10 @@ export default function Toaster({ toasts = [], onDismiss }) {
       aria-label={t('notifications.toasts', 'Notifications')}
       data-testid="toaster"
       sx={{
-        position: 'fixed', insetBlockEnd: 16, insetInlineEnd: 16, zIndex: 1400,
+        // Notifications should not cover a modal editor or the full-screen
+        // dashboard builder. They remain above the normal app shell.
+        position: 'fixed', insetBlockEnd: 16, insetInlineEnd: 16,
+        zIndex: (theme) => theme.zIndex.modal - 1,
         display: 'flex', flexDirection: 'column', gap: 1,
         pointerEvents: 'none',   // the page stays clickable between cards
       }}

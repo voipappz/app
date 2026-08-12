@@ -137,33 +137,36 @@ export default function DashboardBuilder({
   return (
     <Dialog fullScreen open={open} onClose={onClose} PaperProps={{ 'data-testid': 'dashboard-builder' }}>
       <AppBar position="relative" color="inherit" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Toolbar sx={{ gap: 1, minHeight: { xs: 64, sm: 72 } }}>
-          <IconButton edge="start" onClick={onClose} aria-label={t('common.buttons.close', 'Close')}><CloseIcon /></IconButton>
-          <DashboardIcon color="primary" sx={{ ml: 0.5 }} />
-          <Button
-            color="inherit" endIcon={<KeyboardArrowDownIcon />} onClick={(event) => setDashboardMenuAnchor(event.currentTarget)}
-            sx={{ minWidth: 0, maxWidth: 280, textTransform: 'none', fontSize: { xs: '1rem', sm: '1.2rem' }, fontWeight: 750 }}
-          >
-            <Typography component="span" noWrap>{currentDashboard?.name || t('dashboardBuilder.heading', 'Dashboard builder')}</Typography>
-          </Button>
-          <Tooltip title={t('dashboardBuilder.renameDashboard', 'Rename dashboard')}>
-            <span><IconButton size="small" disabled={!currentDashboard || saving} onClick={() => { setRenameValue(currentDashboard?.name || ''); setRenameOpen(true); }}><EditOutlinedIcon fontSize="small" /></IconButton></span>
-          </Tooltip>
-          {saving && <Chip size="small" color="info" variant="outlined" label={t('dashboardBuilder.saving', 'Saving…')} />}
+        <Toolbar disableGutters sx={{ minHeight: { xs: 64, sm: 72 } }}>
+          <Box sx={{ width: '100%', maxWidth: 1440, mx: 'auto', px: { xs: 1, sm: 2.5 }, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton onClick={onClose} aria-label={t('common.buttons.close', 'Close')}><CloseIcon /></IconButton>
+            <DashboardIcon color="primary" sx={{ display: { xs: 'none', sm: 'block' } }} />
+            <Button
+              color="inherit" endIcon={<KeyboardArrowDownIcon />} onClick={(event) => setDashboardMenuAnchor(event.currentTarget)}
+              sx={{ minWidth: 0, maxWidth: { xs: 180, sm: 300 }, textTransform: 'none', fontSize: { xs: '1rem', sm: '1.15rem' }, fontWeight: 750 }}
+            >
+              <Typography component="span" noWrap>{currentDashboard?.name || t('dashboardBuilder.heading', 'Dashboard builder')}</Typography>
+            </Button>
+            <Tooltip title={t('dashboardBuilder.renameDashboard', 'Rename dashboard')}>
+              <span><IconButton size="small" disabled={!currentDashboard || saving} onClick={() => { setRenameValue(currentDashboard?.name || ''); setRenameOpen(true); }}><EditOutlinedIcon fontSize="small" /></IconButton></span>
+            </Tooltip>
+            {saving && <Chip size="small" color="info" variant="outlined" label={t('dashboardBuilder.saving', 'Saving…')} />}
 
-          <Box sx={{ flex: 1 }} />
-          <Tooltip title={t('dashboardBuilder.events.open', 'DuckDB event views')}>
-            <IconButton color={eventExplorerOpen ? 'primary' : 'default'} onClick={() => setEventExplorerOpen((value) => !value)} data-testid="builder-events-tab"><StorageIcon /></IconButton>
-          </Tooltip>
-          <Tooltip title={t('dashboardBuilder.export', 'Export JSON')}><span><IconButton disabled={!widgets.length} onClick={handleExport}><FileDownloadOutlinedIcon /></IconButton></span></Tooltip>
-          <Tooltip title={t('dashboardBuilder.import', 'Import JSON')}><IconButton onClick={() => fileInput.current?.click()}><FileUploadOutlinedIcon /></IconButton></Tooltip>
-          <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={handleImport} />
-          <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} data-testid="create-dashboard" sx={{ display: { xs: 'none', md: 'inline-flex' }, textTransform: 'none' }}>
-            {t('dashboardBuilder.createDashboard', 'New dashboard')}
-          </Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={(event) => setAddMenuAnchor(event.currentTarget)} data-testid="add-widget" sx={{ textTransform: 'none' }}>
-            {t('dashboardBuilder.addWidget', 'Add widget')}
-          </Button>
+            <Box sx={{ flex: 1 }} />
+            <Tooltip title={t('dashboardBuilder.events.open', 'DuckDB event views')}>
+              <IconButton color={eventExplorerOpen ? 'primary' : 'default'} onClick={() => setEventExplorerOpen((value) => !value)} data-testid="builder-events-tab"><StorageIcon /></IconButton>
+            </Tooltip>
+            <Tooltip title={t('dashboardBuilder.export', 'Export JSON')}><span><IconButton disabled={!widgets.length} onClick={handleExport}><FileDownloadOutlinedIcon /></IconButton></span></Tooltip>
+            <Tooltip title={t('dashboardBuilder.import', 'Import JSON')}><IconButton onClick={() => fileInput.current?.click()}><FileUploadOutlinedIcon /></IconButton></Tooltip>
+            <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={handleImport} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, display: { xs: 'none', md: 'block' } }} />
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} data-testid="create-dashboard" sx={{ display: { xs: 'none', md: 'inline-flex' }, textTransform: 'none', whiteSpace: 'nowrap' }}>
+              {t('dashboardBuilder.createDashboard', 'New dashboard')}
+            </Button>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={(event) => setAddMenuAnchor(event.currentTarget)} data-testid="add-widget" sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}>
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{t('dashboardBuilder.addWidget', 'Add widget')}</Box>
+            </Button>
+          </Box>
         </Toolbar>
       </AppBar>
 
@@ -200,15 +203,15 @@ export default function DashboardBuilder({
         ))}
       </Menu>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', bgcolor: 'background.default' }}>
-        <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', p: { xs: 1.5, md: 2.5 } }} data-testid="builder-widgets-tab">
-          <Paper elevation={0} sx={{ mb: 2, px: 2, py: 1.25, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Chip icon={<GridViewIcon />} size="small" variant="outlined" label={t('dashboardBuilder.count', '{{count}} widgets', { count: widgets.length })} />
-            <Chip icon={<StorageIcon />} size="small" color="success" variant="outlined" label="DuckDB" />
-            <Chip size="small" variant="outlined" label={t('dashboardBuilder.last24Hours', 'Last 24 hours')} />
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', bgcolor: '#f7f8fa', position: 'relative' }}>
+        <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', p: { xs: 1.5, md: 3 } }} data-testid="builder-widgets-tab">
+          <Box sx={{ width: '100%', maxWidth: 1440, mx: 'auto' }}>
+          <Paper elevation={0} sx={{ mb: 2.5, px: { xs: 1.25, sm: 2 }, py: 1.25, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2.5, bgcolor: 'background.paper' }}>
+            <Button size="small" variant="text" startIcon={<RefreshIcon />} onClick={refresh} disabled={loading}>{t('dashboardBuilder.refresh', 'Refresh')}</Button>
             <Box sx={{ flex: 1 }} />
-            {selectedDashboardId !== 'default' && <Button size="small" color="error" startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteDashboardOpen(true)}>{t('dashboardBuilder.deleteDashboard', 'Delete dashboard')}</Button>}
-            <Button size="small" variant="outlined" startIcon={<RefreshIcon />} onClick={refresh} disabled={loading}>{t('dashboardBuilder.refresh', 'Refresh')}</Button>
+            <Chip size="small" variant="outlined" label={t('dashboardBuilder.last24Hours', 'Last 24 hours')} />
+            <Chip icon={<StorageIcon />} size="small" color="success" variant="outlined" label="DuckDB" />
+            <Chip icon={<GridViewIcon />} size="small" variant="outlined" label={t('dashboardBuilder.count', '{{count}} widgets', { count: widgets.length })} />
           </Paper>
 
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -224,7 +227,7 @@ export default function DashboardBuilder({
               <Button size="large" variant="contained" startIcon={<AddIcon />} onClick={(event) => setAddMenuAnchor(event.currentTarget)}>{t('dashboardBuilder.addFirstWidget', 'Add your first widget')}</Button>
             </Paper>
           ) : (
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(4, minmax(0, 1fr))' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gridAutoFlow: 'dense', gap: 2.25, alignItems: 'stretch' }}>
               {widgets.map((widget) => (
                 <BuilderWidget
                   key={widget.uuid} widget={widget} snapshot={snapshot} saving={saving}
@@ -233,6 +236,7 @@ export default function DashboardBuilder({
               ))}
             </Box>
           )}
+          </Box>
         </Box>
 
         {eventExplorerOpen && (

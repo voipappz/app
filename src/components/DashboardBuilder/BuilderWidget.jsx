@@ -1,24 +1,28 @@
 import {
-  Box, Chip, IconButton, LinearProgress, Paper, Stack, Tooltip, Typography,
+  Box, Chip, IconButton, LinearProgress, ListItemIcon, ListItemText, Menu,
+  MenuItem, Paper, Stack, Typography,
 } from '@mui/material';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatWidgetValue, resolveIcon, thresholdColor } from './widgetPresentation';
 import { withDefaults } from './widgetTemplates';
 
-const WIDE_TYPES = new Set(['trend', 'table', 'event_table']);
+const STAT_TYPES = new Set(['counter', 'gauge', 'stat']);
+const CHART_TYPES = new Set(['trend', 'line', 'bar', 'pie']);
+const WIDE_TYPES = new Set([...CHART_TYPES, 'table', 'event_table']);
 
-function TrendPreview({ points, fields }) {
+function TrendPreview({ points, fields, type }) {
   const rows = Array.isArray(points) ? points.slice(-18) : [];
   const series = fields?.length ? fields : ['inbound', 'outbound'];
   const values = rows.map((row) => series.reduce((sum, field) => sum + (Number(row[field]) || 0), 0));
   const max = Math.max(1, ...values);
 
   return (
-    <Box sx={{ height: 112, display: 'flex', alignItems: 'flex-end', gap: 0.5, px: 0.5, pt: 1 }}>
+    <Box data-testid={`widget-preview-${type}`} sx={{ height: 112, display: 'flex', alignItems: 'flex-end', gap: 0.5, px: 0.5, pt: 1 }}>
       {values.length ? values.map((value, index) => (
         <Box
           key={`${rows[index]?.bucket || index}`}
@@ -51,6 +55,7 @@ function TablePreview({ rows, fields }) {
 /** Compact, data-backed preview used inside the full dashboard-builder grid. */
 export default function BuilderWidget({ widget: storedWidget, snapshot, saving, onEdit, onDuplicate, onDelete }) {
   const { t } = useTranslation();
+  const [menuAnchor, setMenuAnchor] = useState(null);
   const widget = withDefaults(storedWidget);
   const Icon = resolveIcon(widget.icon);
   const value = Number(snapshot?.stats?.[widget.metric]) || 0;
@@ -64,31 +69,52 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
       data-testid={`builder-widget-${widget.uuid}`}
       sx={{
         gridColumn: { xs: 'span 1', md: WIDE_TYPES.has(widget.type) ? 'span 2' : 'span 1' },
-        minHeight: WIDE_TYPES.has(widget.type) ? 230 : 190,
+        minHeight: WIDE_TYPES.has(widget.type) ? 240 : 200,
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         border: '1px solid', borderColor: 'divider', borderRadius: 2.5,
+        bgcolor: 'background.paper',
+        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
+        transition: 'border-color 160ms ease, box-shadow 160ms ease',
+        '&:hover': { borderColor: 'text.disabled', boxShadow: '0 12px 30px rgba(15, 23, 42, 0.09)' },
       }}
     >
-      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ px: 1.25, py: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <DragIndicatorIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ px: 1.75, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="body2" sx={{ fontWeight: 750 }} noWrap>{widget.title}</Typography>
-          <Typography variant="caption" color="text.secondary">{t(`dashboardBuilder.type.${widget.type}`, widget.type)}</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 750 }} noWrap>{widget.title}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{t(`dashboardBuilder.type.${widget.type}`, widget.type)}</Typography>
         </Box>
-        <Tooltip title={t('dashboardBuilder.editWidget', 'Edit widget')}><span><IconButton size="small" disabled={saving} onClick={() => onEdit(widget)}><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
-        <Tooltip title={t('dashboardBuilder.duplicateWidget', 'Duplicate widget')}><span><IconButton size="small" disabled={saving} onClick={() => onDuplicate(widget)}><ContentCopyOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
-        <Tooltip title={t('dashboardBuilder.deleteWidget', 'Delete widget')}><span><IconButton size="small" color="error" disabled={saving} onClick={() => onDelete(widget)}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip>
+        <IconButton
+          size="small" disabled={saving} aria-label={t('dashboardBuilder.widgetActions', 'Widget actions')}
+          onClick={(event) => setMenuAnchor(event.currentTarget)}
+        >
+          <MoreVertIcon fontSize="small" />
+        </IconButton>
       </Stack>
 
-      <Box sx={{ flex: 1, p: 1.5, minHeight: 0 }}>
-        {(widget.type === 'counter' || widget.type === 'gauge') && (
-          <Stack sx={{ height: '100%' }} justifyContent="center" alignItems="center" spacing={1}>
-            <Box sx={{ width: 42, height: 42, borderRadius: 2, display: 'grid', placeItems: 'center', bgcolor: 'action.hover', color: accent }}><Icon /></Box>
-            <Typography variant="h4" sx={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{formatWidgetValue(widget, value)}</Typography>
+      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+        <MenuItem onClick={() => { setMenuAnchor(null); onEdit(widget); }}>
+          <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
+          <ListItemText primary={t('dashboardBuilder.editWidget', 'Edit widget')} />
+        </MenuItem>
+        <MenuItem onClick={() => { setMenuAnchor(null); onDuplicate(widget); }}>
+          <ListItemIcon><ContentCopyOutlinedIcon fontSize="small" /></ListItemIcon>
+          <ListItemText primary={t('dashboardBuilder.duplicateWidget', 'Duplicate widget')} />
+        </MenuItem>
+        <MenuItem sx={{ color: 'error.main' }} onClick={() => { setMenuAnchor(null); onDelete(widget); }}>
+          <ListItemIcon><DeleteOutlineIcon fontSize="small" color="error" /></ListItemIcon>
+          <ListItemText primary={t('dashboardBuilder.deleteWidget', 'Delete widget')} />
+        </MenuItem>
+      </Menu>
+
+      <Box sx={{ flex: 1, p: 2, minHeight: 0 }}>
+        {STAT_TYPES.has(widget.type) && (
+          <Stack data-testid={`widget-preview-${widget.type}`} sx={{ height: '100%' }} justifyContent="center" alignItems="center" spacing={1}>
+            <Box sx={{ width: 48, height: 48, borderRadius: 2.5, display: 'grid', placeItems: 'center', bgcolor: 'action.hover', color: accent }}><Icon /></Box>
+            <Typography variant="h3" sx={{ fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{formatWidgetValue(widget, value)}</Typography>
             {widget.type === 'gauge' && <LinearProgress variant="determinate" value={gaugeValue} color="inherit" sx={{ width: '80%', height: 8, borderRadius: 4, color: accent }} />}
           </Stack>
         )}
-        {widget.type === 'trend' && <TrendPreview points={snapshot?.calls_per_hour} fields={widget.fields} />}
+        {CHART_TYPES.has(widget.type) && <TrendPreview type={widget.type} points={snapshot?.calls_per_hour} fields={widget.fields} />}
         {widget.type === 'table' && <TablePreview rows={snapshot?.recent_calls} fields={widget.fields} />}
         {(widget.type === 'event_counter' || widget.type === 'event_table') && (
           <Stack sx={{ height: '100%' }} justifyContent="center" alignItems="center" spacing={1}>
