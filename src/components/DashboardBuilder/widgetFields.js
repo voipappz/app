@@ -20,6 +20,7 @@ export const FALLBACK_FIELDS = {
   stats: COUNTER_METRICS,
   calls_per_hour: ['inbound', 'outbound', 'total'],
   recent_calls: ['started_at', 'direction', 'from_number', 'to_number', 'status', 'duration_sec'],
+  events: ['occurred_at', 'event_type', 'action', 'call_id', 'received_at'],
 };
 
 // Keys that address a row rather than describe it — never offered as fields.
@@ -61,6 +62,7 @@ export function deriveFieldOptions(snapshot) {
     stats: build('stats', stats),
     calls_per_hour: build('calls_per_hour', perHour),
     recent_calls: build('recent_calls', recent),
+    events: build('events', []),
   };
 }
 
@@ -72,6 +74,10 @@ export function fieldsForType(type, options) {
 /** counter/gauge read ONE stat; trend/table read a set of columns. */
 export function isSingleField(type) {
   return SOURCE_BY_TYPE[type] === 'stats';
+}
+
+export function isFieldless(type) {
+  return type === 'event_counter';
 }
 
 /**
@@ -99,6 +105,7 @@ export function isFieldSelected(widget, name) {
  * not leave `fields` full of stat keys the table cannot show.
  */
 export function retargetType(widget, type, options) {
+  if (isFieldless(type)) return { ...widget, type, metric: 'total', fields: [] };
   const available = fieldsForType(type, options).map((f) => f.name);
   if (isSingleField(type)) {
     const metric = available.includes(widget.metric) ? widget.metric : available[0] || '';

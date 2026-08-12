@@ -14,6 +14,7 @@ export const EXPORT_VERSION = 1;
 const PORTABLE_KEYS = [
   'title', 'type', 'metric', 'fields', 'icon', 'color', 'unit',
   'thresholds', 'inverse', 'min', 'max',
+  'eventType', 'action',
 ];
 
 /** Widget → the portable subset (drops uuid/position and unknown extras). */

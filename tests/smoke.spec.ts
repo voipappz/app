@@ -49,6 +49,21 @@ test('mock login reaches the dashboard', async ({ page }) => {
   await expect(page.getByText(/Calls per hour|שיחות לפי שעה/i).first()).toBeVisible();
   await expect(page.getByText(/Recent calls|שיחות אחרונות/i).first()).toBeVisible();
 
+  // Dashboard access includes its local DuckDB builder. The mock user has
+  // dashboard:read (not dashboard:write), matching the end-user ACL that used
+  // to hide the builder completely.
+  await expect(page.getByTestId('dashboard-builder-button')).toBeVisible();
+  await page.getByTestId('dashboard-builder-button').click();
+  await expect(page.getByTestId('dashboard-builder')).toBeVisible();
+  await expect(page.getByTestId('create-dashboard')).toBeVisible();
+  await expect(page.getByTestId('add-widget')).toBeVisible();
+  await page.getByTestId('builder-events-tab').click();
+  await expect(page.getByTestId('dashboard-event-views')).toBeVisible();
+  await expect(page.getByTestId('create-event-counter')).toBeVisible();
+  await expect(page.getByTestId('create-event-table')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('dashboard-builder')).toBeHidden();
+
   // The softphone must remain usable/testable even with no real SIP account.
   // Signaling lifecycle is covered by unit tests; this guards the integrated UI.
   await page.getByTestId('phone-button').click();
@@ -91,7 +106,9 @@ test('mock login reaches the dashboard', async ({ page }) => {
       }],
     }),
   }));
-  await rail.locator('a[href="/event-explorer"]').click();
+  // Raw event inspection is a technical/development route, not end-user
+  // navigation. Keep its route covered without putting it in the main rail.
+  await page.goto('/event-explorer');
   await page.waitForURL('**/event-explorer');
   await expect(page.getByTestId('event-row-browser-raw-1')).toBeVisible();
   await page.getByTestId('event-row-browser-raw-1').click();

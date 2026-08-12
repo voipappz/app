@@ -9,7 +9,10 @@
       "send": "שלח סיכום",
       "back": "חזרה",
       "viewAll": "הצג הכל",
-      "start": "התחל"
+      "start": "התחל",
+      "create": "יצירה",
+      "delete": "מחיקה",
+      "close": "סגירה"
     },
     "status": {
       "loading": "טוען...",
@@ -343,12 +346,14 @@
     }
   },
   "login": {
-    "title": "התחברות לחשבון",
-    "email": "אימייל/שם משתמש",
+    "title": "טוב לראות אותך שוב",
+    "secureAccess": "גישה מאובטחת",
+    "identifier": "אימייל, שם משתמש או שלוחה",
+    "identifierHint": "אפשר להתחבר עם אימייל, שם משתמש או מספר שלוחה.",
     "password": "סיסמה",
     "requiredField": "שדה חובה",
-    "forgotPassword": "שכחתי סיסמה",
-    "loginButton": "התחבר",
+    "credentialsRequired": "יש להזין אימייל, שם משתמש או שלוחה וסיסמה.",
+    "loginButton": "כניסה",
     "loggingIn": "מתחבר...",
     "otpTitle": "אימות דו-שלבי",
     "otpCode": "קוד אימות",
@@ -362,7 +367,7 @@
       "legal": "תנאים משפטיים",
       "contact": "צור קשר"
     },
-    "otpSentTo": "שלחנו קוד בן 6 ספרות למייל <strong>{{email}}</strong>. הזן אותו כדי להמשיך.",
+    "otpSentTo": "יש להזין את קוד האימות בן 6 הספרות שנשלח עבור <strong>{{identifier}}</strong>.",
     "otpExpiresIn": "הקוד יפוג בעוד {{time}}",
     "otpExpired": "הקוד פג — בקש קוד חדש",
     "resendCode": "שלח קוד מחדש",
@@ -371,7 +376,7 @@
     "resendFailed": "לא ניתן היה לשלוח קוד חדש. נסה שוב.",
     "tooManyAttempts": "יותר מדי ניסיונות. המתן מספר דקות ונסה שוב.",
     "accountLocked": "החשבון ננעל בעקבות ניסיונות כושלים רבים. נסה שוב מאוחר יותר.",
-    "otpExpectedHint": "חשבון זה משתמש באימות דו-שלבי — נשלח לך קוד במייל לאחר ההתחברות."
+    "otpExpectedHint": "ייתכן שתתבקש להזין קוד אימות לאחר הכניסה."
   },
   "menu": {
     "dashboard": "לוח בקרה",
@@ -382,7 +387,7 @@
     "switchToRTL": "מעבר ל-RTL",
     "logout": "יציאה",
     "notifications": "התראות",
-    "status": "סטטוס",
+    "status": "הסטטוס שלי",
     "language": "שפה",
     "navigation": "ניווט ראשי",
     "darkMode": "מצב כהה",
@@ -752,7 +757,7 @@
     "seeAll": "כל ההתראות"
   },
   "status": {
-    "title": "סטטוס מערכת",
+    "title": "תקינות המערכת",
     "allOk": "כל המערכות תקינות",
     "degraded": "מצב מופחת",
     "unreachable": "לא זמין",
@@ -784,6 +789,21 @@
       "failed": "נכשל"
     }
   },
+  "userStatus": {
+    "title": "הסטטוס שלי",
+    "subtitle": "הזמינות ופעילות השיחות שלך כרגע.",
+    "availability": "זמינות",
+    "calls": "שיחות",
+    "sinceLogin": "מאז תחילת ההתחברות הנוכחית",
+    "lastCall": "שיחה אחרונה",
+    "talkingTo": "בשיחה עם",
+    "activeQueue": "תור פעיל",
+    "updated": "עודכן",
+    "saving": "מעדכן…",
+    "notFound": "הסטטוס החי שלך עדיין לא זמין.",
+    "loadError": "לא ניתן לטעון את הסטטוס שלך.",
+    "saveError": "לא ניתן לעדכן את הזמינות שלך."
+  },
   "eventExplorer": {
     "title": "אירועים גולמיים מ-DuckDB",
     "subtitle": "אירועי NATS/Cable המקוריים שנשמרו על ידי Deno. בחירת שורה מציגה את ה-JSON הגולמי.",
@@ -811,11 +831,27 @@
   },
   "dashboardBuilder": {
     "heading": "עורך לוח הבקרה",
-    "open": "עריכת לוח",
-    "hint": "הרכיבים מחושבים מאירועי השיחות המקומיים של האפליקציה. ללא רכיבים יוצגו האריחים המובנים.",
+    "open": "בניית לוח בקרה",
+    "hint": "צרו לוחות ורכיבים מהאירועים השמורים ב-DuckDB של האפליקציה.",
+    "dashboard": "לוח בקרה",
+    "createDashboard": "לוח חדש",
+    "dashboardName": "שם לוח הבקרה",
+    "renameDashboard": "שינוי שם לוח הבקרה",
+    "selectDashboard": "בחירת לוח בקרה",
+    "selectWidgetType": "בחירת סוג רכיב",
+    "deleteDashboard": "מחיקת לוח",
+    "confirmDashboardDelete": "למחוק את לוח הבקרה ואת כל הרכיבים שלו?",
     "newWidget": "כותרת רכיב חדש",
     "widgetTitle": "כותרת",
     "addWidget": "הוספת רכיב",
+    "addFirstWidget": "הוספת הרכיב הראשון",
+    "buildHeading": "בניית לוח הבקרה",
+    "buildHint": "בחרו סוג רכיב וחברו אותו לשיחות או לאירועים השמורים ב-DuckDB.",
+    "copySuffix": "עותק",
+    "duplicateWidget": "שכפול רכיב",
+    "refresh": "רענון",
+    "saving": "שומר…",
+    "last24Hours": "24 השעות האחרונות",
     "editWidget": "עריכת רכיב",
     "deleteWidget": "מחיקת רכיב",
     "confirmDelete": "למחוק את הרכיב?",
@@ -841,9 +877,46 @@
     },
     "type": {
       "counter": "מונה",
+      "stat": "נתון",
       "gauge": "מד",
       "trend": "שיחות לפי שעה",
-      "table": "טבלת שיחות"
+      "line": "תרשים קו",
+      "bar": "תרשים עמודות",
+      "pie": "תרשים עוגה",
+      "table": "טבלה",
+      "event_counter": "מונה אירועים",
+      "event_table": "טבלת אירועים"
+    },
+    "newType": {
+      "counter": "מונה חדש",
+      "table": "טבלה חדשה",
+      "pie": "תרשים עוגה חדש",
+      "line": "תרשים קו חדש",
+      "bar": "תרשים עמודות חדש",
+      "gauge": "מד חדש",
+      "stat": "נתון חדש"
+    },
+    "tabs": {
+      "widgets": "רכיבים",
+      "events": "אירועי DuckDB"
+    },
+    "events": {
+      "heading": "תצוגות אירועים מ-DuckDB",
+      "open": "תצוגות אירועים מ-DuckDB",
+      "duckdbView": "תצוגת אירועים מ-DuckDB",
+      "hint": "עיינו באירועים המנורמלים שב-DuckDB והפכו את התצוגה הנוכחית לרכיב.",
+      "search": "חיפוש אירועים",
+      "type": "סוג אירוע",
+      "action": "פעולה",
+      "apply": "החלת תצוגה",
+      "createCounter": "יצירת רכיב מונה",
+      "createTable": "יצירת רכיב טבלה",
+      "resultCount": "{{shown}} מתוך {{total}} אירועים",
+      "use": "שימוש",
+      "loadMore": "טעינת נוספים",
+      "allEvents": "כל האירועים",
+      "loadError": "לא ניתן לטעון אירועים מ-DuckDB.",
+      "empty": "אין אירועים תואמים."
     },
     "fields": {
       "pickOne": "מדד",
@@ -863,7 +936,9 @@
       "callsPerHour": "שיחות לפי שעה",
       "inboundPerHour": "נכנסות לפי שעה",
       "recentCalls": "שיחות אחרונות",
-      "recentFailures": "שיחות אחרונות (מקוצר)"
+      "recentFailures": "שיחות אחרונות (מקוצר)",
+      "allEventCount": "כל האירועים",
+      "recentEvents": "אירועים אחרונים"
     },
     "editor": {
       "add": "הוספת רכיב",

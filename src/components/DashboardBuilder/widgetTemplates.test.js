@@ -10,7 +10,9 @@ describe('the template catalog', () => {
     for (const [key, template] of Object.entries(WIDGET_TEMPLATES)) {
       const source = SOURCE_BY_TYPE[template.type];
       expect(source, `${key} has an unknown type`).toBeTruthy();
-      if (template.metric) expect(FALLBACK_FIELDS[source], key).toContain(template.metric);
+      if (template.metric && template.type !== 'event_counter') {
+        expect(FALLBACK_FIELDS[source], key).toContain(template.metric);
+      }
       for (const field of template.fields || []) {
         expect(FALLBACK_FIELDS[source], `${key}.${field}`).toContain(field);
       }
@@ -69,7 +71,7 @@ describe('withDefaults', () => {
   });
 
   it('rejects an unrenderable type', () => {
-    expect(withDefaults({ type: 'pie' }).type).toBe('counter');
+    expect(withDefaults({ type: 'unknown-widget' }).type).toBe('counter');
     for (const type of WIDGET_TYPES) expect(withDefaults({ type }).type).toBe(type);
   });
 });

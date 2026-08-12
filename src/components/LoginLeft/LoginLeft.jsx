@@ -1,4 +1,4 @@
-import { Box, Typography, Link } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { useLoginLeft } from './LoginLeft';
 import { useTranslation } from 'react-i18next';
 import { brand } from '../../config';
@@ -22,29 +22,20 @@ const LoginLeft = () => {
       <Box className="logo-container">
         <Logo />
       </Box>
-        <Box sx={{height: "55vh;",display:" flex;",justifyContent: "space-between;",flexDirection: "column;"}}>
-          <Box>
-            <Typography variant="h4" className="welcome-text">
-              {t('login.welcome', { brand: brand.name })}
-            </Typography>
+      <Box className="login-left-copy">
+        <Typography variant="h3" className="welcome-text">
+          {t('login.welcome', { brand: brand.name })}
+        </Typography>
 
-            <Typography variant="h6" className="login-subtitle">
-              {t('login.subtitle')}
-            </Typography>
-          </Box>
-          <Box className="footer">
-            <Box>
-              <Typography component="span" className="copyright">
-                © {currentYear}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Link component="a" className="footer-link">{t('login.footer.privacy')}</Link>
-              <Link component="a" className="footer-link">{t('login.footer.legal')}</Link>
-              <Link component="a" className="footer-link">{t('login.footer.contact')}</Link>
-            </Box>
-          </Box>
-        </Box>
+        <Typography variant="h6" className="login-left-subtitle">
+          {t('login.subtitle')}
+        </Typography>
+      </Box>
+      <Box className="footer">
+        <Typography component="span" className="copyright">
+          © {currentYear} {brand.name}
+        </Typography>
+      </Box>
     </Box>
   );
 };

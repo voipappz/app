@@ -13,11 +13,11 @@ import StatusChip from '../common/StatusChip';
 import CallsPerHourChart from '../common/CallsPerHourChart';
 import { DashboardWidgets } from './widgets';
 import { useDashboardSnapshot, type DashboardCall } from './useDashboardSnapshot';
-import { useCallsPerHour } from './useCallsPerHour';
 import DashboardBuilder from '../DashboardBuilder/DashboardBuilder';
 import { formatWidgetValue, resolveIcon, thresholdColor } from '../DashboardBuilder/widgetPresentation';
 import { getWidgets } from '../../services/dashboardsApi';
 import { useACL } from '../../hooks/useACL';
+import EventWidget from '../DashboardBuilder/EventWidget';
 
 interface LocalWidget {
   uuid: string;
@@ -32,6 +32,8 @@ interface LocalWidget {
   inverse?: boolean;
   min?: number;
   max?: number;
+  eventType?: string;
+  action?: string;
 }
 
 /**
@@ -124,32 +126,39 @@ export default function Dashboard() {
     return { from: new Date(now - 24 * 3_600_000), to: new Date(now + 3_600_000) };
   });
   const { snapshot, status } = useDashboardSnapshot(range);
-  // Calls-per-hour comes from the MOTHERSHIP's call list, not the local DuckDB
-  // projection: that projection is fed by the cable tap, which is unconfigured
-  // on most installs, so the chart sat empty while the Calls page showed the
-  // very same calls. Falls back to the projection if the API series is absent.
-  const { points: apiCallsPerHour } = useCallsPerHour({ minutes: 1440 });
-  const callsPerHour = apiCallsPerHour ?? snapshot.calls_per_hour;
+  // Dashboard data is DuckDB-only. Calls and Reports remain mothership-owned,
+  // but no mothership result is mixed into this screen.
+  const callsPerHour = snapshot.calls_per_hour;
   const { stats } = snapshot;
   const { can } = useACL();
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [dashboardId, setDashboardId] = useState(() => {
+    try { return localStorage.getItem('selected-dashboard-id') || 'default'; } catch { return 'default'; }
+  });
+
+  const selectDashboard = useCallback((uuid: string) => {
+    const next = uuid || 'default';
+    setDashboardId(next);
+    try { localStorage.setItem('selected-dashboard-id', next); } catch { /* storage disabled */ }
+  }, []);
 
   // User-defined widgets (local DuckDB definitions). When present they replace
   // the default KPI row; values always come from the same snapshot stats.
   const [customWidgets, setCustomWidgets] = useState<LocalWidget[]>([]);
   const loadWidgets = useCallback(() => {
-    getWidgets().then(setCustomWidgets).catch(() => setCustomWidgets([]));
-  }, []);
+    getWidgets(dashboardId).then(setCustomWidgets).catch(() => setCustomWidgets([]));
+  }, [dashboardId]);
   useEffect(() => { loadWidgets(); }, [loadWidgets]);
 
   // A definition's type decides which snapshot section renders it: counters and
-  // gauges read `stats`, trends read `calls_per_hour`, tables read `recent_calls`.
-  const { tiles, trends, tables } = useMemo(() => ({
-    tiles: customWidgets.filter((w) => !w.type || w.type === 'counter' || w.type === 'gauge'),
-    trends: customWidgets.filter((w) => w.type === 'trend'),
+  // gauges/stats read `stats`, charts read `calls_per_hour`, tables read `recent_calls`.
+  const { tiles, charts, tables, eventWidgets } = useMemo(() => ({
+    tiles: customWidgets.filter((w) => !w.type || ['counter', 'gauge', 'stat'].includes(w.type)),
+    charts: customWidgets.filter((w) => ['trend', 'line', 'bar', 'pie'].includes(w.type || '')),
     tables: customWidgets.filter((w) => w.type === 'table'),
+    eventWidgets: customWidgets.filter((w) => w.type === 'event_counter' || w.type === 'event_table'),
   }), [customWidgets]);
-  const customPanels = trends.length > 0 || tables.length > 0;
+  const customPanels = charts.length > 0 || tables.length > 0;
 
   const rawValue = (metric: string): number =>
     (stats as unknown as Record<string, number>)[metric] ?? 0;
@@ -161,7 +170,7 @@ export default function Dashboard() {
         subtitle={t('callDashboard.timeRange.last24Hours', 'Last 24 hours')}
         actions={
           <>
-            {can('dashboard:write') && (
+            {can('dashboard:read') && (
               <Button
                 size="small" variant="outlined" color="inherit" startIcon={<EditOutlinedIcon />}
                 onClick={() => setBuilderOpen(true)} data-testid="dashboard-builder-button"
@@ -183,6 +192,7 @@ export default function Dashboard() {
       <DashboardBuilder
         open={builderOpen} onClose={() => setBuilderOpen(false)}
         onChange={loadWidgets} snapshot={snapshot}
+        selectedDashboardId={dashboardId} onSelectDashboard={selectDashboard}
       />
 
       <Box data-testid="dashboard-kpis" sx={{ display: 'grid', gap: 2, mb: 2, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' } }}>
@@ -212,10 +222,11 @@ export default function Dashboard() {
       <Box sx={{ display: 'grid', gap: 2, mb: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 7fr) minmax(0, 5fr)' }, alignItems: 'stretch' }}>
         {customPanels ? (
           <>
-            {trends.map((widget) => (
+            {charts.map((widget) => (
               <CallsPerHourChart
                 key={widget.uuid} points={callsPerHour}
                 series={widget.fields} title={widget.title}
+                variant={widget.type === 'line' || widget.type === 'pie' ? widget.type : 'bar'}
               />
             ))}
             {tables.map((widget) => (
@@ -232,6 +243,12 @@ export default function Dashboard() {
           </>
         )}
       </Box>
+
+      {eventWidgets.length > 0 && (
+        <Box sx={{ display: 'grid', gap: 2, mb: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' } }}>
+          {eventWidgets.map((widget) => <EventWidget key={widget.uuid} widget={widget} />)}
+        </Box>
+      )}
 
       <DashboardWidgets />
     </Box>

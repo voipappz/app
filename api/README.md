@@ -20,6 +20,10 @@ bundle in production.
 - **`/auth/*`** — forwarded unchanged to the mothership user login/OTP API.
 - **Dashboard snapshot** — KPIs, hourly call buckets, and recent calls projected
   from locally consumed events in DuckDB.
+- **Dashboard builder** — authenticated `/dashboard/dashboards` and
+  `/dashboard/widgets` CRUD stores multiple dashboard definitions and their
+  widgets in DuckDB. `/dashboard/events` pages the normalized local events for
+  event-view widgets without returning the untouched `raw_payload`.
 - **Optional Influx connector** — retained for tenant-specific analytics; it is
   not used by the current Dashboard.
 - **Transcripts** — read on request from the engine's event store

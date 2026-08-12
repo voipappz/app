@@ -15,11 +15,21 @@
 export const SOURCE_BY_TYPE = {
   counter: 'stats',
   gauge: 'stats',
+  stat: 'stats',
   trend: 'calls_per_hour',
+  line: 'calls_per_hour',
+  bar: 'calls_per_hour',
+  pie: 'calls_per_hour',
   table: 'recent_calls',
+  event_counter: 'events',
+  event_table: 'events',
 };
 
-export const WIDGET_TYPES = ['counter', 'gauge', 'trend', 'table'];
+export const WIDGET_TYPES = [
+  'counter', 'table', 'pie', 'line', 'bar', 'gauge', 'stat',
+  // Kept for definitions created by the earlier portal builder.
+  'trend', 'event_counter', 'event_table',
+];
 
 /** Blank widget — every field the editor can touch, so merges are total. */
 export const DEFAULT_WIDGET = {
@@ -34,6 +44,8 @@ export const DEFAULT_WIDGET = {
   inverse: false,
   min: 0,
   max: 100,
+  eventType: '',
+  action: '',
 };
 
 export const WIDGET_TEMPLATES = {
@@ -76,10 +88,10 @@ export const WIDGET_TEMPLATES = {
 
   // Trend — the calls_per_hour projection
   callsPerHour: {
-    title: 'Calls per hour', type: 'trend', fields: ['inbound', 'outbound'],
+    title: 'Calls per hour', type: 'bar', fields: ['inbound', 'outbound'],
   },
   inboundPerHour: {
-    title: 'Inbound per hour', type: 'trend', fields: ['inbound'],
+    title: 'Inbound per hour', type: 'line', fields: ['inbound'],
   },
 
   // Table — the recent_calls rows
@@ -91,6 +103,14 @@ export const WIDGET_TEMPLATES = {
     title: 'Recent calls (compact)', type: 'table',
     fields: ['started_at', 'from_number', 'status'],
   },
+  allEventCount: {
+    title: 'All events', type: 'event_counter', metric: 'total',
+    icon: 'Insights', unit: 'events',
+  },
+  recentEvents: {
+    title: 'Recent events', type: 'event_table',
+    fields: ['occurred_at', 'event_type', 'action', 'call_id'],
+  },
 };
 
 /** Template keys grouped for the editor's chip row. */
@@ -99,6 +119,7 @@ export const TEMPLATE_CATEGORIES = {
   gauges: ['failureGauge', 'handleTimeGauge'],
   trends: ['callsPerHour', 'inboundPerHour'],
   tables: ['recentCalls', 'recentFailures'],
+  events: ['allEventCount', 'recentEvents'],
 };
 
 /**

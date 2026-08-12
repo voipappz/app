@@ -13,6 +13,9 @@ import { getToken } from '../lib/auth';
  */
 export const COUNTER_METRICS = ['total', 'answered', 'failed', 'inbound', 'outbound', 'avg_duration_sec'];
 
+const dashboardQuery = (dashboardUuid = 'default') =>
+  `?${new URLSearchParams({ dashboard_uuid: dashboardUuid || 'default' })}`;
+
 async function send(method, path, body) {
   const token = typeof getToken === 'function' ? getToken() : null;
   const response = await fetch(`${DENO_API_BASE}${path}`, {
@@ -36,18 +39,63 @@ export function normalizeWidgets(payload) {
   return raw.filter((w) => w && typeof w === 'object' && w.uuid);
 }
 
-export async function getWidgets() {
-  return normalizeWidgets(await send('GET', '/dashboard/widgets'));
+export function normalizeDashboards(payload) {
+  const raw = Array.isArray(payload) ? payload
+    : Array.isArray(payload?.dashboards) ? payload.dashboards
+    : [];
+  return raw.filter((dashboard) => dashboard?.uuid && dashboard?.name);
 }
 
-export function createWidget(widget) {
-  return send('POST', '/dashboard/widgets', widget);
+export async function getDashboards() {
+  return normalizeDashboards(await send('GET', '/dashboard/dashboards'));
 }
 
-export function updateWidget(uuid, patch) {
-  return send('PATCH', `/dashboard/widgets/${encodeURIComponent(uuid)}`, patch);
+export function createDashboard(name) {
+  return send('POST', '/dashboard/dashboards', { name });
+}
+
+export function renameDashboard(uuid, name) {
+  return send('PATCH', `/dashboard/dashboards/${encodeURIComponent(uuid)}`, { name });
+}
+
+export function deleteDashboard(uuid) {
+  return send('DELETE', `/dashboard/dashboards/${encodeURIComponent(uuid)}`);
+}
+
+export async function getWidgets(dashboardUuid = 'default') {
+  return normalizeWidgets(await send('GET', `/dashboard/widgets${dashboardQuery(dashboardUuid)}`));
+}
+
+export function createWidget(widget, dashboardUuid = 'default') {
+  return send('POST', `/dashboard/widgets${dashboardQuery(dashboardUuid)}`, widget);
+}
+
+export function updateWidget(uuid, patch, dashboardUuid = 'default') {
+  return send('PATCH', `/dashboard/widgets/${encodeURIComponent(uuid)}${dashboardQuery(dashboardUuid)}`, patch);
 }
 
 export function deleteWidget(uuid) {
   return send('DELETE', `/dashboard/widgets/${encodeURIComponent(uuid)}`);
+}
+
+export function buildDashboardEventsQuery({
+  limit = 50, offset = 0, q = '', eventType = '', action = '', callId = '',
+} = {}) {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (q.trim()) params.set('q', q.trim());
+  if (eventType.trim()) params.set('event_type', eventType.trim());
+  if (action.trim()) params.set('action', action.trim());
+  if (callId.trim()) params.set('call_id', callId.trim());
+  return params.toString();
+}
+
+/** Authenticated, normalized DuckDB events for the builder (never raw_payload). */
+export async function getDashboardEvents(filters = {}) {
+  const payload = await send('GET', `/dashboard/events?${buildDashboardEventsQuery(filters)}`);
+  return {
+    events: Array.isArray(payload?.events) ? payload.events : [],
+    total: Number(payload?.total) || 0,
+    limit: Number(payload?.limit) || 50,
+    offset: Number(payload?.offset) || 0,
+  };
 }

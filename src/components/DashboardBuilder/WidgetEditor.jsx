@@ -17,24 +17,25 @@ const TEMPLATE_KEYS = Object.values(TEMPLATE_CATEGORIES).flat();
  * tab is gone: there is no Redis here, and the metric is picked from the field
  * select instead of typed as a free-text path.
  */
-export default function WidgetEditor({ open, widget, options, saving, onClose, onSave }) {
+export default function WidgetEditor({ open, widget, initialDraft, options, saving, onClose, onSave }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState(0);
-  const [draft, setDraft] = useState(() => withDefaults(widget || {}));
+  const [draft, setDraft] = useState(() => withDefaults(initialDraft || widget || {}));
 
   useEffect(() => {
     if (open) {
-      setDraft(withDefaults(widget || {}));
+      setDraft(withDefaults(initialDraft || widget || {}));
       setTab(0);
     }
-  }, [open, widget]);
+  }, [initialDraft, open, widget]);
 
   const set = (key, value) => setDraft((prev) => ({ ...prev, [key]: value }));
   const setThreshold = (key, value) =>
     setDraft((prev) => ({ ...prev, thresholds: { ...prev.thresholds, [key]: value } }));
 
   const isGauge = draft.type === 'gauge';
-  const isCounter = draft.type === 'counter';
+  const isCounter = draft.type === 'counter' || draft.type === 'stat';
+  const isEvent = draft.type === 'event_counter' || draft.type === 'event_table';
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
@@ -89,10 +90,25 @@ export default function WidgetEditor({ open, widget, options, saving, onClose, o
                 ))}
               </TextField>
             </Stack>
-            <FieldSelect
-              widget={draft} options={options}
-              onToggle={(name) => setDraft((prev) => toggleField(prev, name))}
-            />
+            {isEvent && (
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField
+                  fullWidth size="small" label={t('dashboardBuilder.events.type', 'Event type')}
+                  value={draft.eventType || ''} onChange={(e) => set('eventType', e.target.value)}
+                  placeholder="call.cdr"
+                />
+                <TextField
+                  fullWidth size="small" label={t('dashboardBuilder.events.action', 'Action')}
+                  value={draft.action || ''} onChange={(e) => set('action', e.target.value)}
+                />
+              </Stack>
+            )}
+            {draft.type !== 'event_counter' && (
+              <FieldSelect
+                widget={draft} options={options}
+                onToggle={(name) => setDraft((prev) => toggleField(prev, name))}
+              />
+            )}
           </Stack>
         )}
 

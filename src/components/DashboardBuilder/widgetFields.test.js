@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   deriveFieldOptions, FALLBACK_FIELDS, fieldsForType, isFieldSelected,
-  isSingleField, retargetType, toggleField,
+  isFieldless, isSingleField, retargetType, toggleField,
 } from './widgetFields';
 
 const SNAPSHOT = {
@@ -55,8 +55,11 @@ describe('field selection', () => {
   it('is single for stat-backed types and multi for the rest', () => {
     expect(isSingleField('counter')).toBe(true);
     expect(isSingleField('gauge')).toBe(true);
+    expect(isSingleField('stat')).toBe(true);
     expect(isSingleField('table')).toBe(false);
     expect(isSingleField('trend')).toBe(false);
+    expect(isSingleField('line')).toBe(false);
+    expect(isFieldless('event_counter')).toBe(true);
   });
 
   it('keeps metric and fields in sync for a counter', () => {
@@ -79,7 +82,9 @@ describe('field selection', () => {
   it('offers a type only the fields of its own source', () => {
     expect(fieldsForType('table', options)).toBe(options.recent_calls);
     expect(fieldsForType('trend', options)).toBe(options.calls_per_hour);
+    expect(fieldsForType('pie', options)).toBe(options.calls_per_hour);
     expect(fieldsForType('gauge', options)).toBe(options.stats);
+    expect(fieldsForType('event_table', options)).toBe(options.events);
   });
 });
 
@@ -103,6 +108,11 @@ describe('retargetType', () => {
   it('keeps the overlap when both sources share a name', () => {
     expect(retargetType({ type: 'table', fields: ['status', 'inbound'] }, 'trend', options()).fields)
       .toEqual(['inbound']);
+  });
+
+  it('clears fields when switching to an event counter', () => {
+    expect(retargetType({ type: 'table', fields: ['status'] }, 'event_counter', options()))
+      .toMatchObject({ type: 'event_counter', metric: 'total', fields: [] });
   });
 
   function options() { return deriveFieldOptions(SNAPSHOT); }

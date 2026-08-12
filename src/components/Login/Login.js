@@ -94,14 +94,15 @@ export const useLogin = () => {
     event.preventDefault();
     setTouched({ email: true, password: true });
 
-    if (!email || !password) {
-      setError('Email and password are required');
+    const identifier = email.trim();
+    if (!identifier || !password) {
+      setError(i18n.t('login.credentialsRequired'));
       return;
     }
 
     setLoading();
     try {
-      await applyStep(await userLogin(email, password));
+      await applyStep(await userLogin(identifier, password));
     } catch (err) {
       console.error('Login error:', err);
       setError(describeError(err, 'login.loginFailed'));
@@ -111,10 +112,11 @@ export const useLogin = () => {
   // Resend — the API has no dedicated route, so re-run step 1: that mints a
   // fresh temp_token + code server-side.
   const handleResendOtp = async () => {
-    if (!email || !password) return;
+    const identifier = email.trim();
+    if (!identifier || !password) return;
     setLoading();
     try {
-      await applyStep(await userLogin(email, password));
+      await applyStep(await userLogin(identifier, password));
     } catch (err) {
       console.error('OTP resend error:', err);
       setError(describeError(err, 'login.resendFailed'));
@@ -132,7 +134,7 @@ export const useLogin = () => {
 
     setLoading();
     try {
-      const session = await verifyOtp(tempToken, otpCode, email, password);
+      const session = await verifyOtp(tempToken, otpCode, email.trim(), password);
       await finishLogin(session);
     } catch (err) {
       console.error('OTP error:', err);

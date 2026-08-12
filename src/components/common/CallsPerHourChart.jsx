@@ -3,7 +3,8 @@ import { Paper, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
+  ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, Legend, CartesianGrid,
 } from 'recharts';
 import { statusColor, statusLabel } from './statusColors';
 
@@ -19,7 +20,7 @@ import { statusColor, statusLabel } from './statusColors';
  *
  * Recharts; bar colors from the shared status→theme-color map (brand-aware).
  */
-export default function CallsPerHourChart({ calls = [], points = null, series: only = null, title = null }) {
+export default function CallsPerHourChart({ calls = [], points = null, series: only = null, title = null, variant = 'bar' }) {
   const theme = useTheme();
   const { t } = useTranslation();
   // A 300px-tall chart eats most of a phone screen before the numbers below it
@@ -87,6 +88,11 @@ export default function CallsPerHourChart({ calls = [], points = null, series: o
   const seriesColor = (s) => useProjection
     ? (theme.palette[PROJECTION_PALETTE[s] || 'primary']?.main || theme.palette.grey[500])
     : hexFor(s);
+  const pieData = series.map((name) => ({
+    name: seriesLabel(name),
+    key: name,
+    value: data.reduce((sum, row) => sum + (Number(row[name]) || 0), 0),
+  }));
 
   return (
     <Paper elevation={0} sx={{ p: { xs: 1.75, sm: 2.5 }, height: '100%', minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
@@ -97,7 +103,27 @@ export default function CallsPerHourChart({ calls = [], points = null, series: o
         </Typography>
       ) : (
         <ResponsiveContainer width="100%" height={isNarrow ? 220 : 300}>
-          <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+          {variant === 'pie' ? (
+            <PieChart>
+              <Pie data={pieData} dataKey="value" nameKey="name" innerRadius="44%" outerRadius="76%" paddingAngle={2}>
+                {pieData.map((entry) => <Cell key={entry.key} fill={seriesColor(entry.key)} />)}
+              </Pie>
+              <Tooltip
+                contentStyle={{ background: theme.palette.background.paper, border: `1px solid ${theme.palette.divider}`, borderRadius: 8, fontSize: 12 }}
+              />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+            </PieChart>
+          ) : variant === 'line' ? (
+            <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} vertical={false} />
+              <XAxis dataKey="hour" tick={{ fontSize: isNarrow ? 10 : 12, fill: theme.palette.text.secondary }} interval={isNarrow ? 2 : 'preserveEnd'} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: theme.palette.text.secondary }} />
+              <Tooltip contentStyle={{ background: theme.palette.background.paper, border: `1px solid ${theme.palette.divider}`, borderRadius: 8, fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v) => seriesLabel(v)} />
+              {series.map((s) => <Line key={s} type="monotone" dataKey={s} name={seriesLabel(s)} stroke={seriesColor(s)} strokeWidth={2} dot={false} />)}
+            </LineChart>
+          ) : (
+            <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} vertical={false} />
             <XAxis
               dataKey="hour"
@@ -118,7 +144,8 @@ export default function CallsPerHourChart({ calls = [], points = null, series: o
             {series.map((s) => (
               <Bar key={s} dataKey={s} name={seriesLabel(s)} stackId="calls" fill={seriesColor(s)} radius={[2, 2, 0, 0]} />
             ))}
-          </BarChart>
+            </BarChart>
+          )}
         </ResponsiveContainer>
       )}
     </Paper>

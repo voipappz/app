@@ -16,7 +16,7 @@ Calls is the reference implementation for new list modules.
 | Login | `src/components/Login/`, `src/lib/auth.ts`, `src/lib/clients/mothership.ts` | Mothership | Password login, optional OTP, trusted session and logout. |
 | Calls | `src/components/Calls/`, `src/services/callsApi.js` | Mothership | Server-filtered and paginated call list, details and transcript presentation. |
 | Reports | `src/components/Reports/`, `src/services/reportsApi.js` | Mothership | Mature report definitions, date filtering and charts. |
-| Dashboard | `src/components/Dashboard/` | Local DuckDB projection | KPIs, calls per hour and recent calls derived only from consumed Crystal events. |
+| Dashboard | `src/components/Dashboard/`, `src/components/DashboardBuilder/` | Local DuckDB projection | KPIs, calls per hour and recent calls derived only from consumed Crystal events. The recovered Nimbus-style full-screen builder provides dashboard CRUD, an explicit Counter/Table/Pie/Line/Bar/Gauge/Stat chooser, widget editing, and normalized DuckDB event views. |
 | Phone | `src/components/Phone/`, `src/lib/sip/` | Authenticated user/PBX | SIP registration, presence, inbound/outbound call lifecycle, audio and call notifications. |
 | Navigation/Layout | `src/components/MainMenu/`, `src/components/Layout/` | Frontend | End-user menu, responsive hamburger behavior and authenticated layout. |
 | Notifications | `src/components/Notifications/` | Frontend | Application notifications and notification state. |
@@ -46,7 +46,7 @@ Calls is the reference implementation for new list modules.
 | Event ingestion | `api/event_ingestion.ts` | Preserves and normalizes real `cdr.write` rows plus optional committed EventCdr envelopes. |
 | CDR reconciliation | `api/cdr_reconciliation.ts` | Ordered replay paging from the last producer event id. |
 | Crystal Cable | `api/cable.ts` | Optional DashboardLive/legacy ActionCable subscription and normalization. |
-| Event store + Dashboard projection | `api/event_store.ts` | Permanent DuckDB persistence, producer-id deduplication, atomic replay checkpoints and Dashboard snapshots. |
+| Event store + Dashboard projection | `api/event_store.ts` | Permanent DuckDB persistence, producer-id deduplication, atomic replay checkpoints, Dashboard snapshots, dashboard definitions and dashboard-scoped widgets. |
 | Crystal mock | `api/mock_crystal_events.ts` | Test-only ringing, answered and completed frames matching va-crystal's contract. |
 | Event freshness | `api/health_freshness.ts` | Disabled, idle, current and stale active-source health states. |
 | Event inspector | `GET /events`, `src/components/EventExplorer/` | Opt-in filtered/paginated read-only view of DuckDB rows and raw payloads; enabled in development Compose. |
@@ -65,7 +65,7 @@ Calls is the reference implementation for new list modules.
 | Transcripts/logs | Engine/mothership service | No; read on demand. |
 | CDR events received by this app | Current va-crystal bulk input; optional committed API stream/replay | Yes, permanently in DuckDB with the original raw row. |
 | DashboardLive values | va-crystal via Cable | Runtime relay only. |
-| Dashboard projections | Consumed local events | Derived in DuckDB. |
+| Dashboard projections, definitions and widgets | Consumed local events + user configuration | Derived and stored in DuckDB. The authenticated builder browses normalized events but never exposes their untouched `raw_payload`. |
 | SIP credentials/settings | Authenticated user payload | Runtime only. |
 
 ## Adding a future module

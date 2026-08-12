@@ -1,12 +1,27 @@
 .sidebar {
-  background-color: black;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.12), transparent 28%),
+    linear-gradient(145deg, #111827 0%, #050608 100%);
   color: #fff;
   min-height: 100vh; /* Minimum height of viewport */
   height: 100%; /* Fill parent container */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 2rem;
+  padding: clamp(32px, 4vw, 64px);
+}
+
+.sidebar::after {
+  content: '';
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  right: -190px;
+  bottom: -190px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
 }
 
 .login-left .logo-container {
@@ -21,39 +36,33 @@
   align-items: center;
 }
 
+.login-left-copy {
+  max-width: 520px;
+  margin: auto 0;
+  padding-bottom: 10vh;
+}
+
 .welcome-text {
-  text-align: center;
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-  font-weight: 600;
+  margin-bottom: 20px;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.04em;
   color: #fff;
 }
 
-.login-subtitle {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #aaa;
+.login-left-subtitle {
+  max-width: 430px;
+  color: rgba(255, 255, 255, 0.66);
   font-weight: 400;
+  line-height: 1.6;
 }
 
 .footer {
-  display: flex;
-  justify-content: space-between;
   font-size: 0.75rem;
-  color: #aaa;
-}
-
-.footer a {
-  color: #aaa;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.footer a:hover {
-  text-decoration: underline;
+  color: rgba(255, 255, 255, 0.48);
 }
 
 .copyright {
-  color: #aaa;
+  color: inherit;
   font-size: 0.75rem;
 }

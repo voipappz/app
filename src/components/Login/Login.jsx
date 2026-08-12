@@ -8,8 +8,11 @@ import {
   FormControl,
   FormHelperText,
   CircularProgress,
-  Alert
+  Alert,
+  InputAdornment,
 } from '@mui/material';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useLogin } from './Login';
 import { useTranslation, Trans } from 'react-i18next';
 import { brand } from '../../config';
@@ -42,7 +45,7 @@ const Login = () => {
 
 
   return (
-    <Container component="main" maxWidth="sm" className="login-container">
+    <Container component="main" maxWidth={false} className="login-container">
       <Paper
         elevation={0}
         className="login-paper"
@@ -52,15 +55,23 @@ const Login = () => {
           <img src={brand.logo} alt={brand.name} style={{ height: 40 }} />
         </Box>
 
-        <Typography component="h1" variant="h5" className="login-title">
+        <Typography variant="overline" className="login-eyebrow">
+          {t('login.secureAccess')}
+        </Typography>
+
+        <Typography component="h1" variant="h4" className="login-title">
           {otpStep ? t('login.otpTitle') : t('login.title')}
         </Typography>
 
-        {/* Name the destination — the code is emailed (Jobs::Mail::Send), so
-            saying which address it went to is both accurate and self-service. */}
+        {!otpStep && (
+          <Typography variant="body2" className="login-subtitle">
+            {t('login.identifierHint')}
+          </Typography>
+        )}
+
         {otpStep && (
           <Typography variant="body2" className="login-subtitle" data-testid="otp-subtitle">
-            <Trans i18nKey="login.otpSentTo" values={{ email }} components={{ strong: <strong /> }} />
+            <Trans i18nKey="login.otpSentTo" values={{ identifier: email }} components={{ strong: <strong /> }} />
           </Typography>
         )}
 
@@ -116,28 +127,27 @@ const Login = () => {
               </Typography>
             </Box>
 
-            <Box className="form-footer">
-              <Typography
-                variant="body2"
-                className="forgot-password"
-                onClick={handleBackToCredentials}
-                data-testid="otp-back"
-                sx={{ cursor: 'pointer' }}
-              >
-                {t('login.back')}
-              </Typography>
+            <Button
+              fullWidth
+              type="submit"
+              variant="contained"
+              className="login-button"
+              data-testid="otp-verify-button"
+              disabled={loading || otpCode.length !== 6 || otpExpired}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              {loading ? t('login.verifying') : t('login.verify')}
+            </Button>
 
-              <Button
-                type="submit"
-                variant="contained"
-                className="login-button"
-                data-testid="otp-verify-button"
-                disabled={loading || otpCode.length !== 6 || otpExpired}
-                startIcon={loading ? <CircularProgress size={20} /> : null}
-              >
-                {loading ? t('login.verifying') : t('login.verify')}
-              </Button>
-            </Box>
+            <Button
+              type="button"
+              variant="text"
+              className="login-secondary-button"
+              onClick={handleBackToCredentials}
+              data-testid="otp-back"
+            >
+              {t('login.back')}
+            </Button>
           </Box>
         ) : (
         <Box component="form" onSubmit={handleSubmit} className="login-form" data-testid="login-form">
@@ -145,8 +155,8 @@ const Login = () => {
             <TextField
               fullWidth
               id="email"
-              name="email"
-              label={t('login.email')}
+              name="username"
+              label={t('login.identifier')}
               value={email}
               onChange={handleEmailChange}
               onBlur={() => handleBlur('email')}
@@ -154,10 +164,19 @@ const Login = () => {
               className="login-input email-input"
               data-testid="email-input"
               data-cy="email-input"
+              autoComplete="username"
+              inputProps={{ autoCapitalize: 'none', spellCheck: false }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <BadgeOutlinedIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
               required
-              error={touched.email && email === ''}
+              error={touched.email && email.trim() === ''}
             />
-            {touched.email && email === '' && (
+            {touched.email && email.trim() === '' && (
               <FormHelperText error className="error-message email-error">{t('login.requiredField')}</FormHelperText>
             )}
           </FormControl>
@@ -176,6 +195,14 @@ const Login = () => {
               className="login-input password-input"
               data-testid="password-input"
               data-cy="password-input"
+              autoComplete="current-password"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LockOutlinedIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
               required
               error={touched.password && password === ''}
             />
@@ -192,26 +219,18 @@ const Login = () => {
             </Typography>
           )}
 
-          <Box className="form-footer">
-            <Typography
-              variant="body2"
-              className="forgot-password"
-            >
-              {t('login.forgotPassword')}
-            </Typography>
-
-            <Button
-              type="submit"
-              variant="contained"
-              className="login-button"
-              data-testid="login-button"
-              data-cy="login-button"
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} /> : null}
-            >
-              {loading ? t('login.loggingIn') : t('login.loginButton')}
-            </Button>
-          </Box>
+          <Button
+            fullWidth
+            type="submit"
+            variant="contained"
+            className="login-button"
+            data-testid="login-button"
+            data-cy="login-button"
+            disabled={loading || !email.trim() || !password}
+            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {loading ? t('login.loggingIn') : t('login.loginButton')}
+          </Button>
         </Box>
         )}
       </Paper>

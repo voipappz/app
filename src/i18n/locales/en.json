@@ -9,7 +9,10 @@
       "send": "Send Summary",
       "back": "Back",
       "viewAll": "View All",
-      "start": "Start"
+      "start": "Start",
+      "create": "Create",
+      "delete": "Delete",
+      "close": "Close"
     },
     "status": {
       "loading": "Loading...",
@@ -322,13 +325,15 @@
     }
   },
   "login": {
-    "title": "Login Account",
-    "email": "Email/Username",
+    "title": "Welcome back",
+    "secureAccess": "Secure access",
+    "identifier": "Email, username or extension",
+    "identifierHint": "Sign in with your work email, username, or extension number.",
     "password": "Password",
     "requiredField": "Required field",
-    "forgotPassword": "Forgot Password",
-    "loginButton": "Login",
-    "loggingIn": "Logging in...",
+    "credentialsRequired": "Enter your email, username or extension and password.",
+    "loginButton": "Sign in",
+    "loggingIn": "Signing in...",
     "otpTitle": "Two-step verification",
     "otpCode": "Verification code",
     "verify": "Verify",
@@ -341,7 +346,7 @@
       "legal": "Legal",
       "contact": "Contact"
     },
-    "otpSentTo": "We emailed a 6-digit code to <strong>{{email}}</strong>. Enter it to continue.",
+    "otpSentTo": "Enter the 6-digit verification code sent for <strong>{{identifier}}</strong>.",
     "otpExpiresIn": "Code expires in {{time}}",
     "otpExpired": "Code expired — request a new one",
     "resendCode": "Resend code",
@@ -350,7 +355,7 @@
     "resendFailed": "Could not resend the code. Please try again.",
     "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
     "accountLocked": "Account locked due to too many failed attempts. Try again later.",
-    "otpExpectedHint": "This account uses two-step verification — we'll email you a code after you sign in."
+    "otpExpectedHint": "You may be asked for a verification code after signing in."
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -361,7 +366,7 @@
     "switchToRTL": "Switch to RTL",
     "logout": "Logout",
     "notifications": "Notifications",
-    "status": "Status",
+    "status": "My status",
     "language": "Language",
     "navigation": "Main navigation",
     "darkMode": "Dark mode",
@@ -731,7 +736,7 @@
     "seeAll": "See all notifications"
   },
   "status": {
-    "title": "System status",
+    "title": "System health",
     "allOk": "All systems operational",
     "degraded": "Degraded",
     "unreachable": "Unreachable",
@@ -763,6 +768,21 @@
       "failed": "failed"
     }
   },
+  "userStatus": {
+    "title": "My status",
+    "subtitle": "Your availability and call activity right now.",
+    "availability": "Availability",
+    "calls": "Calls",
+    "sinceLogin": "Since your current session started",
+    "lastCall": "Last call",
+    "talkingTo": "Talking to",
+    "activeQueue": "Active queue",
+    "updated": "Updated",
+    "saving": "Updating…",
+    "notFound": "Your live agent status is not available yet.",
+    "loadError": "Could not load your status.",
+    "saveError": "Could not update your availability."
+  },
   "eventExplorer": {
     "title": "Raw DuckDB events",
     "subtitle": "Original NATS/Cable events persisted by Deno. Select a row to inspect its raw JSON.",
@@ -790,11 +810,27 @@
   },
   "dashboardBuilder": {
     "heading": "Dashboard builder",
-    "open": "Edit dashboard",
-    "hint": "Widgets are computed from this app's local call events. Without widgets the default tiles show.",
+    "open": "Build dashboard",
+    "hint": "Create dashboards and widgets from the events stored in this app's DuckDB.",
+    "dashboard": "Dashboard",
+    "createDashboard": "New dashboard",
+    "dashboardName": "Dashboard name",
+    "renameDashboard": "Rename dashboard",
+    "selectDashboard": "Select dashboard",
+    "selectWidgetType": "Select widget type",
+    "deleteDashboard": "Delete dashboard",
+    "confirmDashboardDelete": "Delete this dashboard and all its widgets?",
     "newWidget": "New widget title",
     "widgetTitle": "Title",
     "addWidget": "Add widget",
+    "addFirstWidget": "Add your first widget",
+    "buildHeading": "Build your dashboard",
+    "buildHint": "Choose a widget type and connect it to the calls or events stored in DuckDB.",
+    "copySuffix": "copy",
+    "duplicateWidget": "Duplicate widget",
+    "refresh": "Refresh",
+    "saving": "Saving…",
+    "last24Hours": "Last 24 hours",
     "editWidget": "Edit widget",
     "deleteWidget": "Delete widget",
     "confirmDelete": "Delete this widget?",
@@ -820,9 +856,46 @@
     },
     "type": {
       "counter": "Counter",
+      "stat": "Stat",
       "gauge": "Gauge",
       "trend": "Calls per hour",
-      "table": "Call table"
+      "line": "Line chart",
+      "bar": "Bar chart",
+      "pie": "Pie chart",
+      "table": "Table",
+      "event_counter": "Event counter",
+      "event_table": "Event table"
+    },
+    "newType": {
+      "counter": "New counter",
+      "table": "New table",
+      "pie": "New pie chart",
+      "line": "New line chart",
+      "bar": "New bar chart",
+      "gauge": "New gauge",
+      "stat": "New stat"
+    },
+    "tabs": {
+      "widgets": "Widgets",
+      "events": "DuckDB events"
+    },
+    "events": {
+      "heading": "DuckDB event views",
+      "open": "DuckDB event views",
+      "duckdbView": "DuckDB event view",
+      "hint": "Browse normalized events stored in DuckDB, then turn the current view into a widget.",
+      "search": "Search events",
+      "type": "Event type",
+      "action": "Action",
+      "apply": "Apply view",
+      "createCounter": "Create count widget",
+      "createTable": "Create table widget",
+      "resultCount": "{{shown}} of {{total}} events",
+      "use": "Use",
+      "loadMore": "Load more",
+      "allEvents": "All events",
+      "loadError": "Could not load DuckDB events.",
+      "empty": "No matching events."
     },
     "fields": {
       "pickOne": "Metric",
@@ -842,7 +915,9 @@
       "callsPerHour": "Calls per hour",
       "inboundPerHour": "Inbound per hour",
       "recentCalls": "Recent calls",
-      "recentFailures": "Recent calls (compact)"
+      "recentFailures": "Recent calls (compact)",
+      "allEventCount": "All events",
+      "recentEvents": "Recent events"
     },
     "editor": {
       "add": "Add widget",

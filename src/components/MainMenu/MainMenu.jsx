@@ -20,8 +20,7 @@ import { useTranslation } from 'react-i18next';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PhoneIcon from '@mui/icons-material/Phone';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
-import StorageIcon from '@mui/icons-material/Storage';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import TranslateIcon from '@mui/icons-material/Translate';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
@@ -35,7 +34,6 @@ import './MainMenu.css';
 import { appVersion, brand } from '../../config';
 import AccountMenu from './AccountMenu';
 import NotificationsMenu from './NotificationsMenu';
-import SystemHealth from '../common/SystemHealth';
 
 const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   const { t } = useTranslation();
@@ -59,11 +57,11 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
     close();
   };
 
-  // Define all menu items with their required permissions. Status lives in the
-  // rail's bottom utility cluster (with the bell), not the main list.
+  // Main status is user-facing: presence and personal call activity. Technical
+  // system health stays under the account menu.
   const allMenuItems = [
     { icon: <DashboardIcon />, text: t('menu.dashboard'), path: '/dashboard', permission: 'dashboard:read' },
-    { icon: <StorageIcon />, text: t('menu.events', 'Raw events'), path: '/event-explorer', permission: 'dashboard:read' },
+    { icon: <PersonOutlineIcon />, text: t('menu.status'), path: '/status', permission: 'dashboard:read' },
     { icon: <PhoneIcon />, text: t('menu.calls'), path: '/calls', permission: 'calls:read' },
     { icon: <BarChartIcon />, text: t('menu.reports'), path: '/reports', permission: 'reports:read' },
   ];
@@ -71,7 +69,6 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
   // Filter menu items based on user permissions
   const menuItems = allMenuItems.filter(item => can(item.permission));
   const canSeeNotifications = can('dashboard:read');
-  const canSeeStatus = can('dashboard:read');
   const modeLabel = isDark ? t('menu.lightMode', 'Light mode') : t('menu.darkMode', 'Dark mode');
 
   const userName = user?.name || user?.email || t('phone.guest', 'guest');
@@ -134,14 +131,6 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
             <ListItemButton component={RouterLink} to="/notifications" onClick={(event) => go(event, '/notifications')} selected={location.pathname === '/notifications'}>
               <ListItemIcon><NotificationsActiveIcon /></ListItemIcon>
               <ListItemText primary={t('menu.notifications', 'Notifications')} />
-            </ListItemButton>
-          </ListItem>
-        )}
-        {canSeeStatus && (
-          <ListItem disablePadding>
-            <ListItemButton component={RouterLink} to="/status" onClick={(event) => go(event, '/status')} selected={location.pathname === '/status'}>
-              <ListItemIcon><MonitorHeartIcon /></ListItemIcon>
-              <ListItemText primary={t('menu.status')} />
             </ListItemButton>
           </ListItem>
         )}
@@ -220,20 +209,8 @@ const MainMenu = ({ mobileDrawerOpen, onDrawerToggle }) => {
             );
           })}
         </Box>
-        {/* Bottom cluster (reference UX): dark mode, language, bell, status, avatar. */}
+        {/* Bottom cluster: display settings, notifications, and account/system health. */}
         <Box className="rail-utilities">
-          {canSeeStatus && (
-            <Tooltip title={t('menu.status', 'System status')} placement="right">
-              <ListItemButton
-                className={`rail-item utility${location.pathname === '/status' ? ' active' : ''}`}
-                onClick={(event) => go(event, '/status')}
-                data-testid="rail-health-button"
-                aria-label={t('menu.status', 'System status')}
-              >
-                <Box className="rail-icon"><SystemHealth compact /></Box>
-              </ListItemButton>
-            </Tooltip>
-          )}
           <Tooltip title={modeLabel} placement="right">
             <ListItemButton className="rail-item utility" onClick={toggleMode} data-testid="rail-theme-toggle">
               <Box className="rail-icon">{isDark ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}</Box>

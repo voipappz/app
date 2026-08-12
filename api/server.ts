@@ -24,7 +24,9 @@ import { eventFreshness, type Freshness } from './health_freshness.ts';
 import { createCableClient, mintCableToken, normalizeCableEvent, type CableClient, type Normalized } from "./cable.ts";
 import { normalizeNatsMessage } from "./event_ingestion.ts";
 import { createNatsConsumer, type NatsConsumer } from './nats.ts';
-import { EventStore, type EventStoreStats, type WidgetDefinition } from "./event_store.ts";
+import {
+  EventStore, type DashboardDefinition, type EventStoreStats, type WidgetDefinition,
+} from "./event_store.ts";
 import { CDR_SYNC_SOURCE, reconcileEventCdr } from './cdr_reconciliation.ts';
 import { mockCrystalCallSequence } from "./mock_crystal_events.ts";
 import { dashboardCallsPerHour } from './influx.ts';
@@ -34,7 +36,7 @@ import { canSendRealtime, createCoalescingRelay } from './realtime_relay.ts';
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 const JSON_HEADERS = { "Content-Type": "application/json", ...CORS_HEADERS };
@@ -644,6 +646,51 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier, options: Request
       }
     }
 
+    // Builder data explorer. Unlike the opt-in operational /events inspector,
+    // this authenticated dashboard view returns only the normalized projection
+    // (never raw_payload) and is always available to the dashboard feature.
+    if (request.method === "GET" && url.pathname === "/dashboard/events") {
+      const authResult = await verifyJwt(request);
+      if (!authResult.authenticated && authResult.error !== "Auth not configured") {
+        return unauthorizedResponse(authResult.error || "Unauthorized", CORS_HEADERS);
+      }
+      const requestedLimit = Number(url.searchParams.get("limit") || 50);
+      const requestedOffset = Number(url.searchParams.get("offset") || 0);
+      if (!Number.isInteger(requestedLimit) || !Number.isInteger(requestedOffset) || requestedLimit < 1 || requestedOffset < 0) {
+        return new Response(JSON.stringify({ error: "invalid dashboard event page" }), { status: 400, headers: JSON_HEADERS });
+      }
+      const filters = {
+        q: url.searchParams.get("q")?.trim() || undefined,
+        eventType: url.searchParams.get("event_type")?.trim() || undefined,
+        action: url.searchParams.get("action")?.trim() || undefined,
+        callId: url.searchParams.get("call_id")?.trim() || undefined,
+      };
+      if (Object.values(filters).some((value) => value && value.length > 200)) {
+        return new Response(JSON.stringify({ error: "event filter too long" }), { status: 400, headers: JSON_HEADERS });
+      }
+      try {
+        const page = await eventReader.page({
+          limit: Math.min(250, requestedLimit), offset: requestedOffset, ...filters,
+        });
+        const events = page.events.map((event) => ({
+          event_id: event.event_id,
+          call_id: event.call_id,
+          event_type: event.event_type,
+          action: event.action,
+          occurred_at: event.occurred_at,
+          occurred_at_epoch: event.occurred_at_epoch,
+          received_at: event.received_at,
+          payload: event.payload,
+        }));
+        return new Response(JSON.stringify({
+          events, total: page.total, limit: Math.min(250, requestedLimit), offset: requestedOffset,
+        }), { status: 200, headers: JSON_HEADERS });
+      } catch (err) {
+        console.error("dashboard event view failed:", err instanceof Error ? err.message : err);
+        return new Response(JSON.stringify({ error: "event store unavailable" }), { status: 503, headers: JSON_HEADERS });
+      }
+    }
+
     // Read-only operational view over the rows actually stored in DuckDB.
     // Explicitly opt-in because payloads may include tenant call metadata.
     if (request.method === "GET" && url.pathname === "/events") {
@@ -682,6 +729,49 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier, options: Request
       }
     }
 
+    // Dashboard collection CRUD. This is the missing top level from Nimbus's
+    // builder: users can create/select dashboards, then edit their widgets.
+    if (url.pathname === "/dashboard/dashboards" || url.pathname.startsWith("/dashboard/dashboards/")) {
+      const authResult = await verifyJwt(request);
+      if (!authResult.authenticated && authResult.error !== "Auth not configured") {
+        return unauthorizedResponse(authResult.error || "Unauthorized", CORS_HEADERS);
+      }
+      const dashboardId = url.pathname === "/dashboard/dashboards"
+        ? null
+        : decodeURIComponent(url.pathname.slice("/dashboard/dashboards/".length));
+      try {
+        if (request.method === "GET" && !dashboardId) {
+          return new Response(JSON.stringify({ dashboards: await eventStore.listDashboards() }), { status: 200, headers: JSON_HEADERS });
+        }
+        if ((request.method === "POST" && !dashboardId) || (request.method === "PATCH" && dashboardId)) {
+          let body: Record<string, unknown> = {};
+          try { body = await request.json(); } catch { /* validation below */ }
+          const name = typeof body.name === "string" ? body.name.trim() : "";
+          if (!name) return new Response(JSON.stringify({ error: "dashboard name is required" }), { status: 400, headers: JSON_HEADERS });
+          const dashboards = await eventStore.listDashboards();
+          const current = dashboardId ? dashboards.find((item) => item.uuid === dashboardId) : null;
+          if (dashboardId && !current) return new Response(JSON.stringify({ error: "dashboard not found" }), { status: 404, headers: JSON_HEADERS });
+          const dashboard = await eventStore.saveDashboard({
+            uuid: dashboardId || crypto.randomUUID(),
+            name,
+            position: current?.position ?? dashboards.length,
+          } as DashboardDefinition);
+          return new Response(JSON.stringify(dashboard), { status: dashboardId ? 200 : 201, headers: JSON_HEADERS });
+        }
+        if (request.method === "DELETE" && dashboardId) {
+          if (dashboardId === "default") {
+            return new Response(JSON.stringify({ error: "default dashboard cannot be deleted" }), { status: 409, headers: JSON_HEADERS });
+          }
+          const deleted = await eventStore.deleteDashboard(dashboardId);
+          return new Response(JSON.stringify({ deleted }), { status: deleted ? 200 : 404, headers: JSON_HEADERS });
+        }
+        return new Response(JSON.stringify({ error: "method not allowed" }), { status: 405, headers: JSON_HEADERS });
+      } catch (err) {
+        console.error("dashboard store failed:", err instanceof Error ? err.message : err);
+        return new Response(JSON.stringify({ error: "dashboard store unavailable" }), { status: 503, headers: JSON_HEADERS });
+      }
+    }
+
     // Dashboard widget DEFINITIONS (the builder) — stored in the same local
     // DuckDB as the events they visualize. No mothership involvement.
     if (url.pathname === "/dashboard/widgets" || url.pathname.startsWith("/dashboard/widgets/")) {
@@ -690,20 +780,22 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier, options: Request
         return unauthorizedResponse(authResult.error || "Unauthorized", CORS_HEADERS);
       }
       const widgetId = url.pathname === "/dashboard/widgets" ? null : decodeURIComponent(url.pathname.slice("/dashboard/widgets/".length));
+      const dashboardUuid = url.searchParams.get("dashboard_uuid")?.trim() || "default";
       try {
         if (request.method === "GET" && !widgetId) {
-          return new Response(JSON.stringify({ widgets: await eventStore.listWidgets() }), { status: 200, headers: JSON_HEADERS });
+          return new Response(JSON.stringify({ widgets: await eventStore.listWidgets(dashboardUuid) }), { status: 200, headers: JSON_HEADERS });
         }
         if ((request.method === "POST" && !widgetId) || (request.method === "PATCH" && widgetId)) {
           let body: Record<string, unknown> = {};
           try { body = await request.json(); } catch { /* empty body → defaults */ }
           if (request.method === "PATCH") {
-            const current = (await eventStore.listWidgets()).find((w) => w.uuid === widgetId);
+            const current = (await eventStore.listWidgets(dashboardUuid)).find((w) => w.uuid === widgetId);
             if (!current) return new Response(JSON.stringify({ error: "widget not found" }), { status: 404, headers: JSON_HEADERS });
             body = { ...current, ...body };
           }
           const widget = await eventStore.saveWidget({
             title: "", type: "counter", metric: "total", position: Date.now() % 1_000_000,
+            dashboard_uuid: dashboardUuid,
             ...body,
             uuid: widgetId || crypto.randomUUID(),
           } as WidgetDefinition);

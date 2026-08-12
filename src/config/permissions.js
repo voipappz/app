@@ -25,6 +25,7 @@ export const ROLE_TEMPLATES = {
 
 export const ROUTE_PERMISSIONS = {
   '/dashboard': 'dashboard:read',
+  '/status': 'dashboard:read',
   '/event-explorer': 'dashboard:read',
   '/calls': 'calls:read',
   '/reports': 'reports:read',

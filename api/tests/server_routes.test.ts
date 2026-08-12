@@ -133,3 +133,37 @@ Deno.test("event inspector reads its page from DuckDB only", async () => {
     offset: 5,
   });
 });
+
+Deno.test("dashboard event views are authenticated and never expose raw payloads", async () => {
+  const handler = createRequestHandler(
+    async () => ({ authenticated: true }),
+    {
+      // Builder event views do not depend on the separate operational inspector.
+      eventInspectorEnabled: false,
+      eventReader: {
+        page: async (query) => {
+          assertEquals(query, {
+            limit: 25, offset: 0, q: undefined,
+            eventType: "call.cdr", action: undefined, callId: undefined,
+          });
+          return {
+            total: 1,
+            events: [{
+              event_id: "event-1", call_id: "call-1", event_type: "call.cdr", action: "call.cdr",
+              occurred_at: "2026-08-10 21:00:00", occurred_at_epoch: 1786395600,
+              received_at: "2026-08-10 21:00:01", payload: { duration: 42 },
+              raw_payload: { secret_upstream_shape: true },
+            }],
+          };
+        },
+      },
+    },
+  );
+
+  const response = await handler(new Request("http://localhost/dashboard/events?limit=25&event_type=call.cdr"));
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.total, 1);
+  assertEquals(body.events[0].payload, { duration: 42 });
+  assertEquals("raw_payload" in body.events[0], false);
+});

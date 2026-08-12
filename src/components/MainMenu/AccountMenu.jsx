@@ -114,7 +114,7 @@ export default function AccountMenu({ anchorEl, open, onClose, user, onLogout })
       {/* System status, inline — a glance, not a screen. */}
       <Box sx={{ px: 2, py: 1 }} data-testid="account-status">
         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          {t('menu.status', 'Status')}
+          {t('status.title', 'System health')}
         </Typography>
         {checks === null && (
           <Typography variant="body2" color="text.secondary">{t('status.unreachable', 'Backend unreachable')}</Typography>

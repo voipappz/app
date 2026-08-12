@@ -74,11 +74,18 @@ export interface DashboardSnapshot {
   recent_calls: DashboardCall[];
 }
 
+export interface DashboardDefinition {
+  uuid: string;
+  name: string;
+  position: number;
+}
+
 // User-defined dashboard widget DEFINITION (the builder's output). Values are
 // always computed from the local event projection — the definition only says
 // what to show. Stored as a JSON row so the shape can grow without migrations.
 export interface WidgetDefinition {
   uuid: string;
+  dashboard_uuid: string;
   title: string;
   type: string;                       // 'counter' (v1)
   metric: string;                     // key into DashboardSnapshot.stats
@@ -186,28 +193,100 @@ export class EventStore {
         last_error VARCHAR
       )
     `);
-    // Dashboard widget definitions (the builder). Same local DB file — the
-    // dashboard is entirely a local-projection feature.
+    // User-created dashboards + their widget definitions. Both live beside the
+    // events they visualize, so this feature never depends on the mothership.
+    await this.connection.run(`
+      CREATE TABLE IF NOT EXISTS dashboard_definitions (
+        uuid VARCHAR PRIMARY KEY,
+        name VARCHAR NOT NULL,
+        position INTEGER NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT current_timestamp
+      )
+    `);
+    await this.connection.run(`
+      INSERT INTO dashboard_definitions (uuid, name, position)
+      SELECT 'default', 'Main dashboard', 0
+      WHERE NOT EXISTS (SELECT 1 FROM dashboard_definitions WHERE uuid = 'default')
+    `);
     await this.connection.run(`
       CREATE TABLE IF NOT EXISTS dashboard_widgets (
         uuid VARCHAR PRIMARY KEY,
         definition JSON NOT NULL,
         position INTEGER NOT NULL DEFAULT 0,
+        dashboard_uuid VARCHAR NOT NULL DEFAULT 'default',
         updated_at TIMESTAMP DEFAULT current_timestamp
       )
     `);
+    // Existing installations predate multiple dashboards. DuckDB's guarded
+    // ALTER keeps every old widget on the default dashboard without a rebuild.
+    await this.connection.run(
+      "ALTER TABLE dashboard_widgets ADD COLUMN IF NOT EXISTS dashboard_uuid VARCHAR DEFAULT 'default'",
+    );
+    await this.connection.run(
+      "UPDATE dashboard_widgets SET dashboard_uuid = 'default' WHERE dashboard_uuid IS NULL OR dashboard_uuid = ''",
+    );
+    await this.connection.run(
+      "CREATE INDEX IF NOT EXISTS dashboard_widgets_dashboard ON dashboard_widgets(dashboard_uuid)",
+    );
     this.lastError = null;
   }
 
-  async listWidgets(): Promise<WidgetDefinition[]> {
+  async listDashboards(): Promise<DashboardDefinition[]> {
     await this.open();
     await this.writeQueue;
     const result = await this.connection.runAndReadAll(
-      "SELECT uuid, definition, position FROM dashboard_widgets ORDER BY position, uuid",
+      "SELECT uuid, name, position FROM dashboard_definitions ORDER BY position, name, uuid",
+    );
+    return result.getRowObjects().map((row: Record<string, unknown>) => ({
+      uuid: String(row.uuid),
+      name: String(row.name),
+      position: Number(row.position ?? 0),
+    }));
+  }
+
+  async saveDashboard(dashboard: DashboardDefinition): Promise<DashboardDefinition> {
+    await this.open();
+    const position = Number.isFinite(dashboard.position) ? Math.floor(dashboard.position) : 0;
+    const name = dashboard.name.trim() || "Untitled dashboard";
+    await this.connection.run(`
+      INSERT OR REPLACE INTO dashboard_definitions (uuid, name, position, updated_at)
+      VALUES (${sqlString(dashboard.uuid)}, ${sqlString(name)}, ${position}, current_timestamp)
+    `);
+    return { uuid: dashboard.uuid, name, position };
+  }
+
+  /** The seeded default is permanent; user-created dashboards are removable. */
+  async deleteDashboard(uuid: string): Promise<boolean> {
+    await this.open();
+    if (uuid === "default") return false;
+    const before = await this.connection.runAndReadAll(
+      `SELECT COUNT(*) AS count FROM dashboard_definitions WHERE uuid = ${sqlString(uuid)}`,
+    );
+    const exists = Number(before.getRowObjects()?.[0]?.count ?? 0) > 0;
+    if (!exists) return false;
+    await this.connection.run("BEGIN TRANSACTION");
+    try {
+      await this.connection.run(`DELETE FROM dashboard_widgets WHERE dashboard_uuid = ${sqlString(uuid)}`);
+      await this.connection.run(`DELETE FROM dashboard_definitions WHERE uuid = ${sqlString(uuid)}`);
+      await this.connection.run("COMMIT");
+      return true;
+    } catch (error) {
+      try { await this.connection.run("ROLLBACK"); } catch { /* original error wins */ }
+      throw error;
+    }
+  }
+
+  async listWidgets(dashboardUuid = "default"): Promise<WidgetDefinition[]> {
+    await this.open();
+    await this.writeQueue;
+    const result = await this.connection.runAndReadAll(
+      `SELECT uuid, dashboard_uuid, definition, position FROM dashboard_widgets
+       WHERE dashboard_uuid = ${sqlString(dashboardUuid)} ORDER BY position, uuid`,
     );
     return result.getRowObjects().map((row: Record<string, unknown>) => ({
       ...(jsonObject(row.definition) ?? {}),
       uuid: String(row.uuid),
+      dashboard_uuid: String(row.dashboard_uuid ?? "default"),
       position: Number(row.position ?? 0),
     })) as WidgetDefinition[];
   }
@@ -215,14 +294,17 @@ export class EventStore {
   /** Insert or replace one widget definition (uuid comes from the caller). */
   async saveWidget(widget: WidgetDefinition): Promise<WidgetDefinition> {
     await this.open();
-    const { uuid, position, ...definition } = widget;
+    const { uuid, dashboard_uuid = "default", position, ...definition } = widget;
     const stored = { ...definition, title: definition.title || "", type: definition.type || "counter", metric: definition.metric || "total" };
     await this.connection.run(`
-      INSERT OR REPLACE INTO dashboard_widgets (uuid, definition, position, updated_at)
+      INSERT OR REPLACE INTO dashboard_widgets (uuid, definition, position, dashboard_uuid, updated_at)
       VALUES (${sqlString(uuid)}, CAST(${sqlString(JSON.stringify(stored))} AS JSON),
-        ${Number.isFinite(position) ? Math.floor(position) : 0}, current_timestamp)
+        ${Number.isFinite(position) ? Math.floor(position) : 0}, ${sqlString(dashboard_uuid)}, current_timestamp)
     `);
-    return { ...stored, uuid, position: Number.isFinite(position) ? Math.floor(position) : 0 } as WidgetDefinition;
+    return {
+      ...stored, uuid, dashboard_uuid,
+      position: Number.isFinite(position) ? Math.floor(position) : 0,
+    } as WidgetDefinition;
   }
 
   async deleteWidget(uuid: string): Promise<boolean> {
