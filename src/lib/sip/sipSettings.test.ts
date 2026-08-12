@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-  defaultSipSettings, loadSipSettings, saveSipSettings, sipPhoneEnabled,
-  sipSettingsReady, sipSettingsFromAccount, sipSettingsFromUser,
-} from './sipSettings';
+import { defaultSipSettings, loadSipSettings, saveSipSettings, sipSettingsReady, sipSettingsFromAccount, sipSettingsFromUser } from './sipSettings';
 
 describe('sipSettings', () => {
   // Hermetic: clear any ambient VITE_SIP_* (the dev .env may hardcode creds) so
@@ -15,7 +12,6 @@ describe('sipSettings', () => {
     vi.stubEnv('VITE_SIP_AUTOCONNECT', '');
     vi.stubEnv('VITE_SIP_DOMAIN', '');
     vi.stubEnv('VITE_SIP_WSS_URL', '');
-    vi.stubEnv('VITE_SIP_ENABLED', 'true');
   });
   afterEach(() => vi.unstubAllEnvs());
 
@@ -26,14 +22,6 @@ describe('sipSettings', () => {
     expect(s.username).toBe('');
     expect(s.password).toBe('');
     expect(s.autoConnect).toBe(false);
-  });
-
-  it('can disable browser SIP without affecting other portal connections', () => {
-    expect(sipPhoneEnabled()).toBe(true);
-    for (const value of ['false', '0', 'off', 'disabled']) {
-      vi.stubEnv('VITE_SIP_ENABLED', value);
-      expect(sipPhoneEnabled()).toBe(false);
-    }
   });
 
   it('save → load round-trips through localStorage', () => {

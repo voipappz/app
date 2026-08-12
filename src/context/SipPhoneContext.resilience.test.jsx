@@ -1,7 +1,7 @@
 // Resilience: if the SIP/WebRTC layer throws while loading, the ErrorBoundary in
 // SipPhoneProvider must swap in a degraded context and STILL render the app —
 // the softphone failing must never white-screen the whole project.
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 // Mock the SIP hook so the live provider throws during render (simulates sip.js /
@@ -25,16 +25,7 @@ const renderApp = () => render(
 describe('SipPhoneProvider resilience', () => {
   beforeEach(() => {
     useSipPhone.mockReset();
-    vi.stubEnv('VITE_SIP_ENABLED', 'true');
     vi.spyOn(console, 'error').mockImplementation(() => {}); // silence boundary log
-  });
-  afterEach(() => vi.unstubAllEnvs());
-
-  it('does not mount or connect the SIP layer when the tenant disables it', () => {
-    vi.stubEnv('VITE_SIP_ENABLED', 'false');
-    renderApp();
-    expect(screen.getByTestId('consumer')).toHaveTextContent('app-ok:unavailable:true');
-    expect(useSipPhone).not.toHaveBeenCalled();
   });
 
   it('renders children with a degraded context when the SIP layer throws', () => {

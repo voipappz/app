@@ -16,15 +16,6 @@ export interface SipSettings {
 
 const KEY = "sip-settings";
 
-/**
- * Tenant-level softphone switch. This controls browser SIP/WebRTC only; it has
- * no relationship to the Deno ActionCable event connection (`CABLE_URL`).
- */
-export function sipPhoneEnabled(): boolean {
-  const value = String(import.meta.env.VITE_SIP_ENABLED ?? 'true').trim().toLowerCase();
-  return !['0', 'false', 'off', 'disabled'].includes(value);
-}
-
 // Settings hardcoded via env (VITE_SIP_*) — only the keys actually set. A web
 // softphone needs the SIP password client-side to register, so it lives in the
 // bundle; fine for a demo/tenant build, rotate per deployment. Returns ONLY the

@@ -75,10 +75,6 @@ ssh:
 
 builder:
   arch: amd64
-  args:
-    # Nimbus currently has no usable browser SIP/WebRTC endpoint. Cable remains
-    # enabled server-side and is unaffected by this frontend-only switch.
-    VITE_SIP_ENABLED: "false"
   # NO VITE_MOTHERSHIP_URL, deliberately.
   #
   # Baking it puts the BROWSER on an absolute URL. The app is served from

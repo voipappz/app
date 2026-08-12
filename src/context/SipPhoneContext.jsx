@@ -11,10 +11,7 @@
 // working and only the softphone is disabled.
 import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSipPhone } from '../lib/sip/useSipPhone';
-import {
-  loadSipSettings, saveSipSettings, clearSipSettings, defaultSipSettings,
-  sipPhoneEnabled, sipSettingsReady,
-} from '../lib/sip/sipSettings';
+import { loadSipSettings, saveSipSettings, clearSipSettings, defaultSipSettings, sipSettingsReady } from '../lib/sip/sipSettings';
 import { useAuth } from './AuthContext';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 
@@ -32,7 +29,7 @@ const noopAsync = async () => {};
 // Degraded context used when the SIP/WebRTC subsystem fails to load. Same shape
 // as the live value so consumers (PhoneWidget) render without crashing — the
 // softphone simply reports 'unavailable' and its actions are no-ops.
-function degradedValue(settings, updateSettings, reason = 'WebRTC unavailable') {
+function degradedValue(settings, updateSettings) {
   return {
     status: 'unavailable',
     unavailable: true,
@@ -44,7 +41,7 @@ function degradedValue(settings, updateSettings, reason = 'WebRTC unavailable') 
     transfer: null,
     consult: null,
     networkAvailable: typeof navigator === 'undefined' || navigator.onLine !== false,
-    lastError: reason,
+    lastError: 'WebRTC unavailable',
     logs: [],
     settings,
     updateSettings,
@@ -128,20 +125,8 @@ function SipPhoneLive({ settings, setSettings, updateSettings, children }) {
 export function SipPhoneProvider({ children }) {
   const [settings, setSettings] = useState(() => loadSipSettings());
   const updateSettings = useCallback((next) => { setSettings(next); saveSipSettings(next); }, []);
-  const enabled = sipPhoneEnabled();
 
   const degraded = useMemo(() => degradedValue(settings, updateSettings), [settings, updateSettings]);
-  const disabled = useMemo(
-    () => degradedValue(settings, updateSettings, 'Softphone disabled'),
-    [settings, updateSettings],
-  );
-
-  // Some tenants expose only the mothership API + ActionCable event stream and
-  // have no browser SIP/WebRTC endpoint. Do not mount the SIP hook at all in
-  // that mode: no WebSocket attempt, registration, or reconnect timer can run.
-  if (!enabled) {
-    return <SipPhoneContext.Provider value={disabled}>{children}</SipPhoneContext.Provider>;
-  }
 
   return (
     <ErrorBoundary
