@@ -21,6 +21,32 @@ Deno.test("browser WebSocket requires an authenticated portal session", async ()
   assertEquals(await response.json(), { error: "Missing bearer token" });
 });
 
+// Regression: the per-user cable bridge read the caller's token AFTER
+// Deno.upgradeWebSocket had taken the request. Touching request.headers past
+// that point throws "Request closed", the exception escaped handleWebSocket, and
+// the upgrade response was never returned — so EVERY authenticated browser
+// socket died: dashboard, call events and notifications alike. Only the
+// rejected path was covered, and it returns before upgrading, so nothing caught
+// it. Assert the accepted path actually upgrades.
+Deno.test("an authenticated browser WebSocket upgrades instead of throwing", async () => {
+  const handler = createRequestHandler(async () => ({ authenticated: true }));
+  const token = btoa("portal-token").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const response = await handler(new Request("http://localhost/ws/events?topics=%23", {
+    headers: {
+      upgrade: "websocket",
+      connection: "Upgrade",
+      "sec-websocket-key": "dGhlIHNhbXBsZSBub25jZQ==",
+      "sec-websocket-version": "13",
+      "sec-websocket-protocol": `voipappz-bearer.${token}`,
+    },
+  }));
+  // 101 Switching Protocols — anything else means the upgrade never happened.
+  assertEquals(response.status, 101);
+  // The private bearer subprotocol must be echoed back: a browser that offered
+  // one and gets none selected aborts the connection itself.
+  assertEquals(response.headers.get("sec-websocket-protocol"), `voipappz-bearer.${token}`);
+});
+
 Deno.test("health exposes Crystal call-event processing counters", async () => {
   const handler = createRequestHandler(async () => ({ authenticated: true }));
   const response = await handler(new Request("http://localhost/health"));

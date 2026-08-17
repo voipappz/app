@@ -404,21 +404,23 @@ function handleWebSocket(request: Request): Response {
   const authProtocol = (request.headers.get('sec-websocket-protocol') || '')
     .split(',').map((value) => value.trim())
     .find((value) => value.startsWith('voipappz-bearer.'));
-  const { socket, response } = Deno.upgradeWebSocket(
-    request,
-    authProtocol ? { protocol: authProtocol } : undefined,
-  );
+  // EVERYTHING read off the request must be read BEFORE the upgrade: once
+  // Deno.upgradeWebSocket takes it, touching request.headers throws
+  // "Request closed" — and that exception escapes handleWebSocket, so the
+  // upgrade response is never returned and the browser socket dies with it.
+  // The cable authorizes its connection from the caller's own login token, so
+  // that token must be captured here, not later.
   const url = new URL(request.url);
   const initialTopics = (url.searchParams.get("topics") || "#").split(',').map((s) => s.trim()).filter(Boolean);
-  // This user's state stream, bridged through us. The cable authorizes the
-  // CONNECTION from the token before any channel exists, so it must be the
-  // caller's own login token — one cable connection per browser client, not the
-  // startup singletons above. `id` comes from the token's claims where possible;
-  // a token that carries no user_uuid falls back to what the client asked for.
   const userToken = requestToken(request);
   const claims = tokenClaims(userToken);
   const stateUserId = claims.user_uuid || url.searchParams.get("state_user") || "";
   const dashboardAccountId = claims.account_uuid || "";
+
+  const { socket, response } = Deno.upgradeWebSocket(
+    request,
+    authProtocol ? { protocol: authProtocol } : undefined,
+  );
   let userCable: CableClient | null = null;
   // Every per-user stream lands on THIS socket. It must never go through the
   // shared emitEvent fan-out, which broadcasts to all subscribers regardless of
