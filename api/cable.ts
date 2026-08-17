@@ -173,6 +173,7 @@ export function createCableClient(opts: CableClientOpts): CableClient {
   let ready = false;
   let stopped = false;
   let disabled = false;
+  let welcomed = false;
   let reconnectAttempts = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -196,9 +197,19 @@ export function createCableClient(opts: CableClientOpts): CableClient {
     if (stopped || disabled) return;
     const u = opts.token ? `${opts.url}?token=${encodeURIComponent(opts.token)}` : opts.url;
     let failed = false;
+    // ActionCable greets an ACCEPTED connection with `welcome`. A server that
+    // rejects one (reject_unauthorized_connection) instead closes straight away
+    // — code 1000, reason "Farewell", no welcome. Both look identical to a dead
+    // network from here, so track the greeting: closing before it means our
+    // connect params/auth were refused, and retrying cannot help. Say so once,
+    // rather than burning the retry budget silently.
+    welcomed = false;
     const fail = () => {
       if (failed) return;
       failed = true;
+      if (!welcomed) {
+        log(`cable connection refused — closed before welcome (check connect params/auth for ${opts.url})`);
+      }
       scheduleReconnect();
     };
     try {
@@ -227,6 +238,7 @@ export function createCableClient(opts: CableClientOpts): CableClient {
     try { frame = JSON.parse(data); } catch { return; }
     switch (frame?.type) {
       case "welcome":
+        welcomed = true;
         ws?.send(JSON.stringify({ command: "subscribe", identifier }));
         return;
       case "confirm_subscription":

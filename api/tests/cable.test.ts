@@ -198,3 +198,51 @@ Deno.test("normalizeCableEvent — transcribe.error maps to transcription.failed
   assertEquals(n!.wsType, "transcription.failed");
   assertEquals(n!.wsPayload.error, "stt 401");
 });
+
+// A rejected connection and a dead network are indistinguishable from the
+// socket's point of view — both just close. ActionCable greets an ACCEPTED
+// connection with `welcome`, so closing before it means the server refused our
+// connect params (reject_unauthorized_connection closes 1000 "Farewell").
+// Without this the log only shows a generic reconnect countdown.
+Deno.test("cable client — closing before welcome is reported as a refused connection", () => {
+  const logs: string[] = [];
+  let sock!: FakeSocket;
+  const client = createCableClient({
+    url: "ws://x/cable", token: "", channel: "CallEvents",
+    log: (m) => logs.push(m),
+    reconnectMs: 10_000,          // never actually fires within the test
+    socketFactory: () => (sock = new FakeSocket()),
+  });
+
+  sock.emit("open");
+  sock.close();                    // server closes without ever sending welcome
+
+  assert(
+    logs.some((m) => m.includes("connection refused") && m.includes("before welcome")),
+    `expected a refused-connection log, got: ${JSON.stringify(logs)}`,
+  );
+  client.stop();
+});
+
+// The opposite case must NOT be mislabelled: once welcomed, a later drop is a
+// transport failure, not a rejection, and should reconnect quietly.
+Deno.test("cable client — a drop AFTER welcome is not reported as refused", () => {
+  const logs: string[] = [];
+  let sock!: FakeSocket;
+  const client = createCableClient({
+    url: "ws://x/cable", token: "", channel: "CallEvents",
+    log: (m) => logs.push(m),
+    reconnectMs: 10_000,
+    socketFactory: () => (sock = new FakeSocket()),
+  });
+
+  sock.emit("open");
+  sock.emit("message", JSON.stringify({ type: "welcome" }));
+  sock.close();
+
+  assert(
+    !logs.some((m) => m.includes("connection refused")),
+    `a post-welcome drop must not be called refused, got: ${JSON.stringify(logs)}`,
+  );
+  client.stop();
+});
