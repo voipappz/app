@@ -43,6 +43,25 @@ export function reduceCallState(current: CallInfo | null, event: CallStateEvent)
   if (event.type === "clear") return current.state === "ended" ? null : current;
   return current;
 }
+// Sessions are removed on SessionState.Terminated. Anything that never reaches
+// it — a consult leg abandoned mid-transfer, a dialog orphaned by a dropped
+// socket or a re-register — used to sit in the map forever, and the busy check
+// in handleIncomingCall then rejected EVERY later incoming call: no toast, no
+// Answer button, on a phone that still looked registered.
+//
+// So trust live session state over the bookkeeping. Drops terminated sessions
+// and returns the still-valid active id (null when its session is gone, since
+// an active id pointing at nothing can only block calls).
+export function pruneEndedSessions(
+  sessions: Map<string, { state: SessionState }>,
+  activeId: string | null,
+): string | null {
+  for (const [id, session] of sessions) {
+    if (session.state === SessionState.Terminated) sessions.delete(id);
+  }
+  return activeId && sessions.has(activeId) ? activeId : null;
+}
+
 export interface SipCredentials {
   username: string;
   password: string;
@@ -317,6 +336,8 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     const m = from.match(/<sip:([^@>]+)/);
     const remote = m ? m[1] : (invitation.remoteIdentity?.uri?.user || "unknown");
     (invitation as any).ctxid = callUuid;
+
+    activeIdRef.current = pruneEndedSessions(sessionsRef.current, activeIdRef.current);
 
     // Busy / reject-all → 486-style reject (lines 869–877).
     if (dndRef.current || activeIdRef.current || sessionsRef.current.size > 0) {
