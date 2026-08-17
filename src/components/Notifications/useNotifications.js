@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { eventsWsProtocols, eventsWsUrl } from '../Calls/useCalls';
 import { useAuth } from '../../context/AuthContext';
 import { getToken } from '../../lib/auth';
 import { config } from '../../config';
@@ -16,6 +17,29 @@ const authHeaders = () => {
   };
 };
 
+function getTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const diffInMinutes = Math.floor((new Date() - date) / (1000 * 60));
+
+  if (diffInMinutes < 1) return 'Just now';
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+  return `${Math.floor(diffInMinutes / 1440)}d ago`;
+}
+
+// One notification row, whether it came from the initial fetch or was pushed
+// over the cable. Both sources carry the same server-side record, so they must
+// normalize identically — a pushed row that looked different would render as a
+// second, subtly wrong notification.
+const toRow = (notification) => ({
+  ...notification,
+  id: notification.uuid,
+  isRead: !!notification.read_at,
+  timeAgo: getTimeAgo(notification.created_at),
+  recipient: notification.recipient || null,
+  meta: notification.meta || {},
+});
+
 export const useNotifications = () => {
   // The session token, from the ONE place that holds it (lib/auth). This used
   // to read `access` off useAuth(), which has never exposed such a key — so the
@@ -26,6 +50,8 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const wsRef = useRef(null);
+  const reconnectTimer = useRef(null);
 
   const fetchNotifications = useCallback(async () => {
     // Signed out: settle the state rather than returning with `loading` still
@@ -54,17 +80,7 @@ export const useNotifications = () => {
       const body = await response.json();
       const data = Array.isArray(body) ? body : [];
 
-      // Transform the API response to ensure consistent structure
-      const transformedNotifications = data.map(notification => ({
-        ...notification,
-        id: notification.uuid,
-        isRead: !!notification.read_at,
-        timeAgo: getTimeAgo(notification.created_at),
-        recipient: notification.recipient || null,
-        meta: notification.meta || {}
-      }));
-
-      setNotifications(transformedNotifications);
+      setNotifications(data.map(toRow));
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError(err.message);
@@ -204,34 +220,51 @@ export const useNotifications = () => {
   }, [fetchNotifications]);
 
   // Helper function to calculate time ago
-  function getTimeAgo(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return `${Math.floor(diffInMinutes / 1440)}d ago`;
-  }
+  // One fetch for what already exists. There is no interval any more: the
+  // server PUSHES new notifications over the cable (deno subscribes this user's
+  // `notifications:<user_uuid>` stream on their behalf and relays it here), so
+  // polling every 30s only re-fetched a list that had not changed.
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
-  // Auto-refresh notifications every 30 seconds
+  // Live feed. Same socket and bearer-subprotocol handshake the dashboard uses.
   useEffect(() => {
-    fetchNotifications();
-    
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+    if (!isAuthenticated) return undefined;
+    const url = eventsWsUrl('notification');
+    let stopped = false;
 
-  // Real-time updates could be added here with WebSocket connection
-  useEffect(() => {
-    // WebSocket connection for real-time notifications
-    // This would be implemented when real-time functionality is needed
-    
+    function connect() {
+      if (stopped) return;
+      const ws = new WebSocket(url, eventsWsProtocols());
+      wsRef.current = ws;
+      ws.addEventListener('close', () => {
+        // Reconnect unless we are unmounting: a dropped socket would otherwise
+        // silently stop notifications, and nothing polls to cover for it now.
+        if (!stopped) reconnectTimer.current = window.setTimeout(connect, 3000);
+      });
+      ws.addEventListener('error', () => { /* close fires too */ });
+      ws.addEventListener('message', (event) => {
+        let frame;
+        try { frame = JSON.parse(event.data); } catch { return; }
+        if (frame?.type !== 'notification' || !frame.message) return;
+        const row = toRow(frame.message);
+        if (!row.id) return;
+        setNotifications((prev) => (
+          // The same notification can arrive twice (a reconnect that overlaps
+          // the initial fetch); key on uuid so it never doubles up.
+          prev.some((existing) => existing.id === row.id) ? prev : [row, ...prev]
+        ));
+      });
+    }
+
+    connect();
     return () => {
-      // Cleanup WebSocket connection
+      stopped = true;
+      if (reconnectTimer.current) window.clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
+      try { wsRef.current?.close(); } catch { /* already gone */ }
+      wsRef.current = null;
     };
-  }, []);
+  }, [isAuthenticated]);
 
   return {
     notifications,
