@@ -338,6 +338,14 @@ export function useSipPhone(overrides: Partial<SipConfig> = {}) {
     (invitation as any).ctxid = callUuid;
 
     activeIdRef.current = pruneEndedSessions(sessionsRef.current, activeIdRef.current);
+    // The VISIBLE call and the session map are separate state and can diverge.
+    // reduceCallState's `start` keeps the current call unless it has ended, so
+    // one left showing `active` after its session disappeared silently discards
+    // every incoming call: the INVITE arrives, the toast never opens, and there
+    // is no Answer button on a phone that looks perfectly healthy. A call with
+    // no session cannot be answered or hung up, so drop it. Functional updates
+    // apply in order, so wireSession's `start` below sees the cleared value.
+    setCall((c) => (c && !sessionsRef.current.has(c.id) ? null : c));
 
     // Busy / reject-all → 486-style reject (lines 869–877).
     if (dndRef.current || activeIdRef.current || sessionsRef.current.size > 0) {
