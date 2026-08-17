@@ -8,31 +8,15 @@
 // the baked `event_record_json` to the `call_events` stream. We never touch
 // Redis/AMQP directly; we speak the ActionCable WS protocol.
 //
-// Auth: the cable connection authenticates with an HS256 JWT passed as
-// `?token=`, carrying an `account_uuid` claim, signed with the cable's
-// SECRET_KEY (see va-crystal/va-shared/src/cable_auth.cr). No expiry is checked,
-// so a backend service can mint one long-lived token.
+// Auth: the connection authenticates with a `?token=` the node verifies against
+// its own SECRET_KEY (va-crystal node/realtime/app.cr). It accepts a mothership
+// USER token — `user_uuid` is a valid identity claim — so callers pass the login
+// token they already hold. This client never mints one: doing so required
+// sharing the node's secret, which is exactly the coupling we do not want.
 
 type Pojo = Record<string, any>;
 
-// ── JWT minting (HS256) ─────────────────────────────────────────────────
 const enc = new TextEncoder();
-function b64url(bytes: Uint8Array): string {
-  let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-// Mint an HS256 JWT { account_uuid } signed with `secret` — the exact shape
-// VaShared::CableAuth.decode_jwt expects (alg HS256, account_uuid claim).
-export async function mintCableToken(secret: string, accountUuid: string): Promise<string> {
-  const header = b64url(enc.encode(JSON.stringify({ alg: "HS256", typ: "JWT" })));
-  const payload = b64url(enc.encode(JSON.stringify({ account_uuid: accountUuid })));
-  const data = `${header}.${payload}`;
-  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(data)));
-  return `${data}.${b64url(sig)}`;
-}
 
 // ── Normalize a cable broadcast into our canonical event ────────────────
 // Cable payload (event_record_json):
@@ -150,6 +134,11 @@ export interface CableClientOpts {
   // Raw path (DashboardLive): receive the untouched broadcast `message`
   // (the dashboard is a value stream, not a call event — skip normalization).
   onRaw?: (message: unknown) => void | Promise<void>;
+  // Several streams on ONE connection. ActionCable multiplexes by identifier,
+  // so a browser client that wants its state, its dashboard and its
+  // notifications needs one socket and three subscribes — not three sockets.
+  // Takes precedence over `identifier`/`channel` when non-empty.
+  subscriptions?: Array<{ identifier: Pojo; onRaw: (message: unknown) => void | Promise<void> }>;
   log?: (m: string) => void;
   reconnectMs?: number;
   /** Reject oversized ActionCable frames before JSON parsing. */
@@ -163,7 +152,17 @@ export interface CableClient { stop(): void; ready(): boolean; disabled(): boole
 
 export function createCableClient(opts: CableClientOpts): CableClient {
   const channel = opts.channel ?? "CallEvents";
-  const identifier = JSON.stringify(opts.identifier ?? { channel });
+  // The identifier STRING is the subscription's identity: the server echoes it
+  // back verbatim on every frame, so routing must compare the exact string we
+  // sent, key order and all (CABLE_SPEC §2).
+  const routes = new Map<string, (message: unknown) => void | Promise<void>>();
+  for (const sub of opts.subscriptions ?? []) {
+    routes.set(JSON.stringify(sub.identifier), sub.onRaw);
+  }
+  const identifiers = routes.size
+    ? [...routes.keys()]
+    : [JSON.stringify(opts.identifier ?? { channel })];
+  const identifier = identifiers[0];
   const log = opts.log ?? (() => {});
   const reconnectMs = opts.reconnectMs ?? 3000;
   const maxReconnectAttempts = opts.maxReconnectAttempts ?? 5;
@@ -239,14 +238,18 @@ export function createCableClient(opts: CableClientOpts): CableClient {
     switch (frame?.type) {
       case "welcome":
         welcomed = true;
-        ws?.send(JSON.stringify({ command: "subscribe", identifier }));
+        for (const id of identifiers) ws?.send(JSON.stringify({ command: "subscribe", identifier: id }));
         return;
       case "confirm_subscription":
-        ready = true; reconnectAttempts = 0; log(`cable subscribed → ${identifier}`);
+        // On this cable a confirmed subscription is also the REGISTRATION: the
+        // node stamps user:<uuid>:logged_in_at when it lands. Log which one, so
+        // a partially-registered connection is visible rather than implied.
+        ready = true; reconnectAttempts = 0;
+        log(`cable subscribed → ${frame.identifier ?? identifier}`);
         return;
       case "reject_subscription":
         ready = false; disabled = true;
-        log(`cable disabled — subscription rejected → ${identifier} (check channel/JWT/account)`);
+        log(`cable disabled — subscription rejected → ${frame.identifier ?? identifier} (check channel/params)`);
         try { ws?.close(); } catch { /* already closed */ }
         return;
       case "ping":
@@ -255,6 +258,10 @@ export function createCableClient(opts: CableClientOpts): CableClient {
     }
     // Data frame: { identifier, message }.
     if (frame && frame.message !== undefined) {
+      // Multiplexed: route by the identifier the server echoed back.
+      const route = routes.get(String(frame.identifier));
+      if (route) { await route(frame.message); return; }
+      if (routes.size) return;   // multiplexed client: an unknown stream is not ours
       // Raw path (DashboardLive): hand the broadcast through untouched.
       if (opts.onRaw) { await opts.onRaw(frame.message); return; }
       // Default path: message is a baked call event → normalize + emit.

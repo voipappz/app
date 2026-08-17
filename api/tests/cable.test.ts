@@ -1,33 +1,11 @@
-// Tests for the ActionCable client (api/cable.ts): JWT minting, the cable→
-// canonical event normalizer, and the WS handshake/ingest — all with a fake
-// socket and no network.
+// Tests for the ActionCable client (api/cable.ts): the cable→canonical event
+// normalizer and the WS handshake/ingest — all with a fake socket and no
+// network. There is no token minting to test: the caller supplies the token.
 import { assertEquals, assert } from "@std/assert";
 import {
-  mintCableToken, normalizeCableEvent, createCableClient,
+  normalizeCableEvent, createCableClient,
   type WebSocketLike, type Normalized,
 } from "../cable.ts";
-
-function b64urlToStr(s: string): string {
-  s = s.replace(/-/g, "+").replace(/_/g, "/");
-  while (s.length % 4) s += "=";
-  return atob(s);
-}
-
-Deno.test("mintCableToken — HS256 JWT with account_uuid, signature is secret-bound", async () => {
-  const secret = "shhh-secret";
-  const token = await mintCableToken(secret, "acct-123");
-  const [h, p, sig] = token.split(".");
-  assertEquals(token.split(".").length, 3);
-  assertEquals(JSON.parse(b64urlToStr(h)).alg, "HS256");
-  assertEquals(JSON.parse(b64urlToStr(p)).account_uuid, "acct-123");
-
-  // HMAC is deterministic: same secret+claims → identical token (lets a backend
-  // mint a stable long-lived token). A different secret yields a different sig,
-  // so cable's constant-time signature check would reject a forged token.
-  assertEquals(await mintCableToken(secret, "acct-123"), token);
-  const forged = await mintCableToken("wrong-secret", "acct-123");
-  assert(forged.split(".")[2] !== sig, "signature must depend on the secret");
-});
 
 Deno.test("normalizeCableEvent — number.* maps to call.* with metadata", () => {
   const n = normalizeCableEvent({

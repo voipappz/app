@@ -11,17 +11,17 @@
 // The optional events.cdr mode consumes committed envelopes and closes gaps by
 // request/reply replay.
 import {
-  PORT, CABLE_URL, CABLE_CHANNEL, CABLE_TOKEN, CABLE_SECRET, CABLE_ACCOUNT_UUID, CABLE_ENABLED,
-  CABLE_DASHBOARD_UUID, POSTGREST_URL, POSTGREST_ENABLED, ENGINE_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
+  PORT, CABLE_URL, CABLE_CHANNEL, CABLE_TOKEN, CABLE_ENABLED,
+  POSTGREST_URL, POSTGREST_ENABLED, ENGINE_URL, ENGINE_ENABLED, EVENTS_STALE_SECONDS,
   MOCK_CRYSTAL_EVENTS, EVENT_INSPECTOR_ENABLED, NATS_URL, NATS_CDR_SUBJECTS, NATS_ENABLED,
   NATS_REPLAY_ENABLED, NATS_REPLAY_SUBJECT, NATS_RECONCILE_SECONDS, MCP_ENABLED, MCP_AUTH_TOKEN,
   MCP_ALLOW_LOCALHOST_WITHOUT_TOKEN, DASHBOARD_RELAY_INTERVAL_MS, WS_MAX_BUFFERED_BYTES, WS_MAX_EVENT_BYTES,
   CABLE_MAX_FRAME_BYTES, WS_MAX_CLIENTS,
 } from './config.ts';
-import { createJwtVerifier, unauthorizedResponse, type JwtVerifier } from './auth_middleware.ts';
+import { createJwtVerifier, requestToken, unauthorizedResponse, type JwtVerifier } from './auth_middleware.ts';
 import { fetchTranscript } from './engine.ts';
 import { eventFreshness, type Freshness } from './health_freshness.ts';
-import { createCableClient, mintCableToken, normalizeCableEvent, type CableClient, type Normalized } from "./cable.ts";
+import { createCableClient, normalizeCableEvent, type CableClient, type Normalized } from "./cable.ts";
 import { normalizeNatsMessage } from "./event_ingestion.ts";
 import { createNatsConsumer, type NatsConsumer } from './nats.ts';
 import {
@@ -237,7 +237,11 @@ function routingKeyMatches(pattern: string, key: string): boolean {
 }
 
 // ── Bus state ─────────────────────────────────────────────────────────
-interface Subscriber { ws: WebSocket; topics: Set<string>; }
+// `environmentUuid` comes from the caller's own login token. The cable streams
+// are global, so it is what keeps one tenant's browser from being handed
+// another tenant's call events. Empty means unrestricted — an unauthenticated
+// test harness, or a token that carries no environment claim.
+interface Subscriber { ws: WebSocket; topics: Set<string>; environmentUuid: string; }
 const subscribers = new Map<WebSocket, Subscriber>();
 let relayedCounter = 0;   // events relayed to /ws subscribers
 let tappedCounter = 0;    // everything received from cable
@@ -249,7 +253,6 @@ let websocketOversizedDropCounter = 0;
 let dashboardFramesReceived = 0;
 let dashboardFramesCoalesced = 0;
 let cableClient: CableClient | null = null;
-let dashboardCableClient: CableClient | null = null;  // DashboardLive (agents/extensions stream)
 let natsConsumer: NatsConsumer | null = null;
 let reconciliationRunning = false;
 let lastCallEventAt: number | null = null;    // last accepted CallEvents message; DashboardLive does not mask silence
@@ -268,7 +271,12 @@ function emitEvent(type: string, payload: Pojo, occurredAtIso?: string): void {
     console.warn(`websocket event dropped: type=${type} bytes=${bytes} limit=${WS_MAX_EVENT_BYTES}`);
     return;
   }
+  // Only filter when BOTH sides know their environment: an event that carries
+  // no environment (dashboard frames, transcripts) still reaches everyone, and a
+  // subscriber with no claim keeps the previous unfiltered behaviour.
+  const eventEnvironment = typeof payload?.environment_uuid === "string" ? payload.environment_uuid : "";
   for (const sub of subscribers.values()) {
+    if (sub.environmentUuid && eventEnvironment && sub.environmentUuid !== eventEnvironment) continue;
     if ([...sub.topics].some((pat) => routingKeyMatches(pat, type))) {
       if (!canSendRealtime(sub.ws, WS_MAX_BUFFERED_BYTES)) {
         websocketBackpressureDropCounter++;
@@ -279,11 +287,6 @@ function emitEvent(type: string, payload: Pojo, occurredAtIso?: string): void {
   }
 }
 
-const dashboardRelay = createCoalescingRelay<Pojo>(
-  (payload) => emitEvent("dashboard.live", payload),
-  (pending, next) => ({ ...pending, ...next }),
-  DASHBOARD_RELAY_INTERVAL_MS,
-);
 
 // One acceptance path for both the live Cable client and the explicit Crystal
 // mock. An event is visible to browser consumers only after DuckDB accepted it.
@@ -306,17 +309,17 @@ async function consumeCallEvent(n: Normalized): Promise<boolean> {
 type Pojo = Record<string, any>;
 
 // Subscribe to the cable server's CallEvents channel and relay broadcasts to
-// browser /ws subscribers. Reconnect/keepalive live in createCableClient. The
-// token is resolved once at startup: explicit CABLE_TOKEN, else minted from
-// CABLE_SECRET (= cable's SECRET_KEY) + CABLE_ACCOUNT_UUID.
+// browser /ws subscribers. Reconnect/keepalive live in createCableClient.
+// These are the USERLESS taps, so the only credential they can have is one an
+// operator supplied outright. Per-user streams do not come through here — they
+// use the caller's own login token, in handleWebSocket.
 async function startCableClient() {
 
   // Open the local store before subscribing so received events can be persisted
   // before they are relayed to browser consumers.
   await eventStore.open();
 
-  const token = CABLE_TOKEN ||
-    (CABLE_SECRET && CABLE_ACCOUNT_UUID ? await mintCableToken(CABLE_SECRET, CABLE_ACCOUNT_UUID) : "");
+  const token = CABLE_TOKEN;
   if (!token) console.log("📡 cable auth → endpoint-managed/anonymous");
 
   if (CALL_EVENTS_CABLE_ENABLED) {
@@ -333,33 +336,10 @@ async function startCableClient() {
     console.log(`📡 CallEvents cable off — Core NATS is the exclusive CDR source`);
   }
 
-  // DashboardLive — the live agents/extensions panel. Separate channel; its
-  // stream is dashboard:live:{account_uuid}. When an upstream state projector
-  // is installed, the broadcast is a render-ready widget value map:
-  // { "<widget_uuid>": { type:"table", table:[ {uuid, …fields} ] } }.
-  // va-crystal itself now publishes state.<scope>.<id> operations and does not
-  // assemble this DashboardLive snapshot inside the stateless node.
-  // We pass it through untouched as a `dashboard.live` /ws frame — the browser
-  // renders it. Needs a real account_uuid + the dashboard uuid (Live_uuid).
-  if (CABLE_DASHBOARD_UUID && CABLE_ACCOUNT_UUID && CABLE_ACCOUNT_UUID !== "events-consumer") {
-    dashboardCableClient = createCableClient({
-      url: CABLE_URL,
-      token,
-      identifier: { channel: "DashboardLive", account_uuid: CABLE_ACCOUNT_UUID, Live_uuid: CABLE_DASHBOARD_UUID },
-      maxFrameBytes: CABLE_MAX_FRAME_BYTES,
-      log: (m) => console.log(`📊 ${m}`),
-      onRaw: (message) => {
-        // payload = widget_uuid → { type, table }. Bursts are merged latest-per-
-        // widget before browser fan-out, bounding timers and outbound pressure.
-        dashboardFramesReceived++;
-        const payload = (message && typeof message === "object") ? message as Pojo : { raw: message };
-        if (dashboardRelay.push(payload)) dashboardFramesCoalesced++;
-      },
-    });
-    console.log(`📊 dashboard cable client → ${CABLE_URL} channel=DashboardLive dashboard=${CABLE_DASHBOARD_UUID}`);
-  } else {
-    console.log("📊 dashboard cable bridge off — set CABLE_DASHBOARD_UUID + a real CABLE_ACCOUNT_UUID");
-  }
+  // DashboardLive used to run here as a third userless singleton, keyed by a
+  // CABLE_ACCOUNT_UUID env var. It is account-scoped, so it belongs on the
+  // caller's own connection like StateChannel does — see handleWebSocket, which
+  // takes the account from the login token instead of from configuration.
 }
 
 async function startNatsClient() {
@@ -403,6 +383,19 @@ async function reconcileCdrEvents(): Promise<void> {
   }
 }
 
+// Claims of a JWT we did not issue and do not verify — the cable verifies it
+// against its own SECRET_KEY. We only read it to learn WHICH user's stream to
+// open. Returns {} for an opaque (non-JWT) token.
+function tokenClaims(token: string): Record<string, any> {
+  try {
+    const part = token.split('.')[1] || '';
+    const b64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(b64.padEnd(b64.length + ((4 - b64.length % 4) % 4), '=')));
+  } catch {
+    return {};
+  }
+}
+
 // ── WS lifecycle ──────────────────────────────────────────────────────
 function handleWebSocket(request: Request): Response {
   // Authentication already validated this private offered protocol. Echo it as
@@ -417,13 +410,90 @@ function handleWebSocket(request: Request): Response {
   );
   const url = new URL(request.url);
   const initialTopics = (url.searchParams.get("topics") || "#").split(',').map((s) => s.trim()).filter(Boolean);
+  // This user's state stream, bridged through us. The cable authorizes the
+  // CONNECTION from the token before any channel exists, so it must be the
+  // caller's own login token — one cable connection per browser client, not the
+  // startup singletons above. `id` comes from the token's claims where possible;
+  // a token that carries no user_uuid falls back to what the client asked for.
+  const userToken = requestToken(request);
+  const claims = tokenClaims(userToken);
+  const stateUserId = claims.user_uuid || url.searchParams.get("state_user") || "";
+  const dashboardAccountId = claims.account_uuid || "";
+  let userCable: CableClient | null = null;
+  // Every per-user stream lands on THIS socket. It must never go through the
+  // shared emitEvent fan-out, which broadcasts to all subscribers regardless of
+  // who they are — that is how one tenant's data reaches another's browser.
+  const sendToClient = (frame: Pojo) => {
+    if (!canSendRealtime(socket, WS_MAX_BUFFERED_BYTES)) { websocketBackpressureDropCounter++; return; }
+    try { socket.send(JSON.stringify(frame)); } catch { websocketBackpressureDropCounter++; }
+  };
+
   socket.addEventListener("open", () => {
-    const sub: Subscriber = { ws: socket, topics: new Set(initialTopics) };
+    const sub: Subscriber = { ws: socket, topics: new Set(initialTopics), environmentUuid: claims.environment_uuid || "" };
     subscribers.set(socket, sub);
     socket.send(JSON.stringify({ type: "welcome", ts: new Date().toISOString(), subscribed: [...sub.topics], clients: subscribers.size, cable_ready: cableClient?.ready() ?? false }));
+
+    // ONE cable connection per browser client, authorized by that person's own
+    // login token, carrying every stream they are entitled to. ActionCable
+    // multiplexes by identifier, so three streams do not need three sockets.
+    //
+    // A confirmed subscription is also the REGISTRATION: the node stamps
+    // user:<uuid>:logged_in_at when the subscribe lands (app.cr), so connecting
+    // here is what marks the user online.
+    const streams: Array<{ identifier: Pojo; onRaw: (m: unknown) => void }> = [];
+
+    if (stateUserId) {
+      // Their own state. A value stream, not a call event — relay the ops
+      // untouched and let the browser fold them (CABLE_SPEC §5).
+      streams.push({
+        identifier: { channel: "StateChannel", scope: "user", id: stateUserId },
+        onRaw: (message) => sendToClient({ type: "user.state", user_uuid: stateUserId, message }),
+      });
+      // Their notifications, pushed. This replaces the browser polling the API
+      // on a timer: same server, same data, no interval.
+      streams.push({
+        identifier: { channel: "Notifications", user_uuid: stateUserId },
+        onRaw: (message) => sendToClient({ type: "notification", message }),
+      });
+    }
+
+    // The live agents/extensions panel. The CONNECTION is this user's, but the
+    // panel is tenant-wide, so its stream is keyed by account — taken from the
+    // same token's claims, never from configuration.
+    if (dashboardAccountId) {
+      const relay = createCoalescingRelay<Pojo>(
+        (payload) => sendToClient({ type: "dashboard.live", ts: new Date().toISOString(), payload }),
+        (pending, next) => ({ ...pending, ...next }),
+        DASHBOARD_RELAY_INTERVAL_MS,
+      );
+      streams.push({
+        identifier: { channel: "DashboardLive", account_uuid: dashboardAccountId },
+        onRaw: (message) => {
+          dashboardFramesReceived++;
+          const payload = (message && typeof message === "object") ? message as Pojo : { raw: message };
+          if (relay.push(payload)) dashboardFramesCoalesced++;
+        },
+      });
+    }
+
+    if (userToken && streams.length) {
+      userCable = createCableClient({
+        url: CABLE_URL,
+        token: userToken,
+        subscriptions: streams,
+        maxFrameBytes: CABLE_MAX_FRAME_BYTES,
+        log: (m) => console.log(`👤 ${m}`),
+      });
+    }
   });
-  socket.addEventListener("close", () => { subscribers.delete(socket); });
-  socket.addEventListener("error", () => { subscribers.delete(socket); });
+  const teardown = () => {
+    subscribers.delete(socket);
+    // This cable connection exists only for this client — never outlive it.
+    userCable?.stop();
+    userCable = null;
+  };
+  socket.addEventListener("close", teardown);
+  socket.addEventListener("error", teardown);
   socket.addEventListener("message", (e) => {
     const sub = subscribers.get(socket);
     if (!sub) return;
@@ -872,7 +942,6 @@ export function createRequestHandler(jwtVerifier?: JwtVerifier, options: Request
       return new Response(JSON.stringify({
         status: "ok", template: "voipappz",
         cable_ready: cableClient?.ready() ?? false, cable_url: CABLE_URL, cable_channel: CABLE_CHANNEL,
-        dashboard_cable_ready: dashboardCableClient?.ready() ?? false,
         ws_clients: subscribers.size, relayed: relayedCounter, tapped: tappedCounter,
         persisted: persistedCounter, duplicates: duplicateCounter, persistence_failures: persistenceFailureCounter,
         websocket_backpressure_drops: websocketBackpressureDropCounter,

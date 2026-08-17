@@ -26,10 +26,13 @@ export const ENGINE_ENABLED = ENGINE_EMAIL !== "" && ENGINE_PASSWORD !== "";
 // When NATS_URL is unset, CallEvents remains a legacy CDR fallback. Once a
 // Core-NATS CDR stream is enabled, the server does not consume CDRs from
 // Cable; Cable may still bridge DashboardLive agent/extension state.
-// Connection auth is an HS256 JWT
-// (?token=) carrying an account_uuid claim, signed with the cable SECRET_KEY.
-// Provide either a ready-made CABLE_TOKEN, or CABLE_SECRET (= cable's SECRET_KEY)
-// + CABLE_ACCOUNT_UUID to mint one at boot. Server-side only — NEVER expose as VITE_*.
+// Connection auth is ONE thing: a `?token=` the node verifies against its own
+// SECRET_KEY, and it accepts a mothership user token (va-crystal
+// node/realtime/app.cr takes `user_uuid` as an identity claim). So the login the
+// browser already did IS the cable credential — nothing is minted here, and
+// there is no secret to configure on this side. Per-user cable connections take
+// the caller's own token; CABLE_TOKEN is only for the userless server-side tap.
+// Server-side only — NEVER expose as VITE_*.
 // va-crystal's node serves the ActionCable endpoint on port 4000 by default.
 // Its Cable backend transports broadcasts over NATS; this consumer speaks the
 // stable ActionCable WebSocket protocol rather than coupling to NATS internals.
@@ -37,19 +40,11 @@ const configuredCableUrl = (Deno.env.get("CABLE_URL") || "").trim();
 export const CABLE_URL = configuredCableUrl || "ws://127.0.0.1:4000/cable";
 export const CABLE_CHANNEL = Deno.env.get("CABLE_CHANNEL") || "CallEvents";
 export const CABLE_TOKEN = Deno.env.get("CABLE_TOKEN") || "";
-export const CABLE_SECRET = Deno.env.get("CABLE_SECRET") || Deno.env.get("SECRET_KEY") || "";
-// The CallEvents stream is global, so the JWT's account_uuid claim only needs
-// to be present (cable rejects an empty one) — it doesn't filter events. So it
-// defaults to a label and the operator normally only sets SECRET_KEY.
-export const CABLE_ACCOUNT_UUID = Deno.env.get("CABLE_ACCOUNT_UUID") || "events-consumer";
-// Cable clients can start from an explicit endpoint or as soon as cable auth
-// resolves. The server decides whether that means CallEvents, DashboardLive,
-// or both.
 // An explicitly configured URL enables the connection even when authentication
 // is handled by the endpoint. Protected va-crystal endpoints still require a
-// valid token/secret and will safely disable after bounded failures. If no URL
-// is configured, the legacy local default stays dormant unless auth is present.
-export const CABLE_ENABLED = configuredCableUrl !== "" || CABLE_TOKEN !== "" || CABLE_SECRET !== "";
+// valid token and will safely disable after bounded failures. If no URL is
+// configured, the legacy local default stays dormant unless a token is present.
+export const CABLE_ENABLED = configuredCableUrl !== "" || CABLE_TOKEN !== "";
 // Explicit local functional-test mode. Enables POST /test/crystal/events,
 // which injects Crystal-shaped frames through the normal normalize → DuckDB →
 // relay path. Keep false/unset in production.
@@ -67,13 +62,7 @@ export const MCP_AUTH_TOKEN = Deno.env.get("MCP_AUTH_TOKEN") || "";
 // client works with zero setup. It is intentionally unset in production.
 export const MCP_ALLOW_LOCALHOST_WITHOUT_TOKEN =
   Deno.env.get("MCP_ALLOW_LOCALHOST_WITHOUT_TOKEN") === "1";
-// DashboardLive: the live agents/extensions panel is a SEPARATE cable channel
-// whose stream is `dashboard:live:{account_uuid}`. Subscribing needs the
-// dashboard's uuid (the channel's `Live_uuid` param) + a real account_uuid.
-// Set both to bridge the live dashboard to /ws/events as `dashboard.live`
-// frames; unset ⇒ the dashboard bridge stays off (calls/transcripts unaffected).
-export const CABLE_DASHBOARD_UUID = Deno.env.get("CABLE_DASHBOARD_UUID") || "";
-// DashboardLive can contain full widget tables. Coalesce bursts before browser
+// The dashboard stream can contain full widget tables. Coalesce bursts before browser
 // fan-out, and stop writing to a client whose socket queue is already backed up.
 const dashboardRelayMs = Number.parseInt(Deno.env.get("DASHBOARD_RELAY_INTERVAL_MS") || "250", 10);
 export const DASHBOARD_RELAY_INTERVAL_MS = Number.isFinite(dashboardRelayMs)

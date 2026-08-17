@@ -20,7 +20,10 @@ interface VerifierOptions {
   maxPending?: number;
 }
 
-function requestToken(request: Request): string {
+// The caller’s own login token. Exported because the cable bridge needs it:
+// the node accepts a mothership user token as its `?token=`, so the login the
+// browser already did IS the cable credential — nothing is minted server-side.
+export function requestToken(request: Request): string {
   const authorization = request.headers.get('authorization') || '';
   const match = authorization.match(/^Bearer\s+(.+)$/i);
   if (match?.[1]) return match[1].trim();
