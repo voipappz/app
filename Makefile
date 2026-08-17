@@ -1,4 +1,4 @@
-.PHONY: help env mcp-env mcp-token dev check-mothership up down build lint unit verify test test-crystal act act-api push deploy ship status tmux module prod prod-down
+.PHONY: help env mcp-env mcp-token dev check-mothership up down build lint unit verify test test-crystal cable-probe act act-api push deploy ship status tmux module prod prod-down
 
 # Everything runs in Docker — no host node/npm/ruby required. One-off npm/node
 # commands reuse the react-app service (repo mount + cached node_modules volume).
@@ -109,6 +109,13 @@ test: ## Playwright E2E in Docker (needs the app running — make up / make dev)
 
 test-crystal: ## Build API and verify Crystal mock → DuckDB → health/dashboard
 	npm run test:crystal
+
+cable-probe: ## Probe the cable with a real session: make cable-probe AUTH='<localStorage.auth>'
+	@docker run --rm --network host \
+	  -e AUTH='$(AUTH)' -e TOKEN='$(TOKEN)' -e ID='$(ID)' \
+	  -e CABLE_URL='$(CABLE_URL)' -e SECONDS='$(SECONDS)' \
+	  -v "$(PWD)/scripts:/s:ro" denoland/deno:latest \
+	  run --allow-net --allow-env /s/cable-probe.ts
 
 act-api: ## Run the Deno/Cable/Core-NATS/DuckDB/MCP CI job locally with act
 	ACT_BIN="$(ACT)" ACT_RUNNER_IMAGE="$(ACT_PLATFORM)" scripts/ci-local.sh api
