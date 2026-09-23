@@ -1,12 +1,12 @@
 /* Sidebar Container - LIGHT Theme inspired by Sentry */
 .sidebar-container {
   position: fixed;
-  left: 0;
+  inset-inline-start: 0;
   top: 0;
   height: 100vh;
-  width: 80px;
+  width: var(--sidebar-width);
   background: #f9fafb;
-  border-right: 1px solid #e5e7eb;
+  border-inline-end: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
   z-index: 1200;
@@ -17,14 +17,14 @@
 }
 
 .sidebar-container.collapsed {
-  width: 0;
-  border-right: none;
+  width: var(--sidebar-width-collapsed);
+  border-inline-end: none;
   box-shadow: none;
 }
 
 /* Expanded (labeled) rail — toggled by the hamburger */
 .sidebar-container.expanded {
-  width: 210px;
+  width: var(--sidebar-width-expanded);
 }
 
 /* Hamburger row at the top (replaces the logo) */
@@ -82,7 +82,7 @@
    (14px / weight 600 active) so the whole sidebar reads as one type system. */
 .sidebar-container.expanded .sidebar-nav-text {
   max-width: none;
-  text-align: left;
+  text-align: start;
   font-size: 14px;
   font-weight: 500;
   opacity: 1;
@@ -417,7 +417,7 @@
 /* Dark Mode Support */
 [data-theme="dark"] .sidebar-container {
   background: #1a202c;
-  border-right: 1px solid #4a5568;
+  border-inline-end: 1px solid #4a5568;
 }
 
 [data-theme="dark"] .sidebar-nav-button {
@@ -478,7 +478,7 @@
 @media (max-width: 899px) {
   .sidebar-container {
     position: relative;
-    width: 80px;
+    width: var(--sidebar-width);
   }
 }
 

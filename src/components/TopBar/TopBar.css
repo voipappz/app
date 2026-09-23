@@ -6,8 +6,8 @@
 .topbar-container--legacy {
   position: fixed;
   top: 0;
-  left: 80px;
-  width: calc(100% - 80px);
+  inset-inline-start: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
   height: 48px;
   background-color: var(--topbar-bg, #f6f7f9);
   border-bottom: 1px solid var(--border-light);
@@ -16,18 +16,18 @@
   padding: 0 12px;
   z-index: 1100;
   gap: 6px;
-  transition: left 0.25s ease, width 0.25s ease;
+  transition: inset-inline-start 0.25s ease, width 0.25s ease;
   font-family: 'Rubik', sans-serif;
 }
 
 .topbar-container.sidebar-collapsed {
-  left: 0;
+  inset-inline-start: var(--sidebar-width-collapsed);
   width: 100%;
 }
 
 .topbar-container.sidebar-expanded {
-  left: 210px;
-  width: calc(100% - 210px);
+  inset-inline-start: var(--sidebar-width-expanded);
+  width: calc(100% - var(--sidebar-width-expanded));
 }
 
 /* Hamburger */
@@ -171,8 +171,7 @@
 .topbar-filter-panel {
   position: absolute;
   top: 100%;
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   z-index: 1200;
   background-color: var(--theme-bg-primary, #fff);
   border: 1px solid var(--border-light);
@@ -239,7 +238,7 @@
   align-items: center;
   gap: 1px;
   flex-shrink: 0;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 /* Tech-nav icons get a tighter, toolbar feel */
@@ -300,7 +299,7 @@
 @media (max-width: 899px) {
   .topbar-container,
   .topbar-container.sidebar-expanded {
-    left: 0;
+    inset-inline-start: 0;
     width: 100%;
   }
 

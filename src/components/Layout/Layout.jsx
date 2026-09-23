@@ -255,7 +255,9 @@ const Layout = ({ children }) => {
               ModalProps={{ keepMounted: true }}
               sx={{
                 display: { xs: 'block', md: 'none' },
-                '& .MuiDrawer-paper': { width: 80, boxSizing: 'border-box' }
+                // The rail's width lives in index.css (--sidebar-width) so this
+                // and Sidebar.css cannot drift apart.
+                '& .MuiDrawer-paper': { width: 'var(--sidebar-width)', boxSizing: 'border-box' }
               }}
             >
               <Sidebar expanded onNavigate={() => setMobileDrawerOpen(false)} onToggleSidebar={handleToggleSidebar} />

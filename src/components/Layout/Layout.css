@@ -18,17 +18,20 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin-left: 80px;
+  /* Logical, not `margin-left`: under dir="rtl" the sidebar is on the right
+     and the content has to be pushed the other way. Same for the widths —
+     they come from index.css so the rail and this offset cannot drift. */
+  margin-inline-start: var(--sidebar-width);
   margin-top: 0;
   height: 100vh;
   background-color: var(--theme-bg-secondary);
-  transition: background-color 0.2s ease, margin-left 0.25s ease;
+  transition: background-color 0.2s ease, margin-inline-start 0.25s ease;
 }
 
 /* Brand watermark — always visible at the lower-right of the content area */
 .app-watermark {
   position: absolute;
-  right: 16px;
+  inset-inline-end: 16px;
   bottom: 10px;
   height: 16px;
   opacity: 0.5;
@@ -39,11 +42,11 @@
 [data-theme="dark"] .app-watermark { opacity: 0.45; }
 
 .content-container.sidebar-collapsed {
-  margin-left: 0;
+  margin-inline-start: var(--sidebar-width-collapsed);
 }
 
 .content-container.sidebar-expanded {
-  margin-left: 210px;
+  margin-inline-start: var(--sidebar-width-expanded);
 }
 
 /* Login page specific styles */
@@ -95,7 +98,7 @@
 
   .content-container,
   .content-container.sidebar-expanded {
-    margin-left: 0;
+    margin-inline-start: 0;
     margin-top: 0;
     height: 100vh;
   }

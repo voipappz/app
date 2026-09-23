@@ -2,9 +2,14 @@
 
 /* Global Design System - Sentry Inspired (LIGHT THEME) */
 :root {
-  /* Layout */
-  --sidebar-width: 80px;
-  --sidebar-width-collapsed: 80px;
+  /* Layout — the ONE place the sidebar's geometry is written down.
+     Sidebar.css sets the rail's own width from these, Layout.css offsets the
+     content by the same values, TopBar.css positions the legacy strip beside
+     it, and Layout.jsx hands --sidebar-width to the mobile Drawer. They used
+     to be four copies of `80px` and `210px` kept in step by hand. */
+  --sidebar-width: 80px;            /* icon rail, the default */
+  --sidebar-width-expanded: 210px;  /* icon + label, toggled by the hamburger */
+  --sidebar-width-collapsed: 0px;   /* hidden entirely */
 
   /* Light Theme Colors (Sentry inspired) */
   --bg-primary: #ffffff;

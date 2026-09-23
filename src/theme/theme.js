@@ -47,6 +47,15 @@ const theme = createTheme({
     light: scheme(light, severity.light),
     dark: scheme(dark, severity.dark),
   },
+  // Spelled out rather than left to the defaults, because the shell's CSS
+  // already hardcodes the same cutover as `@media (max-width: 899px)` in
+  // Layout.css, Sidebar.css and TopBar.css. These are MUI's own default
+  // values, so nothing moves -- but `theme.breakpoints.down('md')` in a
+  // component and that media query are now the same number on purpose
+  // instead of by coincidence, and changing one means changing this.
+  breakpoints: {
+    values: { xs: 0, sm: 600, md: 900, lg: 1200, xl: 1536 },
+  },
   shape: { borderRadius: radius.md },
   typography: {
     fontFamily: type.family,
