@@ -32,8 +32,11 @@ M := $(MAKE)
 # up a system Node 14 on a machine that had the pinned 22 installed.
 NPM := bin/npm.sh
 
-# The no-host-node path: DOCKER=1 on setup/install/dev/build/test runs the job
-# in a container instead (see docker-compose.yml). Compose is a docker
+# The no-host-node path: DOCKER=1 on setup/install/dev/build/test/lint/unit/fix
+# (and so on check, which just calls them) runs the job in a container instead
+# (see docker-compose.yml). On a host with no usable node at all -- an old
+# glibc the pinned node will not start on, say -- this is the ONLY way to lint
+# or run the unit suite, which is why they take the flag too.  Compose is a docker
 # subcommand (v2) on some machines and a separate binary (v1) on others;
 # hardcoding one dies on the other with what reads as a broken stack.
 DC ?= $(shell if docker compose version >/dev/null 2>&1; then echo 'docker compose'; \
@@ -83,7 +86,7 @@ setup: ## [DOCKER=1] Everything a fresh clone needs: node, .env, dependencies, b
 # `npm ci` is the reproducible one and needs a lockfile in sync with
 # package.json; `npm install` is the forgiving fallback for a repo without one.
 install: ## [DOCKER=1] Install node dependencies (npm ci when a lockfile is present)
-	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app npm ci; \
+	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app sh -c 'npm ci'; \
 	 elif [ -f package-lock.json ]; then $(NPM) ci; else $(NPM) install; fi
 
 browsers: ## Install the Playwright browser the suite drives
@@ -121,17 +124,27 @@ stop: ## [PORT=3000] Stop a server this Makefile started
 
 ##@ Quality
 
-lint: ## Run ESLint over the working tree
-	$(NPM) run lint
+# DOCKER=1 runs the command through `sh -c` rather than passing it to
+# `compose run` directly. With compose v1 (1.29 here) a directly-passed command
+# executes but its output never reaches the terminal: `run -T app npm ci`
+# installs all 517 packages and prints nothing, and `run app npx vitest run`
+# looks like it did nothing at all. A gate that hides its own output -- and so
+# reports success it has not earned -- is worse than no gate. `sh -c` restores
+# it. Quote with '...' so $(DC)'s own word splitting leaves the script intact.
+lint: ## [DOCKER=1] Run ESLint over the working tree
+	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app sh -c 'npm run lint'; \
+	 else $(NPM) run lint; fi
 
-fix: ## Run ESLint with --fix
-	$(NPM) exec -- eslint . --fix
+fix: ## [DOCKER=1] Run ESLint with --fix
+	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app sh -c 'npm exec -- eslint . --fix'; \
+	 else $(NPM) exec -- eslint . --fix; fi
 
-unit: ## Run the Vitest unit suite
-	$(NPM) run test:unit:run
+unit: ## [DOCKER=1] Run the Vitest unit suite
+	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app sh -c 'npm run test:unit:run'; \
+	 else $(NPM) run test:unit:run; fi
 
 # The gate a PR has to pass, in CI's order, so a red CI is reproducible here.
-check: ## check-make, secrets, lint, unit and a build -- the pre-push gate
+check: ## [DOCKER=1] check-make, secrets, lint, unit and a build -- the pre-push gate
 	@$(M) check-make
 	@$(M) secrets
 	@$(M) lint
