@@ -51,7 +51,7 @@ STOP  = PORT=$(PORT) $(M) stop >/dev/null
 # Every target in one place so `check-make` can prove each still has a rule.
 # Add a target: add it here.
 PHONY_TARGETS := help setup install browsers env dev build preview serve stop \
-                 lint fix unit check test test-list report doctor secrets \
+                 lint fix unit check gate test test-list report doctor secrets \
                  docker-build docker-run check-make clean
 
 .PHONY: $(PHONY_TARGETS)
@@ -142,6 +142,20 @@ fix: ## [DOCKER=1] Run ESLint with --fix
 unit: ## [DOCKER=1] Run the Vitest unit suite
 	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app sh -c 'npm run test:unit:run'; \
 	 else $(NPM) run test:unit:run; fi
+
+# lint + unit in one go, with the whole transcript kept in tmp/gate.log.
+# The log is the point: the checks run in a container on a host with no node,
+# so the person running them would otherwise have to copy several hundred
+# lines back by hand for anyone else to read. tmp/ is already gitignored.
+# Exit status is the pipeline's first command, not tee's, so a red run still
+# fails the target.
+gate: ## [DOCKER=1] lint + unit, transcript in tmp/gate.log
+	@mkdir -p tmp
+	@set -o pipefail; \
+	 { $(M) lint $(if $(DOCKER),DOCKER=1); echo; $(M) unit $(if $(DOCKER),DOCKER=1); } 2>&1 | tee tmp/gate.log; \
+	 status=$$?; \
+	 echo; echo "gate: transcript in tmp/gate.log"; \
+	 exit $$status
 
 # The gate a PR has to pass, in CI's order, so a red CI is reproducible here.
 check: ## [DOCKER=1] check-make, secrets, lint, unit and a build -- the pre-push gate
