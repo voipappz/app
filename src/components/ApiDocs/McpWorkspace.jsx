@@ -21,9 +21,6 @@ export default function McpWorkspace({ initialQuestion = '' }) {
   const [notice, setNotice] = useState('');
   const apiBaseUrl = config.apiBaseUrl.replace(/\/$/, '');
   const mcpUrl = new URL(`${apiBaseUrl}/api/mcp`, window.location.origin).toString();
-  // Public, unauthenticated: the Agent Skill, OpenAPI and readiness resources
-  // for development — no tools, nothing account-scoped.
-  const devMcpUrl = new URL(`${apiBaseUrl}/tasks/mcp`, window.location.origin).toString();
   const skillUrl = new URL(`${apiBaseUrl}/tasks/agent-skills/use-voipappz-api/SKILL.md`, window.location.origin).toString();
   const readinessUrl = new URL(`${apiBaseUrl}/tasks/agent-skills/use-voipappz-api/references/integration-status.json`, window.location.origin).toString();
   const openApiUrl = new URL(`${apiBaseUrl}/tasks/openapi.json`, window.location.origin).toString();
@@ -98,16 +95,6 @@ export default function McpWorkspace({ initialQuestion = '' }) {
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Authorization: Bearer &lt;token&gt; or Basic &lt;email:password&gt;
-        </Typography>
-        <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mt: 1 }}>Development endpoint</Typography>
-        <Typography
-          data-testid="mcp-workspace-dev-endpoint"
-          sx={{ fontFamily: MONO, fontSize: 13, overflowWrap: 'anywhere' }}
-        >
-          {devMcpUrl}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Public, no credentials: the Agent Skill, OpenAPI contract and readiness resources only — no tools.
         </Typography>
         <McpConnect endpointUrl={mcpUrl} copyText={copyText} />
       </Paper>
