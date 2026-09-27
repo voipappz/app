@@ -56,6 +56,15 @@ describe('AdminDashboard', () => {
     expect(await screen.findByRole('heading', { name: /every customer/i })).toBeInTheDocument();
   });
 
+  // Metric exploration lives on the widget board (an 'explorer' widget), not
+  // in a panel of its own between the two.
+  it('has no standalone metric explorer panel', () => {
+    auth.mockReturnValue({ isRoot: false });
+    scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [{ uuid: 'env-1', name: 'main' }] });
+    render(<AdminDashboard />);
+    expect(screen.queryByRole('button', { name: /metric explorer/i })).not.toBeInTheDocument();
+  });
+
   it('asks for an application when none is selected', () => {
     auth.mockReturnValue({ isRoot: false });
     scope.mockReturnValue({ selectedCustomer: null, selectedEnvironments: [] });

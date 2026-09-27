@@ -44,6 +44,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
   const isGauge = draft.type === 'gauge';
   const isCounter = draft.type === 'counter' || draft.type === 'stat';
   const isTable = draft.type === 'table';
+  const isExplorer = draft.type === 'explorer';
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ 'data-testid': 'widget-editor', sx: { borderRadius: 3 } }}>
@@ -55,7 +56,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
         <Tabs value={tab} onChange={(_, next) => setTab(next)} variant="fullWidth" sx={{ mb: 2 }}>
           <Tab label="General" />
           <Tab label="Appearance" />
-          <Tab label="Thresholds" disabled={isTable} />
+          <Tab label="Thresholds" disabled={isTable || isExplorer} />
         </Tabs>
 
         {tab === 0 && (
@@ -127,7 +128,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
               </Stack>
             )}
             {!isCounter && !isGauge && !isTable && (
-              <Typography variant="body2" color="text.secondary">Chart widgets take their styling from the theme.</Typography>
+              <Typography variant="body2" color="text.secondary">Chart and explorer widgets take their styling from the theme.</Typography>
             )}
             {isTable && (
               <Typography variant="body2" color="text.secondary">The recent calls table has no appearance options.</Typography>
@@ -135,7 +136,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
           </Stack>
         )}
 
-        {tab === 2 && !isTable && (
+        {tab === 2 && !isTable && !isExplorer && (
           <Stack spacing={3}>
             <Typography variant="body2" color="text.secondary">Values past these limits tint the tile amber, then red.</Typography>
             <Box>
@@ -162,7 +163,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
             />
           </Stack>
         )}
-        {!isTable && <Box sx={{ mt: 2 }}>
+        {!isTable && !isExplorer && <Box sx={{ mt: 2 }}>
           <Button disabled={!draft.measurement || !draft.field} onClick={() => { setPreview({ ...draft }); setPreviewRun((run) => run + 1); }}>Run preview</Button>
           {preview && <>
             {JSON.stringify(preview) !== JSON.stringify(draft) && <Typography color="text.secondary">Settings changed. Run preview again to update the results.</Typography>}

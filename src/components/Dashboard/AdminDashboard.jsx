@@ -11,15 +11,13 @@
 // empty screen, which is the bird's-eye case this screen exists for.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Accordion, AccordionDetails, AccordionSummary, Box, Chip, FormControl, FormControlLabel, IconButton, MenuItem, Paper, Select, Switch, Tooltip, Typography,
+  Box, FormControl, FormControlLabel, IconButton, MenuItem, Paper, Select, Switch, Tooltip, Typography,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import GroupsIcon from '@mui/icons-material/Groups';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import TerminalIcon from '@mui/icons-material/Terminal';
 import { useAuth } from '../../context/AuthContext';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -27,7 +25,6 @@ import { monitoringApi } from '../../services/api/monitoringApi';
 import { MetricCard, ChartPanel, WidgetGrid, Slot } from '../Monitoring/widgets';
 import LiveCallsDashboard from './LiveCallsDashboard.jsx';
 import CallsBreakdown, { sumByKey } from './CallsBreakdown.jsx';
-import InfluxMetricExplorer from '../Monitoring/InfluxMetricExplorer/InfluxMetricExplorer.jsx';
 import WidgetBoard from '../DashboardBuilder/WidgetBoard';
 
 // Same cadence as Monitoring, so a console with both open refreshes together.
@@ -73,7 +70,6 @@ export default function AdminDashboard() {
   const [outcome, setOutcome] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [metricExplorerOpen, setMetricExplorerOpen] = useState(true);
   const [cdrGroupBy, setCdrGroupBy] = useState('direction');
   const timer = useRef(null);
 
@@ -227,28 +223,8 @@ export default function AdminDashboard() {
           </Slot>
         </WidgetGrid>
 
-        {/* The dashboard is the operational monitoring surface. Keep ad-hoc
-            metric exploration beside its live and CDR charts, using the same
-            safe structured Influxer query builder as the former Monitoring
-            panel: the browser selects fields, never submits InfluxQL. */}
-        <Accordion
-          expanded={metricExplorerOpen}
-          onChange={(_, expanded) => setMetricExplorerOpen(expanded)}
-          disableGutters
-          elevation={0}
-          sx={{ mt: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, '&:before': { display: 'none' } }}
-        >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <TerminalIcon fontSize="small" />
-              <Typography sx={{ fontWeight: 600 }}>Metric explorer</Typography>
-              <Chip size="small" variant="outlined" label="Influxer" />
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <InfluxMetricExplorer defaultMeasurement="cdr" defaultField="duration" />
-          </AccordionDetails>
-        </Accordion>
+        {/* Ad-hoc metric exploration is a board widget ('explorer' in
+            widgetTemplates), not a panel of its own between the two. */}
         {accountUuid && <WidgetBoard key={accountUuid} storageScope={`admin-metrics:${accountUuid}`} />}
       </Box>
     </LiveCallsDashboard>

@@ -27,13 +27,20 @@ const PALETTE = ['#65758E', '#28A7E9', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6
  * field → aggregation; the selected node and time window are injected. No
  * hand-written InfluxQL — but the InfluxQL Influxer generated is shown read-only.
  */
-export default function InfluxMetricExplorer({ host = '', defaultMeasurement = '', defaultField = '' }) {
+export default function InfluxMetricExplorer({
+  host = '', defaultMeasurement = '', defaultField = '', defaultAggregation = 'mean', defaultMinutes = 60,
+}) {
   const [schema, setSchema] = useState([]);
   const [schemaErr, setSchemaErr] = useState(null);
   const [measurement, setMeasurement] = useState('');
   const [field, setField] = useState('');
-  const [aggregation, setAggregation] = useState('mean');
-  const [minutes, setMinutes] = useState(60);
+  const [aggregation, setAggregation] = useState(AGGREGATIONS.includes(defaultAggregation) ? defaultAggregation : 'mean');
+  const [minutes, setMinutes] = useState(Number(defaultMinutes) > 0 ? Number(defaultMinutes) : 60);
+  // A widget's saved window can be any length; keep it selectable.
+  const windows = useMemo(
+    () => (WINDOWS.some((w) => w.minutes === minutes) ? WINDOWS : [...WINDOWS, { label: `Last ${minutes} min`, minutes }].sort((a, b) => a.minutes - b.minutes)),
+    [minutes],
+  );
   const [result, setResult] = useState(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState(null);
@@ -115,7 +122,7 @@ export default function InfluxMetricExplorer({ host = '', defaultMeasurement = '
         <FormControl size="small" sx={{ minWidth: 130 }}>
           <InputLabel>Window</InputLabel>
           <Select label="Window" value={minutes} onChange={(e) => setMinutes(e.target.value)}>
-            {WINDOWS.map((w) => <MenuItem key={w.minutes} value={w.minutes}>{w.label}</MenuItem>)}
+            {windows.map((w) => <MenuItem key={w.minutes} value={w.minutes}>{w.label}</MenuItem>)}
           </Select>
         </FormControl>
 

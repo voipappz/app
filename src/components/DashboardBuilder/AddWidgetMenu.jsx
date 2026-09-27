@@ -20,7 +20,8 @@ const CATEGORY_LABELS = {
   counters: 'Numbers',
   gauges: 'Gauges',
   trends: 'Charts',
-  tables: 'Tables'
+  tables: 'Tables',
+  explore: 'Explore'
 };
 
 export default function AddWidgetMenu({ onPick, disabled }) {

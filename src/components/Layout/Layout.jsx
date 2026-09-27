@@ -16,7 +16,7 @@ import useIdleTimeout from '../../hooks/useIdleTimeout';
 import { useZendeskWidget } from '../../services/zendeskWidget';
 import './Layout.css';
 
-
+const SIDEBAR_EXPANDED_KEY = 'sidebar-expanded';
 
 const Layout = ({ children }) => {
   useLayout();
@@ -69,7 +69,13 @@ const Layout = ({ children }) => {
   // Sidebar state — desktop collapse + mobile drawer (shared by the hamburger).
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const sidebarCollapsed = false;
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  // Expanded is a per-browser preference: it survives a reload.
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_EXPANDED_KEY) === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_EXPANDED_KEY, sidebarExpanded ? '1' : '0'); } catch { /* storage disabled */ }
+  }, [sidebarExpanded]);
   const isMobile = useMediaQuery((t) => t.breakpoints.down('md'));
   const handleToggleSidebar = () => {
     if (isMobile) setMobileDrawerOpen(open => !open);
@@ -119,6 +125,7 @@ const Layout = ({ children }) => {
             {!isMcpWorkspace && <TopBar
               sidebarCollapsed={sidebarCollapsed}
               sidebarExpanded={sidebarExpanded}
+              menuOpen={isMobile ? mobileDrawerOpen : sidebarExpanded}
               onToggleSidebar={handleToggleSidebar}
               onToggleExpand={handleToggleExpand}
             />}

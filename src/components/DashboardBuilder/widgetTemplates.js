@@ -10,7 +10,7 @@
  * (Postgres, via useDashboardSnapshot) — InfluxDB has no row-level call data.
  */
 
-export const WIDGET_TYPES = ['counter', 'gauge', 'stat', 'trend', 'line', 'bar', 'pie', 'table'];
+export const WIDGET_TYPES = ['counter', 'gauge', 'stat', 'trend', 'line', 'bar', 'pie', 'table', 'explorer'];
 
 // Widget type → whether it's a live Influx metric query or the calls table.
 export const isInfluxType = (type) => type !== 'table';
@@ -140,6 +140,13 @@ export const WIDGET_TEMPLATES = {
   recentCalls: {
     title: 'Recent calls', type: 'table',
     fields: ['started_at', 'direction', 'from_number', 'to_number', 'status', 'duration_sec']
+  },
+  // The Monitoring metric explorer pinned to the board: the saved query is
+  // where it opens, and it runs only when asked.
+  metricExplorer: {
+    title: 'Metric explorer', type: 'explorer',
+    measurement: 'cdr', field: 'duration', aggregation: 'mean', minutes: 60,
+    icon: 'Insights'
   }
 };
 
@@ -149,7 +156,8 @@ export const TEMPLATE_CATEGORIES = {
   counters: ['callsToday', 'totalCalls', 'peakIncoming', 'peakOutgoing', 'extensionsTotal', 'avgCallDuration', 'avgTalkTime'],
   gauges: ['concurrentCallsGauge'],
   trends: ['callVolumeTrend'],
-  tables: ['recentCalls']
+  tables: ['recentCalls'],
+  explore: ['metricExplorer']
 };
 
 /**

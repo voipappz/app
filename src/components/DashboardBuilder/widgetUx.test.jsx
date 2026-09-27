@@ -46,6 +46,26 @@ describe('dashboard widget UX', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('call-1');
     expect(screen.getByRole('dialog')).toHaveTextContent('ANSWER');
   });
+  // The explorer is a board widget like any other: saved with its query,
+  // offered by Add widget, and it only queries when asked to.
+  it('offers a metric explorer widget and runs its saved query on demand', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('dashboard-definitions:test-board', JSON.stringify({ dashboards: [{ uuid: 'default', name: 'Default' }], widgets: { default: [
+      { uuid: 'saved-explorer', type: 'explorer', title: 'Explore CDR', measurement: 'cdr', field: 'duration', aggregation: 'max', minutes: 1440, position: 0 },
+    ] } }));
+    monitoringApi.runInfluxQuery.mockResolvedValue({ columns: ['time', 'value'], rows: [{ time: '2026-09-27T10:00:00Z', value: 2 }, { time: '2026-09-27T11:00:00Z', value: 3 }] });
+    render(<WidgetBoard storageScope="test-board" />);
+    expect(await screen.findByText('Explore CDR')).toBeInTheDocument();
+    const run = await screen.findByRole('button', { name: 'Run' });
+    await waitFor(() => expect(run).toBeEnabled());
+    expect(monitoringApi.runInfluxQuery).not.toHaveBeenCalled();
+    await user.click(run);
+    await waitFor(() => expect(monitoringApi.runInfluxQuery).toHaveBeenCalledWith(expect.objectContaining({ measurement: 'cdr', field: 'duration', aggregation: 'max', minutes: 1440 })));
+    expect(await screen.findByTestId('line-renderer')).toBeInTheDocument();
+    await user.click(screen.getByTestId('add-widget'));
+    expect(screen.getByTestId('widget-preset-metricExplorer')).toBeInTheDocument();
+  });
+
   it.each(['line', 'bar', 'pie'])('uses the %s renderer', (type) => {
     render(<MetricChart type={type} series={[{ time: 'now', value: 4 }]} />);
     expect(screen.getByTestId(`${type}-renderer`)).toBeInTheDocument();
