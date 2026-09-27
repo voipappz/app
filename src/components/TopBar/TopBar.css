@@ -11,7 +11,7 @@
   padding: 0 12px;
   z-index: 1100;
   gap: 6px;
-  transition: left 0.25s ease, width 0.25s ease;
+  /* Match the sidebar immediately; do not animate layout dimensions. */
   font-family: 'Rubik', sans-serif;
 }
 
@@ -21,8 +21,8 @@
 }
 
 .topbar-container.sidebar-expanded {
-  left: 210px;
-  width: calc(100% - 210px);
+  left: 104px;
+  width: calc(100% - 104px);
 }
 
 /* Hamburger */

@@ -97,7 +97,7 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
           >
             <ListItemIcon className="sidebar-nav-icon" sx={{ minWidth: 'auto', justifyContent: 'center', position: 'relative' }}>
               <IconComp />
-              {badge && !expanded && (
+              {badge && (
                 <Box component="span" sx={{
                   position: 'absolute', top: -4, right: -6, minWidth: 14, height: 14, px: 0.4,
                   borderRadius: '7px', backgroundColor: badge.color, color: '#fff',
@@ -108,15 +108,6 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
               )}
             </ListItemIcon>
             <span className="sidebar-nav-text">{item.text}</span>
-            {badge && expanded && (
-              <Box component="span" sx={{
-                ml: 'auto', minWidth: 18, height: 16, px: 0.6, borderRadius: '8px',
-                backgroundColor: badge.color, color: '#fff', fontSize: '0.62rem',
-                fontWeight: 700, lineHeight: '16px', textAlign: 'center',
-              }}>
-                {badge.count > 99 ? '99+' : badge.count}
-              </Box>
-            )}
           </ListItemButton>
         </ListItem>
       </Tooltip>
