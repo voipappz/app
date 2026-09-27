@@ -247,7 +247,7 @@ const UserDetails = ({
 
       {/* User Form */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card variant="outlined" sx={{ height: '100%' }}>
             <CardContent sx={{ height: '100%' }}>
               <Typography variant="h6" gutterBottom>
@@ -293,7 +293,7 @@ const UserDetails = ({
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card variant="outlined" sx={{ height: '100%' }}>
             <CardContent sx={{ height: '100%' }}>
               <Typography variant="h6" gutterBottom>
@@ -368,7 +368,7 @@ const UserDetails = ({
         </Grid>
 
         {!isNew && !isEditing && (
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Card variant="outlined">
               <CardContent>
                 <Typography variant="h6" gutterBottom>

@@ -154,7 +154,7 @@ export const PlanBridge = ({
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           {/* Plan Fields — Name, then billing cadence (Period + Interval), Notes, Enabled */}
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Name"
                 value={formData.name}
@@ -168,7 +168,7 @@ export const PlanBridge = ({
                 disabled={loading}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl
                 fullWidth
                 size="small"
@@ -191,7 +191,7 @@ export const PlanBridge = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Interval"
                 type="number"
@@ -207,7 +207,7 @@ export const PlanBridge = ({
                 inputProps={{ min: 1 }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Notes"
                 value={formData.notes}
@@ -220,7 +220,7 @@ export const PlanBridge = ({
                 disabled={loading}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControlLabel
                 control={
                   <Switch

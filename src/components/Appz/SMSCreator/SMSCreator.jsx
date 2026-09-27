@@ -79,7 +79,7 @@ const SMSCreator = ({
     switch (input) {
       case 'textarea':
         return (
-          <Grid item xs={12} key={fieldKey}>
+          <Grid size={12} key={fieldKey}>
             <TextField
               {...commonProps}
               multiline
@@ -90,7 +90,7 @@ const SMSCreator = ({
       
       case 'number':
         return (
-          <Grid item xs={12} md={gridSize} key={fieldKey}>
+          <Grid size={{ xs: 12, md: gridSize }} key={fieldKey}>
             <TextField
               {...commonProps}
               type="number"
@@ -101,7 +101,7 @@ const SMSCreator = ({
       case 'string':
       default:
         return (
-          <Grid item xs={12} md={gridSize} key={fieldKey}>
+          <Grid size={{ xs: 12, md: gridSize }} key={fieldKey}>
             <TextField {...commonProps} />
           </Grid>
         );
@@ -152,7 +152,7 @@ const SMSCreator = ({
         <CardContent>
           {/* Schema Name Field */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Schema Name"

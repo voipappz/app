@@ -159,7 +159,7 @@ const BillingEditor = ({ balance, type, isEdit }) => {
         Billing
       </Typography>
       <Grid container spacing={2} direction="column">
-        <Grid item xs={12}>
+        <Grid size={12}>
             <TextField
               label={type === 'prepaid' ? 'Balance (credit)' : 'Balance (usage)'}
               value={balance ?? 0}
@@ -514,7 +514,7 @@ const SubscriptionDialog = ({
               Basic Information
             </Typography>
             <Grid container spacing={2} direction="column">
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   label="Name"
                   value={formData.name}
@@ -527,7 +527,7 @@ const SubscriptionDialog = ({
                   autoComplete="off"
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControl fullWidth required error={!!errors.environment_uuid || (submitAttempted && !formData.environment_uuid)}>
                   <InputLabel required>Application</InputLabel>
                   <Select
@@ -548,7 +548,7 @@ const SubscriptionDialog = ({
                   )}
                 </FormControl>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <PlanSelect
                   value={formData.plan_uuid}
                   onChange={(value) => handleChange('plan_uuid', value)}
@@ -563,7 +563,7 @@ const SubscriptionDialog = ({
                   onPlanUpdated={onRefreshPlans}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControl fullWidth required>
                   <InputLabel required>Type</InputLabel>
                   <Select
@@ -581,7 +581,7 @@ const SubscriptionDialog = ({
                   </FormHelperText>
                 </FormControl>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControl fullWidth>
                   <InputLabel>Status</InputLabel>
                   <Select
@@ -607,7 +607,7 @@ const SubscriptionDialog = ({
               Subscription Period
             </Typography>
             <Grid container spacing={2} direction="column">
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   label="Begin Date"
                   type="date"
@@ -620,7 +620,7 @@ const SubscriptionDialog = ({
                   helperText={errors.begins_at || (submitAttempted && !formData.begins_at ? 'Begin date is required' : '')}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   label="End Date"
                   type="date"

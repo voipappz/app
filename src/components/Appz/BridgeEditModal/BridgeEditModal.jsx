@@ -522,7 +522,7 @@ const BridgeEditModal = ({
                   {agents.map(agent => {
                     const isSelected = selectedAgents.some(a => a.uuid === agent.uuid);
                     return (
-                      <Grid item xs={6} sm={4} md={3} key={agent.uuid}>
+                      <Grid size={{ xs: 6, sm: 4, md: 3 }} key={agent.uuid}>
                         <Button
                           variant={isSelected ? "contained" : "outlined"}
                           size="small"

@@ -182,7 +182,7 @@ const DynamicSchemaForm = ({
 
           {/* Environment Name Field - always text field */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Application Name"
@@ -204,7 +204,7 @@ const DynamicSchemaForm = ({
               </Typography>
               <Grid container spacing={3} sx={{ mb: 3 }}>
                 {fields.map((field, index) => (
-                  <Grid item xs={12} md={6} key={field.key || field.name || index}>
+                  <Grid size={{ xs: 12, md: 6 }} key={field.key || field.name || index}>
                     {renderField(field)}
                   </Grid>
                 ))}

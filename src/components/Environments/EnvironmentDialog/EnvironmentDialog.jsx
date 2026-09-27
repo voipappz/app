@@ -104,7 +104,7 @@ const ProfileEditor = ({ profile, onChange, disabled, title = "Profile Propertie
 
         {profileItems.map((item, index) => (
           <Grid container spacing={2} key={index} sx={{ mb: 1 }}>
-            <Grid item xs={5}>
+            <Grid size={5}>
               <TextField
                 label="Key"
                 value={item.key}
@@ -116,7 +116,7 @@ const ProfileEditor = ({ profile, onChange, disabled, title = "Profile Propertie
                 autoComplete="off"
               />
             </Grid>
-            <Grid item xs={5}>
+            <Grid size={5}>
               <TextField
                 label="Value"
                 value={item.value}
@@ -128,7 +128,7 @@ const ProfileEditor = ({ profile, onChange, disabled, title = "Profile Propertie
                 autoComplete="off"
               />
             </Grid>
-            <Grid item xs={2}>
+            <Grid size={2}>
               <IconButton
                 onClick={() => removeProfileItem(index)}
                 disabled={disabled || profileItems.length === 1}
@@ -317,7 +317,7 @@ const EnvironmentDialog = ({
         <Grid container spacing={2} direction="column">
           {/* 1. UUID Field - Read Only with copy (only shown in edit mode) */}
           {isEdit && environment?.uuid && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <Typography variant="caption" color="text.secondary" sx={{ minWidth: 70, fontWeight: 600 }}>UUID</Typography>
@@ -333,7 +333,7 @@ const EnvironmentDialog = ({
           )}
 
           {/* 2. Enabled Toggle - right after UUID */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <FormControlLabel
               control={
                 <Switch
@@ -348,7 +348,7 @@ const EnvironmentDialog = ({
           </Grid>
 
           {/* 3. Name Field */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Name"
@@ -366,7 +366,7 @@ const EnvironmentDialog = ({
           </Grid>
 
           {/* 4. Profile Properties Editor - Dynamic fields from API */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <DynamicProfileEditor
               type="environment"
               profile={formData.profile}
@@ -380,7 +380,7 @@ const EnvironmentDialog = ({
           </Grid>
 
           {/* 5. Meta Properties Editor */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <ProfileEditor
               profile={formData.meta}
               onChange={(meta) => handleChange('meta', meta)}
@@ -394,17 +394,17 @@ const EnvironmentDialog = ({
             <>
               {/* Customer Information */}
               {environment.customer && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="h6" sx={{ color: 'primary.main', mb: 1 }}>
                     Customer Details
                   </Typography>
                   <Box sx={{ p: 2, backgroundColor: 'var(--mui-palette-surface-muted)', borderRadius: 1, border: '1px solid var(--mui-palette-divider)' }}>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <Typography variant="caption" color="text.secondary">Customer Name</Typography>
                         <Typography variant="body2" fontWeight={600}>{environment.customer.name || 'N/A'}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <Typography variant="caption" color="text.secondary">Customer UUID</Typography>
                         <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
                           {environment.customer.uuid || environment.customer_uuid || 'N/A'}
@@ -417,26 +417,26 @@ const EnvironmentDialog = ({
 
               {/* Technical Configuration */}
               {(environment.domain || environment.wss_server || environment.timezone) && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="h6" sx={{ color: 'primary.main', mb: 1 }}>
                     Technical Configuration
                   </Typography>
                   <Box sx={{ p: 2, backgroundColor: 'var(--mui-palette-surface-muted)', borderRadius: 1, border: '1px solid var(--mui-palette-divider)' }}>
                     <Grid container spacing={2}>
                       {environment.domain && (
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                           <Typography variant="caption" color="text.secondary">Domain</Typography>
                           <Typography variant="body2" fontWeight={600}>{environment.domain}</Typography>
                         </Grid>
                       )}
                       {environment.wss_server && (
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                           <Typography variant="caption" color="text.secondary">WSS Server</Typography>
                           <Typography variant="body2">{environment.wss_server}</Typography>
                         </Grid>
                       )}
                       {environment.timezone && (
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                           <Typography variant="caption" color="text.secondary">Timezone</Typography>
                           <Typography variant="body2">{environment.timezone}</Typography>
                         </Grid>
@@ -447,25 +447,25 @@ const EnvironmentDialog = ({
               )}
 
               {/* Environment Info */}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Typography variant="h6" sx={{ color: 'primary.main', mb: 1 }}>
                   Environment Info
                 </Typography>
                 <Box sx={{ p: 2, backgroundColor: 'var(--mui-palette-surface-muted)', borderRadius: 1, border: '1px solid var(--mui-palette-divider)' }}>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Typography variant="caption" color="text.secondary">UUID</Typography>
                       <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
                         {environment.uuid || environment.id || 'N/A'}
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Typography variant="caption" color="text.secondary">Created At</Typography>
                       <Typography variant="body2">
                         {formatDate(environment.created_at)}
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Typography variant="caption" color="text.secondary">Updated At</Typography>
                       <Typography variant="body2">
                         {formatDate(environment.updated_at)}
@@ -478,7 +478,7 @@ const EnvironmentDialog = ({
           )}
 
           {/* Notes Field - always last in the form body */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Notes"

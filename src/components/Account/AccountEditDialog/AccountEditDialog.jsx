@@ -245,7 +245,7 @@ const AccountEditDialog = ({
 
         <Grid container spacing={3} direction="column">
           {/* Editable Fields Section */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Name"
@@ -260,7 +260,7 @@ const AccountEditDialog = ({
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Email"
@@ -273,7 +273,7 @@ const AccountEditDialog = ({
 
           {/* Reset Password & Basic Auth Buttons */}
           {formData.uuid && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Tooltip title="Generate a new password for this account">
                   <Button
@@ -373,7 +373,7 @@ const AccountEditDialog = ({
             </Grid>
           )}
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Notes"
@@ -388,7 +388,7 @@ const AccountEditDialog = ({
           </Grid>
 
           {/* Profile Editor - Dynamic fields from API */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <DynamicProfileEditor
               type="account"
               profile={formData.profile}

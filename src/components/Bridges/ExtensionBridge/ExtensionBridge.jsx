@@ -290,7 +290,7 @@ export const ExtensionBridge = ({
       <Grid container spacing={3} direction="column">
         {/* Extension UUID (read-only, edit mode only) */}
         {extension?.uuid && (
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               label="UUID"
               fullWidth
@@ -310,7 +310,7 @@ export const ExtensionBridge = ({
 
         {/* Environment - shown when hideEnvironment is false */}
         {!hideEnvironment && environments.length > 0 && (
-          <Grid item xs={12}>
+          <Grid size={12}>
             {/* A portal user has one environment, their own: never a choice. */}
             {!userSession && (
             <FormControl fullWidth required error={!!formErrors.environment_uuid}>
@@ -339,7 +339,7 @@ export const ExtensionBridge = ({
         )}
 
         {/* Name */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <TextField
             label="Name"
             value={formData.name}
@@ -354,7 +354,7 @@ export const ExtensionBridge = ({
         </Grid>
 
         {/* Username (Device Number) */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <TextField
             label="Device Number"
             value={formData.username}
@@ -369,7 +369,7 @@ export const ExtensionBridge = ({
         </Grid>
 
         {/* Password (SIP Password) */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <SecretField
             label="SIP Password"
             value={formData.password}
@@ -420,7 +420,7 @@ export const ExtensionBridge = ({
         </Grid>
 
         {/* Enabled Toggle */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <FormControlLabel
             control={
               <Switch
@@ -434,7 +434,7 @@ export const ExtensionBridge = ({
         </Grid>
 
         {/* Notes */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <TextField
             label="Notes"
             value={formData.notes}
@@ -448,7 +448,7 @@ export const ExtensionBridge = ({
         </Grid>
 
         {/* Profile Editor - Dynamic fields from API */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <DynamicProfileEditor
             type="extension"
             profile={formData.profile}
