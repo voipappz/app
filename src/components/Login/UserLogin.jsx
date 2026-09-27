@@ -131,6 +131,7 @@ const UserLogin = ({ switcher = null }) => {
       <Box component="form" id="portal-login-form" name="portal-login" action="/portal-login" method="post" onSubmit={handleSubmit} className="login-form" data-testid="user-login-form">
         <FormControl fullWidth className="form-group">
           <TextField
+            size="medium"
             fullWidth
             id="user-email"
             name="portal_email"
@@ -160,6 +161,7 @@ const UserLogin = ({ switcher = null }) => {
 
         <FormControl fullWidth className="form-group">
           <TextField
+            size="medium"
             fullWidth
             id="user-password"
             name="portal_password"
@@ -241,6 +243,7 @@ const UserLogin = ({ switcher = null }) => {
       <Box component="form" onSubmit={handleOtpSubmit} className="login-form" data-testid="user-otp-form">
         <FormControl fullWidth className="form-group">
           <TextField
+            size="medium"
             fullWidth
             id="user-otp-code"
             name="otp-code"
@@ -310,6 +313,7 @@ const UserLogin = ({ switcher = null }) => {
           <Box component="form" onSubmit={handleForgotEmailSubmit} className="login-form" data-testid="user-forgot-form">
             <FormControl fullWidth className="form-group">
               <TextField
+                size="medium"
                 fullWidth
                 id="user-forgot-email"
                 name="forgot-email"
@@ -378,6 +382,7 @@ const UserLogin = ({ switcher = null }) => {
           <Box component="form" onSubmit={handleForgotOtpSubmit} className="login-form" data-testid="user-forgot-otp-form">
             <FormControl fullWidth className="form-group">
               <TextField
+                size="medium"
                 fullWidth
                 id="user-forgot-otp-code"
                 name="forgot-otp-code"
@@ -450,6 +455,7 @@ const UserLogin = ({ switcher = null }) => {
         <Box component="form" onSubmit={handleForgotResetSubmit} className="login-form" data-testid="user-forgot-reset-form">
           <FormControl fullWidth className="form-group">
             <TextField
+              size="medium"
               fullWidth
               id="user-new-password"
               name="new-password"
@@ -469,6 +475,7 @@ const UserLogin = ({ switcher = null }) => {
 
           <FormControl fullWidth className="form-group">
             <TextField
+              size="medium"
               fullWidth
               id="user-confirm-password"
               name="confirm-password"

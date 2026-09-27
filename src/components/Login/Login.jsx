@@ -62,6 +62,7 @@ const Login = ({ switcher = null }) => {
       <Box component="form" id="admin-login-form" name="admin-login" action="/admin-login" method="post" onSubmit={handleSubmit} className="login-form" data-testid="login-form">
         <FormControl fullWidth className="form-group">
           <TextField
+            size="medium"
             fullWidth
             id="email"
             name="email"
@@ -86,6 +87,7 @@ const Login = ({ switcher = null }) => {
 
         <FormControl fullWidth className="form-group">
           <TextField
+            size="medium"
             fullWidth
             id="password"
             name="password"
@@ -156,6 +158,7 @@ const Login = ({ switcher = null }) => {
       <Box component="form" onSubmit={handleOtpSubmit} className="login-form" data-testid="otp-form">
         <FormControl fullWidth className="form-group">
           <TextField
+            size="medium"
             fullWidth
             id="otp-code"
             name="otp-code"
@@ -225,6 +228,7 @@ const Login = ({ switcher = null }) => {
           <Box component="form" onSubmit={handleForgotEmailSubmit} className="login-form" data-testid="forgot-form">
             <FormControl fullWidth className="form-group">
               <TextField
+                size="medium"
                 fullWidth
                 id="forgot-email"
                 name="forgot-email"
@@ -293,6 +297,7 @@ const Login = ({ switcher = null }) => {
           <Box component="form" onSubmit={handleForgotOtpSubmit} className="login-form" data-testid="forgot-otp-form">
             <FormControl fullWidth className="form-group">
               <TextField
+                size="medium"
                 fullWidth
                 id="forgot-otp-code"
                 name="forgot-otp-code"
@@ -365,6 +370,7 @@ const Login = ({ switcher = null }) => {
         <Box component="form" onSubmit={handleForgotResetSubmit} className="login-form" data-testid="forgot-reset-form">
           <FormControl fullWidth className="form-group">
             <TextField
+              size="medium"
               fullWidth
               id="new-password"
               name="new-password"
@@ -383,6 +389,7 @@ const Login = ({ switcher = null }) => {
 
           <FormControl fullWidth className="form-group">
             <TextField
+              size="medium"
               fullWidth
               id="confirm-password"
               name="confirm-password"
