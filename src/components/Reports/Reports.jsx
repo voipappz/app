@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import useReports from './Reports'; // Custom hook
 import ReportsDashboards from './ReportsDashboards.jsx';
+import { reportsViewFor } from './reportsView';
 import './Reports.css'; // Styles
 import ReportDataHandler from '../../utils/reportDataHandler';
 import { reportsApi } from '../../services/api/reportsApi';
@@ -60,10 +61,13 @@ const Reports = () => {
 
   // Screen view: 'visual' (Blazer-style dashboards, the landing view) or
   // 'editor' (report list + SQL editor). A ?report= deep link means the user
-  // wants a specific report — land them in the editor.
-  // The resource/editor view is the default, matching Services and the other
-  // CRUD screens. Visual remains available as the dashboard presentation.
-  const [screenView, setScreenView] = useState('editor');
+  // wants a specific report — land them in the editor, and switch there when
+  // one is opened later (create, fork, a link from another screen).
+  const [screenView, setScreenView] = useState(() => reportsViewFor(searchParams));
+  const linkedReport = searchParams.get('report');
+  useEffect(() => {
+    if (linkedReport) setScreenView('editor');
+  }, [linkedReport]);
   const { can } = usePermissions();
   const canWrite = can('reports', 'write');
 
