@@ -1,5 +1,7 @@
 import { apiService, toFormData } from '../apiService';
 
+const CLEARABLE_FIELDS = ['replace', 'notes'];
+
 /**
  * DIDs API Service
  * Handles all DID management operations including CRUD, provider management, and routing
@@ -107,6 +109,12 @@ export const didsApi = {
 
     // Use centralized toFormData helper for proper nested object encoding
     const formData = toFormData(didData);
+    // toFormData drops empty strings, so a field cleared in the form would
+    // never reach the API and the old value would stay. An empty `replace`
+    // is meaningful (strip the prefix), and empty notes clears the notes.
+    CLEARABLE_FIELDS.forEach((field) => {
+      if (didData?.[field] === '' && !formData.has(field)) formData.append(field, '');
+    });
 
     return apiService.patch(url, formData, headers, `updating DID ${didId}`, true);
   },

@@ -27,9 +27,13 @@ const CustomFooter = ({
   totalPages,
   totalRecords,
   onGoToPage,
+  // Outside a DataGrid (the Logs screen) there is no grid context, and
+  // GridFooterContainer throws without one.
+  standalone = false,
 }) => {
+  const Container = standalone ? Box : GridFooterContainer;
   return (
-    <GridFooterContainer>
+    <Container {...(standalone ? { sx: { borderTop: 1, borderColor: 'divider' } } : {})}>
       <Box className="custom-footer-root">
         <Box className="custom-footer-pagination">
           <IconButton
@@ -96,7 +100,7 @@ const CustomFooter = ({
           )}
         </Box>
       </Box>
-    </GridFooterContainer>
+    </Container>
   );
 };
 

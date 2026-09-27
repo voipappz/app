@@ -26,6 +26,7 @@ import useNodeHealth from '../../hooks/useNodeHealth';
 import useGatusHealth from '../../hooks/useGatusHealth';
 import useApiHealth from '../../hooks/useApiHealth';
 import ApiHealthPanel from './ApiHealthPanel.jsx';
+import HealthList from './HealthList.jsx';
 import IntegrationCard from './IntegrationCard.jsx';
 import { INTEGRATIONS, useIntegrations } from './integrations.js';
 import useMonitoring, { SYSTEM_METRICS } from './Monitoring.js';
@@ -95,47 +96,6 @@ const HostSelector = ({ hosts, value, onChange }) => (
   </FormControl>
 );
 
-/** The mothership's lightweight shared status (/health). */
-const ServiceHealthStrip = ({ health, onOpenDetails }) => {
-  if (!health?.checks) return null;
-  return (
-    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-      <FavoriteIcon sx={{ fontSize: 16, color: ['healthy', 'ok'].includes(health.status) ? '#10b981' : '#ef4444' }} />
-      <Typography variant="caption" sx={{
-        fontWeight: 600, color: 'var(--theme-text-secondary)', fontSize: '0.7rem',
-        textTransform: 'uppercase', letterSpacing: 0.5, mr: 0.5,
-      }}>
-        Health:
-      </Typography>
-      {Object.entries(health.checks).map(([name, check]) => {
-        const ok = check.ok === true || check.healthy === true || ['healthy', 'ok', 'up'].includes(check.status);
-        return (
-          <Tooltip key={name} title={check.message || (ok ? 'Operational' : 'Issue detected')}>
-            <Chip
-              label={name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-              size="small" variant="outlined"
-              icon={<DnsIcon sx={{ fontSize: 14, color: ok ? '#10b981' : '#ef4444' }} />}
-              sx={{
-                fontSize: '0.7rem', height: 24,
-                borderColor: ok ? '#10b98140' : '#ef444460',
-                color: ok ? '#10b981' : '#ef4444',
-                backgroundColor: ok ? '#10b98108' : '#ef444410',
-                cursor: onOpenDetails ? 'pointer' : 'default',
-              }}
-              onClick={onOpenDetails}
-            />
-          </Tooltip>
-        );
-      })}
-      {health.duration_ms != null && (
-        <Typography variant="caption" sx={{ color: 'var(--theme-text-secondary)', fontSize: '0.65rem', ml: 1 }}>
-          {health.duration_ms}ms
-        </Typography>
-      )}
-    </Box>
-  );
-};
-
 /**
  * Integrations — one card per service, all from /api/monitoring/influxdb/query.
  * The table lives in integrations.js: series + fields + thresholds, one row each.
@@ -167,10 +127,10 @@ const Monitoring = () => {
     fetchData,
   } = useMonitoring();
   const apiHealth = useApiHealth();
-  const health = apiHealth.response;
 
   const [monitorNodes, setMonitorNodes] = useState([]);
-  const [apiHealthDetailsOpen, setApiHealthDetailsOpen] = useState(false);
+  // The service whose verbose health is open (null: closed).
+  const [healthFocus, setHealthFocus] = useState(null);
 
   // Syslog hosts are display names; the Gatus relay is addressed by node UUID.
   // Resolve that mapping once so the monitoring panel calls the existing
@@ -257,14 +217,12 @@ const Monitoring = () => {
               </Box>
             </Paper>
 
-            {health?.checks && (
-              <Paper elevation={0} sx={{
-                px: 2, py: 1, border: '1px solid var(--theme-border)',
-                borderRadius: '8px', backgroundColor: 'var(--theme-bg-primary)',
-              }}>
-                <ServiceHealthStrip health={health} onOpenDetails={() => setApiHealthDetailsOpen(true)} />
-              </Paper>
-            )}
+            <Paper elevation={0} sx={{
+              px: 2, py: 1, border: '1px solid var(--theme-border)',
+              borderRadius: '8px', backgroundColor: 'var(--theme-bg-primary)',
+            }}>
+              <HealthList health={apiHealth} gatusSummary={fleetHealth.summary} onOpen={setHealthFocus} />
+            </Paper>
 
             {/* Host metrics — Influxer models, thresholds from config/alerts.yaml */}
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -396,10 +354,10 @@ const Monitoring = () => {
         </>
       </Box>
 
-      <Dialog open={apiHealthDetailsOpen} onClose={() => setApiHealthDetailsOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>API detailed health</DialogTitle>
-        <DialogContent><ApiHealthPanel /></DialogContent>
-        <DialogActions><Button onClick={() => setApiHealthDetailsOpen(false)}>Close</Button></DialogActions>
+      <Dialog open={Boolean(healthFocus)} onClose={() => setHealthFocus(null)} maxWidth="md" fullWidth>
+        <DialogTitle>Health — verbose</DialogTitle>
+        <DialogContent><ApiHealthPanel focus={healthFocus} summary={apiHealth.response} /></DialogContent>
+        <DialogActions><Button onClick={() => setHealthFocus(null)}>Close</Button></DialogActions>
       </Dialog>
     </Box>
   );
