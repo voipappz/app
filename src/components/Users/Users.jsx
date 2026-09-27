@@ -28,6 +28,7 @@ import {
   Upload as UploadIcon,
   EventNote as EventsIcon,
   ContentCopy as DuplicateIcon,
+  QrCode2 as QrCodeIcon,
   Add as AddIcon
 } from '@mui/icons-material';
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -41,6 +42,7 @@ import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import UserDialog from './UserDialog/UserDialog';
 import ImportCSVDialog from '../common/ImportCSVDialog/ImportCSVDialog';
 import DuplicateUserDialog from './DuplicateUserDialog/DuplicateUserDialog';
+import UserLoginQrDialog from './UserLoginQr/UserLoginQrDialog.jsx';
 import { SkillChipList } from '../common/SkillChip';
 import { formatDate } from '../../utils/dateUtils';
 import { getEnabledChipProps } from '../../utils/chipStyles';
@@ -70,6 +72,8 @@ import { useIsUserSession } from '../../hooks/useIsUserSession';
  */
 const Users = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  // The user whose sign-in QR is open (row action).
+  const [loginQrUser, setLoginQrUser] = useState(null);
 
   const { showSuccess } = useNotification();
   const { can } = usePermissions();
@@ -484,6 +488,19 @@ const Users = () => {
                               </Tooltip>
                             )}
                             {canWrite && (
+                              <Tooltip title="Sign-in QR">
+                                <IconButton
+                                  data-testid="user-login-qr-button"
+                                  aria-label={`Sign-in QR for ${user.name || user.email}`}
+                                  size="small"
+                                  onClick={() => setLoginQrUser(user)}
+                                  disabled={loading || user.enabled === false}
+                                >
+                                  <QrCodeIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canWrite && (
                               <Tooltip title="Reset password">
                                 <IconButton
                                   size="small"
@@ -560,6 +577,8 @@ const Users = () => {
       />
 
       {/* Duplicate User Dialog */}
+      <UserLoginQrDialog open={Boolean(loginQrUser)} user={loginQrUser} onClose={() => setLoginQrUser(null)} />
+
       <DuplicateUserDialog
         open={duplicateDialogOpen}
         onClose={handleCloseDuplicateDialog}

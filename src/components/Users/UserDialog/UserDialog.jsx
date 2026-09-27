@@ -24,6 +24,7 @@ import {
   Snackbar
 } from '@mui/material';
 import { Close as CloseIcon, QrCode2, Phone as PhoneIcon, LockReset, Visibility, VisibilityOff, Download, ContentCopy, Refresh as RefreshIcon } from '@mui/icons-material';
+import UserLoginQrDialog from '../UserLoginQr/UserLoginQrDialog.jsx';
 import { useState, useEffect, useCallback } from 'react';
 import DynamicProfileEditor from '../../common/DynamicProfileEditor/DynamicProfileEditor';
 import { ACLSelect } from '../../common/ACLSelect';
@@ -63,6 +64,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
   const [successMessage, setSuccessMessage] = useState('');
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [loginQrOpen, setLoginQrOpen] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState(null);
   const [qrError, setQrError] = useState('');
 
@@ -731,7 +733,19 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                               disabled={!getLoginUrl()}
                               sx={{ textTransform: 'none', minWidth: 150 }}
                             >
-                              QR Code
+                              Device QR
+                            </Button>
+                          </Tooltip>
+                        )}
+                        {user?.uuid && user?.enabled !== false && (
+                          <Tooltip title="Scan on a phone to sign in as this user (single use, 10 minutes)">
+                            <Button
+                              variant="outlined"
+                              startIcon={<QrCode2 />}
+                              onClick={() => setLoginQrOpen(true)}
+                              sx={{ textTransform: 'none', minWidth: 150 }}
+                            >
+                              Sign-in QR
                             </Button>
                           </Tooltip>
                         )}
@@ -974,6 +988,8 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
           {editBody}
         </Dialog>
       )}
+
+      <UserLoginQrDialog open={loginQrOpen} user={user} onClose={() => setLoginQrOpen(false)} />
 
       {/* QR Code Dialog */}
       <Dialog open={qrDialogOpen} onClose={() => { setQrDialogOpen(false); setQrImageUrl(null); setQrError(''); }} maxWidth="xs" fullWidth>

@@ -52,7 +52,8 @@ const UserLogin = ({ switcher = null }) => {
     handleBackToCredentials,
     handleForgotEmailSubmit,
     handleForgotOtpSubmit,
-    handleForgotResetSubmit
+    handleForgotResetSubmit,
+    qrSigningIn
   } = useUserLogin();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -529,6 +530,12 @@ const UserLogin = ({ switcher = null }) => {
         <Box className="portal-login-brand">
           <img src={brandLogo} alt={brandName} className="portal-login-logo" />
         </Box>
+        {qrSigningIn ? (
+          <Box data-testid="qr-signing-in" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 4 }}>
+            <CircularProgress />
+            <Typography>Signing you in…</Typography>
+          </Box>
+        ) : (<>
         {!showForgetForm && !otpStep && switcher}
         {showForgetForm
           ? renderForgotForm()
@@ -536,6 +543,7 @@ const UserLogin = ({ switcher = null }) => {
             ? renderOtpForm()
             : renderLoginForm()
         }
+        </>)}
         <Typography variant="caption" className="portal-login-footer">
           Your workspace is protected with secure sign-in.
         </Typography>

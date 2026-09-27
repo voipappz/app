@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import axios from 'axios';
 import { useUserAuth } from '../../context/UserAuthContext';
@@ -214,6 +214,30 @@ export const useUserLogin = () => {
     navigate('/');
   };
 
+  // Sign-in by QR: /?login_token=<single-use JWT> from Users → Sign-in QR.
+  // Take it out of the address bar first (it must not linger in history or be
+  // shared), then trade it once for a session. The ref keeps StrictMode's
+  // second effect run from spending the code twice.
+  const [qrSigningIn, setQrSigningIn] = useState(() => new URLSearchParams(window.location.search).has('login_token'));
+  const qrTried = useRef(false);
+  useEffect(() => {
+    if (qrTried.current) return;
+    qrTried.current = true;
+    const url = new URL(window.location.href);
+    const loginToken = url.searchParams.get('login_token');
+    if (!loginToken) return;
+    url.searchParams.delete('login_token');
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    setLoading();
+    axios.post('/auth/user_qr_login', null, { params: { token: loginToken } })
+      .then((response) => completeLogin(response.data))
+      .catch((err) => {
+        setError(err.response?.data?.message || err.response?.data?.error || 'This sign-in code did not work. Ask for a new one, or sign in with your email.');
+      })
+      .finally(() => setQrSigningIn(false));
+  // Once, on the first render: the code in the URL is single-use.
+  }, []);
+
   const handleBackToCredentials = () => {
     setOtpStep(false);
     setOtpCode('');
@@ -223,7 +247,7 @@ export const useUserLogin = () => {
 
   return {
     email, password, showForgetForm, forgotEmail, forgotSent, forgotStep, forgotOtpCode,
-    newPassword, confirmPassword, touched, loading, error, otpStep, otpCode,
+    newPassword, confirmPassword, touched, loading, error, otpStep, otpCode, qrSigningIn,
     handleEmailChange, handlePasswordChange, handleForgotEmailChange, handleForgotOtpChange,
     handleNewPasswordChange, handleConfirmPasswordChange, handleOtpCodeChange, handleBlur,
     handleSubmit, handleOtpSubmit, handleForgotPasswordClick, handleBackToLogin,
