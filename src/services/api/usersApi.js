@@ -165,6 +165,18 @@ export const usersApi = {
   },
 
   /**
+   * A sign-in QR code for this user: a 10-minute, single-use JWT the sign-in
+   * page trades for a session (POST /auth/user_qr_login).
+   * @param {string} userId - The user UUID
+   * @returns {Promise<{token: string, expires_at: number}>}
+   */
+  createLoginToken: async (userId) => {
+    return apiService.post(`/api/users/${userId}/login_token`, new URLSearchParams(), {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }, 'creating sign-in code', false);
+  },
+
+  /**
    * Get user permissions
    * @param {string} userId - The user ID
    * @returns {Promise<Array>} - Array of permission objects
