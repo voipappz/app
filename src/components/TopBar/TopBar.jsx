@@ -910,10 +910,10 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
         )}
         <Box sx={{ width: 8 }} />
 
-        <Tooltip title="Search and MCP actions (Ctrl+K)">
+        <Tooltip title="MCP — assistant, connect, tools (Ctrl+K)">
           <Button
             size="small"
-            aria-label="Search and MCP actions (Ctrl+K)"
+            aria-label="MCP (Ctrl+K)"
             onClick={() => openResourceFinder()}
             startIcon={<SearchIcon sx={{ fontSize: 17 }} />}
             sx={{

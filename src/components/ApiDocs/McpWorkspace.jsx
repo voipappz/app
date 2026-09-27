@@ -9,17 +9,21 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { config } from '../../config.js';
 import McpConnect from './McpConnect.jsx';
 import McpConsole from './McpConsole.jsx';
+import McpAssistant from './McpAssistant.jsx';
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 
 const safeAgentPrompt = (skillUrl, readinessUrl, openApiUrl) =>
   `Read the VoipAppz Agent Skill at ${skillUrl}, its readiness reference at ${readinessUrl}, and the live API contract at ${openApiUrl}. Do not guess billing or provisioning rules, and never ask me to paste credentials into this chat.`;
 
-/** Admin MCP workspace: connection recipes and the authenticated tool browser. */
-export default function McpWorkspace() {
+/** The MCP workspace: the assistant, connection recipes and the authenticated tool browser. */
+export default function McpWorkspace({ initialQuestion = '' }) {
   const [notice, setNotice] = useState('');
   const apiBaseUrl = config.apiBaseUrl.replace(/\/$/, '');
   const mcpUrl = new URL(`${apiBaseUrl}/api/mcp`, window.location.origin).toString();
+  // Public, unauthenticated: the Agent Skill, OpenAPI and readiness resources
+  // for development — no tools, nothing account-scoped.
+  const devMcpUrl = new URL(`${apiBaseUrl}/tasks/mcp`, window.location.origin).toString();
   const skillUrl = new URL(`${apiBaseUrl}/tasks/agent-skills/use-voipappz-api/SKILL.md`, window.location.origin).toString();
   const readinessUrl = new URL(`${apiBaseUrl}/tasks/agent-skills/use-voipappz-api/references/integration-status.json`, window.location.origin).toString();
   const openApiUrl = new URL(`${apiBaseUrl}/tasks/openapi.json`, window.location.origin).toString();
@@ -69,6 +73,13 @@ export default function McpWorkspace() {
 
       <Paper
         elevation={0}
+        sx={{ p: { xs: 1.5, sm: 2 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}
+      >
+        <McpAssistant initialQuestion={initialQuestion} />
+      </Paper>
+
+      <Paper
+        elevation={0}
         sx={{ p: { xs: 1.5, sm: 2 }, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}
       >
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }} justifyContent="space-between" sx={{ mb: 1 }}>
@@ -87,6 +98,16 @@ export default function McpWorkspace() {
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Authorization: Bearer &lt;token&gt; or Basic &lt;email:password&gt;
+        </Typography>
+        <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mt: 1 }}>Development endpoint</Typography>
+        <Typography
+          data-testid="mcp-workspace-dev-endpoint"
+          sx={{ fontFamily: MONO, fontSize: 13, overflowWrap: 'anywhere' }}
+        >
+          {devMcpUrl}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Public, no credentials: the Agent Skill, OpenAPI contract and readiness resources only — no tools.
         </Typography>
         <McpConnect endpointUrl={mcpUrl} copyText={copyText} />
       </Paper>

@@ -1,54 +1,35 @@
-import { Dialog, TextField, InputAdornment, Box, CircularProgress } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import { useGlobalSearchResults } from './useGlobalSearchResults';
-import SearchResults from './SearchResults';
+import { lazy, Suspense } from 'react';
+import { Box, CircularProgress, Dialog, DialogTitle, IconButton, Typography } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import './CommandPalette.css';
 
-// Global search as a centered dialog, on every viewport (⌘K, or the
-// openResourceFinder event). Renders useGlobalSearchResults + SearchResults.
-const CommandPalette = ({ open, onClose, initialQuery = '' }) => {
-  const search = useGlobalSearchResults({ open, initialQuery, onClose });
+const McpWorkspace = lazy(() => import('../ApiDocs/McpWorkspace.jsx'));
 
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      className="command-palette-overlay"
-      PaperProps={{ className: 'command-palette-paper' }}
-      slotProps={{ backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.3)' } } }}
-    >
-      <Box sx={{ p: '12px 12px 0' }}>
-        <TextField
-          value={search.query}
-          onChange={(e) => search.setQuery(e.target.value)}
-          onKeyDown={search.handleKeyDown}
-          placeholder="Search, ask, or call a number…"
-          variant="outlined"
-          size="small"
-          fullWidth
-          autoFocus
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ fontSize: 22, color: 'var(--theme-text-secondary)' }} />
-              </InputAdornment>
-            ),
-            endAdornment: search.resourceLoading ? (
-              <InputAdornment position="end">
-                <CircularProgress size={16} />
-              </InputAdornment>
-            ) : null,
-            sx: {
-              borderRadius: '10px',
-              fontSize: '1rem',
-              '& .MuiOutlinedInput-input': { py: '12px' },
-            },
-          }}
-        />
-      </Box>
-      <SearchResults search={search} />
-    </Dialog>
-  );
-};
+// ⌘K opens the MCP workspace — the assistant, quick connect and the tool
+// console, everything MCP in one place — and for now nothing else. Resource
+// search and the quick actions (useGlobalSearchResults) are kept aside.
+const CommandPalette = ({ open, onClose, initialQuery = '' }) => (
+  <Dialog
+    open={open}
+    onClose={onClose}
+    maxWidth="lg"
+    fullWidth
+    aria-label="MCP"
+    PaperProps={{ sx: { height: '90dvh', display: 'flex', flexDirection: 'column' } }}
+    slotProps={{ backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.3)' } } }}
+  >
+    <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1, pr: 1 }}>
+      <Typography component="span" variant="h6" sx={{ flex: 1 }}>MCP</Typography>
+      <IconButton aria-label="Close MCP" onClick={onClose}><CloseIcon /></IconButton>
+    </DialogTitle>
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      {open && (
+        <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
+          <McpWorkspace initialQuestion={initialQuery} />
+        </Suspense>
+      )}
+    </Box>
+  </Dialog>
+);
 
 export default CommandPalette;
