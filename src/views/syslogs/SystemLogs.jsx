@@ -27,6 +27,7 @@ import {
   Refresh as RefreshIcon,
   PlayArrow as PlayIcon,
   Pause as PauseIcon,
+  FilterAlt as FilterAltIcon,
   FilterAltOff as FilterAltOffIcon,
   FiberManualRecord as DotIcon,
   Download as DownloadIcon,
@@ -38,7 +39,6 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useSystemLogs } from './SystemLogs';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
-import CustomFooter from '../../components/Calls/CustomFooter/CustomFooter.jsx';
 import {
   LEVEL_CONFIG,
   AUTO_REFRESH_OPTIONS,
@@ -79,6 +79,8 @@ const SystemLogs = ({ initialParams }) => {
     totalCount,
     pagination,
     setPagination,
+    hasMore,
+    loadMore,
 
     apps,
     nodes,
@@ -240,6 +242,23 @@ const SystemLogs = ({ initialParams }) => {
     return [...groups.entries()];
   }, [logs, groupBy]);
 
+  // Any value in Log details becomes a filter in one click: the three with a
+  // dropdown set it, everything else (key=value fields) searches the message.
+  const filterBy = useCallback((key, value) => {
+    const text = String(value);
+    if (key === 'server') setSelectedHost(text);
+    else if (key === 'source') setSelectedApp(text);
+    else if (key === 'level') {
+      const severity = text.toLowerCase();
+      setSelectedSeverity(severity === 'error' ? 'err' : severity === 'warn' ? 'warning' : severity);
+    } else {
+      const needle = `${key}=${text}`;
+      setLocalSearch(needle);
+      setSearchQuery(needle);
+    }
+    setSelectedLog(null);
+  }, [setSelectedHost, setSelectedApp, setSelectedSeverity, setSearchQuery]);
+
   const applyGroupFilter = useCallback((value) => {
     if (groupBy === 'host') {
       setSelectedHost(value === 'Unknown' ? '' : value);
@@ -272,7 +291,6 @@ const SystemLogs = ({ initialParams }) => {
     );
   }
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / pagination.limit));
 
   return (
     <Box
@@ -479,7 +497,7 @@ const SystemLogs = ({ initialParams }) => {
               inputProps={{ 'aria-label': 'Logs per page' }}
               sx={{ fontSize: '11px', '& .MuiSelect-select': { py: 0.5 } }}
             >
-              {[25, 50, 100, 200].map((size) => <MenuItem key={size} value={size}>{size} / page</MenuItem>)}
+              {[25, 50, 100, 200].map((size) => <MenuItem key={size} value={size}>{size} per load</MenuItem>)}
             </Select>
           </FormControl>
         </Box>
@@ -604,7 +622,14 @@ const SystemLogs = ({ initialParams }) => {
 
       {/* Message-first stream. Sources and other structured values are useful
           as group headers; each line itself stays focused on the log message. */}
-      <Paper elevation={0} sx={{ flex: 1, minHeight: 0, overflow: 'auto', border: '1px solid var(--mui-palette-divider)', borderRadius: 1, bgcolor: 'var(--mui-palette-background-paper)' }}>
+      <Paper
+        elevation={0}
+        data-testid="syslog-stream"
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) loadMore();
+        }}
+        sx={{ flex: 1, minHeight: 0, overflow: 'auto', border: '1px solid var(--mui-palette-divider)', borderRadius: 1, bgcolor: 'var(--mui-palette-background-paper)' }}>
         {loading && logs.length === 0 ? (
           <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary', fontSize: '0.82rem' }}>Loading messages…</Typography>
         ) : groupedLogs.length === 0 ? (
@@ -656,20 +681,22 @@ const SystemLogs = ({ initialParams }) => {
             })}
           </Box>
         ))}
+        {logs.length > 0 && (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, py: 1 }}>
+            {loading ? (
+              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>Loading older messages…</Typography>
+            ) : hasMore ? (
+              <Button size="small" onClick={loadMore}>Load more</Button>
+            ) : (
+              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>End of the selected time range</Typography>
+            )}
+          </Box>
+        )}
       </Paper>
 
-      <CustomFooter
-        standalone
-        loadingMore={loading}
-        currentPage={pagination.page + 1}
-        totalPages={totalPages}
-        totalRecords={totalCount}
-        hasNextPage={pagination.page + 1 < totalPages}
-        onGoToPage={(page) => setPagination((current) => ({
-          ...current,
-          page: Math.min(Math.max(page - 1, 0), totalPages - 1),
-        }))}
-      />
+      <Typography data-testid="syslog-count" sx={{ flexShrink: 0, fontSize: '0.72rem', color: 'text.secondary', px: 0.5 }}>
+        {logs.length.toLocaleString()} of {totalCount.toLocaleString()} messages loaded
+      </Typography>
 
       <Dialog
         open={Boolean(selectedLog)}
@@ -698,7 +725,16 @@ const SystemLogs = ({ initialParams }) => {
             }).filter(([, value]) => value !== undefined && value !== '').map(([key, value]) => (
               <React.Fragment key={key}>
                 <Typography component="dt" sx={{ fontWeight: 700, fontSize: '0.78rem' }}>{key.replaceAll('_', ' ')}</Typography>
-                <Typography component="dd" sx={{ m: 0, fontFamily: 'monospace', fontSize: '0.78rem', overflowWrap: 'anywhere' }}>{String(value)}</Typography>
+                <Box component="dd" sx={{ m: 0, display: 'flex', alignItems: 'flex-start', gap: 0.5, minWidth: 0 }}>
+                  <Typography component="span" sx={{ flex: 1, minWidth: 0, fontFamily: 'monospace', fontSize: '0.78rem', overflowWrap: 'anywhere' }}>{String(value)}</Typography>
+                  {key !== 'time' && (
+                    <Tooltip title={`Show only ${key.replaceAll('_', ' ')} = ${String(value)}`}>
+                      <IconButton size="small" aria-label={`Filter by ${key.replaceAll('_', ' ')}`} onClick={() => filterBy(key, value)} sx={{ p: 0.25, flexShrink: 0 }}>
+                        <FilterAltIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
               </React.Fragment>
             ))}
           </Box>
