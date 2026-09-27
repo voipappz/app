@@ -27,6 +27,7 @@ const WINDOWS = [
 export default function WidgetEditor({ open, widget, initialDraft, saving, onClose, onSave }) {
   const [tab, setTab] = useState(0);
   const [preview, setPreview] = useState(null);
+  const [previewRun, setPreviewRun] = useState(0);
   const [draft, setDraft] = useState(() => withDefaults(initialDraft || widget || {}));
 
   useEffect(() => {
@@ -162,10 +163,10 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
           </Stack>
         )}
         {!isTable && <Box sx={{ mt: 2 }}>
-          <Button disabled={!draft.measurement || !draft.field} onClick={() => setPreview({ ...draft })}>Run preview</Button>
+          <Button disabled={!draft.measurement || !draft.field} onClick={() => { setPreview({ ...draft }); setPreviewRun((run) => run + 1); }}>Run preview</Button>
           {preview && <>
             {JSON.stringify(preview) !== JSON.stringify(draft) && <Typography color="text.secondary">Settings changed. Run preview again to update the results.</Typography>}
-            <WidgetPreview key={JSON.stringify(preview)} widget={preview} />
+            <WidgetPreview key={previewRun} widget={preview} />
           </>}
         </Box>}
       </DialogContent>

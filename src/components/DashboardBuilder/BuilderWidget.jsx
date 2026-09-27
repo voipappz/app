@@ -38,7 +38,12 @@ function TablePreview({ rows, fields }) {
       {!rows?.length && <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>No rows yet</Typography>}
       <Dialog open={Boolean(selected)} onClose={() => setSelected(null)} fullWidth maxWidth="md">
         <DialogTitle>Call details</DialogTitle><DialogContent>
-          <Box component="pre" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(selected?.raw || selected, null, 2)}</Box>
+          <Box component="dl" sx={{ display: 'grid', gridTemplateColumns: 'minmax(100px, 1fr) minmax(0, 2fr)', gap: 1 }}>
+            {Object.entries(selected?.raw || selected || {}).map(([key, value]) => <Box key={key} sx={{ display: 'contents' }}>
+              <Typography component="dt" sx={{ textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</Typography>
+              <Typography component="dd" sx={{ m: 0, overflowWrap: 'anywhere' }}>{value === null || value === undefined ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value)}</Typography>
+            </Box>)}
+          </Box>
           <Button onClick={() => setSelected(null)}>Close</Button>
         </DialogContent>
       </Dialog>

@@ -101,6 +101,8 @@ describe('dashboard widget UX', () => {
     await user.click(screen.getByRole('button', { name: 'Run preview' }));
     expect(await screen.findByRole('table', { name: 'Preview data' })).toBeInTheDocument();
     expect(save).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Run preview' }));
+    await waitFor(() => expect(monitoringApi.runInfluxQuery).toHaveBeenCalledTimes(2));
     await user.type(screen.getByLabelText('Title'), ' updated');
     expect(screen.getByText(/Settings changed/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Save', exact: true }));
