@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import ToolDialog from '../../components/TopBar/ToolDialog.jsx';
 import LogsScreen from './LogsScreen.jsx';
 
-const ok = (value) => vi.fn(() => Promise.resolve(value));
 vi.mock('../../services/api/syslogsApi', () => {
+  const ok = (value) => vi.fn(() => Promise.resolve(value));
   const api = {
     fetchLogs: ok({ data: [], total: 0 }), fetchAggregate: ok({ data: [] }), fetchMetrics: ok({ data: [] }),
     getMonitoringStatus: ok({}), setMonitoring: ok({}), fetchAlerts: ok([]), fetchApps: ok([]), fetchNodes: ok([]),
