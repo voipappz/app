@@ -613,7 +613,7 @@ const Reports = () => {
         {!loadingReportData && !errorReportData && selectedReportData && (
           <>
             <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-              <Grid item xs={12} sm>
+              <Grid size={{ xs: 12, sm: 'grow' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Typography variant="h5" gutterBottom sx={{ mb: { xs: 1, sm: 0 } }}>
                     {selectedReportData.name || reports.find(r => r.uuid === selectedReportData.report_uuid)?.name || 'Report Details'}
@@ -622,7 +622,7 @@ const Reports = () => {
                     label={detectedChartType === 'table' ? 'Table' : `${detectedChartType.replace(/\b\w/g, c => c.toUpperCase())} chart`} />
                 </Box>
               </Grid>
-              <Grid item xs={12} md="auto">
+              <Grid size={{ xs: 12, md: 'auto' }}>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <Button
                     variant="contained"
@@ -697,7 +697,7 @@ const Reports = () => {
                   )}
                 </Box>
               </Grid>
-              <Grid item xs={12} md="auto">
+              <Grid size={{ xs: 12, md: 'auto' }}>
                 <DateRangePicker
                   dateRange={savedDateRange || dateRange}
                   setDateRange={handleDateRangeChange}
@@ -899,12 +899,12 @@ const Reports = () => {
                 <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                  
                   <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary' }}>
                         Label Field: <strong>{chartLabelField?.name || '—'}</strong> (automatically selected)
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} sm={8}>
+                    <Grid size={{ xs: 12, sm: 8 }}>
                       <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
                         Data Fields (select chart series)
                       </Typography>

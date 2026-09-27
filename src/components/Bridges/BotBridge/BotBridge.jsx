@@ -288,7 +288,7 @@ export const BotBridge = ({
 
         {/* Name and Environment */}
         <Grid container spacing={2}>
-          <Grid item xs={12} md={hideEnvironment ? 12 : 6}>
+          <Grid size={{ xs: 12, md: hideEnvironment ? 12 : 6 }}>
             <TextField
               label="Name"
               value={formData.name}
@@ -303,7 +303,7 @@ export const BotBridge = ({
           </Grid>
 
           {!hideEnvironment && (
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               {/* A portal user has one environment, their own: never a choice. */}
               {!userSession && (
               <FormControl fullWidth required error={!!formErrors.environment_uuid} disabled={loading}>
@@ -322,7 +322,7 @@ export const BotBridge = ({
             </Grid>
           )}
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <FormControl fullWidth disabled={loading || announcementsLoading}>
               <InputLabel>Announcement (Optional)</InputLabel>
               <Select
@@ -353,7 +353,7 @@ export const BotBridge = ({
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TextField
               label="Timeout (seconds)"
               type="number"

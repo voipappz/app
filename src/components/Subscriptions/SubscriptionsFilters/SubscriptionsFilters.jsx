@@ -101,13 +101,13 @@ const SubscriptionsFilters = ({
         <AccordionDetails sx={{ p: 3 }}>
           <Grid container spacing={2}>
             {/* Text Search Filters */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
                 Search Filters
               </Typography>
             </Grid>
             
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 size="small"
@@ -123,7 +123,7 @@ const SubscriptionsFilters = ({
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 size="small"
@@ -139,13 +139,13 @@ const SubscriptionsFilters = ({
             </Grid>
 
             {/* Dropdown Filters */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 2, mt: 2 }}>
                 Category Filters
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Application</InputLabel>
                 <Select
@@ -164,7 +164,7 @@ const SubscriptionsFilters = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -183,7 +183,7 @@ const SubscriptionsFilters = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Plan</InputLabel>
                 <Select
@@ -202,7 +202,7 @@ const SubscriptionsFilters = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Recurring</InputLabel>
                 <Select
@@ -219,13 +219,13 @@ const SubscriptionsFilters = ({
             </Grid>
 
             {/* Date Range Filters */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 2, mt: 2 }}>
                 Date Range Filters
               </Typography>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 Created Date
               </Typography>
@@ -251,7 +251,7 @@ const SubscriptionsFilters = ({
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 Updated Date
               </Typography>
@@ -277,7 +277,7 @@ const SubscriptionsFilters = ({
               </Box>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 End Date
               </Typography>
@@ -305,7 +305,7 @@ const SubscriptionsFilters = ({
 
             {/* Action Buttons */}
             {hasActiveFilters && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box sx={{ display: 'flex', gap: 1, mt: 2, pt: 2, borderTop: '1px solid var(--mui-palette-divider)' }}>
                   <Button
                     variant="outlined"

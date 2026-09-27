@@ -490,7 +490,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
               <Box component="form" autoComplete="off" noValidate>
                 <Grid container spacing={3} direction={embedded ? 'row' : 'column'}>
                   {/* Enabled — leads the form */}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <FormControlLabel
                       control={
                         <Switch
@@ -505,7 +505,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   </Grid>
 
                   {/* Name */}
-                  <Grid item {...half}>
+                  <Grid size={half}>
                     <TextField
                       label="Name"
                       fullWidth
@@ -522,7 +522,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   </Grid>
 
                   {/* Email */}
-                  <Grid item {...half}>
+                  <Grid size={half}>
                     <TextField
                       label="Email"
                       fullWidth
@@ -540,7 +540,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
 
                   {/* Password - create only */}
                   {!isEdit && (
-                    <Grid item {...half}>
+                    <Grid size={half}>
                       <SecretField
                         label="Password"
                         fullWidth
@@ -573,7 +573,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   )}
 
                   {/* Environment */}
-                  <Grid item {...half}>
+                  <Grid size={half}>
                     <FormControl
                       fullWidth
                       disabled={loading}
@@ -605,7 +605,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   {/* Extension Details — header only on create (explains auto-gen);
                       on edit the Username field sits inline for an even 2-col grid. */}
                   {!isEdit && (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, mt: 1 }}>
                         Device Details
                       </Typography>
@@ -614,7 +614,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
 
                   {/* Auto-generate toggle - create only */}
                   {!isEdit && (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <FormControlLabel
                         control={
                           <Switch
@@ -629,7 +629,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   )}
 
                   {/* Extension Username */}
-                  <Grid item {...half}>
+                  <Grid size={half}>
                     <TextField
                       label={isEdit ? 'Username (Device Number)' : 'Device Number'}
                       value={extensionUsername}
@@ -670,7 +670,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   </Grid>
 
                   {/* ACL */}
-                  <Grid item {...half}>
+                  <Grid size={half}>
                     <ACLSelect
                       value={formData.acl_uuid}
                       onChange={(uuid) => handleChange('acl_uuid', uuid)}
@@ -682,7 +682,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   </Grid>
 
                   {/* Status */}
-                  <Grid item {...half}>
+                  <Grid size={half}>
                     <StatusSelect
                       value={formData.status_uuid}
                       onChange={(uuid) => handleChange('status_uuid', uuid)}
@@ -695,7 +695,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
 
                   {/* User Actions - edit only */}
                   {isEdit && (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Tooltip title="Generate a new password for this user">
                           <Button
@@ -778,7 +778,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
 
                   {/* UUID — subtle read-only footer (edit only) */}
                   {isEdit && user?.uuid && (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', pt: 1, borderTop: 1, borderColor: 'divider' }}>
                         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>UUID</Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{user.uuid}</Typography>
@@ -843,23 +843,23 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   </Typography>
                   <Box sx={{ p: 2, backgroundColor: 'var(--mui-palette-surface-muted)', borderRadius: 1, border: '1px solid var(--mui-palette-divider)' }}>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" color="text.secondary">State</Typography>
                         <Typography variant="body2" fontWeight={600}>{user.state.state}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" color="text.secondary">Status</Typography>
                         <Typography variant="body2" color="success.main">{user.state.status}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" color="text.secondary">Logged In</Typography>
                         <Typography variant="body2">{user.state.logged_in ? 'Yes' : 'No'}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <Typography variant="caption" color="text.secondary">Total Calls</Typography>
                         <Typography variant="body2">{user.state.call_counter}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <Typography variant="caption" color="text.secondary">Successful Calls</Typography>
                         <Typography variant="body2">{user.state.success_call_counter}</Typography>
                       </Grid>

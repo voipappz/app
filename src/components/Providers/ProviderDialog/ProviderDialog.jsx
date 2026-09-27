@@ -429,7 +429,7 @@ const ProviderDialog = ({
         <Grid container spacing={2}>
           {/* 1. UUID Field - Read Only with copy (only shown in edit mode) */}
           {provider?.uuid && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <Typography variant="caption" color="text.secondary" sx={{ minWidth: 70, fontWeight: 600 }}>UUID</Typography>
@@ -445,7 +445,7 @@ const ProviderDialog = ({
           )}
 
           {/* 2. Enabled - right after UUID */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <FormControlLabel
               control={
                 <Switch
@@ -460,7 +460,7 @@ const ProviderDialog = ({
           </Grid>
 
           {/* 3. Type selector - only editable in create mode */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <FormControl fullWidth required disabled={!!provider}>
               <InputLabel required>Provider Type</InputLabel>
               <Select
@@ -485,7 +485,7 @@ const ProviderDialog = ({
           </Grid>
 
           {/* 4. Name - always required */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Name"
@@ -503,7 +503,7 @@ const ProviderDialog = ({
           {/* ========== SIP Provider Fields ========== */}
           {formData.type === 'sip' && (
             <>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Hostname"
@@ -518,7 +518,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Port"
@@ -535,7 +535,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControl fullWidth error={!!errors.protocol || (submitAttempted && !formData.protocol)} required>
                   <InputLabel required>Protocol</InputLabel>
                   <Select
@@ -559,7 +559,7 @@ const ProviderDialog = ({
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Username"
@@ -574,7 +574,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <SecretField
                   fullWidth
                   label="Password"
@@ -594,7 +594,7 @@ const ProviderDialog = ({
           {/* ========== TTS Provider Fields ========== */}
           {formData.type === 'tts' && (
             <>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Alert severity="info" sx={{ mb: 1 }}>
                   <Typography variant="body2">
                     To use Google Text-to-Speech, you need a Google Cloud service account with the Text-to-Speech API enabled.
@@ -603,7 +603,7 @@ const ProviderDialog = ({
                 </Alert>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Project ID"
@@ -619,7 +619,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Private Key ID"
@@ -638,7 +638,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Private Key"
@@ -659,7 +659,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Client Email"
@@ -675,7 +675,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Client ID"
@@ -694,7 +694,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControl fullWidth error={!!errors['profile.voice_gender']} required>
                   <InputLabel required>Voice Gender</InputLabel>
                   <Select
@@ -723,7 +723,7 @@ const ProviderDialog = ({
           {/* ========== LLM Provider Fields ========== */}
           {formData.type === 'llm' && (
             <>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Alert severity="info" sx={{ mb: 1 }}>
                   <Typography variant="body2">
                     Configure an AI/LLM provider for chat, text generation, and AI-powered features.
@@ -732,7 +732,7 @@ const ProviderDialog = ({
                 </Alert>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth required error={!!errors['profile.service']}>
                   <InputLabel required>Service</InputLabel>
                   <Select
@@ -756,7 +756,7 @@ const ProviderDialog = ({
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Model"
@@ -771,7 +771,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <SecretField
                   fullWidth
                   label="API Key"
@@ -790,7 +790,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="System Prompt"
@@ -812,7 +812,7 @@ const ProviderDialog = ({
           {/* ========== Generic Provider Fields (DID, SMS, Gateway, Webhook, Caller ID) ========== */}
           {!['sip', 'tts', 'llm'].includes(formData.type) && (
             <>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Hostname/URL"
@@ -826,7 +826,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Username/API Key"
@@ -840,7 +840,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <SecretField
                   fullWidth
                   label="Password/Secret"
@@ -854,7 +854,7 @@ const ProviderDialog = ({
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600, mb: 1 }}>
                   Profile (JSON)
                 </Typography>
@@ -889,7 +889,7 @@ const ProviderDialog = ({
 
           {/* ========== SIP Provider Profile ========== */}
           {formData.type === 'sip' && provider?.profile && Object.keys(provider.profile).length > 0 && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600, mb: 1, mt: 1 }}>
                 Profile
               </Typography>
@@ -902,7 +902,7 @@ const ProviderDialog = ({
           )}
 
           {/* Description - always shown at the end */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Description"
@@ -923,17 +923,17 @@ const ProviderDialog = ({
             <>
               {/* Customer Details */}
               {provider.customer && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Typography variant="h6" sx={{ color: 'primary.main', mb: 1, mt: 2 }}>
                     Customer Details
                   </Typography>
                   <Box sx={{ p: 2, backgroundColor: 'var(--mui-palette-surface-muted)', borderRadius: 1, border: '1px solid var(--mui-palette-divider)' }}>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" color="text.secondary">Customer Name</Typography>
                         <Typography variant="body2" fontWeight={600}>{provider.customer.name || 'N/A'}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" color="text.secondary">Customer UUID</Typography>
                         <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
                           {provider.customer.uuid || provider.customer_uuid || 'N/A'}
@@ -945,32 +945,32 @@ const ProviderDialog = ({
               )}
 
               {/* Provider Info */}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Typography variant="h6" sx={{ color: 'primary.main', mb: 1, mt: 2 }}>
                   Provider Information
                 </Typography>
                 <Box sx={{ p: 2, backgroundColor: 'var(--mui-palette-surface-muted)', borderRadius: 1, border: '1px solid var(--mui-palette-divider)' }}>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Typography variant="caption" color="text.secondary">Provider UUID</Typography>
                       <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
                         {provider.uuid || provider.id || 'N/A'}
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Typography variant="caption" color="text.secondary">Created At</Typography>
                       <Typography variant="body2">
                         {formatDate(provider.created_at)}
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Typography variant="caption" color="text.secondary">Updated At</Typography>
                       <Typography variant="body2">
                         {formatDate(provider.updated_at)}
                       </Typography>
                     </Grid>
                     {provider.tariff && (
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" color="text.secondary">Default Tariff</Typography>
                         <Typography variant="body2" fontWeight={600}>
                           {provider.tariff.name || provider.tariff_uuid || 'None'}
@@ -978,7 +978,7 @@ const ProviderDialog = ({
                       </Grid>
                     )}
                     {provider.status && (
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" color="text.secondary">Status</Typography>
                         <Typography variant="body2" color={provider.status === 'active' ? 'success.main' : 'text.secondary'}>
                           {provider.status}
@@ -986,7 +986,7 @@ const ProviderDialog = ({
                       </Grid>
                     )}
                     {provider.call_count !== undefined && (
-                      <Grid item xs={12} sm={4}>
+                      <Grid size={{ xs: 12, sm: 4 }}>
                         <Typography variant="caption" color="text.secondary">Total Calls</Typography>
                         <Typography variant="body2">{provider.call_count}</Typography>
                       </Grid>

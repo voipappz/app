@@ -795,7 +795,7 @@ const EnhancedSchemaForm = ({
                   {Array.isArray(dynamicProductFields) ? (
                     // If products is an array of product items
                     dynamicProductFields.map((product, productIdx) => (
-                      <Grid item xs={12} key={productIdx}>
+                      <Grid size={12} key={productIdx}>
                         <TextField
                           fullWidth
                           size="small"
@@ -808,7 +808,7 @@ const EnhancedSchemaForm = ({
                   ) : dynamicProductFields.fields ? (
                     // If products has a fields structure like other sections
                     dynamicProductFields.fields.map((productField, productFieldIdx) => (
-                      <Grid item xs={12} sm={6} key={productFieldIdx}>
+                      <Grid size={{ xs: 12, sm: 6 }} key={productFieldIdx}>
                         {renderField(
                           productField,
                           sectionKey,
@@ -862,7 +862,7 @@ const EnhancedSchemaForm = ({
               </Typography>
               <Grid container spacing={2}>
                 {field.fields && field.fields.map((subField, subIdx) => (
-                  <Grid item xs={12} sm={6} key={subIdx}>
+                  <Grid size={{ xs: 12, sm: 6 }} key={subIdx}>
                     {renderField(subField, sectionKey, value?.[subField.key], index, field.key)}
                   </Grid>
                 ))}
@@ -1011,11 +1011,7 @@ const EnhancedSchemaForm = ({
                           }
 
                           return (
-                            <Grid
-                              item
-                              xs={12}
-                              sm={gridSize}
-                              md={gridSize}
+                            <Grid size={{ xs: 12, sm: gridSize, md: gridSize }}
                               key={fieldIndex}
                             >
                               {renderField(field, sectionKey, entry[field.key], index)}
@@ -1047,11 +1043,7 @@ const EnhancedSchemaForm = ({
                 }
 
                 return (
-                  <Grid
-                    item
-                    xs={12}
-                    sm={gridSize}
-                    md={gridSize}
+                  <Grid size={{ xs: 12, sm: gridSize, md: gridSize }}
                     key={index}
                   >
                     {renderField(field, sectionKey, sectionValue[field.key])}

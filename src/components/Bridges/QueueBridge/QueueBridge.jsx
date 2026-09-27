@@ -765,7 +765,7 @@ export const QueueBridge = ({
       <Grid container spacing={3} direction="column">
         {/* UUID - Read Only (edit mode only) */}
         {queue?.uuid && (
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               label="UUID"
               fullWidth
@@ -781,7 +781,7 @@ export const QueueBridge = ({
         )}
 
         {/* Enabled Toggle */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="body1">Enabled</Typography>
             <Switch
@@ -793,7 +793,7 @@ export const QueueBridge = ({
         </Grid>
 
         {/* Name */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <TextField
             label="Name"
             value={formData.name}
@@ -808,7 +808,7 @@ export const QueueBridge = ({
         </Grid>
 
         {/* Strategy */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <FormControl fullWidth disabled={loading || strategiesLoading} required error={!!formErrors.strategy}>
             <InputLabel required>Strategy</InputLabel>
             <Select
@@ -835,7 +835,7 @@ export const QueueBridge = ({
 
         {/* Environment */}
         {!hideEnvironment && (
-          <Grid item xs={12}>
+          <Grid size={12}>
             {/* A portal user has one environment, their own: never a choice. */}
             {!userSession && (
             <FormControl fullWidth required error={!!formErrors.environment_uuid} disabled={loading}>
@@ -857,7 +857,7 @@ export const QueueBridge = ({
         )}
 
         {/* Intro Announcement */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <FormControl fullWidth disabled={loading || announcementsLoading}>
               <InputLabel>Intro Announcement</InputLabel>
@@ -887,7 +887,7 @@ export const QueueBridge = ({
         </Grid>
 
         {/* Hold Announcement */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <FormControl fullWidth required error={!!formErrors.hold_announcement_uuid} disabled={loading || announcementsLoading}>
               <InputLabel required>Hold Announcement</InputLabel>
@@ -923,14 +923,14 @@ export const QueueBridge = ({
             </Grid>
 
         {/* Max Wait Time Bridge Configuration */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
             Max Wait Time Bridge Configuration
           </Typography>
         </Grid>
 
         {/* Max Wait Time (seconds) */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <TextField
             label="Max Wait Time (seconds)"
             type="number"
@@ -946,7 +946,7 @@ export const QueueBridge = ({
         </Grid>
 
         {/* Bridge Type */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <FormControl fullWidth required error={!!formErrors.max_wait_time_bridge_type} disabled={loading}>
             <InputLabel required>Bridge Type</InputLabel>
             <Select
@@ -964,7 +964,7 @@ export const QueueBridge = ({
         </Grid>
 
         {/* Bridge Destination */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           <FormControl fullWidth required error={!!formErrors.max_wait_time_bridge_uuid} disabled={loading || bridgeResourcesLoading || !formData.max_wait_time_bridge_type}>
             <InputLabel required>Bridge Destination</InputLabel>
             <Select

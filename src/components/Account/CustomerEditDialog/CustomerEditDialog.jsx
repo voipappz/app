@@ -185,7 +185,7 @@ const CustomerEditDialog = ({
 
           {/* Read-only identity — UUID (with copy) always on top */}
           {!isCreate && formData.uuid && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   <Typography variant="caption" color="text.secondary" sx={{ minWidth: 70, fontWeight: 600 }}>UUID</Typography>
@@ -213,7 +213,7 @@ const CustomerEditDialog = ({
           )}
 
           {/* Enabled toggle */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <FormControlLabel
               control={
                 <Switch
@@ -227,7 +227,7 @@ const CustomerEditDialog = ({
           </Grid>
 
           {/* Name */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Customer Name"
@@ -243,7 +243,7 @@ const CustomerEditDialog = ({
           </Grid>
 
           {/* Node selector */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               select
               fullWidth
@@ -277,7 +277,7 @@ const CustomerEditDialog = ({
               login_otp_enabled toggle among them. Nothing reads those back at
               runtime, and a partial save merges rather than replaces, so
               hiding them changes no behaviour and loses no stored value. */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <DynamicProfileEditor
               type="customer"
               profile={formData.profile}
@@ -290,7 +290,7 @@ const CustomerEditDialog = ({
           </Grid>
 
           {/* Notes — always at the bottom of the form */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Notes"
@@ -307,7 +307,7 @@ const CustomerEditDialog = ({
           {/* Create a new environment for this customer using the shared schema
               builder — the same wizard the Schema screen uses. Edit mode only. */}
           {!isCreate && (
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Accordion disableGutters elevation={0} sx={{ border: '1px solid var(--border-light, #e5e7eb)', borderRadius: 1, '&:before': { display: 'none' } }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

@@ -457,7 +457,7 @@ const AccountDialog = ({
           <Grid container spacing={3} direction="column">
             {/* UUID Field - Read Only with copy (only shown in edit mode) */}
             {isEditMode && account?.uuid && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                     <Typography variant="caption" color="text.secondary" sx={{ minWidth: 70, fontWeight: 600 }}>UUID</Typography>
@@ -473,7 +473,7 @@ const AccountDialog = ({
             )}
 
             {/* Enabled + Root toggles */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControlLabel
                 control={
                   <Switch
@@ -486,7 +486,7 @@ const AccountDialog = ({
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Name"
@@ -502,7 +502,7 @@ const AccountDialog = ({
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Email"
@@ -520,7 +520,7 @@ const AccountDialog = ({
 
             {/* Password field - only for create mode */}
             {!isEditMode && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <SecretField
                   fullWidth
                   label="Password"
@@ -552,7 +552,7 @@ const AccountDialog = ({
 
             {/* Reset Password & Generate Basic Auth - only for edit mode with write access */}
             {isEditMode && canWrite && (
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   <Tooltip title="Change account password">
                     <Button
@@ -583,7 +583,7 @@ const AccountDialog = ({
             )}
 
             {/* Environments - Multi-select with search and virtualization */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Autocomplete
                 multiple
                 options={environments || []}
@@ -679,7 +679,7 @@ const AccountDialog = ({
             </Grid>
 
             {/* ACL Field with inline Create/Edit */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <ACLSelect
                 value={formData.acl_uuid}
                 onChange={(uuid) => handleChange('acl_uuid', uuid)}
@@ -694,7 +694,7 @@ const AccountDialog = ({
             </Grid>
 
             {/* Meta Properties */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ mt: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" color="text.secondary">Meta Properties</Typography>
@@ -738,7 +738,7 @@ const AccountDialog = ({
             </Grid>
 
             {/* Notes Field - always last in the form body */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Notes"

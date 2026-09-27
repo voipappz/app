@@ -245,7 +245,7 @@ const AccountCreateDialog = ({
         )}
 
         <Grid container spacing={3} direction="column">
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Name"
@@ -261,7 +261,7 @@ const AccountCreateDialog = ({
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             <TextField
               fullWidth
               label="Email"
@@ -277,7 +277,7 @@ const AccountCreateDialog = ({
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             <SecretField
               fullWidth
               label="Password"
@@ -307,7 +307,7 @@ const AccountCreateDialog = ({
           </Grid>
 
           {/* Environments - Multi-select with search and virtualization */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Autocomplete
               multiple
               options={environments || []}
@@ -402,7 +402,7 @@ const AccountCreateDialog = ({
             />
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             <FormControl fullWidth required error={!!errors.acl_uuid}>
               <InputLabel>ACL (Role)</InputLabel>
               <Select
@@ -431,7 +431,7 @@ const AccountCreateDialog = ({
             </FormControl>
           </Grid>
 
-          <Grid item xs={12}>
+          <Grid size={12}>
             <FormControlLabel
               control={
                 <Switch

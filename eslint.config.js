@@ -31,6 +31,11 @@ export default [
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
       'react-refresh/only-export-components': 'off',
       'react-hooks/exhaustive-deps': 'off',
+      // MUI v7 Grid sizes with `size`; `item`/`xs`/`md` are silently ignored.
+      'no-restricted-syntax': ['error', {
+        selector: "JSXOpeningElement[name.name='Grid'] > JSXAttribute[name.name=/^(item|xs|sm|md|lg|xl)$/]",
+        message: 'MUI v7 Grid ignores item/xs/sm/md/lg/xl — use size={{ xs, md }}.',
+      }],
     },
   },
   // TypeScript files configuration
