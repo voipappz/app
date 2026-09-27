@@ -109,8 +109,9 @@ active identity. `/admin` and `/login` only select the Account sign-in view.
 
 An account can choose customer and environment. A user has one environment and
 uses the same sidebar, top bar, and routes, filtered strictly by their ACL: a
-screen or control with no ACL key is account-only. The phone drawer is also
-account-only. Keep account token-only Calls features (column configuration,
+screen or control with no ACL key is account-only. The phone drawer opens for
+either session: a user's own extension registers itself
+(`SoftphoneContext`). Keep account token-only Calls features (column configuration,
 saved filters, and live-call count) off for user sessions; list, segments,
 aggregates, and export must use the user's token. `useIsUserSession()`
 identifies this branch.
