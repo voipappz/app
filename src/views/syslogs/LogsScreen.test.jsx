@@ -20,10 +20,10 @@ vi.mock('../../context/CustomerEnvironmentContext', () => ({
 // to render there, not only on its own route.
 describe('Logs in the top-bar tool dialog', () => {
   it('renders the syslog screen inside the dialog', async () => {
-    render(<ToolDialog title="Logs" open onClose={vi.fn()}><LogsScreen /></ToolDialog>);
+    render(<ToolDialog title="Syslog" open onClose={vi.fn()}><LogsScreen /></ToolDialog>);
 
-    expect(screen.getByRole('dialog', { name: 'Logs' })).toBeInTheDocument();
-    expect(await screen.findByRole('dialog', { name: 'Logs' })).toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: 'Logs' }).querySelector('.custom-footer-root')).not.toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Syslog' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Syslog' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Syslog' }).querySelector('.custom-footer-root')).not.toBeNull();
   });
 });
