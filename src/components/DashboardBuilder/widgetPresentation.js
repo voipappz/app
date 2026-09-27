@@ -41,8 +41,9 @@ export function formatDuration(seconds) {
  * duration, *_sec) render as mm:ss and never carry a unit suffix.
  */
 export function formatWidgetValue(widget, value) {
+  if (value === null || value === undefined) return '—';
   const raw = Number(value) || 0;
-  if (/duration|billsec|_sec$/.test(widget?.field || '')) return formatDuration(raw);
+  if (widget?.aggregation !== 'count' && /duration|billsec|_sec$/.test(widget?.field || '')) return formatDuration(raw);
   const unit = (widget?.unit || '').trim();
   return unit ? `${raw} ${unit}` : String(raw);
 }

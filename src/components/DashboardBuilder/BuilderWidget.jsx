@@ -1,5 +1,5 @@
 import {
-  Box, IconButton, LinearProgress, ListItemIcon, ListItemText, Menu,
+  Box, Button, Dialog, DialogContent, DialogTitle, IconButton, LinearProgress, ListItemIcon, ListItemText, Menu,
   MenuItem, Paper, Stack, Typography
 } from '@mui/material';
 import ArrowDownwardOutlinedIcon from '@mui/icons-material/ArrowDownwardOutlined';
@@ -12,43 +12,41 @@ import { useState } from 'react';
 import { formatWidgetValue, gaugePercent, resolveIcon, thresholdColor } from './widgetPresentation';
 import { withDefaults } from './widgetTemplates';
 import { useWidgetValue } from './useWidgetValue';
+import MetricChart from './MetricChart';
 
 const STAT_TYPES = new Set(['counter', 'gauge', 'stat']);
 const CHART_TYPES = new Set(['trend', 'line', 'bar', 'pie']);
 const WIDE_TYPES = new Set([...CHART_TYPES, 'table']);
 
-function TrendPreview({ series }) {
-  const rows = Array.isArray(series) ? series.slice(-18) : [];
-  const values = rows.map((row) => Number(row.value) || 0);
-  const max = Math.max(1, ...values);
-
-  return (
-    <Box sx={{ height: 112, display: 'flex', alignItems: 'flex-end', gap: 0.5, px: 0.5, pt: 1 }}>
-      {values.length ? values.map((value, index) => (
-        <Box
-          key={`${rows[index]?.time || index}`}
-          sx={{ flex: 1, minWidth: 3, height: `${Math.max(6, (value / max) * 100)}%`, bgcolor: 'primary.main', borderRadius: '3px 3px 0 0', opacity: 0.8 }}
-        />
-      )) : (
-        <Typography variant="body2" color="text.secondary" sx={{ m: 'auto' }}>No data yet</Typography>
-      )}
-    </Box>
-  );
+function TrendPreview({ series, type }) {
+  return <MetricChart series={series} type={type} />;
 }
 
 function TablePreview({ rows, fields }) {
-  const columns = (fields?.length ? fields : ['started_at', 'direction', 'status']).slice(0, 4);
+  const [selected, setSelected] = useState(null);
+  const columns = fields?.length ? fields : ['started_at', 'direction', 'status'];
   return (
-    <Box sx={{ overflow: 'hidden', border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, columns.length)}, minmax(0, 1fr))`, bgcolor: 'action.hover' }}>
+    <Box sx={{ overflow: 'auto', maxHeight: 320, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, columns.length)}, minmax(120px, 1fr))`, bgcolor: 'action.hover' }}>
         {columns.map((field) => <Typography key={field} variant="caption" sx={{ p: 0.75, fontWeight: 700 }} noWrap>{field}</Typography>)}
       </Box>
-      {(rows || []).slice(0, 3).map((row, index) => (
-        <Box key={row.id || index} sx={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, columns.length)}, minmax(0, 1fr))`, borderTop: '1px solid', borderColor: 'divider' }}>
+      {(rows || []).map((row, index) => (
+        <Box component="button" type="button" aria-label={`Open call ${row.id || index}`} onClick={() => setSelected(row)} key={row.id || index} sx={{ width: '100%', color: 'inherit', bgcolor: 'transparent', cursor: 'pointer', textAlign: 'left', display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, columns.length)}, minmax(120px, 1fr))`, border: 0, borderTop: '1px solid', borderColor: 'divider' }}>
           {columns.map((field) => <Typography key={field} variant="caption" color="text.secondary" sx={{ p: 0.75 }} noWrap>{String(row[field] ?? '—')}</Typography>)}
         </Box>
       ))}
       {!rows?.length && <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>No rows yet</Typography>}
+      <Dialog open={Boolean(selected)} onClose={() => setSelected(null)} fullWidth maxWidth="md">
+        <DialogTitle>Call details</DialogTitle><DialogContent>
+          <Box component="dl" sx={{ display: 'grid', gridTemplateColumns: 'minmax(100px, 1fr) minmax(0, 2fr)', gap: 1 }}>
+            {Object.entries(selected?.raw || selected || {}).map(([key, value]) => <Box key={key} sx={{ display: 'contents' }}>
+              <Typography component="dt" sx={{ textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</Typography>
+              <Typography component="dd" sx={{ m: 0, overflowWrap: 'anywhere' }}>{value === null || value === undefined ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value)}</Typography>
+            </Box>)}
+          </Box>
+          <Button onClick={() => setSelected(null)}>Close</Button>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
@@ -59,11 +57,11 @@ function TablePreview({ rows, fields }) {
  * useWidgetValue; 'table' reads recent_calls off the shared snapshot
  * (Postgres-backed — see useDashboardSnapshot).
  */
-export default function BuilderWidget({ widget: storedWidget, snapshot, saving, onEdit, onDuplicate, onDelete, onMove }) {
+export default function BuilderWidget({ widget: storedWidget, snapshot, saving, onEdit, onDuplicate, onDelete, onMove, queryOptions }) {
   const [menuAnchor, setMenuAnchor] = useState(null);
   const widget = withDefaults(storedWidget);
   const Icon = resolveIcon(widget.icon);
-  const { value, series, error } = useWidgetValue(widget.type !== 'table' ? widget : null);
+  const { value, series, error, loading, updatedAt } = useWidgetValue(widget.type !== 'table' ? widget : null, queryOptions);
   const accent = thresholdColor(widget, value) || widget.color || 'primary.main';
   const gaugeValue = gaugePercent(widget, value);
 
@@ -128,14 +126,16 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
             {/* Same rule as the dashboard tiles: a value we couldn't fetch
                 shows as "—", never as a confident 0. */}
             <Typography variant="h3" sx={{ fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-              {error ? '—' : formatWidgetValue(widget, value)}
+              {error ? '—' : loading ? '…' : formatWidgetValue(widget, value)}
             </Typography>
             {error && <Typography variant="caption" color="text.secondary">unavailable</Typography>}
+            {widget.aggregation === 'mean' && <Typography variant="caption" color="text.secondary">Average in the latest time bucket</Typography>}
             {widget.type === 'gauge' && <LinearProgress variant="determinate" value={gaugeValue} color="inherit" sx={{ width: '80%', height: 8, borderRadius: 4, color: accent }} />}
           </Stack>
         )}
-        {CHART_TYPES.has(widget.type) && <TrendPreview series={series} />}
+        {CHART_TYPES.has(widget.type) && (error ? <Typography role="alert">Could not load data. Try refreshing.</Typography> : loading ? <LinearProgress aria-label="Loading chart" /> : <TrendPreview series={series} type={widget.type} />)}
         {widget.type === 'table' && <TablePreview rows={snapshot?.recent_calls} fields={widget.fields} />}
+        {updatedAt && <Typography variant="caption" color="text.secondary">Updated {new Date(updatedAt).toLocaleTimeString()}</Typography>}
       </Box>
     </Paper>
   );
