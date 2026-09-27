@@ -51,7 +51,7 @@ export const NAV_ITEMS = [
 // Also consumed by global search and breadcrumbs.
 export const TOPBAR_NAV_ITEMS = [
   { text: 'Events',        path: '/events',         iconComponent: BoltIcon,                  aclKey: 'logs',                           group: 'MONITOR'  },
-  { text: 'Logs',          path: '/logs',           iconComponent: SubjectIcon,               aclKey: 'logs',                           group: 'MONITOR'  },
+  { text: 'Syslog',        path: '/logs',           iconComponent: SubjectIcon,               aclKey: 'logs',                           group: 'MONITOR'  },
   { text: 'Monitoring',    path: '/monitoring',     iconComponent: TimelineIcon,              aclKey: 'monitors',                       group: 'MONITOR'  },
   { text: 'Nodes',         path: '/nodes',          iconComponent: DnsIcon,                   aclKey: 'nodes',                          group: 'MONITOR'  },
   { text: 'Providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'ADMIN'    },
