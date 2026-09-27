@@ -69,7 +69,9 @@ const UserLogin = ({ switcher = null }) => {
   }, []);
 
   const brandColor = portalData?.logo_color;
-  const brandLogo = portalData?.logo_url || '/images/VA_logo_blue.png';
+  // The logo is the customer's own, from customer_portal_data — never a
+  // VoipAppz fallback. No logo_url, no logo.
+  const brandLogo = portalData?.logo_url || null;
   const brandName = portalData?.logo_title || 'VoipAppz';
 
   // Favicon/title only while THIS screen is mounted — the admin console (and
@@ -527,9 +529,11 @@ const UserLogin = ({ switcher = null }) => {
   return (
     <Box className="login-page login-page--portal" style={brandColor ? { '--accent-color': brandColor } : undefined}>
       <Paper elevation={0} className="login-paper">
-        <Box className="portal-login-brand">
-          <img src={brandLogo} alt={brandName} className="portal-login-logo" />
-        </Box>
+        {brandLogo && (
+          <Box className="portal-login-brand">
+            <img src={brandLogo} alt={brandName} className="portal-login-logo" />
+          </Box>
+        )}
         {qrSigningIn ? (
           <Box data-testid="qr-signing-in" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 4 }}>
             <CircularProgress />

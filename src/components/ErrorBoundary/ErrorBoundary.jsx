@@ -2,6 +2,31 @@ import React from 'react';
 import { Box, Typography, Button, Alert, Paper } from '@mui/material';
 import { Refresh as RefreshIcon, Home as HomeIcon } from '@mui/icons-material';
 
+// A lazy screen whose file could not be downloaded: Chrome, Safari and Firefox
+// word it differently. It is a network/deploy problem, not a bug in the page.
+const CHUNK_ERROR = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|ChunkLoadError|Loading chunk .* failed/i;
+
+export function describeError(error, online = typeof navigator === 'undefined' ? true : navigator.onLine) {
+  const message = String(error?.message || error || '');
+  if (CHUNK_ERROR.test(message) || error?.name === 'ChunkLoadError') {
+    const file = (message.match(/[\w.-]+\.js/) || [])[0] || null;
+    return {
+      kind: 'network',
+      title: "Couldn't load this screen",
+      body: online
+        ? 'Part of the app could not be downloaded. The connection may have dropped for a moment, or a new version was just released. Reloading the page fetches the current version.'
+        : 'You appear to be offline, so part of the app could not be downloaded. Check your connection, then reload.',
+      detail: file ? `Missing file: ${file}` : message,
+    };
+  }
+  return {
+    kind: 'app',
+    title: 'Oops! Something went wrong',
+    body: "We're sorry, but there was an unexpected error. Please try refreshing the page or go back to the home screen.",
+    detail: message || null,
+  };
+}
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -13,10 +38,12 @@ class ErrorBoundary extends React.Component {
     };
   }
 
-  static getDerivedStateFromError() {
-    // Update state so the next render will show the fallback UI
-    return { 
+  static getDerivedStateFromError(error) {
+    // The error is kept now, so the first fallback render already knows which
+    // message to show.
+    return {
       hasError: true,
+      error,
       errorId: Date.now() // Unique ID for this error instance
     };
   }
@@ -89,6 +116,8 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       const isDevelopment = process.env.NODE_ENV === 'development';
+      const described = describeError(this.state.error);
+      const isNetwork = described.kind === 'network';
 
       return (
         <Box
@@ -111,16 +140,21 @@ class ErrorBoundary extends React.Component {
               textAlign: 'center'
             }}
           >
-            <Typography variant="h4" color="error" gutterBottom>
-              Oops! Something went wrong
-            </Typography>
-            
-            <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-              We're sorry, but there was an unexpected error. Please try refreshing the page or go back to the home screen.
+            <Typography variant="h4" color={isNetwork ? 'warning.main' : 'error'} gutterBottom>
+              {described.title}
             </Typography>
 
-            <Alert severity="error" sx={{ mb: 3, textAlign: 'left' }}>
+            <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
+              {described.body}
+            </Typography>
+
+            <Alert severity={isNetwork ? 'warning' : 'error'} sx={{ mb: 3, textAlign: 'left' }}>
               <Typography variant="subtitle2">Error ID: {this.state.errorId}</Typography>
+              {!isDevelopment && described.detail && (
+                <Typography variant="body2" sx={{ mt: 1, fontFamily: 'monospace', overflowWrap: 'anywhere' }}>
+                  {described.detail}
+                </Typography>
+              )}
               {isDevelopment && this.state.error && (
                 <>
                   <Typography variant="body2" sx={{ mt: 1, fontFamily: 'monospace' }}>
@@ -136,6 +170,12 @@ class ErrorBoundary extends React.Component {
             </Alert>
 
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {isNetwork && (
+                <Button variant="contained" color="primary" startIcon={<RefreshIcon />} onClick={this.handleReload}>
+                  Reload page
+                </Button>
+              )}
+              {!isNetwork && (
               <Button
                 variant="contained"
                 color="primary"
@@ -144,7 +184,8 @@ class ErrorBoundary extends React.Component {
               >
                 Try Again
               </Button>
-              
+              )}
+
               <Button
                 variant="outlined"
                 color="primary"
@@ -154,6 +195,7 @@ class ErrorBoundary extends React.Component {
                 Go Home
               </Button>
               
+              {!isNetwork && (
               <Button
                 variant="outlined"
                 color="secondary"
@@ -161,6 +203,7 @@ class ErrorBoundary extends React.Component {
               >
                 Reload Page
               </Button>
+              )}
             </Box>
 
             {isDevelopment && this.state.errorInfo && (

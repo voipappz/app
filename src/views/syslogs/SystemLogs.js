@@ -82,8 +82,16 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     }
   }, []);
 
-  // Load syslogs from the InfluxDB-backed /api/logs endpoint.
+  // Load syslogs from the InfluxDB-backed /api/logs endpoint. Page 1 replaces
+  // the list; every later page (scrolling down) is appended to it. Only the
+  // newest request may land, so a slow page from before a filter change
+  // cannot append to the new list.
+  const requestSeq = useRef(0);
+  // A short page means there is nothing older, whatever the total says.
+  const [reachedEnd, setReachedEnd] = useState(false);
   const loadLogs = useCallback(async () => {
+    const seq = ++requestSeq.current;
+    const append = pagination.page > 0;
     try {
       setLoading(true);
 
@@ -99,29 +107,43 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
       }
 
       const response = await syslogsApi.fetchLogs(params);
+      if (seq !== requestSeq.current) return;
 
+      let rows = [];
+      let total = 0;
       if (Array.isArray(response)) {
-        setLogs(response);
-        setTotalCount(response.length);
+        rows = response;
+        total = response.length;
       } else if (response?.data && Array.isArray(response.data)) {
-        setLogs(response.data);
-        setTotalCount(response.total || response.total_records || response.data.length);
-      } else {
+        rows = response.data;
+        total = response.total || response.total_records || response.data.length;
+      }
+      setLogs((current) => (append ? [...current, ...rows] : rows));
+      setTotalCount(total);
+      setReachedEnd(rows.length < pagination.limit);
+    } catch (error) {
+      if (seq !== requestSeq.current) return;
+      console.error('Failed to load logs:', error);
+      if (!append) {
         setLogs([]);
         setTotalCount(0);
       }
-    } catch (error) {
-      console.error('Failed to load logs:', error);
-      setLogs([]);
-      setTotalCount(0);
+      setReachedEnd(true);
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }, [pagination, dateRange, requestFilters]);
 
+  // Scrolling to the bottom asks for the next page.
+  const hasMore = !reachedEnd && logs.length < totalCount;
+  const loadMore = useCallback(() => {
+    if (loading || !hasMore) return;
+    setPagination((current) => ({ ...current, page: current.page + 1 }));
+  }, [loading, hasMore]);
+
   useEffect(() => {
     setPagination((current) => current.page === 0 ? current : { ...current, page: 0 });
-  }, [dateRange, selectedApp, selectedHost, selectedSeverity, filterText, searchQuery]);
+  }, [dateRange, selectedApp, selectedHost, selectedSeverity, filterText, searchQuery, pagination.limit]);
 
   // Period quick-select handler
   const handlePeriodSelect = useCallback((period) => {
@@ -132,10 +154,13 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
   const refreshLogs = useCallback(() => {
     if (dateRange?.period && dateRange.period !== 'custom') {
       setDateRange(computePeriodRange(dateRange.period));
+    } else if (pagination.page > 0) {
+      // Back to the newest lines; the page change reloads.
+      setPagination((current) => ({ ...current, page: 0 }));
     } else {
       loadLogs();
     }
-  }, [dateRange?.period, loadLogs]);
+  }, [dateRange?.period, loadLogs, pagination.page]);
 
   // Derived filter state
   const hasActiveFilters = useMemo(
@@ -262,6 +287,8 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     totalCount,
     pagination,
     setPagination,
+    hasMore,
+    loadMore,
 
     // Dropdown data
     apps,

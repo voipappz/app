@@ -8,10 +8,9 @@ import {
   Tooltip,
   Chip,
   CircularProgress,
-  Select,
-  MenuItem,
-  FormControl,
   Skeleton,
+  Alert,
+  Button,
   Divider
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
@@ -30,7 +29,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useAIChat } from './useAIChat';
+import { useAIChat, NO_LLM_MESSAGE } from './useAIChat';
 import { useAIChatSidebar } from '../../context/AIChatSidebarContext';
 import ProviderDialog from '../Providers/ProviderDialog/ProviderDialog';
 import { providersApi } from '../../services/api/providersApi';
@@ -266,9 +265,6 @@ SessionItem.displayName = 'SessionItem';
 const AIChatSidebar = ({
   isCollapsed,
   onToggle,
-  agents,
-  selectedAgent,
-  onAgentSelect,
   isLoadingAgents,
   sessions,
   sessionId,
@@ -276,10 +272,8 @@ const AIChatSidebar = ({
   onSessionClick,
   onDeleteSession,
   onNewChat,
-  onRefresh,
   messagesCount,
-  isEndpointActive,
-  onAddProvider
+  isEndpointActive
 }) => (
   <Box
     sx={{
@@ -343,68 +337,8 @@ const AIChatSidebar = ({
           </Typography>
         </Box>
 
-        {/* Agent Selector */}
+        {/* Status: there is one assistant, no agent to pick */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography sx={{ color: 'var(--theme-text-primary)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase' }}>
-              Agent
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5 }}>
-              {/* Providers are an account resource; a portal user has no add button. */}
-              {onAddProvider && (
-                <Tooltip title="Add LLM Provider" placement="top" arrow>
-                  <IconButton size="small" onClick={onAddProvider} sx={{ color: 'var(--theme-text-tertiary)' }}>
-                    <AddIcon sx={{ fontSize: 14 }} />
-                  </IconButton>
-                </Tooltip>
-              )}
-              <IconButton size="small" onClick={onRefresh} sx={{ color: 'var(--theme-text-tertiary)' }}>
-                <RefreshIcon sx={{ fontSize: 14 }} />
-              </IconButton>
-            </Box>
-          </Box>
-
-          {isLoadingAgents ? (
-            <Skeleton variant="rounded" height={36} sx={{ backgroundColor: 'var(--theme-bg-secondary)' }} />
-          ) : (
-            <FormControl size="small" fullWidth>
-              <Select
-                value={selectedAgent || ''}
-                onChange={(e) => onAgentSelect(e.target.value)}
-                displayEmpty
-                sx={{
-                  backgroundColor: 'var(--theme-bg-primary)',
-                  borderRadius: '12px',
-                  color: 'var(--theme-text-secondary)',
-                  fontSize: '0.75rem',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'var(--theme-border)'
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'var(--theme-text-secondary)'
-                  },
-                  '& .MuiSelect-icon': { color: 'var(--theme-text-secondary)' }
-                }}
-              >
-                <MenuItem value="" disabled>
-                  <Typography sx={{ fontSize: '0.75rem', color: 'var(--theme-text-tertiary)' }}>
-                    {agents.length === 0 ? 'No agents available' : 'Select Agent'}
-                  </Typography>
-                </MenuItem>
-                {agents.map((agent) => (
-                  <MenuItem key={agent.id || agent.agent_id} value={agent.id || agent.agent_id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <SmartToyIcon sx={{ fontSize: 16 }} />
-                      <Typography sx={{ fontSize: '0.75rem' }}>
-                        {agent.name || agent.id || agent.agent_id}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
-
           {/* Status indicator */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box
@@ -412,11 +346,11 @@ const AIChatSidebar = ({
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                backgroundColor: isEndpointActive ? '#22c55e' : '#ef4444'
+                backgroundColor: isLoadingAgents ? 'var(--color-neutral)' : (isEndpointActive ? 'var(--color-success)' : 'var(--color-danger)')
               }}
             />
             <Typography sx={{ fontSize: '0.65rem', color: 'var(--theme-text-tertiary)' }}>
-              {isEndpointActive ? 'Connected' : 'Disconnected'}
+              {isLoadingAgents ? 'Checking…' : (isEndpointActive ? 'Connected' : 'No LLM provider')}
             </Typography>
           </Box>
         </Box>
@@ -476,10 +410,9 @@ const AIChat = () => {
     isLoadingSessions,
     loadSession,
     deleteSession,
-    agents,
-    selectedAgent,
     isLoadingAgents,
-    handleAgentSelect,
+    llmMissing,
+    isRestoringSession,
     isEndpointActive,
     canManageProviders,
     sendMessage,
@@ -517,7 +450,7 @@ const AIChat = () => {
     try {
       await providersApi.createProvider(data);
       setProviderDialogOpen(false);
-      // Refresh the agents list so the new provider appears
+      // Re-check, so the chat opens now that there is a provider
       fetchAgents();
     } finally {
       setProviderDialogLoading(false);
@@ -550,9 +483,6 @@ const AIChat = () => {
       <AIChatSidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={toggleAISidebar}
-        agents={agents}
-        selectedAgent={selectedAgent}
-        onAgentSelect={handleAgentSelect}
         isLoadingAgents={isLoadingAgents}
         sessions={sessions}
         sessionId={sessionId}
@@ -560,10 +490,8 @@ const AIChat = () => {
         onSessionClick={loadSession}
         onDeleteSession={deleteSession}
         onNewChat={clearChat}
-        onRefresh={fetchAgents}
         messagesCount={messages.length}
         isEndpointActive={isEndpointActive}
-        onAddProvider={canManageProviders ? handleOpenProviderDialog : undefined}
       />
 
       {/* Main Chat Area */}
@@ -587,7 +515,7 @@ const AIChat = () => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography sx={{ color: 'var(--theme-text-tertiary)', fontSize: '0.75rem' }}>
-                  {selectedAgent ? `Agent: ${agents.find(a => (a.id || a.agent_id) === selectedAgent)?.name || selectedAgent}` : 'No agent selected'}
+                  Your data, through the VoipAppz tools
                 </Typography>
                 {isStreaming && <CircularProgress size={12} sx={{ color: 'var(--accent-primary, #65758E)' }} />}
               </Box>
@@ -597,7 +525,12 @@ const AIChat = () => {
 
         {/* Messages Area */}
         <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
-          {messages.length === 0 ? (
+          {isRestoringSession && messages.length === 0 ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 1.5 }}>
+              <CircularProgress size={20} sx={{ color: 'var(--accent-primary, #65758E)' }} />
+              <Typography sx={{ color: 'var(--theme-text-tertiary)', fontSize: '0.85rem' }}>Loading your last conversation…</Typography>
+            </Box>
+          ) : messages.length === 0 ? (
             <Box sx={{
               display: 'flex',
               flexDirection: 'column',
@@ -611,9 +544,20 @@ const AIChat = () => {
                 What can I help with?
               </Typography>
               <Typography sx={{ color: 'var(--theme-text-tertiary)', fontSize: '0.9rem', mb: 3 }}>
-                {selectedAgent ? 'Try one of these or type your own question.' : 'Select an agent from the sidebar to begin.'}
+                {llmMissing ? 'The assistant is not set up yet.' : 'Try one of these or type your own question.'}
               </Typography>
-              {selectedAgent && (
+              {llmMissing && (
+                <Alert
+                  severity="warning"
+                  sx={{ maxWidth: 560, textAlign: 'left', mb: 2 }}
+                  action={canManageProviders && (
+                    <Button color="inherit" size="small" onClick={handleOpenProviderDialog}>Add LLM provider</Button>
+                  )}
+                >
+                  {NO_LLM_MESSAGE}{!canManageProviders && ' Ask your administrator to add one.'}
+                </Alert>
+              )}
+              {!llmMissing && (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', maxWidth: 560 }}>
                   {[
                     { label: 'Show me users with no active calls', prompt: 'List users who have no active calls right now' },
@@ -640,7 +584,7 @@ const AIChat = () => {
                   ))}
                 </Box>
               )}
-              {selectedAgent && (
+              {!llmMissing && (
                 <Typography sx={{ fontSize: '0.72rem', color: 'var(--theme-text-tertiary)', mt: 2 }}>
                   Tip: press Ctrl+Shift+A (or ⌘+Shift+A) to open this anywhere
                 </Typography>
@@ -726,11 +670,11 @@ const AIChat = () => {
               fullWidth
               multiline
               maxRows={4}
-              placeholder={selectedAgent ? 'Ask anything...' : 'Select an agent to start'}
+              placeholder={llmMissing ? 'Add an LLM provider to start' : 'Ask anything...'}
               value={inputValue}
               onChange={handleInputChange}
               onKeyDown={handleKeyPress}
-              disabled={isStreaming || !selectedAgent}
+              disabled={isStreaming || llmMissing}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '16px',
@@ -759,7 +703,7 @@ const AIChat = () => {
             ) : (
               <IconButton
                 onClick={() => sendMessage(inputValue)}
-                disabled={!inputValue.trim() || !selectedAgent}
+                disabled={!inputValue.trim() || llmMissing}
                 sx={{
                   backgroundColor: 'var(--accent-primary, #65758E)',
                   color: '#fff',
