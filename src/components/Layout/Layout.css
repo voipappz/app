@@ -22,25 +22,15 @@
   margin-top: 48px;
   height: calc(100vh - 48px);
   background-color: var(--theme-bg-secondary);
-  transition: background-color 0.2s ease, margin-left 0.25s ease;
+  /* Resize charts/tables once per toggle, not on every animation frame. */
+  transition: background-color 0.2s ease;
 }
-
-/* Footer branding stays in normal flow, clear of the floating Help widget. */
-.app-watermark {
-  height: 16px;
-  width: auto;
-  opacity: 0.5;
-  pointer-events: none;
-  user-select: none;
-  z-index: 2;
-}
-[data-theme="dark"] .app-watermark { opacity: 0.45; }
 
 .content-container.sidebar-collapsed {
   margin-left: 0;
 }
 
-.content-container.sidebar-expanded { margin-left: 210px; }
+.content-container.sidebar-expanded { margin-left: 104px; }
 
 .content-container.mcp-fullscreen {
   margin: 0;
@@ -59,35 +49,6 @@
   flex-direction: column;
   min-height: 100vh;
   height: 100vh;
-}
-
-/* App Footer */
-.app-footer {
-  display: flex;
-  justify-content: flex-start;
-  gap: 12px;
-  align-items: center;
-  padding: 6px 120px 6px 16px;
-  box-sizing: border-box;
-  border-top: 1px solid #e5e7eb;
-  background: #fafafa;
-  min-height: 32px;
-  flex-shrink: 0;
-}
-
-.app-footer-text {
-  color: #9ca3af;
-  font-size: 0.65rem !important;
-  letter-spacing: 0.02em;
-}
-
-[data-theme="dark"] .app-footer {
-  background: #1a202c;
-  border-top-color: #4a5568;
-}
-
-[data-theme="dark"] .app-footer-text {
-  color: #6b7280;
 }
 
 /* Responsive layout fixes */

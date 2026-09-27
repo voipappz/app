@@ -7,6 +7,8 @@ import TuneIcon from '@mui/icons-material/Tune';
 import WidgetsIcon from '@mui/icons-material/Widgets';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import DownloadIcon from '@mui/icons-material/Download';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { useThemeMode } from '../../context/ThemeContext';
 import RedisViewer from './RedisViewer.jsx';
 import FeatureFlags from './FeatureFlags.jsx';
 import SystemConfig from './SystemConfig.jsx';
@@ -14,6 +16,23 @@ import AppConfig, { YamlView } from './AppConfig.jsx';
 import screenReviewUrl from '../../../docs/uat/UAT-screens.xlsx?url';
 import customerJourneyUrl from '../../../docs/uat/UAT-review.xlsx?url';
 import fullRegressionUrl from '../../../docs/uat/UAT-v2.xlsx?url';
+
+// Preserve the CI build stamp, falling back to the package version locally.
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || __APP_VERSION__ || 'dev';
+
+const About = () => {
+  const { isDarkMode } = useThemeMode();
+  return (
+    <Stack spacing={2} alignItems="flex-start">
+      <Box component="img"
+        src={isDarkMode ? '/images/VA_logo_white.png' : '/images/VA_logo_dark.png'}
+        alt="VoipAppz"
+        sx={{ height: 32, maxWidth: '100%', objectFit: 'contain' }}
+      />
+      <Typography variant="body2" data-testid="app-version">Version: v{APP_VERSION}</Typography>
+    </Stack>
+  );
+};
 
 const UatDownloads = () => {
   const files = [
@@ -129,6 +148,13 @@ const SECTIONS = [
     description: 'Release review spreadsheets',
     icon: <FactCheckIcon fontSize="small" />,
     component: UatDownloads,
+  },
+  {
+    key: 'about',
+    label: 'About',
+    description: 'Application version and branding',
+    icon: <InfoOutlinedIcon fontSize="small" />,
+    component: About,
   },
 ];
 

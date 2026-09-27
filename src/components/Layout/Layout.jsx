@@ -1,4 +1,4 @@
-import { Box, Drawer, Typography, Snackbar, Button, useMediaQuery } from '@mui/material';
+import { Box, Drawer, Snackbar, Button, useMediaQuery } from '@mui/material';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useLayout } from './Layout';
 import { useLocation, useNavigate } from 'react-router';
@@ -13,22 +13,10 @@ import { RecentPagesProvider } from '../../context/RecentPagesContext';
 import { loadCustomerData, applyCustomerBranding, getCustomerData } from '../../services/customerService';
 import { useVersionCheck } from '../../hooks/useVersionCheck';
 import useIdleTimeout from '../../hooks/useIdleTimeout';
-import { useThemeMode } from '../../context/ThemeContext';
 import { useZendeskWidget } from '../../services/zendeskWidget';
 import './Layout.css';
 
 
-// Build version shown in the footer. Prefer the CI build stamp
-// (VITE_APP_VERSION = YYYY.MM.DD-<short-sha>, set by the build step in .github/workflows/ci.yml),
-// fall back to the package.json version, then "dev" for local `npm run dev`.
-const APP_VERSION = import.meta.env.VITE_APP_VERSION || __APP_VERSION__ || 'dev';
-
-// Both served from this deployment's own public/images. The white one used to be
-// hardcoded to https://cloud.voipappz.io:9443 — so every install, MTN included,
-// fetched its logo from voipappz's cloud host, and lost its logo entirely if that
-// host was unreachable. The asset was in public/images the whole time.
-const LOGO_DARK = '/images/VA_logo_dark.png';
-const LOGO_WHITE = '/images/VA_logo_white.png';
 
 const Layout = ({ children }) => {
   useLayout();
@@ -36,7 +24,6 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const { isAuthenticated, logout, user, customerUuid } = useAuth();
   const userAuth = useUserAuth();
-  const { isDarkMode } = useThemeMode();
   // `/` is user sign-in and `/admin` is account sign-in. Both are bare only
   // while no session exists.
   const isLoginPage = ['/', '/admin'].includes(location.pathname)
@@ -122,7 +109,7 @@ const Layout = ({ children }) => {
               ModalProps={{ keepMounted: true }}
               sx={{
                 display: { xs: 'block', md: 'none' },
-                '& .MuiDrawer-paper': { width: 210, boxSizing: 'border-box' }
+                '& .MuiDrawer-paper': { width: 104, boxSizing: 'border-box' }
               }}
             >
               <Sidebar expanded onNavigate={() => setMobileDrawerOpen(false)} />
@@ -141,16 +128,6 @@ const Layout = ({ children }) => {
               <Box sx={{ flex: '1 1 0', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {children}
               </Box>
-              {!isMcpWorkspace && <Box className="app-footer">
-                <Typography className="app-footer-text" variant="caption" data-testid="app-version">
-                  v{APP_VERSION}
-                </Typography>
-              <img
-                className="app-watermark"
-                src={isDarkMode ? LOGO_WHITE : LOGO_DARK}
-                alt="VoipAppz"
-              />
-              </Box>}
             </Box>
           </Box>
           <PortalSidebar />
