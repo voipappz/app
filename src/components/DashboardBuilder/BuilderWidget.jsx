@@ -13,10 +13,13 @@ import { formatWidgetValue, gaugePercent, resolveIcon, thresholdColor } from './
 import { withDefaults } from './widgetTemplates';
 import { useWidgetValue } from './useWidgetValue';
 import MetricChart from './MetricChart';
+import InfluxMetricExplorer from '../Monitoring/InfluxMetricExplorer/InfluxMetricExplorer.jsx';
 
 const STAT_TYPES = new Set(['counter', 'gauge', 'stat']);
 const CHART_TYPES = new Set(['trend', 'line', 'bar', 'pie']);
 const WIDE_TYPES = new Set([...CHART_TYPES, 'table']);
+// Runs its own query on demand; the board must not poll for it.
+const ON_DEMAND_TYPES = new Set(['table', 'explorer']);
 
 function TrendPreview({ series, type }) {
   return <MetricChart series={series} type={type} />;
@@ -61,17 +64,18 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
   const [menuAnchor, setMenuAnchor] = useState(null);
   const widget = withDefaults(storedWidget);
   const Icon = resolveIcon(widget.icon);
-  const { value, series, error, loading, updatedAt } = useWidgetValue(widget.type !== 'table' ? widget : null, queryOptions);
+  const { value, series, error, loading, updatedAt } = useWidgetValue(ON_DEMAND_TYPES.has(widget.type) ? null : widget, queryOptions);
   const accent = thresholdColor(widget, value) || widget.color || 'primary.main';
   const gaugeValue = gaugePercent(widget, value);
+  const isExplorer = widget.type === 'explorer';
 
   return (
     <Paper
       elevation={0}
       data-testid={`builder-widget-${widget.uuid}`}
       sx={{
-        gridColumn: { xs: 'span 1', md: WIDE_TYPES.has(widget.type) ? 'span 2' : 'span 1' },
-        minHeight: WIDE_TYPES.has(widget.type) ? 240 : 200,
+        gridColumn: { xs: 'span 1', md: isExplorer ? '1 / -1' : WIDE_TYPES.has(widget.type) ? 'span 2' : 'span 1' },
+        minHeight: WIDE_TYPES.has(widget.type) || isExplorer ? 240 : 200,
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         border: '1px solid', borderColor: 'divider', borderRadius: 2.5,
         bgcolor: 'background.paper',
@@ -135,6 +139,12 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
         )}
         {CHART_TYPES.has(widget.type) && (error ? <Typography role="alert">Could not load data. Try refreshing.</Typography> : loading ? <LinearProgress aria-label="Loading chart" /> : <TrendPreview series={series} type={widget.type} />)}
         {widget.type === 'table' && <TablePreview rows={snapshot?.recent_calls} fields={widget.fields} />}
+        {isExplorer && (
+          <InfluxMetricExplorer
+            defaultMeasurement={widget.measurement} defaultField={widget.field}
+            defaultAggregation={widget.aggregation} defaultMinutes={widget.minutes}
+          />
+        )}
         {updatedAt && <Typography variant="caption" color="text.secondary">Updated {new Date(updatedAt).toLocaleTimeString()}</Typography>}
       </Box>
     </Paper>

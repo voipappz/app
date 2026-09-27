@@ -131,6 +131,10 @@ import { ConfirmDialog } from '../ui';
 
 const ITEM_HEIGHT = 68; // application rows: name + type, status/date/id, meta chips
 
+// The API's own dependencies as /health?verbose reports them. `process` is
+// the API itself, which the pill as a whole already stands for.
+const HEALTH_SERVICE_LABELS = { database: 'DB', redis: 'Redis', nats: 'NATS', disk: 'Disk' };
+
 // A selected-environment chip that can be dragged to reorder (drag handle =
 // the grip icon; the × still removes). Order persists into the selection.
 function SortableEnvChip({ env, onDelete, canDelete }) {
@@ -164,7 +168,7 @@ function SortableEnvChip({ env, onDelete, canDelete }) {
 }
 
 // --- TopBar Component ---
-const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, onToggleSidebar, onToggleExpand }) => {
+const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, onToggleSidebar, onToggleExpand }) => {
   const navigate = useNavigate();
 
   const { isAuthenticated, user, logout, accountCustomer } = useAuth();
@@ -857,7 +861,7 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, onToggleSidebar, on
           aria-expanded={isMobile ? undefined : sidebarExpanded}
           sx={{ display: 'inline-flex' }}
         >
-          <MenuIcon sx={{ fontSize: 22 }} />
+          <MenuIcon sx={{ fontSize: 22, transition: 'transform 220ms ease', transform: menuOpen ? 'rotate(90deg)' : 'rotate(0deg)' }} />
         </IconButton>
         {/* Selected applications and the customer/environment selector. */}
         {userSession ? (
@@ -965,13 +969,13 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, onToggleSidebar, on
           </>
           )}
 
-          {/* App Health — the API's own dependencies (database / redis / nats)
-              from /health?verbose, always visible at the top. One dot per
-              dependency; click opens the full Health dialog. An account's. */}
+          {/* App Health — the API's own services from /health?verbose, always
+              visible at the top: one dot per service. Click opens the
+              Monitoring screen in the tool dialog. An account's. */}
           {!userSession && (
           <Button
             aria-label="Health"
-            onClick={() => navigate('/monitoring')}
+            onClick={() => setActiveTool('/monitoring')}
             sx={{
               display: 'flex', alignItems: 'center', gap: 0.75, px: 1, py: 0.5,
               minWidth: 0, textTransform: 'none',
@@ -983,20 +987,14 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, onToggleSidebar, on
             {healthStatus.loading && !healthStatus.checks ? (
               <CircularProgress size={12} sx={{ color: 'var(--theme-text-secondary)' }} />
             ) : healthStatus.checks ? (
-              [
-                { key: 'database', label: 'DB' },
-                { key: 'redis', label: 'Redis' },
-                { key: 'nats', label: 'NATS' },
-              ].map(({ key, label }) => {
-                const check = healthStatus.checks[key];
+              Object.entries(healthStatus.checks).filter(([key]) => key !== 'process').map(([key, check]) => {
+                const label = HEALTH_SERVICE_LABELS[key] || key;
                 const ok = check?.ok === true;
-                const tip = check
-                  ? `${label}: ${ok ? `healthy (${check.ms}ms)` : `DOWN — ${check.error || 'check failed'}`}`
-                  : `${label}: unknown`;
+                const tip = `${label}: ${ok ? `healthy${check.ms != null ? ` (${check.ms}ms)` : ''}` : `DOWN — ${check?.error || 'check failed'}`}`;
                 return (
                   <Tooltip key={key} title={tip}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                      <CircleIcon sx={{ fontSize: 9, color: check ? (ok ? '#4caf50' : '#f44336') : '#9e9e9e' }} />
+                      <CircleIcon sx={{ fontSize: 9, color: ok ? '#4caf50' : '#f44336' }} />
                       <Typography sx={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--theme-text-secondary)', lineHeight: 1 }}>
                         {label}
                       </Typography>
@@ -1005,8 +1003,17 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, onToggleSidebar, on
                 );
               })
             ) : (
-              <Tooltip title={healthStatus.isHealthy ? 'API healthy' : 'API unhealthy — click for details'}>
-                <CircleIcon sx={{ fontSize: 12, color: healthStatus.isHealthy ? '#4caf50' : '#f44336' }} />
+              // An API that answers /health without a `checks` payload: only
+              // the API as a whole can be shown.
+              <Tooltip title={healthStatus.isHealthy
+                ? 'API healthy — this API reports no per-service detail'
+                : `API unhealthy (HTTP ${healthStatus.status || 'unreachable'}) — click for details`}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                  <CircleIcon sx={{ fontSize: 9, color: healthStatus.isHealthy ? '#4caf50' : '#f44336' }} />
+                  <Typography sx={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--theme-text-secondary)', lineHeight: 1 }}>
+                    API
+                  </Typography>
+                </Box>
               </Tooltip>
             )}
           </Button>
