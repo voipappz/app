@@ -25,6 +25,7 @@ import { monitoringApi } from '../../services/api/monitoringApi';
 import { MetricCard, ChartPanel, WidgetGrid, Slot } from '../Monitoring/widgets';
 import LiveCallsDashboard from './LiveCallsDashboard.jsx';
 import CallsBreakdown, { sumByKey } from './CallsBreakdown.jsx';
+import WidgetBoard from '../DashboardBuilder/WidgetBoard';
 
 // Same cadence as Monitoring, so a console with both open refreshes together.
 const REFRESH_MS = 30000;
@@ -51,7 +52,7 @@ const groupLabel = (key) => CDR_GROUPS.find((group) => group.key === key)?.label
 
 export default function AdminDashboard() {
   const { selectedCustomer, selectedEnvironments } = useCustomerEnvironment();
-  const { isRoot } = useAuth();
+  const { isRoot, accountUuid } = useAuth();
   const { can } = usePermissions();
   const environment = selectedEnvironments?.[0] || null;
   // CDR monitoring follows the selected customer across every one of its
@@ -221,8 +222,10 @@ export default function AdminDashboard() {
             </Paper>
           </Slot>
         </WidgetGrid>
-        {/* The widget board (and its metric explorer) lives on /live, scoped
-            to the environment that screen watches. */}
+
+        {/* Account-wide here; /live carries its own board, scoped to the
+            environment that screen watches. */}
+        {accountUuid && <WidgetBoard key={accountUuid} storageScope={`admin-metrics:${accountUuid}`} />}
       </Box>
     </LiveCallsDashboard>
   );
