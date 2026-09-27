@@ -64,6 +64,15 @@ globalThis.RTCPeerConnection = class MockRTCPeerConnection {
   removeEventListener() {}
 };
 
+// jsdom has no ResizeObserver; react-grid-layout's useContainerWidth wants one.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class MockResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 // Mock WebSocket
 globalThis.WebSocket = class MockWebSocket {
   constructor(url) {

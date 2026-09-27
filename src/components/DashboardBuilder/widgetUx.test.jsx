@@ -46,6 +46,23 @@ describe('dashboard widget UX', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('call-1');
     expect(screen.getByRole('dialog')).toHaveTextContent('ANSWER');
   });
+  // Placement is the grid's: a saved {x, y, col, row} puts the card where it
+  // was left (4 columns across the hook's 1280px initial width, 16px gaps).
+  it('places widgets on the grid where their saved layout says', async () => {
+    localStorage.setItem('dashboard-definitions:test-board', JSON.stringify({ dashboards: [{ uuid: 'default', name: 'Default' }], widgets: { default: [
+      { ...widget, uuid: 'placed', title: 'Placed counter', position: 0, layout: { x: 2, y: 0, col: 2, row: 2 } },
+      { ...widget, uuid: 'flowed', title: 'Flowed counter', position: 1 },
+    ] } }));
+    render(<WidgetBoard storageScope="test-board" />);
+    const placed = (await screen.findByText('Placed counter')).closest('.react-grid-item');
+    expect(placed.style.transform).toBe('translate(648px, 0px)');
+    expect(screen.getByTestId('widget-grid').querySelectorAll('.react-grid-item')).toHaveLength(2);
+    await waitFor(() => {
+      const store = JSON.parse(localStorage.getItem('dashboard-definitions:test-board'));
+      expect(store.widgets.default.find((entry) => entry.uuid === 'flowed').layout).toEqual(expect.objectContaining({ x: 0, col: 1, row: 2 }));
+    });
+  });
+
   // The explorer is a board widget like any other: saved with its query,
   // offered by Add widget, and it only queries when asked to.
   it('offers a metric explorer widget and runs its saved query on demand', async () => {

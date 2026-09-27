@@ -17,7 +17,6 @@ import InfluxMetricExplorer from '../Monitoring/InfluxMetricExplorer/InfluxMetri
 
 const STAT_TYPES = new Set(['counter', 'gauge', 'stat']);
 const CHART_TYPES = new Set(['trend', 'line', 'bar', 'pie']);
-const WIDE_TYPES = new Set([...CHART_TYPES, 'table']);
 // Runs its own query on demand; the board must not poll for it.
 const ON_DEMAND_TYPES = new Set(['table', 'explorer']);
 
@@ -74,8 +73,8 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
       elevation={0}
       data-testid={`builder-widget-${widget.uuid}`}
       sx={{
-        gridColumn: { xs: 'span 1', md: isExplorer ? '1 / -1' : WIDE_TYPES.has(widget.type) ? 'span 2' : 'span 1' },
-        minHeight: WIDE_TYPES.has(widget.type) || isExplorer ? 240 : 200,
+        // Size and place come from the grid item around it (WidgetBoard).
+        height: '100%',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         border: '1px solid', borderColor: 'divider', borderRadius: 2.5,
         bgcolor: 'background.paper',
@@ -84,7 +83,7 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
         '&:hover': { borderColor: 'text.disabled', boxShadow: '0 12px 30px rgba(15, 23, 42, 0.09)' }
       }}
     >
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ px: 1.75, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
+      <Stack direction="row" spacing={1} alignItems="center" className="widget-drag-handle" sx={{ px: 1.75, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover', cursor: 'grab' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 750 }} noWrap>{widget.title}</Typography>
           <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{widget.type}</Typography>
@@ -123,7 +122,7 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
         </MenuItem>
       </Menu>
 
-      <Box sx={{ flex: 1, p: 2, minHeight: 0 }}>
+      <Box sx={{ flex: 1, p: 2, minHeight: 0, overflow: 'auto' }}>
         {STAT_TYPES.has(widget.type) && (
           <Stack sx={{ height: '100%' }} justifyContent="center" alignItems="center" spacing={1}>
             <Box sx={{ width: 48, height: 48, borderRadius: 2.5, display: 'grid', placeItems: 'center', bgcolor: 'action.hover', color: accent }}><Icon /></Box>
