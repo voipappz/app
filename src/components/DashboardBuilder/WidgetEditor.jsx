@@ -4,6 +4,7 @@ import {
   Divider, FormControlLabel, MenuItem, Slider, Stack, Tab, Tabs, TextField, Typography
 } from '@mui/material';
 import FieldSelect from './FieldSelect';
+import WidgetPreview from './WidgetPreview';
 import { ICON_NAMES } from './widgetPresentation';
 import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, WIDGET_TYPES, withDefaults } from './widgetTemplates';
 
@@ -25,12 +26,15 @@ const WINDOWS = [
  */
 export default function WidgetEditor({ open, widget, initialDraft, saving, onClose, onSave }) {
   const [tab, setTab] = useState(0);
+  const [preview, setPreview] = useState(null);
+  const [previewRun, setPreviewRun] = useState(0);
   const [draft, setDraft] = useState(() => withDefaults(initialDraft || widget || {}));
 
   useEffect(() => {
     if (open) {
       setDraft(withDefaults(initialDraft || widget || {}));
       setTab(0);
+      setPreview(null);
     }
   }, [initialDraft, open, widget]);
 
@@ -42,7 +46,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
   const isTable = draft.type === 'table';
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ 'data-testid': 'widget-editor', sx: { borderRadius: 3 } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ 'data-testid': 'widget-editor', sx: { borderRadius: 3 } }}>
       <DialogTitle sx={{ fontWeight: 700 }}>
         {widget?.uuid ? 'Edit widget' : 'Add widget'}
       </DialogTitle>
@@ -158,11 +162,18 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
             />
           </Stack>
         )}
+        {!isTable && <Box sx={{ mt: 2 }}>
+          <Button disabled={!draft.measurement || !draft.field} onClick={() => { setPreview({ ...draft }); setPreviewRun((run) => run + 1); }}>Run preview</Button>
+          {preview && <>
+            {JSON.stringify(preview) !== JSON.stringify(draft) && <Typography color="text.secondary">Settings changed. Run preview again to update the results.</Typography>}
+            <WidgetPreview key={previewRun} widget={preview} />
+          </>}
+        </Box>}
       </DialogContent>
 
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" disabled={saving || !draft.title.trim()} onClick={() => onSave(draft)}>
+        <Button variant="contained" disabled={saving || !draft.title.trim() || (!isTable && (!draft.measurement || !draft.field))} onClick={() => onSave(draft)}>
           Save
         </Button>
       </DialogActions>

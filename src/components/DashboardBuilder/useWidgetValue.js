@@ -1,55 +1,39 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { monitoringApi } from '../../services/api/monitoringApi';
 
-/**
- * Live value for one Influx-backed widget — the same
- * monitoringApi.runInfluxQuery({measurement, field, aggregation, minutes})
- * call InfluxMetricExplorer makes, polled on an interval instead of run
- * on-demand. Table widgets don't use this — they read recent_calls off
- * useDashboardSnapshot instead (see Dashboard.jsx).
- */
-export function useWidgetValue(widget, { refreshInterval = 30_000 } = {}) {
-  const [value, setValue] = useState(null);
-  const [series, setSeries] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const aliveRef = useRef(true);
-
+// A request belongs to one effect, so old responses cannot replace a new metric.
+export function useWidgetValue(widget, { refreshInterval = 30_000, refreshKey = 0, minutes: windowMinutes } = {}) {
   const { measurement, field, aggregation, minutes } = widget || {};
-
-  const load = useCallback(async () => {
-    if (!measurement || !field) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const result = await monitoringApi.runInfluxQuery({
-        measurement, field, aggregation: aggregation || 'mean', minutes: minutes || 60
-      });
-      if (!aliveRef.current) return;
-      const rows = Array.isArray(result?.rows) ? result.rows : [];
-      setSeries(rows);
-      // Latest bucket's value is the widget's headline number (counters/gauges/stats);
-      // trend/line/bar/pie widgets use the full `series` instead.
-      const last = rows[rows.length - 1];
-      setValue(last ? Number(last.value) || 0 : 0);
-      setError(result?.unavailable ? 'unavailable' : null);
-    } catch (err) {
-      if (aliveRef.current) setError(err?.message || 'Query failed');
-    } finally {
-      if (aliveRef.current) setLoading(false);
-    }
-  }, [measurement, field, aggregation, minutes]);
-
+  const [state, setState] = useState({ value: null, series: [], loading: true, error: null, updatedAt: null });
   useEffect(() => {
-    aliveRef.current = true;
-    setLoading(true);
+    let active = true;
+    let pending = false;
+    setState({ value: null, series: [], loading: Boolean(measurement && field), error: null, updatedAt: null });
+    const load = async () => {
+      if (!measurement || !field || pending) return;
+      pending = true;
+      try {
+        const result = await monitoringApi.runInfluxQuery({ measurement, field, aggregation: aggregation || 'mean', minutes: windowMinutes || minutes || 60 });
+        if (!active) return;
+        const series = Array.isArray(result?.rows) ? result.rows : [];
+        const last = series[series.length - 1]?.value;
+        const numbers = series.map((row) => row.value).filter((value) => value !== null && value !== undefined && value !== '').map(Number).filter(Number.isFinite);
+        const value = numbers.length && ['count', 'sum'].includes(aggregation)
+          ? numbers.reduce((total, number) => total + number, 0)
+          : numbers.length && aggregation === 'max' ? Math.max(...numbers)
+          : numbers.length && aggregation === 'min' ? Math.min(...numbers)
+          : last === null || last === undefined || last === '' ? null : Number(last);
+        setState({ series, value: Number.isFinite(value) ? value : null, loading: false,
+          error: result?.unavailable ? 'This measurement is unavailable.' : null, updatedAt: Date.now(), influxql: result?.influxql });
+      } catch (err) {
+        if (active) setState((previous) => ({ ...previous, loading: false, error: err?.message || 'Query failed' }));
+      } finally { pending = false; }
+    };
     load();
     const timer = refreshInterval > 0 ? setInterval(load, refreshInterval) : null;
-    return () => { aliveRef.current = false; if (timer) clearInterval(timer); };
-  }, [load, refreshInterval]);
-
-  return { value, series, loading, error };
+    return () => { active = false; if (timer) clearInterval(timer); };
+  }, [measurement, field, aggregation, minutes, windowMinutes, refreshInterval, refreshKey]);
+  return state;
 }
 
 export default useWidgetValue;

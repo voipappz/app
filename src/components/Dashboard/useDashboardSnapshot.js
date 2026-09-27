@@ -83,6 +83,7 @@ export function mapRecentCall(row, index) {
 // as a tag), and carries no uuid — so key off the call id it does have.
 export function mapCdrCall(row, index) {
   return {
+    raw: row,
     id: row.call_uuid || row.sip_call_id || `${row.time}-${index}`,
     direction: row.direction || '',
     from_number: row.caller || null,
