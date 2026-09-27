@@ -203,6 +203,13 @@
   margin-bottom: 20px;
 }
 
+/* MUI's FormControl sets margin: 0 in a style injected after this sheet, with
+   the same specificity, so the rule above alone lost: the fields touched and
+   the password label sat on the email border. Two classes win. */
+.login-form .form-group {
+  margin-bottom: 20px;
+}
+
 .password-container {
   margin-bottom: 8px;
 }
