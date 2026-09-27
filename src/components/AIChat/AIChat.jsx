@@ -412,6 +412,7 @@ const AIChat = () => {
     deleteSession,
     isLoadingAgents,
     llmMissing,
+    isRestoringSession,
     isEndpointActive,
     canManageProviders,
     sendMessage,
@@ -524,7 +525,12 @@ const AIChat = () => {
 
         {/* Messages Area */}
         <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
-          {messages.length === 0 ? (
+          {isRestoringSession && messages.length === 0 ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 1.5 }}>
+              <CircularProgress size={20} sx={{ color: 'var(--accent-primary, #65758E)' }} />
+              <Typography sx={{ color: 'var(--theme-text-tertiary)', fontSize: '0.85rem' }}>Loading your last conversation…</Typography>
+            </Box>
+          ) : messages.length === 0 ? (
             <Box sx={{
               display: 'flex',
               flexDirection: 'column',

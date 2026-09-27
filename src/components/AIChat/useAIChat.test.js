@@ -188,6 +188,31 @@ describe('useAIChat session endpoints', () => {
   });
 });
 
+describe('useAIChat chat history', () => {
+  it('reopens the last conversation from the API', async () => {
+    localStorage.setItem('ai_chat_session_id', 'sess-old');
+    fetchMock.mockImplementation(async (url) => (String(url).endsWith('/sessions/sess-old')
+      ? jsonResponse({ messages: [{ message: { content: 'how many calls?' }, response: { content: '42' } }] })
+      : jsonResponse([])));
+    const { result } = renderHook(() => useAIChat());
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(2));
+    expect(result.current.messages[1].content).toBe('42');
+    expect(result.current.sessionId).toBe('sess-old');
+    expect(result.current.isRestoringSession).toBe(false);
+  });
+
+  it('starts fresh when the stored conversation is gone', async () => {
+    localStorage.setItem('ai_chat_session_id', 'sess-gone');
+    fetchMock.mockImplementation(async () => jsonResponse({ messages: [] }));
+    const { result } = renderHook(() => useAIChat());
+
+    await waitFor(() => expect(result.current.isRestoringSession).toBe(false));
+    expect(result.current.sessionId).toBeNull();
+    expect(localStorage.getItem('ai_chat_session_id')).toBeNull();
+  });
+});
+
 describe('useAIChat has one assistant, no agent to pick', () => {
   it('selects the assistant for an account even with no LLM provider, and says one is missing', async () => {
     providersApi.getProviders.mockResolvedValueOnce([]);

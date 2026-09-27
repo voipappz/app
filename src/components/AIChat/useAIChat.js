@@ -136,6 +136,8 @@ export const useAIChat = () => {
   });
   const [sessions, setSessions] = useState([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  // Reopening the chat brings back the conversation it was showing.
+  const [isRestoringSession, setIsRestoringSession] = useState(() => Boolean(localStorage.getItem('ai_chat_session_id')));
 
   // Agent management
   const [agents, setAgents] = useState([]);
@@ -226,6 +228,7 @@ export const useAIChat = () => {
   const loadSession = useCallback(async (sessionIdToLoad) => {
     if (!access || !sessionIdToLoad) return;
 
+    setIsRestoringSession(true);
     try {
       const response = await fetch(`${config.apiBaseUrl}/api/vmls/sessions/${sessionIdToLoad}`, {
         method: 'GET',
@@ -263,12 +266,20 @@ export const useAIChat = () => {
           return msgs;
         });
 
+        if (formattedMessages.length === 0) {
+          // Deleted, or never saved: start fresh instead of continuing a ghost.
+          setSessionId(null);
+          localStorage.removeItem('ai_chat_session_id');
+          return;
+        }
         setMessages(formattedMessages);
         setSessionId(sessionIdToLoad);
         localStorage.setItem('ai_chat_session_id', sessionIdToLoad);
       }
     } catch (err) {
       console.error('Failed to load session:', err);
+    } finally {
+      setIsRestoringSession(false);
     }
   }, [access]);
 
@@ -302,6 +313,16 @@ export const useAIChat = () => {
   useEffect(() => {
     fetchAgents();
   }, [fetchAgents]);
+
+  // The API keeps every conversation; reopen the last one where it was left.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || !access) return;
+    restoredRef.current = true;
+    const stored = localStorage.getItem('ai_chat_session_id');
+    if (stored) loadSession(stored);
+    else setIsRestoringSession(false);
+  }, [access, loadSession]);
 
   // Fetch sessions when agent changes
   useEffect(() => {
@@ -617,6 +638,7 @@ export const useAIChat = () => {
     agents,
     selectedAgent,
     llmMissing,
+    isRestoringSession,
     isLoadingAgents,
     handleAgentSelect,
     isEndpointActive,
