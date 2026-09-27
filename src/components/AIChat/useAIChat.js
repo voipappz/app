@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { config } from '../../config';
 import { providersApi } from '../../services/api/providersApi';
-import { getMockAgents, getMockSessions, generateMockStreamResponse } from './aiMockService';
+import { getMockSessions, generateMockStreamResponse } from './aiMockService';
 
 /**
  * Backend endpoints (lib/endpoints/vmls.rb on the API):
@@ -113,6 +113,9 @@ function parseBuffer(buffer, onChunk) {
 /**
  * Custom hook for AI Chat functionality with agents and sessions
  */
+const ASSISTANT = { id: 'assistant', agent_id: 'assistant', name: 'VoipAppz assistant' };
+export const NO_LLM_MESSAGE = 'No LLM provider is configured for this customer. The assistant needs one (an Anthropic or OpenAI key under Providers, type LLM) to understand questions.';
+
 export const useAIChat = () => {
   // Either door: the admin console's token or the portal user's. A browser
   // holds only one at a time (sessionIsolation.js), and the API scopes the
@@ -136,9 +139,9 @@ export const useAIChat = () => {
 
   // Agent management
   const [agents, setAgents] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState(() => {
-    return localStorage.getItem('ai_chat_selected_agent') || null;
-  });
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  // The customer has no enabled LLM provider to run the assistant.
+  const [llmMissing, setLlmMissing] = useState(false);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
 
   // Tool calls and reasoning
@@ -154,58 +157,37 @@ export const useAIChat = () => {
   // Generate unique ID
   const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Fetch available LLM providers via /api/providers?search[type]=llm
+  // There is nothing to choose: /api/vmls/generate ignores provider_uuid and
+  // runs the customer's first enabled LLM provider. So every session talks to
+  // one fixed assistant. An account can still see whether the customer has an
+  // LLM provider at all, so the chat says so up front instead of failing with
+  // "No LLM provider configured" on the first message.
   const fetchAgents = useCallback(async () => {
     if (!access) return;
 
-    // A portal user has no provider list to pick from and needs none:
-    // /api/vmls/generate uses the customer's enabled LLM provider. Letting the
-    // 401 below land in the catch put the portal chat into mock mode, where it
-    // answered with canned text.
-    if (!canManageProviders) {
-      const assistant = { id: 'assistant', agent_id: 'assistant', name: 'VoipAppz assistant' };
-      setAgents([assistant]);
-      setIsEndpointActive(true);
-      setIsMockMode(false);
-      setSelectedAgent(assistant.id);
-      return;
-    }
+    setAgents([ASSISTANT]);
+    setSelectedAgent(ASSISTANT.id);
+    setIsMockMode(false);
+    setIsEndpointActive(true);
+    setLlmMissing(false);
+
+    // /api/providers is an account endpoint; a portal token gets 401 there.
+    if (!canManageProviders) return;
 
     setIsLoadingAgents(true);
     try {
       const data = await providersApi.getProviders({ 'search[type]': 'llm' });
-      const rawList = Array.isArray(data) ? data : (data?.data || []);
-      const agentList = rawList.map(p => ({
-        id: p.uuid,
-        agent_id: p.uuid,
-        name: p.name,
-        model: p.profile?.model,
-        service: p.profile?.service || 'openai'
-      }));
-      setAgents(agentList);
-      setIsEndpointActive(agentList.length > 0);
-      setIsMockMode(false);
-
-      // Auto-select first agent if none selected
-      if (!selectedAgent && agentList.length > 0) {
-        const firstAgent = agentList[0].id;
-        setSelectedAgent(firstAgent);
-        localStorage.setItem('ai_chat_selected_agent', firstAgent);
-      }
+      const list = Array.isArray(data) ? data : (data?.data || []);
+      const missing = !list.some((p) => p.enabled !== false);
+      setLlmMissing(missing);
+      setIsEndpointActive(!missing);
     } catch (err) {
-      console.error('Failed to fetch LLM providers, using mock mode:', err);
-      const mockAgents = getMockAgents();
-      setAgents(mockAgents);
-      setIsEndpointActive(true);
-      setIsMockMode(true);
-      if (!selectedAgent && mockAgents.length > 0) {
-        setSelectedAgent(mockAgents[0].id);
-        localStorage.setItem('ai_chat_selected_agent', mockAgents[0].id);
-      }
+      // Unknown: let the first message find out from the API itself.
+      console.error('Failed to fetch LLM providers:', err);
     } finally {
       setIsLoadingAgents(false);
     }
-  }, [access, canManageProviders, selectedAgent]);
+  }, [access, canManageProviders]);
 
   // Fetch chat sessions
   const fetchSessions = useCallback(async () => {
@@ -405,7 +387,12 @@ export const useAIChat = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
-        throw new Error(errorData.detail || `Request failed: ${response.status}`);
+        const message = errorData.detail || errorData.error || `Request failed: ${response.status}`;
+        if (/no llm provider/i.test(message)) {
+          setLlmMissing(true);
+          throw new Error(NO_LLM_MESSAGE);
+        }
+        throw new Error(message);
       }
 
       if (!response.body) {
@@ -566,7 +553,6 @@ export const useAIChat = () => {
           {
             message: content,
             session_id: sessionId,
-            provider_uuid: selectedAgent,
             // The assistant with the MCP tools (lib/mediators/mcp/chat.rb on
             // the API), not the VML Lua generator this endpoint defaults to.
             mode: 'mcp',
@@ -630,6 +616,7 @@ export const useAIChat = () => {
     // Agents
     agents,
     selectedAgent,
+    llmMissing,
     isLoadingAgents,
     handleAgentSelect,
     isEndpointActive,
