@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Button, Chip, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip } from 'recharts';
+import MetricChart from '../DashboardBuilder/MetricChart';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import PageHeader from '../common/PageHeader.jsx';
@@ -83,27 +83,11 @@ function DashboardStatTile({ widget }) {
 }
 
 function DashboardTrendCard({ widget }) {
-  const { series } = useWidgetValue(widget);
-  const data = (Array.isArray(series) ? series : []).map((row, index) => ({
-    x: row.time ? new Date(row.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : index,
-    value: Number(row.value) || 0
-  }));
+  const { series, loading, error } = useWidgetValue(widget);
   return (
     <Paper elevation={0} sx={{ p: { xs: 1.75, sm: 2.5 }, height: '100%', minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
       <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 700 }}>{widget.title}</Typography>
-      {data.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>No data yet.</Typography>
-      ) : (
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="x" tick={{ fontSize: 11 }} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-            <RTooltip />
-            <Bar dataKey="value" fill="#5c6bc0" radius={[2, 2, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      )}
+      {error ? <Typography role="alert">Could not load data.</Typography> : loading ? <Typography>Loading…</Typography> : <MetricChart type={widget.type} series={series} />}
     </Paper>
   );
 }
