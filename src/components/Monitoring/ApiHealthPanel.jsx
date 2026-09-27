@@ -8,7 +8,9 @@ import { metricsApi } from '../../services/api/metricsApi';
  * response). It fetches the authenticated /health/detailed endpoint only while
  * mounted (the top-bar mounts it when the operator opens the Health dialog).
  */
-const ApiHealthPanel = () => {
+// `focus`: a service to open on (its /health?verbose entry and its detailed
+// check); `summary`: the /health?verbose payload the page already polls.
+const ApiHealthPanel = ({ focus = null, summary = null }) => {
   const [response, setResponse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,6 +43,18 @@ const ApiHealthPanel = () => {
       </Box>
 
       {error && <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {focus && (
+        <Box sx={{ mb: 2 }} data-testid="health-focus">
+          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, textTransform: 'capitalize' }}>{focus.replace(/_/g, ' ')}</Typography>
+          <Box sx={{ p: 1.5, bgcolor: 'var(--theme-bg-secondary)', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.75rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {JSON.stringify({
+              summary: summary?.checks?.[focus] ?? (focus === 'api' ? summary : undefined) ?? null,
+              detailed: response?.checks?.[focus] ?? null,
+            }, null, 2)}
+          </Box>
+        </Box>
+      )}
 
       <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Box>

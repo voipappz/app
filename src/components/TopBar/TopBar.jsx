@@ -81,7 +81,10 @@ const TOOL_SCREENS = {
   '/nodes': lazy(() => import('../Monitoring/MonitoringNodes.jsx')),
   '/providers': lazy(() => import('../Providers/Providers.jsx')),
   '/templates': lazy(() => import('../Templates/Templates.jsx')),
+  '/settings': lazy(() => import('../Settings/Settings.jsx')),
 };
+// Top-right tools that are not ACL screens but still open in the tool dialog.
+const ACCOUNT_TOOLS = [{ text: 'Settings', path: '/settings' }];
 import ToolDialog from './ToolDialog.jsx';
 const Schema = lazy(() => import('../Appz/Schema.jsx'));
 import AccountCreateDialog from '../Account/AccountCreateDialog/AccountCreateDialog.jsx';
@@ -99,6 +102,8 @@ import TicketDetailView from '../Tickets/TicketDetailView/TicketDetailView';
 import { useTickets } from '../Tickets/Tickets';
 import { openZendeskWidget } from '../../services/zendeskWidget';
 import { useApiHealth } from '../../hooks/useApiHealth';
+import { useGatusHealth } from '../../hooks/useGatusHealth';
+import { HEALTH_COLORS, checkLevel, overallHealth } from './healthLevel';
 import GatusHealthPanel from '../Monitoring/GatusHealthPanel.jsx';
 import ApiHealthPanel from '../Monitoring/ApiHealthPanel.jsx';
 import LiveDrawer from '../Live/LiveDrawer.jsx';
@@ -266,6 +271,8 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
 
   // Health check for the single top-right health button.
   const healthStatus = useApiHealth();
+  const { summary: gatusSummary } = useGatusHealth();
+  const health = overallHealth(healthStatus, gatusSummary);
   const [healthDialogOpen, setHealthDialogOpen] = useState(false);
   // Node whose Gatus health the Health dialog is scoped to (set from the
   // nodes popover). null node = system-wide.
@@ -841,7 +848,8 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
 
   // Professional tools stay inline on desktop and in the overflow on phones.
   const ActiveToolScreen = TOOL_SCREENS[activeTool];
-  const activeToolItem = TOPBAR_NAV_ITEMS.find(item => item.path === activeTool && canAccess(item.aclKey));
+  const activeToolItem = TOPBAR_NAV_ITEMS.find(item => item.path === activeTool && canAccess(item.aclKey))
+    || (!userSession && ACCOUNT_TOOLS.find(item => item.path === activeTool));
   const overflowTools = [
     { key: 'wizard', label: 'Wizard', icon: <AutoFixHighIcon fontSize="small" />, onClick: () => window.dispatchEvent(new Event('openWizardModal')) },
     ...professionalTools,
@@ -910,10 +918,10 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
         )}
         <Box sx={{ width: 8 }} />
 
-        <Tooltip title="MCP — assistant, connect, tools (Ctrl+K)">
+        <Tooltip title="Assistant (Ctrl+K)">
           <Button
             size="small"
-            aria-label="MCP (Ctrl+K)"
+            aria-label="Assistant (Ctrl+K)"
             onClick={() => openResourceFinder()}
             startIcon={<SearchIcon sx={{ fontSize: 17 }} />}
             sx={{
@@ -959,7 +967,7 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
               <IconButton
                 size="small"
                 aria-label="Settings"
-                onClick={() => navigate('/settings')}
+                onClick={() => setActiveTool('/settings')}
                 sx={{ color: 'var(--theme-text-secondary)', '&:hover': { backgroundColor: 'var(--theme-hover)' } }}
               >
                 <SettingsIcon fontSize="small" />
@@ -984,17 +992,15 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
               '&:hover': { backgroundColor: 'var(--theme-hover)' },
             }}
           >
-            {healthStatus.loading && !healthStatus.checks ? (
-              <CircularProgress size={12} sx={{ color: 'var(--theme-text-secondary)' }} />
-            ) : healthStatus.checks ? (
+            {healthStatus.checks ? (
               Object.entries(healthStatus.checks).filter(([key]) => key !== 'process').map(([key, check]) => {
                 const label = HEALTH_SERVICE_LABELS[key] || key;
-                const ok = check?.ok === true;
-                const tip = `${label}: ${ok ? `healthy${check.ms != null ? ` (${check.ms}ms)` : ''}` : `DOWN — ${check?.error || 'check failed'}`}`;
+                const level = checkLevel(check);
+                const tip = `${label}: ${level === 'down' ? `DOWN — ${check?.error || 'check failed'}` : level === 'degraded' ? 'warning' : `healthy${check?.ms != null ? ` (${check.ms}ms)` : ''}`}`;
                 return (
                   <Tooltip key={key} title={tip}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                      <CircleIcon sx={{ fontSize: 9, color: ok ? '#4caf50' : '#f44336' }} />
+                      <CircleIcon sx={{ fontSize: 9, color: HEALTH_COLORS[level] }} />
                       <Typography sx={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--theme-text-secondary)', lineHeight: 1 }}>
                         {label}
                       </Typography>
@@ -1003,17 +1009,10 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
                 );
               })
             ) : (
-              // An API that answers /health without a `checks` payload: only
-              // the API as a whole can be shown.
-              <Tooltip title={healthStatus.isHealthy
-                ? 'API healthy — this API reports no per-service detail'
-                : `API unhealthy (HTTP ${healthStatus.status || 'unreachable'}) — click for details`}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                  <CircleIcon sx={{ fontSize: 9, color: healthStatus.isHealthy ? '#4caf50' : '#f44336' }} />
-                  <Typography sx={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--theme-text-secondary)', lineHeight: 1 }}>
-                    API
-                  </Typography>
-                </Box>
+              // No per-service detail from this API: one dot, coloured by the
+              // overall level (API + node probes).
+              <Tooltip title={`Status — ${health.reason}`}>
+                <CircleIcon data-testid="health-dot" data-level={health.level} sx={{ fontSize: 12, color: HEALTH_COLORS[health.level] }} />
               </Tooltip>
             )}
           </Button>
