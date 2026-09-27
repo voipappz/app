@@ -713,15 +713,13 @@ const Subscriptions = () => {
                           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
                             {canWrite && (
                               <Tooltip
-                                title={subscription.type === 'postpaid'
-                                  ? 'Postpaid — balance is period usage (invoiced), top-up applies to prepaid only'
-                                  : 'Add balance'}
+                                title="Add balance"
                               >
                                 <span>
                                   <IconButton
                                     size="small"
                                     onClick={() => { setBalanceSub(subscription); setBalanceOpen(true); }}
-                                    disabled={loading || subscription.type === 'postpaid'}
+                                    disabled={loading}
                                   >
                                     <AccountBalanceWalletIcon fontSize="small" />
                                   </IconButton>

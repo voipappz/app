@@ -223,8 +223,8 @@ export default function AdminDashboard() {
           </Slot>
         </WidgetGrid>
 
-        {/* Ad-hoc metric exploration is a board widget ('explorer' in
-            widgetTemplates), not a panel of its own between the two. */}
+        {/* Account-wide here; /live carries its own board, scoped to the
+            environment that screen watches. */}
         {accountUuid && <WidgetBoard key={accountUuid} storageScope={`admin-metrics:${accountUuid}`} />}
       </Box>
     </LiveCallsDashboard>

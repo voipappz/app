@@ -63,15 +63,19 @@ export const monitoringApi = {
    * Only exists on API builds carrying voipappz-api ddaa69d05; older
    * deployments 404, so callers must have a fallback.
    */
-  getInfluxRows: async ({ measurement, minutes = 1440, limit = 100 } = {}) => {
+  getInfluxRows: async ({ measurement, minutes = 1440, limit = 100, environmentUuid = '' } = {}) => {
     const qs = new URLSearchParams({ measurement, minutes: String(minutes), limit: String(limit) });
+    if (environmentUuid) qs.append('environment_uuid', environmentUuid);
     return apiService.get(`/api/monitoring/influxdb/rows?${qs.toString()}`, {}, 'fetching influx rows', false, true);
   },
 
-  runInfluxQuery: async ({ measurement, field, aggregation = 'mean', host = '', minutes = 60, bucket = '' } = {}) => {
+  // environmentUuid narrows inside the session's tenant scope (the server
+  // applies it after its own filter); a portal user's token ignores it.
+  runInfluxQuery: async ({ measurement, field, aggregation = 'mean', host = '', minutes = 60, bucket = '', environmentUuid = '' } = {}) => {
     const qs = new URLSearchParams({ measurement, field, aggregation, minutes: String(minutes) });
     if (host) qs.append('host', host);
     if (bucket) qs.append('bucket', bucket);
+    if (environmentUuid) qs.append('environment_uuid', environmentUuid);
     return apiService.get(`/api/monitoring/influxdb/query?${qs.toString()}`, {}, 'running metric query', false, true);
   },
 };

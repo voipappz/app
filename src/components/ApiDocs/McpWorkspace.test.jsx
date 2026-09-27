@@ -9,12 +9,17 @@ vi.mock('./McpConnect.jsx', () => ({
 vi.mock('./McpConsole.jsx', () => ({
   default: ({ active, endpointUrl }) => <div data-testid="mcp-console">{String(active)}:{endpointUrl}</div>,
 }));
+vi.mock('./McpAssistant.jsx', () => ({
+  default: ({ initialQuestion }) => <div data-testid="mcp-assistant">assistant:{initialQuestion}</div>,
+}));
 
 describe('McpWorkspace', () => {
-  it('shows connection instructions and the authenticated MCP browser together', () => {
-    render(<McpWorkspace />);
+  it('shows the assistant, connection instructions and the authenticated MCP browser together', () => {
+    render(<McpWorkspace initialQuestion="how many calls today" />);
 
     expect(screen.getByRole('heading', { name: 'MCP' })).toBeVisible();
+    expect(screen.getByTestId('mcp-assistant')).toHaveTextContent('assistant:how many calls today');
+    expect(screen.queryByText(/tasks\/mcp/)).toBeNull();
     expect(screen.getByText('JSON-RPC 2.0 over POST')).toBeVisible();
     expect(screen.getByText('Quick connect')).toBeVisible();
     expect(screen.getByText(/Authorization: Bearer/)).toBeVisible();

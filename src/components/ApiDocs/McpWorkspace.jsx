@@ -9,14 +9,15 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { config } from '../../config.js';
 import McpConnect from './McpConnect.jsx';
 import McpConsole from './McpConsole.jsx';
+import McpAssistant from './McpAssistant.jsx';
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 
 const safeAgentPrompt = (skillUrl, readinessUrl, openApiUrl) =>
   `Read the VoipAppz Agent Skill at ${skillUrl}, its readiness reference at ${readinessUrl}, and the live API contract at ${openApiUrl}. Do not guess billing or provisioning rules, and never ask me to paste credentials into this chat.`;
 
-/** Admin MCP workspace: connection recipes and the authenticated tool browser. */
-export default function McpWorkspace() {
+/** The MCP workspace: the assistant, connection recipes and the authenticated tool browser. */
+export default function McpWorkspace({ initialQuestion = '' }) {
   const [notice, setNotice] = useState('');
   const apiBaseUrl = config.apiBaseUrl.replace(/\/$/, '');
   const mcpUrl = new URL(`${apiBaseUrl}/api/mcp`, window.location.origin).toString();
@@ -66,6 +67,13 @@ export default function McpWorkspace() {
         </Box>
         <Chip size="small" variant="outlined" label="JSON-RPC 2.0 over POST" />
       </Stack>
+
+      <Paper
+        elevation={0}
+        sx={{ p: { xs: 1.5, sm: 2 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}
+      >
+        <McpAssistant initialQuestion={initialQuestion} />
+      </Paper>
 
       <Paper
         elevation={0}

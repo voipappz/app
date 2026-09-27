@@ -22,11 +22,10 @@ const AddBalanceDialog = ({ open, subscription, onClose, onSuccess }) => {
   }, [open]);
 
   const current = Number(subscription?.balance || 0);
-  // Top-up only makes sense for prepaid — postpaid balance is period usage,
-  // settled by invoice at period close, not by credit.
+  // Allowed for every type; on postpaid the balance is period usage, so say so.
   const isPostpaid = subscription?.type === 'postpaid';
   const parsed = parseInt(amount, 10);
-  const valid = !isPostpaid && amount !== '' && !isNaN(parsed) && parsed > 0;
+  const valid = amount !== '' && !isNaN(parsed) && parsed > 0;
   const newBalance = current + (valid ? parsed : 0);
 
   const handleSave = async () => {
@@ -61,8 +60,8 @@ const AddBalanceDialog = ({ open, subscription, onClose, onSuccess }) => {
 
         {isPostpaid && (
           <Alert severity="info" sx={{ mb: 2 }}>
-            This subscription is postpaid: its balance is the current-period usage and is
-            invoiced when the period closes. Top-up only applies to prepaid subscriptions.
+            This subscription is postpaid: its balance is the current-period usage,
+            invoiced when the period closes. Credit added here adjusts that balance.
           </Alert>
         )}
 
@@ -78,7 +77,6 @@ const AddBalanceDialog = ({ open, subscription, onClose, onSuccess }) => {
           helperText={valid ? `New balance: ${newBalance}` : 'Positive integer units to add as credit'}
           fullWidth
           autoFocus
-          disabled={isPostpaid}
         />
       </DialogContent>
       <DialogActions>

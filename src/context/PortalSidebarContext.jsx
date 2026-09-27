@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
+import { useUserAuth } from './UserAuthContext';
 
 /**
  * ONE sidebar, whatever is in it.
@@ -15,9 +16,13 @@ const Context = createContext({ view: null, params: null, open: () => {}, toggle
 
 export function PortalSidebarProvider({ children }) {
   const [state, setState] = useState({ view: null, params: null });
-  const { isAuthenticated } = useAuth();
+  // Either session may hold the phone: an account signs a device in by hand,
+  // a portal user's own extension registers itself (SoftphoneContext).
+  const admin = useAuth();
+  const portal = useUserAuth();
+  const isAuthenticated = admin.isAuthenticated || portal.isAuthenticated;
 
-  // Call details are shared; the softphone is an account-console tool.
+  // Call details are shared; the softphone needs someone signed in.
   const open = useCallback((view, params = null) => {
     if (view === 'phone' && !isAuthenticated) return;
     setState({ view, params });

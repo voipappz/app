@@ -12,6 +12,13 @@ vi.mock('../../services/api/monitoringApi', () => ({ monitoringApi: {
   runInfluxQuery: vi.fn(), getInfluxSchema: vi.fn(), getInfluxRows: vi.fn(),
 } }));
 
+// jsdom measures every element at 0px, which is the phone's single column;
+// pin the desktop width the placement assertions are written for.
+vi.mock('react-grid-layout', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useContainerWidth: () => ({ width: 1280, containerRef: { current: null }, mounted: true }),
+}));
+
 // Geometry belongs to Recharts. Assert our selected chart and data contract.
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }) => <div>{children}</div>,
@@ -46,6 +53,23 @@ describe('dashboard widget UX', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('call-1');
     expect(screen.getByRole('dialog')).toHaveTextContent('ANSWER');
   });
+  // Placement is the grid's: a saved {x, y, col, row} puts the card where it
+  // was left (4 columns across the hook's 1280px initial width, 16px gaps).
+  it('places widgets on the grid where their saved layout says', async () => {
+    localStorage.setItem('dashboard-definitions:test-board', JSON.stringify({ dashboards: [{ uuid: 'default', name: 'Default' }], widgets: { default: [
+      { ...widget, uuid: 'placed', title: 'Placed counter', position: 0, layout: { x: 2, y: 0, col: 2, row: 2 } },
+      { ...widget, uuid: 'flowed', title: 'Flowed counter', position: 1 },
+    ] } }));
+    render(<WidgetBoard storageScope="test-board" />);
+    const placed = (await screen.findByText('Placed counter')).closest('.react-grid-item');
+    expect(placed.style.transform).toBe('translate(648px,0px)');
+    expect(screen.getByTestId('widget-grid').querySelectorAll('.react-grid-item')).toHaveLength(2);
+    await waitFor(() => {
+      const store = JSON.parse(localStorage.getItem('dashboard-definitions:test-board'));
+      expect(store.widgets.default.find((entry) => entry.uuid === 'flowed').layout).toEqual(expect.objectContaining({ x: 0, col: 1, row: 2 }));
+    });
+  });
+
   // The explorer is a board widget like any other: saved with its query,
   // offered by Add widget, and it only queries when asked to.
   it('offers a metric explorer widget and runs its saved query on demand', async () => {
@@ -102,6 +126,12 @@ describe('dashboard widget UX', () => {
     const { result } = renderHook(() => useWidgetValue(widget, { refreshInterval: 0 }));
     await waitFor(() => expect(result.current.error).toBe('Database unavailable'));
     expect(result.current.value).toBeNull();
+  });
+
+  it('scopes the query to the environment the board is given', async () => {
+    const { result } = renderHook(() => useWidgetValue(widget, { refreshInterval: 0, environmentUuid: 'env-906' }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(monitoringApi.runInfluxQuery).toHaveBeenCalledWith(expect.objectContaining({ environmentUuid: 'env-906' }));
   });
 
   it('uses the shared time range and refreshes on demand', async () => {

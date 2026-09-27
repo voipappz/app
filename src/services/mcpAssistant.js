@@ -76,6 +76,33 @@ export const formatAnswer = (intent, data) => {
 /** What the portal can answer, in the words a person would use. */
 export const ASSISTANT_CAN_ANSWER = 'today’s call count, abandoned or recent calls, devices, and logs';
 
+/** One click each: the questions the assistant is known to answer. */
+export const SUGGESTIONS = [
+  'How many calls did I have today?',
+  'Do I have abandoned calls?',
+  'Show my recent calls',
+  'Show errors in the logs',
+];
+
+// Tools whose raw result is worth showing under the sentence.
+const DETAILED_TOOLS = new Set(['calls.history', 'logs.search']);
+
+/**
+ * The session's usable tools: initialize, then tools/list without the
+ * destructive ones. Rejects when the server cannot be reached, which is the
+ * one thing a chat has to say up front.
+ */
+export async function listMcpTools(token) {
+  if (!token) throw new Error('Sign in again to use the MCP tools.');
+  await rpc(token, 'initialize', {
+    protocolVersion: '2025-03-26',
+    capabilities: {},
+    clientInfo: { name: 'VoipAppz console', version: '1' },
+  });
+  const response = await rpc(token, 'tools/list');
+  return (response?.tools || []).filter((tool) => !tool.annotations?.destructiveHint);
+}
+
 /**
  * Ask a question. Resolves to { text } — the answer as a sentence — and never
  * rejects: a question it cannot map, a tool that fails and a network error are
@@ -92,7 +119,8 @@ export async function askMcpAssistant(token, question) {
   try {
     const response = await rpc(token, 'tools/call', { name: intent.tool, arguments: intent.arguments || {} });
     if (response.isError) return { text: response.content?.[0]?.text || 'The tool could not complete the request.' };
-    return { text: formatAnswer(intent, response.structuredContent || {}) };
+    const data = response.structuredContent || {};
+    return { text: formatAnswer(intent, data), details: DETAILED_TOOLS.has(intent.tool) ? data : null };
   } catch (error) {
     return { text: error.message || 'The tool could not complete the request.' };
   }
