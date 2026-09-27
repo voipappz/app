@@ -218,7 +218,7 @@ export const useUserLogin = () => {
   // Take it out of the address bar first (it must not linger in history or be
   // shared), then trade it once for a session. The ref keeps StrictMode's
   // second effect run from spending the code twice.
-  const [qrSigningIn, setQrSigningIn] = useState(() => new URLSearchParams(window.location.search).has('login_token'));
+  const [qrSigningIn, setQrSigningIn] = useState(() => new URL(window.location.href).searchParams.has('login_token'));
   const qrTried = useRef(false);
   useEffect(() => {
     if (qrTried.current) return;

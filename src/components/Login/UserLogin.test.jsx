@@ -5,7 +5,7 @@ import theme from '../../theme/theme';
 import UserLogin from './UserLogin.jsx';
 
 vi.mock('./UserLogin', () => ({
-  useUserLogin: () => new Proxy({ email: '', password: '', touched: {}, loading: false, error: null, otpStep: false, showForgetForm: false }, {
+  useUserLogin: () => new Proxy({ email: '', password: '', touched: {}, loading: false, error: null, otpStep: false, showForgetForm: false, qrSigningIn: false }, {
     get: (target, key) => (key in target ? target[key] : vi.fn()),
   }),
 }));

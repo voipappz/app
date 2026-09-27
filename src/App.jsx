@@ -109,7 +109,7 @@ const Root = ({ loginMode = 'user' }) => {
   if (admin.initializing || user.initializing) return null;
   // A sign-in QR (/?login_token=) signs in as ITS user, whoever this browser
   // was signed in as: show the user sign-in, which redeems it.
-  if (new URLSearchParams(window.location.search).has('login_token')) return <Layout><SignIn mode="user" /></Layout>;
+  if (new URL(window.location.href).searchParams.has('login_token')) return <Layout><SignIn mode="user" /></Layout>;
   if (admin.isAuthenticated) return <Navigate to="/calls" replace />;
   if (user.isAuthenticated) {
     const first = getPermittedNavItems(user.acl, { strict: true })[0];

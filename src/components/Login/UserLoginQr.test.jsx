@@ -13,21 +13,27 @@ vi.mock('../../utils/loginDebug', () => ({ logLoginDebug: vi.fn() }));
 
 import { useUserLogin } from './UserLogin';
 
+// src/test/setup.js replaces window.location with a plain object, so the
+// address bar is simulated: replaceState writes back into it.
+const visit = (href) => { window.location = { href, origin: 'http://localhost:3000' }; };
+
 // Users → Sign-in QR links to /?login_token=<single-use JWT>.
 describe('sign-in by QR code', () => {
   beforeEach(() => {
-    window.history.replaceState(null, '', '/?login_token=qr.jwt.1');
+    visit('http://localhost:3000/?login_token=qr.jwt.1');
+    vi.spyOn(window.history, 'replaceState').mockImplementation((_s, _t, url) => visit(new URL(url, 'http://localhost:3000').href));
     post.mockResolvedValue({ data: { user: { uuid: 'u-1' }, token: 'session.jwt' } });
   });
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
-    window.history.replaceState(null, '', '/');
+    visit('http://localhost:3000');
   });
 
   it('trades the code once for a session and takes it out of the address bar', async () => {
     const { result, rerender } = renderHook(() => useUserLogin());
     expect(result.current.qrSigningIn).toBe(true);
-    expect(window.location.search).toBe('');
+    expect(window.location.href).toBe('http://localhost:3000/');
 
     await waitFor(() => expect(auth.login).toHaveBeenCalledWith(expect.objectContaining({ token: 'session.jwt' })));
     rerender();
@@ -46,7 +52,7 @@ describe('sign-in by QR code', () => {
   });
 
   it('does nothing without a code', () => {
-    window.history.replaceState(null, '', '/');
+    visit('http://localhost:3000/');
     const { result } = renderHook(() => useUserLogin());
     expect(result.current.qrSigningIn).toBe(false);
     expect(post).not.toHaveBeenCalled();
