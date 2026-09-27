@@ -53,6 +53,7 @@ import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext
 import { formatDate } from '../../utils/dateUtils';
 import { getEnabledChipProps, getTypeChipColor } from '../../utils/chipStyles';
 import useEnvironmentEdit from '../../hooks/useEnvironmentEdit';
+import EntityLink from '../common/EntityLink/EntityLink.jsx';
 import EventsCountBadge from '../common/EventsCountBadge/EventsCountBadge.jsx';
 import EnvironmentDialog from '../Environments/EnvironmentDialog/EnvironmentDialog';
 import './DIDs.css';
@@ -526,28 +527,14 @@ const DIDs = ({ portalMode = false }) => {
                         </TableCell>
                         {!portalMode && (
                         <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography variant="body2">
-                              {orEmpty(did.environment?.name || did.environment_name)}
-                            </Typography>
-                            {(did.environment?.uuid || did.environment_uuid) && canWrite && !portalMode && (
-                              <Tooltip title="Edit Application">
-                                <IconButton
-                                  size="small"
-                                  sx={{ p: 0.25 }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEnvEdit({
-                                      uuid: did.environment?.uuid || did.environment_uuid,
-                                      name: did.environment?.name || did.environment_name
-                                    });
-                                  }}
-                                >
-                                  <EditIcon sx={{ fontSize: 14 }} />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </Box>
+                          <EntityLink
+                            name={did.environment?.name || did.environment_name}
+                            ariaLabel={`Edit application ${did.environment?.name || did.environment_name || ''}`}
+                            onEdit={(did.environment?.uuid || did.environment_uuid) && canWrite ? () => handleEnvEdit({
+                              uuid: did.environment?.uuid || did.environment_uuid,
+                              name: did.environment?.name || did.environment_name,
+                            }) : undefined}
+                          />
                         </TableCell>
                         )}
                         <TableCell>

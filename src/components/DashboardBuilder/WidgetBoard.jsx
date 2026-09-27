@@ -8,8 +8,9 @@ import { monitoringApi } from '../../services/api/monitoringApi';
 import { mapCdrCall } from '../Dashboard/useDashboardSnapshot';
 
 // Reuses the dashboard's existing definitions, editor and card actions.
-// Metric endpoints scope to the authenticated account, not the console picker.
-export default function WidgetBoard({ storageScope = 'admin-metrics' }) {
+// Metric endpoints scope to the authenticated account; `environmentUuid`
+// narrows every widget's query to one environment inside that scope.
+export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '' }) {
   const [widgets, setWidgets] = useState([]);
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -35,14 +36,14 @@ export default function WidgetBoard({ storageScope = 'admin-metrics' }) {
     let active = true;
     const load = async () => {
       try {
-        const result = await monitoringApi.getInfluxRows({ measurement: 'cdr', minutes: minutes || 1440, limit: 100 });
+        const result = await monitoringApi.getInfluxRows({ measurement: 'cdr', minutes: minutes || 1440, limit: 100, environmentUuid });
         if (active) { setCalls((result?.rows || []).map(mapCdrCall)); setCallsError(null); }
       } catch { if (active) { setCalls([]); setCallsError('Could not load call records. Try refreshing.'); } }
     };
     load();
     const timer = auto ? setInterval(load, 30000) : null;
     return () => { active = false; if (timer) clearInterval(timer); };
-  }, [hasTable, minutes, refreshKey, auto]);
+  }, [hasTable, minutes, refreshKey, auto, environmentUuid]);
   const mutate = async (action) => {
     setSaving(true); setError(null);
     setDashboardStorageScope(storageScope);
@@ -52,7 +53,11 @@ export default function WidgetBoard({ storageScope = 'admin-metrics' }) {
   };
   return <Box sx={{ mt: 3 }}>
     <Typography variant="h6">Your widgets</Typography>
-    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Metrics cover your account’s accessible data. The customer/application picker above does not filter these widgets. Layout is saved in this browser.</Typography>
+    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      {environmentUuid
+        ? 'Metrics follow the environment shown above. Layout is saved in this browser.'
+        : 'Metrics cover your account’s accessible data. The customer/application picker above does not filter these widgets. Layout is saved in this browser.'}
+    </Typography>
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
       <AddWidgetMenu onPick={setDraft} disabled={saving} />
       <TextField select size="small" label="Widget time range" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} sx={{ minWidth: 190 }}>
@@ -66,7 +71,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics' }) {
     {!widgets.length && <Alert severity="info">Add a widget to start your dashboard.</Alert>}
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(4, minmax(0, 1fr))' }, gap: 2 }}>
       {widgets.map((widget) => <BuilderWidget key={widget.uuid} widget={widget} snapshot={{ recent_calls: calls }} saving={saving}
-        queryOptions={{ minutes: minutes || undefined, refreshKey, refreshInterval: auto ? 30000 : 0 }}
+        queryOptions={{ minutes: minutes || undefined, refreshKey, refreshInterval: auto ? 30000 : 0, environmentUuid }}
         onEdit={setDraft} onDelete={(item) => mutate(() => deleteWidget(item.uuid))}
         onDuplicate={(item) => mutate(() => { const { uuid: _uuid, ...copy } = item; return createWidget({ ...copy, title: `${copy.title} copy` }); })}
         onMove={(item, delta) => mutate(() => moveWidget(item.uuid, delta))} />)}

@@ -43,6 +43,9 @@ import MetaTagChips from '../common/MetaTagChips/MetaTagChips';
 import HelpButton from '../common/HelpButton';
 import { GUIDE_URLS } from '../../utils/guides';
 import CopyableEmail from '../common/CopyableEmail/CopyableEmail.jsx';
+import EntityLink from '../common/EntityLink/EntityLink.jsx';
+import ACLDialog from '../common/ACLSelect/ACLDialog';
+import useAclEdit from '../../hooks/useAclEdit';
 
 /**
  * Accounts Component
@@ -52,6 +55,11 @@ const Accounts = () => {
   const { can } = usePermissions();
   const canWrite = can('accounts', 'write');
   const { registerScreen, unregisterScreen } = useGlobalSearch();
+  const {
+    aclDialogOpen, aclDialogAcl, aclDialogLoading, aclSaveError,
+    handleAclEdit, handleAclSave, handleAclClose,
+    types: aclTypes, typesLoading: aclTypesLoading, typeData: aclTypeData, typeDataLoading: aclTypeDataLoading, handleAclTypeChange,
+  } = useAclEdit();
 
   const {
     accounts,
@@ -334,9 +342,11 @@ const Accounts = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">
-                            {orEmpty(account.acl?.name)}
-                          </Typography>
+                          <EntityLink
+                            name={account.acl?.name}
+                            ariaLabel={`Edit role ${account.acl?.name || ''}`}
+                            onEdit={canWrite && account.acl?.uuid ? () => handleAclEdit(account.acl) : undefined}
+                          />
                         </TableCell>
                         <TableCell>
                           <MetaTagChips meta={account.meta} />
@@ -430,6 +440,21 @@ const Accounts = () => {
         message={<Typography>Are you sure you want to delete account{' '}
           <strong>{(accountToDelete)?.name}</strong>?</Typography>}
         description="This action cannot be undone and will remove all account data."
+      />
+
+      <ACLDialog
+        open={aclDialogOpen}
+        onClose={handleAclClose}
+        onSave={async (formData) => { await handleAclSave(formData); fetchAccounts(); }}
+        mode="edit"
+        acl={aclDialogAcl}
+        types={aclTypes}
+        typesLoading={aclTypesLoading}
+        typeData={aclTypeData}
+        typeDataLoading={aclTypeDataLoading}
+        onTypeChange={handleAclTypeChange}
+        saving={aclDialogLoading}
+        error={aclSaveError}
       />
     </Box>
   );

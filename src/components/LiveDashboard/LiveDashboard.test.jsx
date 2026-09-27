@@ -43,6 +43,7 @@ vi.mock('../../context/UserAuthContext', () => ({
 vi.mock('../../context/CustomerEnvironmentContext', () => ({
   useCustomerEnvironment: () => ({ selectedEnvironments: [] }),
 }));
+vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ accountUuid: null }) }));
 
 // A user document as the node writes it: identity from the mothership, the
 // rest from the switch.
@@ -164,6 +165,22 @@ describe('LiveDashboard', () => {
     render(<LiveDashboard />);
 
     expect(mockApiGet).not.toHaveBeenCalled();
+  });
+
+  // The board is the one deliberate second source on this screen: saved
+  // Influx widgets, and every one of them scoped to the Live environment.
+  it('shows the widget board scoped to the live environment', async () => {
+    localStorage.setItem('dashboard-definitions:live-metrics:user-1', JSON.stringify({ dashboards: [{ uuid: 'default', name: 'Default' }], widgets: { default: [
+      { uuid: 'w1', type: 'counter', title: 'Calls today', measurement: 'cdr', field: 'duration', aggregation: 'count', minutes: 60, position: 0 },
+    ] } }));
+    mockApiGet.mockResolvedValue({ rows: [] });
+
+    render(<LiveDashboard />);
+
+    expect(await screen.findByText('Calls today')).toBeInTheDocument();
+    await vi.waitFor(() => expect(mockApiGet).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/monitoring\/influxdb\/query\?.*environment_uuid=env-906/), expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+    ));
   });
 
   it('says why the cable is not live instead of leaving the screen to guess', () => {

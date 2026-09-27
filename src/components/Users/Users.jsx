@@ -57,6 +57,12 @@ import HelpButton from '../common/HelpButton';
 import { GUIDE_URLS } from '../../utils/guides';
 import './Users.css';
 import CopyableEmail from '../common/CopyableEmail/CopyableEmail.jsx';
+import EntityLink from '../common/EntityLink/EntityLink.jsx';
+import EnvironmentDialog from '../Environments/EnvironmentDialog/EnvironmentDialog';
+import ACLDialog from '../common/ACLSelect/ACLDialog';
+import useEnvironmentEdit from '../../hooks/useEnvironmentEdit';
+import useAclEdit from '../../hooks/useAclEdit';
+import { useIsUserSession } from '../../hooks/useIsUserSession';
 
 /**
  * Users Component
@@ -68,7 +74,19 @@ const Users = () => {
   const { showSuccess } = useNotification();
   const { can } = usePermissions();
   const canWrite = can('users', 'write');
+  const userSession = useIsUserSession();
+  // Editing the application or role behind a row is a console affordance.
+  const canEditLinked = canWrite && !userSession;
   const { registerScreen, unregisterScreen } = useGlobalSearch();
+  const {
+    envDialogOpen, envDialogEnvironment, envDialogLoading,
+    handleEnvEdit, handleEnvSave, handleEnvClose,
+  } = useEnvironmentEdit();
+  const {
+    aclDialogOpen, aclDialogAcl, aclDialogLoading, aclSaveError,
+    handleAclEdit, handleAclSave, handleAclClose,
+    types: aclTypes, typesLoading: aclTypesLoading, typeData: aclTypeData, typeDataLoading: aclTypeDataLoading, handleAclTypeChange,
+  } = useAclEdit();
 
   const {
     users,
@@ -408,9 +426,11 @@ const Users = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">
-                            {orEmpty(user.acl?.name)}
-                          </Typography>
+                          <EntityLink
+                            name={user.acl?.name}
+                            ariaLabel={`Edit role ${user.acl?.name || ''}`}
+                            onEdit={canEditLinked && user.acl?.uuid ? () => handleAclEdit(user.acl) : undefined}
+                          />
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
@@ -431,9 +451,11 @@ const Users = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2">
-                            {orEmpty(user.environment?.name)}
-                          </Typography>
+                          <EntityLink
+                            name={user.environment?.name}
+                            ariaLabel={`Edit application ${user.environment?.name || ''}`}
+                            onEdit={canEditLinked && user.environment?.uuid ? () => handleEnvEdit(user.environment) : undefined}
+                          />
                         </TableCell>
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
@@ -575,6 +597,29 @@ const Users = () => {
       >
         {liveDrawerOpen && <LiveAgentsPanel open={liveDrawerOpen} />}
       </LiveDrawer>
+
+      <EnvironmentDialog
+        open={envDialogOpen}
+        onClose={handleEnvClose}
+        onSave={async (formData) => { await handleEnvSave(formData); fetchUsers(); }}
+        environment={envDialogEnvironment}
+        loading={envDialogLoading}
+      />
+
+      <ACLDialog
+        open={aclDialogOpen}
+        onClose={handleAclClose}
+        onSave={async (formData) => { await handleAclSave(formData); fetchUsers(); }}
+        mode="edit"
+        acl={aclDialogAcl}
+        types={aclTypes}
+        typesLoading={aclTypesLoading}
+        typeData={aclTypeData}
+        typeDataLoading={aclTypeDataLoading}
+        onTypeChange={handleAclTypeChange}
+        saving={aclDialogLoading}
+        error={aclSaveError}
+      />
     </Box>
   );
 };

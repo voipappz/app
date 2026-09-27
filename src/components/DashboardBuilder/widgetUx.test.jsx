@@ -104,6 +104,12 @@ describe('dashboard widget UX', () => {
     expect(result.current.value).toBeNull();
   });
 
+  it('scopes the query to the environment the board is given', async () => {
+    const { result } = renderHook(() => useWidgetValue(widget, { refreshInterval: 0, environmentUuid: 'env-906' }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(monitoringApi.runInfluxQuery).toHaveBeenCalledWith(expect.objectContaining({ environmentUuid: 'env-906' }));
+  });
+
   it('uses the shared time range and refreshes on demand', async () => {
     const { result, rerender } = renderHook(({ refreshKey }) => useWidgetValue(widget, { refreshInterval: 0, minutes: 1440, refreshKey }), { initialProps: { refreshKey: 0 } });
     await waitFor(() => expect(result.current.loading).toBe(false));

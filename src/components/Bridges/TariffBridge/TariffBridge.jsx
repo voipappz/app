@@ -151,8 +151,10 @@ export const TariffBridge = ({
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           {/* Tariff Fields */}
+          {/* MUI v7 Grid sizes with `size`; the old `item xs md` props are
+              ignored, which packed all four fields into one cramped row. */}
           <Grid container spacing={2}>
-            <Grid item xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <TextField
                 label="Name"
                 value={formData.name}
@@ -166,7 +168,7 @@ export const TariffBridge = ({
                 disabled={loading}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <FormControl
                 fullWidth
                 size="small"
@@ -200,7 +202,7 @@ export const TariffBridge = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 label="Notes"
                 value={formData.notes}
@@ -213,7 +215,7 @@ export const TariffBridge = ({
                 disabled={loading}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControlLabel
                 control={
                   <Switch

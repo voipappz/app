@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { monitoringApi } from '../../services/api/monitoringApi';
 
 // A request belongs to one effect, so old responses cannot replace a new metric.
-export function useWidgetValue(widget, { refreshInterval = 30_000, refreshKey = 0, minutes: windowMinutes } = {}) {
+export function useWidgetValue(widget, { refreshInterval = 30_000, refreshKey = 0, minutes: windowMinutes, environmentUuid = '' } = {}) {
   const { measurement, field, aggregation, minutes } = widget || {};
   const [state, setState] = useState({ value: null, series: [], loading: true, error: null, updatedAt: null });
   useEffect(() => {
@@ -13,7 +13,7 @@ export function useWidgetValue(widget, { refreshInterval = 30_000, refreshKey = 
       if (!measurement || !field || pending) return;
       pending = true;
       try {
-        const result = await monitoringApi.runInfluxQuery({ measurement, field, aggregation: aggregation || 'mean', minutes: windowMinutes || minutes || 60 });
+        const result = await monitoringApi.runInfluxQuery({ measurement, field, aggregation: aggregation || 'mean', minutes: windowMinutes || minutes || 60, environmentUuid });
         if (!active) return;
         const series = Array.isArray(result?.rows) ? result.rows : [];
         const last = series[series.length - 1]?.value;
@@ -32,7 +32,7 @@ export function useWidgetValue(widget, { refreshInterval = 30_000, refreshKey = 
     load();
     const timer = refreshInterval > 0 ? setInterval(load, refreshInterval) : null;
     return () => { active = false; if (timer) clearInterval(timer); };
-  }, [measurement, field, aggregation, minutes, windowMinutes, refreshInterval, refreshKey]);
+  }, [measurement, field, aggregation, minutes, windowMinutes, refreshInterval, refreshKey, environmentUuid]);
   return state;
 }
 

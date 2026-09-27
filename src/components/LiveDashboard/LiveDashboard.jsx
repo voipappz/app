@@ -13,6 +13,9 @@ import { useCable } from '../../services/cable';
 import CableStatus from './CableStatus';
 import useLiveEntities from '../../hooks/useLiveEntities';
 import { useLiveEnvironment } from './useLiveEnvironment';
+import { useAuth } from '../../context/AuthContext';
+import { useUserAuth } from '../../context/UserAuthContext';
+import WidgetBoard from '../DashboardBuilder/WidgetBoard';
 import {
   getLiveSettings, setLiveSettingsScope, statusColor, stateColor,
 } from '../../services/liveSettings';
@@ -98,6 +101,11 @@ const LiveDashboard = () => {
   const [now, setNow] = useState(() => Date.now());
   const cable = useCable();
   const live = useLiveEntities(environmentUuid, null);
+  // The board is saved per person, not per environment: one layout, whose
+  // numbers follow whichever environment this screen watches.
+  const { user: portalUser } = useUserAuth();
+  const { accountUuid } = useAuth();
+  const boardOwner = portalUser?.uuid || accountUuid || '';
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -271,6 +279,12 @@ const LiveDashboard = () => {
       <Typography variant="caption" color="text.secondary">
         Live over the cable. Counters and first-call times reset at the environment's midnight.
       </Typography>
+
+      {/* The one deliberate second source here: saved Influx widgets, each
+          scoped to the environment above (via the API, not the cable). */}
+      {boardOwner && environmentUuid && (
+        <WidgetBoard key={boardOwner} storageScope={`live-metrics:${boardOwner}`} environmentUuid={environmentUuid} />
+      )}
     </Box>
   );
 };

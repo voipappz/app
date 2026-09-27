@@ -59,6 +59,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { getEnabledChipProps } from '../../utils/chipStyles';
 import { useOpenPhoneAs } from '../../hooks/useCallNumber';
 import useEnvironmentEdit from '../../hooks/useEnvironmentEdit';
+import EntityLink from '../common/EntityLink/EntityLink.jsx';
 import EnvironmentDialog from '../Environments/EnvironmentDialog/EnvironmentDialog';
 import EventsCountBadge from '../common/EventsCountBadge/EventsCountBadge.jsx';
 import HelpButton from '../common/HelpButton';
@@ -579,22 +580,11 @@ const Extensions = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          {/* Application name links to the application edit dialog */}
-                          {extension.environment?.uuid && canEditEnv ? (
-                            <Tooltip title="Edit application" placement="top-start">
-                              <Typography
-                                variant="body2"
-                                onClick={(e) => { e.stopPropagation(); handleEnvEdit(extension.environment); }}
-                                sx={{ cursor: 'pointer', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
-                              >
-                                {orEmpty(extension.environment.name)}
-                              </Typography>
-                            </Tooltip>
-                          ) : (
-                            <Typography variant="body2">
-                              {orEmpty(extension.environment?.name)}
-                            </Typography>
-                          )}
+                          <EntityLink
+                            name={extension.environment?.name}
+                            ariaLabel={`Edit application ${extension.environment?.name || ''}`}
+                            onEdit={extension.environment?.uuid && canEditEnv ? () => handleEnvEdit(extension.environment) : undefined}
+                          />
                         </TableCell>
                         <TableCell>
                           <MetaTagChips meta={extension.meta} />
