@@ -29,7 +29,7 @@ vi.mock('../../services/api/providersApi', () => ({
   },
 }));
 
-import useAIChat from './useAIChat';
+import useAIChat, { NO_LLM_MESSAGE } from './useAIChat';
 import { providersApi } from '../../services/api/providersApi';
 
 const jsonResponse = (body) => ({
@@ -185,6 +185,65 @@ describe('useAIChat session endpoints', () => {
 
     const [, opts] = fetchMock.mock.calls.find(([u]) => u.includes('/sessions/sess-9'));
     expect(opts.headers.Authorization).toBe('Bearer test-token');
+  });
+});
+
+describe('useAIChat chat history', () => {
+  it('reopens the last conversation from the API', async () => {
+    localStorage.setItem('ai_chat_session_id', 'sess-old');
+    fetchMock.mockImplementation(async (url) => (String(url).endsWith('/sessions/sess-old')
+      ? jsonResponse({ messages: [{ message: { content: 'how many calls?' }, response: { content: '42' } }] })
+      : jsonResponse([])));
+    const { result } = renderHook(() => useAIChat());
+
+    await waitFor(() => expect(result.current.messages).toHaveLength(2));
+    expect(result.current.messages[1].content).toBe('42');
+    expect(result.current.sessionId).toBe('sess-old');
+    expect(result.current.isRestoringSession).toBe(false);
+  });
+
+  it('starts fresh when the stored conversation is gone', async () => {
+    localStorage.setItem('ai_chat_session_id', 'sess-gone');
+    fetchMock.mockImplementation(async () => jsonResponse({ messages: [] }));
+    const { result } = renderHook(() => useAIChat());
+
+    await waitFor(() => expect(result.current.isRestoringSession).toBe(false));
+    expect(result.current.sessionId).toBeNull();
+    expect(localStorage.getItem('ai_chat_session_id')).toBeNull();
+  });
+});
+
+describe('useAIChat has one assistant, no agent to pick', () => {
+  it('selects the assistant for an account even with no LLM provider, and says one is missing', async () => {
+    providersApi.getProviders.mockResolvedValueOnce([]);
+    const { result } = renderHook(() => useAIChat());
+
+    await waitFor(() => expect(result.current.llmMissing).toBe(true));
+    expect(result.current.selectedAgent).toBe('assistant');
+    expect(result.current.agents).toHaveLength(1);
+  });
+
+  it('is ready when the customer has an enabled LLM provider', async () => {
+    const { result } = renderHook(() => useAIChat());
+
+    await waitFor(() => expect(result.current.isEndpointActive).toBe(true));
+    expect(result.current.llmMissing).toBe(false);
+    expect(result.current.selectedAgent).toBe('assistant');
+  });
+
+  it('turns the API 400 "No LLM provider configured" into a clear message', async () => {
+    fetchMock.mockImplementation(async (url) => (String(url).endsWith('/generate')
+      ? { ok: false, status: 400, json: async () => ({ error: 'No LLM provider configured' }) }
+      : jsonResponse([])));
+    const { result } = renderHook(() => useAIChat());
+    await waitFor(() => expect(result.current.selectedAgent).toBe('assistant'));
+
+    await act(async () => { await result.current.sendMessage('hello'); });
+
+    expect(result.current.llmMissing).toBe(true);
+    expect(result.current.error).toBe(NO_LLM_MESSAGE);
+    const [, opts] = fetchMock.mock.calls.find(([u]) => String(u).endsWith('/generate'));
+    expect(JSON.parse(opts.body)).not.toHaveProperty('provider_uuid');
   });
 });
 
