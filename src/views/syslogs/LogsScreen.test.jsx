@@ -23,6 +23,7 @@ describe('Logs in the top-bar tool dialog', () => {
     render(<ToolDialog title="Logs" open onClose={vi.fn()}><LogsScreen /></ToolDialog>);
 
     expect(screen.getByRole('dialog', { name: 'Logs' })).toBeInTheDocument();
-    expect(await screen.findByText(/syslog|logs/i, { selector: 'h1,h2,h3,h4,h5,h6,p,span,div' }, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Logs' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Logs' }).querySelector('.custom-footer-root')).not.toBeNull();
   });
 });

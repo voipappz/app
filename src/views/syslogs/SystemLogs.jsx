@@ -659,6 +659,7 @@ const SystemLogs = ({ initialParams }) => {
       </Paper>
 
       <CustomFooter
+        standalone
         loadingMore={loading}
         currentPage={pagination.page + 1}
         totalPages={totalPages}
