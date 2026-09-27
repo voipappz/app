@@ -12,6 +12,13 @@ vi.mock('../../services/api/monitoringApi', () => ({ monitoringApi: {
   runInfluxQuery: vi.fn(), getInfluxSchema: vi.fn(), getInfluxRows: vi.fn(),
 } }));
 
+// jsdom measures every element at 0px, which is the phone's single column;
+// pin the desktop width the placement assertions are written for.
+vi.mock('react-grid-layout', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useContainerWidth: () => ({ width: 1280, containerRef: { current: null }, mounted: true }),
+}));
+
 // Geometry belongs to Recharts. Assert our selected chart and data contract.
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }) => <div>{children}</div>,
@@ -55,7 +62,7 @@ describe('dashboard widget UX', () => {
     ] } }));
     render(<WidgetBoard storageScope="test-board" />);
     const placed = (await screen.findByText('Placed counter')).closest('.react-grid-item');
-    expect(placed.style.transform).toBe('translate(648px, 0px)');
+    expect(placed.style.transform).toBe('translate(648px,0px)');
     expect(screen.getByTestId('widget-grid').querySelectorAll('.react-grid-item')).toHaveLength(2);
     await waitFor(() => {
       const store = JSON.parse(localStorage.getItem('dashboard-definitions:test-board'));
