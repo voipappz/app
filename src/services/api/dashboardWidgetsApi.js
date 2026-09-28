@@ -115,7 +115,7 @@ function byPosition(list) {
  */
 export function sectionOf(type) {
   if (['counter', 'gauge', 'stat', 'calls_stat', 'live_calls'].includes(type)) return 'tiles';
-  if (['trend', 'line', 'bar', 'pie', 'calls_chart', 'calls_outcome'].includes(type)) return 'charts';
+  if (['trend', 'line', 'bar', 'pie', 'calls_chart', 'calls_outcome', 'query'].includes(type)) return 'charts';
   if (type === 'table') return 'tables';
   return 'other';
 }

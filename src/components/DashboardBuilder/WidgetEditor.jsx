@@ -85,7 +85,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField fullWidth size="small" label="Title" value={draft.title} onChange={(e) => set('title', e.target.value)} />
               <TextField fullWidth select size="small" label="Type" value={draft.type} onChange={(e) => set('type', e.target.value)}>
-                {WIDGET_TYPES.map((type) => (
+                {WIDGET_TYPES.filter((type) => type !== 'query').map((type) => (
                   <MenuItem key={type} value={type}>{type}</MenuItem>
                 ))}
               </TextField>

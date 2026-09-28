@@ -71,12 +71,25 @@ export const monitoringApi = {
 
   // environmentUuid narrows inside the session's tenant scope (the server
   // applies it after its own filter); a portal user's token ignores it.
-  runInfluxQuery: async ({ measurement, field, aggregation = 'mean', host = '', minutes = 60, bucket = '', environmentUuid = '' } = {}) => {
+  // `where` ({ tag: value }) filters by tag value and `groupBy` (a tag) splits
+  // the answer into one series per value — both checked server-side against
+  // the measurement's real tags, and ANDed with the tenant scope.
+  runInfluxQuery: async ({ measurement, field, aggregation = 'mean', host = '', minutes = 60, bucket = '', environmentUuid = '', where = null, groupBy = '' } = {}) => {
     const qs = new URLSearchParams({ measurement, field, aggregation, minutes: String(minutes) });
     if (host) qs.append('host', host);
     if (bucket) qs.append('bucket', bucket);
     if (environmentUuid) qs.append('environment_uuid', environmentUuid);
+    Object.entries(where || {}).forEach(([tag, value]) => { if (tag && value !== '' && value != null) qs.append(`where[${tag}]`, String(value)); });
+    if (groupBy) qs.append('group_by', groupBy);
     return apiService.get(`/api/monitoring/influxdb/query?${qs.toString()}`, {}, 'running metric query', false, true);
+  },
+
+  // The values one tag has in the caller's own data (last `minutes`, 7 days
+  // by default) — for the widget builder's filter and split-by pickers.
+  getInfluxTagValues: async ({ measurement, tag, minutes = 10080 } = {}) => {
+    const qs = new URLSearchParams({ measurement, tag, minutes: String(minutes) });
+    const res = await apiService.get(`/api/monitoring/influxdb/tag_values?${qs.toString()}`, {}, 'fetching tag values', false, true);
+    return Array.isArray(res?.values) ? res.values : [];
   },
 };
 
