@@ -7,6 +7,7 @@ import FieldSelect from './FieldSelect';
 import WidgetPreview from './WidgetPreview';
 import { ICON_NAMES } from './widgetPresentation';
 import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, WIDGET_TYPES, withDefaults } from './widgetTemplates';
+import { CALLS_METRICS, CDR_GROUPS, isCallsType } from './callsWidgets';
 
 // Filtered against WIDGET_TEMPLATES: a category listing a key that no longer
 // has a template used to throw on `.title` inside the map below and take the
@@ -45,6 +46,10 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
   const isCounter = draft.type === 'counter' || draft.type === 'stat';
   const isTable = draft.type === 'table';
   const isExplorer = draft.type === 'explorer';
+  // Calls widgets read the calls chart, not a measurement: no field picker,
+  // no thresholds, no Influx preview.
+  const isCalls = isCallsType(draft.type);
+  const isLive = draft.type === 'live_calls';
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ 'data-testid': 'widget-editor', sx: { borderRadius: 3 } }}>
@@ -56,7 +61,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
         <Tabs value={tab} onChange={(_, next) => setTab(next)} variant="fullWidth" sx={{ mb: 2 }}>
           <Tab label="General" />
           <Tab label="Appearance" />
-          <Tab label="Thresholds" disabled={isTable || isExplorer} />
+          <Tab label="Thresholds" disabled={isTable || isExplorer || isCalls} />
         </Tabs>
 
         {tab === 0 && (
@@ -85,8 +90,25 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
                 ))}
               </TextField>
             </Stack>
-            <FieldSelect widget={draft} onChange={(patch) => setDraft((prev) => ({ ...prev, ...patch }))} />
-            {!isTable && (
+            {!isCalls && <FieldSelect widget={draft} onChange={(patch) => setDraft((prev) => ({ ...prev, ...patch }))} />}
+            {isCalls && !isLive && (
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                {draft.type === 'calls_stat' && (
+                  <TextField fullWidth select size="small" label="Show" value={draft.metric} onChange={(e) => set('metric', e.target.value)}>
+                    {CALLS_METRICS.map((m) => <MenuItem key={m.key} value={m.key}>{m.label}</MenuItem>)}
+                  </TextField>
+                )}
+                {!(draft.type === 'calls_stat' && draft.metric === 'answered') && (
+                  <TextField fullWidth select size="small" label="Split calls by" value={draft.groupBy} onChange={(e) => set('groupBy', e.target.value)}>
+                    {CDR_GROUPS.map((g) => <MenuItem key={g.key} value={g.key}>{g.label}</MenuItem>)}
+                  </TextField>
+                )}
+              </Stack>
+            )}
+            {isLive && (
+              <Typography variant="body2" color="text.secondary">Calls in progress, incoming and outgoing right now, for the application selected in the top bar.</Typography>
+            )}
+            {!isTable && !isLive && (
               <TextField
                 fullWidth select size="small" label="Time window"
                 value={draft.minutes} onChange={(e) => set('minutes', Number(e.target.value))}
@@ -163,7 +185,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
             />
           </Stack>
         )}
-        {!isTable && !isExplorer && <Box sx={{ mt: 2 }}>
+        {!isTable && !isExplorer && !isCalls && <Box sx={{ mt: 2 }}>
           <Button disabled={!draft.measurement || !draft.field} onClick={() => { setPreview({ ...draft }); setPreviewRun((run) => run + 1); }}>Run preview</Button>
           {preview && <>
             {JSON.stringify(preview) !== JSON.stringify(draft) && <Typography color="text.secondary">Settings changed. Run preview again to update the results.</Typography>}
@@ -174,7 +196,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
 
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" disabled={saving || !draft.title.trim() || (!isTable && (!draft.measurement || !draft.field))} onClick={() => onSave(draft)}>
+        <Button variant="contained" disabled={saving || !draft.title.trim() || (!isTable && !isCalls && (!draft.measurement || !draft.field))} onClick={() => onSave(draft)}>
           Save
         </Button>
       </DialogActions>

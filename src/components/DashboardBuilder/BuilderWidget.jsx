@@ -14,6 +14,8 @@ import { withDefaults } from './widgetTemplates';
 import { useWidgetValue } from './useWidgetValue';
 import MetricChart from './MetricChart';
 import InfluxMetricExplorer from '../Monitoring/InfluxMetricExplorer/InfluxMetricExplorer.jsx';
+import CallsWidgetBody from './CallsWidgetBody.jsx';
+import { isCallsType } from './callsWidgets';
 
 const STAT_TYPES = new Set(['counter', 'gauge', 'stat']);
 const CHART_TYPES = new Set(['trend', 'line', 'bar', 'pie']);
@@ -59,11 +61,12 @@ function TablePreview({ rows, fields }) {
  * useWidgetValue; 'table' reads recent_calls off the shared snapshot
  * (Postgres-backed — see useDashboardSnapshot).
  */
-export default function BuilderWidget({ widget: storedWidget, snapshot, saving, onEdit, onDuplicate, onDelete, onMove, queryOptions }) {
+export default function BuilderWidget({ widget: storedWidget, snapshot, saving, onEdit, onDuplicate, onDelete, onMove, queryOptions, callsScope }) {
   const [menuAnchor, setMenuAnchor] = useState(null);
   const widget = withDefaults(storedWidget);
   const Icon = resolveIcon(widget.icon);
-  const { value, series, error, loading, updatedAt } = useWidgetValue(ON_DEMAND_TYPES.has(widget.type) ? null : widget, queryOptions);
+  const isCalls = isCallsType(widget.type);
+  const { value, series, error, loading, updatedAt } = useWidgetValue(ON_DEMAND_TYPES.has(widget.type) || isCalls ? null : widget, queryOptions);
   const accent = thresholdColor(widget, value) || widget.color || 'primary.main';
   const gaugeValue = gaugePercent(widget, value);
   const isExplorer = widget.type === 'explorer';
@@ -86,7 +89,7 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
       <Stack direction="row" spacing={1} alignItems="center" className="widget-drag-handle" sx={{ px: 1.75, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover', cursor: 'grab' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 750 }} noWrap>{widget.title}</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{widget.type}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{isCalls ? 'calls' : widget.type}</Typography>
         </Box>
         <IconButton size="small" disabled={saving} aria-label="Widget actions" onClick={(event) => setMenuAnchor(event.currentTarget)}>
           <MoreVertIcon fontSize="small" />
@@ -122,7 +125,8 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
         </MenuItem>
       </Menu>
 
-      <Box sx={{ flex: 1, p: 2, minHeight: 0, overflow: 'auto' }}>
+      <Box sx={{ flex: 1, p: 2, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+        {isCalls && <CallsWidgetBody widget={widget} scope={callsScope} queryOptions={queryOptions} />}
         {STAT_TYPES.has(widget.type) && (
           <Stack sx={{ height: '100%' }} justifyContent="center" alignItems="center" spacing={1}>
             <Box sx={{ width: 48, height: 48, borderRadius: 2.5, display: 'grid', placeItems: 'center', bgcolor: 'action.hover', color: accent }}><Icon /></Box>

@@ -6,7 +6,7 @@ import 'react-resizable/css/styles.css';
 import AddWidgetMenu from './AddWidgetMenu';
 import WidgetEditor from './WidgetEditor';
 import BuilderWidget from './BuilderWidget';
-import { getWidgets, createWidget, updateWidget, deleteWidget, updateWidgetLayout, setDashboardStorageScope } from '../../services/api/dashboardWidgetsApi';
+import { getWidgets, createWidget, updateWidget, deleteWidget, updateWidgetLayout, setDashboardStorageScope, seedWidgets } from '../../services/api/dashboardWidgetsApi';
 import { monitoringApi } from '../../services/api/monitoringApi';
 import { mapCdrCall } from '../Dashboard/useDashboardSnapshot';
 import { GRID_COLS, ROW_HEIGHT, layoutFor, layoutChanges } from './widgetLayout';
@@ -14,7 +14,11 @@ import { GRID_COLS, ROW_HEIGHT, layoutFor, layoutChanges } from './widgetLayout'
 // Reuses the dashboard's existing definitions, editor and card actions.
 // Metric endpoints scope to the authenticated account; `environmentUuid`
 // narrows every widget's query to one environment inside that scope.
-export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '' }) {
+// `callsScope` ({ customerUuid, environmentUuid, fleet }) is what the calls
+// widgets follow; `seed` ({ key, widgets }) puts a starter set on the board
+// once (seedWidgets). `heading` false drops the "Your widgets" intro when the
+// board IS the page.
+export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true }) {
   const [widgets, setWidgets] = useState([]);
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -33,12 +37,18 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
     setDashboardStorageScope(storageScope);
     setWidgets(await getWidgets());
   };
+  const seedKey = seed?.key;
   useEffect(() => {
     let active = true;
-    setDashboardStorageScope(storageScope);
-    getWidgets().then((rows) => { if (active) setWidgets(rows); });
+    (async () => {
+      setDashboardStorageScope(storageScope);
+      if (seedKey) await seedWidgets(seedKey, seed.widgets);
+      const rows = await getWidgets();
+      if (active) setWidgets(rows);
+    })();
     return () => { active = false; };
-  }, [storageScope]);
+  // The seed is fixed per key, so only the key re-runs this.
+  }, [storageScope, seedKey]);
   const hasTable = widgets.some((widget) => widget.type === 'table');
   useEffect(() => {
     if (!hasTable) return undefined;
@@ -71,13 +81,15 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
       return change ? { ...widget, layout: change.layout } : widget;
     }));
   };
-  return <Box sx={{ mt: 3 }}>
-    <Typography variant="h6">Your widgets</Typography>
-    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-      {environmentUuid
-        ? 'Metrics follow the environment shown above. Drag a widget by its title to move it, and its corner to resize; the layout is saved in this browser.'
-        : 'Metrics cover your account’s accessible data. The customer/application picker above does not filter these widgets. Drag a widget by its title to move it, and its corner to resize; the layout is saved in this browser.'}
-    </Typography>
+  return <Box sx={{ mt: heading ? 3 : 0, width: '100%' }}>
+    {heading && <>
+      <Typography variant="h6">Your widgets</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        {environmentUuid
+          ? 'Metrics follow the environment shown above. Drag a widget by its title to move it, and its corner to resize; the layout is saved in this browser.'
+          : 'Metrics cover your account’s accessible data. The customer/application picker above does not filter these widgets. Drag a widget by its title to move it, and its corner to resize; the layout is saved in this browser.'}
+      </Typography>
+    </>}
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
       <AddWidgetMenu onPick={setDraft} disabled={saving} />
       <TextField select size="small" label="Widget time range" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} sx={{ minWidth: 190 }}>
@@ -100,7 +112,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
       >
         {widgets.map((widget) => (
           <div key={widget.uuid}>
-            <BuilderWidget widget={widget} snapshot={{ recent_calls: calls }} saving={saving}
+            <BuilderWidget widget={widget} snapshot={{ recent_calls: calls }} saving={saving} callsScope={callsScope}
               queryOptions={{ minutes: minutes || undefined, refreshKey, refreshInterval: auto ? 30000 : 0, environmentUuid }}
               onEdit={setDraft} onDelete={(item) => mutate(() => deleteWidget(item.uuid))}
               onDuplicate={(item) => mutate(() => { const { uuid: _uuid, layout: _layout, ...copy } = item; return createWidget({ ...copy, title: `${copy.title} copy` }); })} />
