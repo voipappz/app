@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# POSIX sh, not bash: hooks run INSIDE the kamal image
+# (ghcr.io/basecamp/kamal — Alpine), which ships no bash. A `#!/usr/bin/env
+# bash` shebang here failed every portal deploy with
+#   env: can't execute 'bash': No such file or directory
+# surfaced by kamal as the useless `pre-build exit status: 32512`.
+set -eu
+
+echo "=== Pre-build: admin deployment policy loaded ==="
+# Source verification belongs to CI and `make check`. This hook runs inside
+# the minimal kamal image and does not pretend to rerun lint, vitest or
+# Playwright there.

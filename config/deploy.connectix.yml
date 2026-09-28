@@ -1,0 +1,70 @@
+# Kamal DESTINATION override for connectix — the admin on the connectix host,
+# beside the connectix portal.
+#
+#     make kamal-config DEST=connectix     # render + verify (read-only)
+#     make deploy DEST=connectix
+#
+# THIS REPO IS PUBLIC, SO THIS FILE NAMES NO HOST. The host address, SSH user,
+# port and key are read from .kamal/env.connectix (gitignored; shape in
+# .kamal/env.example), which the Makefile passes into the kamal container as
+# environment. What IS here is already public: the site's hostname (it is in
+# DNS) and the API the bundle talks to (it is in the bundle).
+#
+# BEFORE THE FIRST DEPLOY, three things on YOUR side, in this order:
+#
+#   1. .kamal/env.connectix — KAMAL_HOST, KAMAL_SSH_USER, KAMAL_SSH_PORT,
+#      KAMAL_SSH_KEY for the connectix box. The portal's notes for the same
+#      host: it answers on 22, not the fleet's 2228, and the authorised key is
+#      id_ed25519, not kamal_deploy. Getting that wrong presents as
+#      `Connection refused`, which reads as the host being down (measured).
+#
+#   2. DNS: an A record for the hostname under `proxy.hosts` pointing at that
+#      host. kamal-proxy obtains the certificate with Let's Encrypt's HTTP-01
+#      challenge on the first request, and a name that does not resolve to the
+#      box fails the challenge — the deploy reports success, the site answers a
+#      TLS error. Port 80 is free for the challenge there (measured: the same
+#      proxy already renews the portal's certificate this way).
+#
+#   3. .kamal/secrets-common with KAMAL_REGISTRY_PASSWORD (Docker Hub token).
+#      A destination deploy reads secrets-common + secrets.<dest>, NOT
+#      .kamal/secrets — see .kamal/secrets.example.
+#
+# SHARING THE HOST WITH THE PORTAL. The portal's kamal-proxy already owns
+# 80/443 on this box and terminates TLS for the portal's hostname. Kamal runs
+# one proxy per host and routes by Host header, so this app adds its hostname
+# and nothing about the portal changes. When the portal moves to xamal (Caddy,
+# same ports), the two cannot share the host any more — settle the proxy
+# question before that cut-over, not after.
+
+servers:
+  web:
+    hosts:
+      - <%= h = ENV["KAMAL_HOST"].to_s.strip; h.empty? ? raise("KAMAL_HOST unset — put it in .kamal/env.connectix (see .kamal/env.example)") : h %>
+
+proxy:
+  hosts:
+    - nimbus-admin.voipappz.io
+  # Automatic certificate: port 80 is free for the HTTP-01 challenge, so
+  # kamal-proxy obtains and renews it and no PEM is baked into a deploy.
+  ssl: true
+
+builder:
+  args:
+    # THE API THIS BUNDLE TALKS TO, chosen at build time (see deploy.yml).
+    # Mirrors the portal's connectix destination, whose forwarder points at the
+    # same mothership; the admin talks to it directly, cross-origin, so the
+    # mothership's CORS policy must allow the hostname above.
+    VITE_API_BASE_URL: https://nimbus-prod.voipappz.io
+    # Optional, public values (they ship in the bundle). Unset means the
+    # features that read them stay off.
+    # VITE_MONITORING_BASE_URL:
+    # VITE_ZENDESK_KEY:
+
+# An EMPTY value counts as unset: --env-file hands an empty string to the
+# container for a `KEY=` line, and ERB's ENV.fetch would take that literally.
+<% pick = ->(name, default) { v = ENV[name].to_s.strip; v.empty? ? default : v } %>
+ssh:
+  user: <%= pick.("KAMAL_SSH_USER", "root") %>
+  port: <%= pick.("KAMAL_SSH_PORT", "22") %>
+  keys:
+    - <%= pick.("KAMAL_SSH_KEY", "~/.ssh/id_ed25519") %>

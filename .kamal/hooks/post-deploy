@@ -1,0 +1,168 @@
+#!/bin/sh
+#
+# Kamal post-deploy hook — runs after the new container is healthy.
+# Smoke checks against the live site: TLS is served, the bundle answers, the
+# cache policy nginx.conf promises is in force, and the paths nginx must
+# REFUSE are refused.
+#
+# POSIX sh and curl-optional, because hooks run INSIDE the kamal image
+# (ghcr.io/basecamp/kamal — Alpine): no bash, no arrays, no curl — only
+# busybox wget. See the shebang note in pre-build.
+#
+# Probes ONLY when KAMAL_HEALTHCHECK_URL names the deployed host. Unset = skip:
+# a hardcoded default probes whichever destination it was written for and then
+# fails the deploy of every other one. `make deploy DEST=<dest>` derives it
+# from the destination's own `proxy.hosts`, so it is never written twice.
+#
+# THE HOOK HAS TO BE ARMED. In the portal it existed for weeks and always
+# skipped: the Makefile passed the variable through and never set it, so every
+# deploy printed "skipping smoke checks" in 0.003s and reported success.
+set -eu
+
+BASE_URL="${KAMAL_HEALTHCHECK_URL:-}"
+if [ -z "$BASE_URL" ]; then
+  echo "=== Post-deploy: KAMAL_HEALTHCHECK_URL unset — skipping smoke checks ==="
+  exit 0
+fi
+
+FAIL=0
+
+# Status code for a GET, via whichever client the image has. -k: we are probing
+# our own box by name during the first minutes of a fresh certificate.
+http_code() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "$1"
+  else
+    wget --no-check-certificate -S -q -O /dev/null -T 10 "$1" 2>&1 \
+      | awk '/^ *HTTP\//{c=$2} END{print (c ? c : "000")}'
+  fi
+}
+
+# One response header's value, lower-cased name match.
+http_header() {
+  _url="$1"; _name="$2"
+  if command -v curl >/dev/null 2>&1; then
+    curl -skI --max-time 10 "$_url" | tr -d '\r' | awk -v n="$_name" 'tolower($1)==tolower(n":"){sub(/^[^:]*: */,"");print;exit}'
+  else
+    wget --no-check-certificate -S -q -O /dev/null -T 10 "$_url" 2>&1 | tr -d '\r' \
+      | awk -v n="$_name" 'tolower($1)==tolower(n":"){sub(/^ *[^:]*: */,"");print;exit}'
+  fi
+}
+
+probe() {
+  _name="$1"; _path="$2"; _expected="$3"
+  _code=$(http_code "$BASE_URL$_path")
+  if [ "$_code" = "$_expected" ]; then
+    echo "  ✓  $_name → $_code"
+  else
+    echo "  ✗  $_name → expected $_expected, got $_code"
+    FAIL=1
+  fi
+}
+
+echo "=== Post-deploy: Waiting 5s for proxy to settle ==="
+sleep 5
+
+echo "=== Post-deploy: Smoke checks against $BASE_URL ==="
+
+# TLS first, so a proxy/certificate failure is distinguished from an
+# application failure. A fresh hostname whose DNS does not point here yet
+# lands in the first branch.
+case "$BASE_URL" in
+  https://*)
+    _tls=$(http_code "$BASE_URL/")
+    if [ "$_tls" = "000" ]; then
+      _plain=$(http_code "$(echo "$BASE_URL" | sed 's|^https://|http://|')/")
+      if [ "$_plain" = "200" ] || [ "$_plain" = "301" ] || [ "$_plain" = "308" ]; then
+        echo "  ✗  TLS NOT SERVED — the same host answers over plain HTTP."
+        echo "     kamal-proxy has no certificate for this hostname yet: check the"
+        echo "     DNS A record and the proxy's logs for the ACME challenge."
+      else
+        echo "  ✗  TLS handshake failed and http did not answer either — is the container up?"
+      fi
+      FAIL=1
+    else
+      echo "  ✓  TLS handshake                → serving https"
+    fi
+    ;;
+esac
+
+# THE BUNDLE. `/` and `/index.html` are the same file served two ways; a deep
+# link must fall back to index.html (the SPA's router owns the path), so a
+# made-up route must ALSO answer 200 — a 404 there means `try_files` was lost.
+probe "GET  /                       (index)" "/" 200
+probe "GET  /index.html             (index, by name)" "/index.html" 200
+probe "GET  /some/deep/route        (SPA fallback)" "/some/deep/route" 200
+
+# THE CACHE POLICY. nginx.conf promises index.html is never cached, so a
+# deploy is visible on the next reload rather than after a browser's TTL.
+# nginx silently DROPS a server-level add_header when a location adds its own,
+# which is exactly the kind of regression that ships green — so it is checked.
+_cc=$(http_header "$BASE_URL/index.html" "Cache-Control")
+case "$_cc" in
+  *no-store*) echo "  ✓  index.html Cache-Control     → $_cc" ;;
+  *)          echo "  ✗  index.html Cache-Control     → '$_cc' (expected no-store)"; FAIL=1 ;;
+esac
+
+# THE GATES, asserted as REFUSALS. Every check above asks "does it answer?",
+# and a server that answers when it should refuse passes all of them.
+# nginx.conf denies package.json and every dotfile path; a 200 on either means
+# the config in the image is not the one in the repo.
+probe "GET  /package.json           (must refuse: 404)" "/package.json" 404
+probe "GET  /.env                   (must refuse: 404)" "/.env" 404
+probe "GET  /.git/HEAD              (must refuse: 404)" "/.git/HEAD" 404
+
+# WHO TO TELL, and it is the hook that tells them. Nothing in GitHub knows a
+# deploy happened: CI builds and tests, deploys are run by a person with
+# `make deploy DEST=...`, and kamal never talks to GitHub.
+#
+# Inert unless ORGANIZATION_SMTP_* is set, and it can never fail the deploy —
+# see lib/notify-email.rb.
+notify() {
+  _subject="$1"
+  [ -x "$KAMAL_HOOK_DIR/lib/notify-email.rb" ] || return 0
+  ruby "$KAMAL_HOOK_DIR/lib/notify-email.rb" "$_subject" || true
+}
+
+DEST_NAME="${KAMAL_DESTINATION:-default}"
+VERSION="${KAMAL_VERSION:-unknown}"
+
+if [ "$FAIL" = "1" ]; then
+  notify "[admin] DEPLOY DEGRADED — $DEST_NAME @ $VERSION" <<NOTE
+The deploy to $DEST_NAME is LIVE but one or more smoke checks failed.
+
+  version   $VERSION
+  hosts     ${KAMAL_HOSTS:-unknown}
+  url       $BASE_URL
+  by        ${KAMAL_PERFORMER:-unknown}
+  at        ${KAMAL_RECORDED_AT:-unknown}
+
+To go back:
+  kamal rollback${KAMAL_DESTINATION:+ -d $KAMAL_DESTINATION}
+NOTE
+
+  echo
+  echo "❌  One or more smoke checks failed. The deploy is live but something is"
+  echo "    mis-wired. Inspect the container log on the deployed host:"
+  echo "      docker logs \$(docker ps --filter label=service=voipappz-admin -q | head -1) --tail 60"
+  echo
+  echo "    The previous container is still available — to go back:"
+  echo "      kamal rollback${KAMAL_DESTINATION:+ -d $KAMAL_DESTINATION}"
+  exit 1
+fi
+
+notify "[admin] deployed — $DEST_NAME @ $VERSION" <<NOTE
+$DEST_NAME is live on $VERSION and every smoke check passed.
+
+  version   $VERSION
+  hosts     ${KAMAL_HOSTS:-unknown}
+  url       $BASE_URL
+  by        ${KAMAL_PERFORMER:-unknown}
+  at        ${KAMAL_RECORDED_AT:-unknown}
+
+Checked: TLS, index and SPA fallback, index.html no-store,
+package.json and dotfile paths refused.
+NOTE
+
+echo
+echo "=== Post-deploy: All smoke checks passed ==="

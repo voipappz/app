@@ -49,7 +49,8 @@ STOP  = PORT=$(PORT) $(M) stop >/dev/null
 # Add a target: add it here.
 PHONY_TARGETS := help setup install browsers env dev build preview serve stop \
                  lint fix unit check test test-list report doctor secrets \
-                 docker-build docker-run check-make clean
+                 docker-build docker-run check-make clean \
+                 kamal-config kamal-push deploy destinations
 
 .PHONY: $(PHONY_TARGETS)
 .DEFAULT_GOAL := help
@@ -204,3 +205,112 @@ clean: ## Remove build output, test artifacts and stray server logs
 	rm -rf dist test-results playwright-report coverage test-results.json
 	rm -f /tmp/vite-*.log /tmp/vite-*.pid
 	@echo "clean"
+
+##@ Deploy — kamal, from this repo
+
+# THE DEPLOY TOOL LIVES HERE. It came from the portal repo (voipappz/connectix),
+# which ran kamal against four live destinations and then moved to xamal. Every
+# lesson from that period is either a comment on the line it protects or a
+# paragraph in docs/deployment.md — read that file before adding a destination.
+#
+# config/deploy*.yml and .kamal/ are kamal's OWN layout, relative to the
+# project root, so a `kamal` run by hand from this directory does exactly what
+# these targets do. Everything runs in the kamal image; no Ruby on the host.
+#
+# NOTHING SENSITIVE IS IN GIT — this repo is public. .kamal/secrets* (registry
+# token), .kamal/env.<dest> (host address, SSH user/port/key) and any *.key or
+# *.pem are ignored; the two *.example files say what each destination needs.
+
+KAMAL_IMAGE ?= ghcr.io/basecamp/kamal:v2.12.0
+
+# Per-destination host details, handed to the container as environment so the
+# destination yaml can read them through ERB and they never appear in a
+# tracked file or on the command line.
+KAMAL_ENV_FILE = .kamal/env.$(DEST)
+
+# MAIL FOR THE POST-DEPLOY HOOK. Read from .env and EXPORTED, so the values
+# reach the kamal container through `-e NAME` (no `=value`) — docker forwards
+# them from this process's environment, which keeps the SMTP password out of
+# the command line and therefore out of `ps`. Empty when .env does not name
+# them, and the hook is inert when they are empty.
+dotenv = $(shell sed -n 's/^$(1)=//p' .env 2>/dev/null | grep . | head -1 | tr -d '\r"')
+export ORGANIZATION_SMTP_ADDRESS        := $(call dotenv,ORGANIZATION_SMTP_ADDRESS)
+export ORGANIZATION_SMTP_PORT           := $(call dotenv,ORGANIZATION_SMTP_PORT)
+export ORGANIZATION_SMTP_USERNAME       := $(call dotenv,ORGANIZATION_SMTP_USERNAME)
+export ORGANIZATION_SMTP_PASSWORD       := $(call dotenv,ORGANIZATION_SMTP_PASSWORD)
+export ORGANIZATION_SMTP_DOMAIN         := $(call dotenv,ORGANIZATION_SMTP_DOMAIN)
+export ORGANIZATION_SMTP_AUTHENTICATION := $(call dotenv,ORGANIZATION_SMTP_AUTHENTICATION)
+export ORGANIZATION_SMTP_FROM           := $(call dotenv,ORGANIZATION_SMTP_FROM)
+export ORGANIZATION_SMTP_TO             := $(call dotenv,ORGANIZATION_SMTP_TO)
+SMTP_ENV = -e ORGANIZATION_SMTP_ADDRESS -e ORGANIZATION_SMTP_PORT \
+	   -e ORGANIZATION_SMTP_USERNAME -e ORGANIZATION_SMTP_PASSWORD \
+	   -e ORGANIZATION_SMTP_DOMAIN -e ORGANIZATION_SMTP_AUTHENTICATION \
+	   -e ORGANIZATION_SMTP_FROM -e ORGANIZATION_SMTP_TO
+
+# `~/.docker` is mounted READ-WRITE on purpose: buildx writes builder activity
+# files there, and a read-only mount fails the build with "read-only file
+# system" long after the image has been built (measured on the portal).
+# GIT_CONFIG_*: the checkout is owned by your uid and kamal runs as root inside
+# the container, so git refuses it as "dubious ownership" — and the
+# RELEASE_SHA build arg shells out to git.
+KAMAL = docker run --rm \
+	  -v "$(CURDIR):/workdir" -w /workdir \
+	  -v "$(HOME)/.ssh:/root/.ssh:ro" \
+	  -v "$(HOME)/.docker:/root/.docker" \
+	  -v /var/run/docker.sock:/var/run/docker.sock \
+	  --env-file "$(KAMAL_ENV_FILE)" \
+	  -e KAMAL_REGISTRY_PASSWORD -e KAMAL_HEALTHCHECK_URL $(SMTP_ENV) \
+	  -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+	  $(KAMAL_IMAGE)
+
+# DEST IS REQUIRED, and the guard is not pedantry. Without `-d`, kamal uses
+# config/deploy.yml. In the portal that file named a DIFFERENT live host with a
+# DIFFERENT image from every destination, so a dropped `DEST=` did not fail —
+# it deployed, somewhere else. Here the base names an unresolvable host as a
+# second lock, and this guard is the first.
+define require_dest
+	@test -n "$(DEST)" || { \
+	  echo "!! DEST is required — a bare deploy has no host to go to." >&2; \
+	  echo "   make $@ DEST=<$$(ls config/deploy.*.yml 2>/dev/null | sed 's|.*deploy\.||;s|\.yml||' | paste -sd'|')>" >&2; \
+	  exit 1; }
+	@test -f "$(KAMAL_ENV_FILE)" || { \
+	  echo "!! $(KAMAL_ENV_FILE) is missing — the host details for '$(DEST)' live there." >&2; \
+	  echo "   cp .kamal/env.example $(KAMAL_ENV_FILE)   # then fill it in" >&2; \
+	  exit 1; }
+endef
+
+kamal-config: ## [DEST=x] Render the resolved kamal config and change nothing
+	$(require_dest)
+	$(KAMAL) config -d $(DEST)
+
+# Separate from deploy because the image push is the step this network fails:
+# Docker Hub answers `invalid content range` on an interrupted layer upload,
+# and retrying the whole deploy to get past it wastes the container swap too.
+# Build layers are cached, so a retry here costs minutes.
+kamal-push: ## [DEST=x] Build and push the image only, no container swap
+	$(require_dest)
+	$(KAMAL) build push -d $(DEST)
+
+# The address the post-deploy hook probes, derived from the destination's own
+# `proxy.hosts` rather than written down twice. In the portal the hook existed
+# for weeks and always SKIPPED: the variable was passed through and never set,
+# so every deploy printed "skipping smoke checks" and reported success.
+dest_url = https://$(shell awk '/^proxy:/{p=1} p&&/^ *- /{gsub(/^ *- /,"");print;exit}' config/deploy.$(DEST).yml)
+
+deploy: ## [DEST=x] Build, push and swap the container — make deploy DEST=connectix
+	$(require_dest)
+	@echo "==> post-deploy smoke checks will run against $(dest_url)"
+	KAMAL_HEALTHCHECK_URL=$(dest_url) $(KAMAL) deploy -d $(DEST)
+
+# There is no single "production": one destination per host, each with its own
+# hostname and API. This lists them rather than pretending one URL speaks for
+# all. Host addresses are not shown — they are not in git.
+destinations: ## The kamal destinations this repo can deploy to
+	@echo "=== Destinations (config/) ==="
+	@for f in config/deploy.*.yml; do \
+	  d=$$(basename $$f .yml | sed 's/deploy\.//'); \
+	  site=$$(awk '/^proxy:/{p=1} p&&/^ *- /{gsub(/^ *- /,"");print;exit}' $$f); \
+	  api=$$(sed -n 's/^ *VITE_API_BASE_URL: *//p' $$f | head -1); \
+	  env=$$( test -f .kamal/env.$$d && echo "env ok" || echo "NO .kamal/env.$$d" ); \
+	  printf "  %-12s %-32s api %-36s %s\n" "$$d" "$$site" "$$api" "$$env"; \
+	done
