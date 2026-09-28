@@ -114,8 +114,8 @@ function byPosition(list) {
  * chart, because they are never side by side on screen.
  */
 export function sectionOf(type) {
-  if (['counter', 'gauge', 'stat'].includes(type)) return 'tiles';
-  if (['trend', 'line', 'bar', 'pie'].includes(type)) return 'charts';
+  if (['counter', 'gauge', 'stat', 'calls_stat', 'live_calls'].includes(type)) return 'tiles';
+  if (['trend', 'line', 'bar', 'pie', 'calls_chart', 'calls_outcome'].includes(type)) return 'charts';
   if (type === 'table') return 'tables';
   return 'other';
 }
@@ -164,6 +164,33 @@ export async function deleteDashboard(dashboardUuid) {
 /** A board's widgets, in the order they are shown. */
 export async function getWidgets(dashboardUuid = 'default') {
   return byPosition(readStore().widgets[dashboardUuid] || []);
+}
+
+/**
+ * Put a set of widgets at the top of a board ONCE per `seedKey`: each item is
+ * a definition with its `layout` ({ x, y, col, row }). Widgets already on the
+ * board move down below them, keeping their order and placement. Deleting a
+ * seeded widget sticks, because the key is remembered on the store.
+ * Returns true when it seeded.
+ */
+export async function seedWidgets(seedKey, items, dashboardUuid = 'default') {
+  const store = readStore();
+  store.seeded = Array.isArray(store.seeded) ? store.seeded : [];
+  if (store.seeded.includes(seedKey)) return false;
+  if (!store.widgets[dashboardUuid]) store.widgets[dashboardUuid] = [];
+  const list = store.widgets[dashboardUuid];
+  const height = items.reduce((bottom, item) => Math.max(bottom, (item.layout?.y ?? 0) + (item.layout?.row ?? 0)), 0);
+  for (const widget of list) {
+    if (widget.layout && Number.isFinite(Number(widget.layout.y))) widget.layout = { ...widget.layout, y: Number(widget.layout.y) + height };
+    widget.position = (widget.position ?? 0) + items.length;
+  }
+  items.forEach((item, index) => {
+    list.push({ ...item, uuid: uuid(), dashboard_uuid: dashboardUuid, position: index });
+  });
+  numberPositions(list);
+  store.seeded.push(seedKey);
+  writeStore(store);
+  return true;
 }
 
 /** Appends: a new widget goes last on its board. */

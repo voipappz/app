@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  setDashboardStorageScope, getWidgets, createWidget, moveWidget, updateWidgetLayout, sectionOf,
+  setDashboardStorageScope, getWidgets, createWidget, moveWidget, updateWidgetLayout, sectionOf, seedWidgets,
 } from './dashboardWidgetsApi';
 
 /**
@@ -88,5 +88,36 @@ describe('dashboardWidgetsApi — order and position', () => {
     expect(sectionOf('counter')).toBe('tiles');
     expect(sectionOf('pie')).toBe('charts');
     expect(sectionOf('table')).toBe('tables');
+  });
+});
+
+describe('dashboardWidgetsApi — seeding a board once', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setDashboardStorageScope('seed-spec');
+  });
+
+  it('puts the seeded widgets on top and moves the existing ones below them', async () => {
+    const mine = await createWidget({ title: 'Mine', type: 'counter' }, 'board');
+    await updateWidgetLayout(mine.uuid, { x: 0, y: 0, col: 1, row: 2 }, 'board');
+
+    const seeded = await seedWidgets('v1', [
+      { title: 'Top', type: 'calls_stat', layout: { x: 0, y: 0, col: 4, row: 3 } },
+    ], 'board');
+
+    expect(seeded).toBe(true);
+    const board = await getWidgets('board');
+    expect(board.map((w) => w.title)).toEqual(['Top', 'Mine']);
+    expect(board[1].layout).toMatchObject({ y: 3 });
+  });
+
+  it('seeds once per key, so a removed widget does not come back', async () => {
+    await seedWidgets('v1', [{ title: 'Top', type: 'calls_stat', layout: { x: 0, y: 0, col: 1, row: 1 } }], 'board');
+    const [top] = await getWidgets('board');
+    const { deleteWidget } = await import('./dashboardWidgetsApi');
+    await deleteWidget(top.uuid);
+
+    expect(await seedWidgets('v1', [{ title: 'Top', type: 'calls_stat' }], 'board')).toBe(false);
+    expect(await titles()).toEqual([]);
   });
 });

@@ -7,7 +7,9 @@ export const ROW_HEIGHT = 120;
 const WIDE_TYPES = new Set(['trend', 'line', 'bar', 'pie', 'table']);
 
 export function defaultSize(type) {
-  if (type === 'explorer') return { w: GRID_COLS, h: 3 };
+  if (type === 'explorer' || type === 'calls_chart') return { w: GRID_COLS, h: 3 };
+  if (type === 'calls_outcome') return { w: 2, h: 3 };
+  if (type === 'live_calls') return { w: 2, h: 2 };
   if (WIDE_TYPES.has(type)) return { w: 2, h: 2 };
   return { w: 1, h: 2 };
 }

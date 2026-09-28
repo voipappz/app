@@ -9,11 +9,14 @@
  * here. The one exception is the 'table' type, which reads recent_calls rows
  * (Postgres, via useDashboardSnapshot) — InfluxDB has no row-level call data.
  */
+import { isCallsType } from './callsWidgets';
 
-export const WIDGET_TYPES = ['counter', 'gauge', 'stat', 'trend', 'line', 'bar', 'pie', 'table', 'explorer'];
+export const WIDGET_TYPES = ['counter', 'gauge', 'stat', 'trend', 'line', 'bar', 'pie', 'table', 'explorer',
+  // Calls widgets (callsWidgets.js): the calls chart split by a CDR tag, and live calls.
+  'calls_stat', 'calls_chart', 'calls_outcome', 'live_calls'];
 
 // Widget type → whether it's a live Influx metric query or the calls table.
-export const isInfluxType = (type) => type !== 'table';
+export const isInfluxType = (type) => type !== 'table' && !isCallsType(type);
 
 /** Blank widget — every field the editor can touch, so merges are total. */
 export const DEFAULT_WIDGET = {
@@ -33,7 +36,11 @@ export const DEFAULT_WIDGET = {
   thresholds: { warning: 70, critical: 90 },
   inverse: false,
   min: 0,
-  max: 100
+  max: 100,
+  // Calls widgets only: the CDR tag to split by, and which number a
+  // calls_stat shows (total | answered | groups | busiest).
+  groupBy: 'direction',
+  metric: 'total'
 };
 
 // Measurements/fields below are the ones this platform's InfluxDB actually
@@ -141,6 +148,29 @@ export const WIDGET_TEMPLATES = {
     title: 'Recent calls', type: 'table',
     fields: ['started_at', 'direction', 'from_number', 'to_number', 'status', 'duration_sec']
   },
+  // The dashboard's calls panels. They follow the customer/application picked
+  // in the top bar, and split calls by a CDR tag (direction, disposition…).
+  callsTotal: {
+    title: 'Calls', type: 'calls_stat', metric: 'total', groupBy: 'direction', minutes: 1440, icon: 'Call'
+  },
+  callsAnswered: {
+    title: 'Answered', type: 'calls_stat', metric: 'answered', groupBy: 'disposition', minutes: 1440, icon: 'Call'
+  },
+  callsGroups: {
+    title: 'Directions', type: 'calls_stat', metric: 'groups', groupBy: 'direction', minutes: 1440, icon: 'Call'
+  },
+  callsBusiest: {
+    title: 'Most calls by direction', type: 'calls_stat', metric: 'busiest', groupBy: 'direction', minutes: 1440, icon: 'CallMade'
+  },
+  callsByDirection: {
+    title: 'Calls by direction', type: 'calls_chart', groupBy: 'direction', minutes: 1440, icon: 'Insights'
+  },
+  callsOutcome: {
+    title: 'How they ended', type: 'calls_outcome', groupBy: 'disposition', minutes: 1440, icon: 'Insights'
+  },
+  liveCalls: {
+    title: 'Live calls', type: 'live_calls', icon: 'Call'
+  },
   // The Monitoring metric explorer pinned to the board: the saved query is
   // where it opens, and it runs only when asked.
   metricExplorer: {
@@ -152,6 +182,7 @@ export const WIDGET_TEMPLATES = {
 
 /** Template keys grouped for the editor's quick-start chip row. */
 export const TEMPLATE_CATEGORIES = {
+  calls: ['liveCalls', 'callsTotal', 'callsAnswered', 'callsGroups', 'callsBusiest', 'callsByDirection', 'callsOutcome'],
   live: ['callsInProgress'],
   counters: ['callsToday', 'totalCalls', 'peakIncoming', 'peakOutgoing', 'extensionsTotal', 'avgCallDuration', 'avgTalkTime'],
   gauges: ['concurrentCallsGauge'],
