@@ -5,6 +5,7 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import AddWidgetMenu from './AddWidgetMenu';
 import WidgetEditor from './WidgetEditor';
+import WidgetBuilder from './WidgetBuilder';
 import BuilderWidget from './BuilderWidget';
 import { getWidgets, createWidget, updateWidget, deleteWidget, updateWidgetLayout, setDashboardStorageScope, seedWidgets } from '../../services/api/dashboardWidgetsApi';
 import { monitoringApi } from '../../services/api/monitoringApi';
@@ -21,6 +22,8 @@ import { GRID_COLS, ROW_HEIGHT, layoutFor, layoutChanges } from './widgetLayout'
 export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true }) {
   const [widgets, setWidgets] = useState([]);
   const [draft, setDraft] = useState(null);
+  // The query widget open in the builder: {} for a new one, the widget to edit.
+  const [building, setBuilding] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [minutes, setMinutes] = useState(0);
@@ -66,7 +69,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
   const mutate = async (action) => {
     setSaving(true); setError(null);
     setDashboardStorageScope(storageScope);
-    try { await action(); await reload(); setDraft(null); }
+    try { await action(); await reload(); setDraft(null); setBuilding(null); }
     catch (err) { setError(err.message || 'Could not save widgets'); }
     finally { setSaving(false); }
   };
@@ -92,6 +95,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
     </>}
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
       <AddWidgetMenu onPick={setDraft} disabled={saving} />
+      <Button variant="outlined" size="small" onClick={() => setBuilding({})} disabled={saving} data-testid="build-widget" sx={{ textTransform: 'none' }}>Build widget</Button>
       <TextField select size="small" label="Widget time range" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} sx={{ minWidth: 190 }}>
         <MenuItem value={0}>Each widget’s time range</MenuItem><MenuItem value={60}>Last hour</MenuItem><MenuItem value={1440}>Last 24 hours</MenuItem><MenuItem value={10080}>Last 7 days</MenuItem>
       </TextField>
@@ -114,12 +118,15 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
           <div key={widget.uuid}>
             <BuilderWidget widget={widget} snapshot={{ recent_calls: calls }} saving={saving} callsScope={callsScope}
               queryOptions={{ minutes: minutes || undefined, refreshKey, refreshInterval: auto ? 30000 : 0, environmentUuid }}
-              onEdit={setDraft} onDelete={(item) => mutate(() => deleteWidget(item.uuid))}
+              onEdit={(item) => (item.type === 'query' ? setBuilding(item) : setDraft(item))} onDelete={(item) => mutate(() => deleteWidget(item.uuid))}
               onDuplicate={(item) => mutate(() => { const { uuid: _uuid, layout: _layout, ...copy } = item; return createWidget({ ...copy, title: `${copy.title} copy` }); })} />
           </div>
         ))}
       </ReactGridLayout>
     </Box>
+    <WidgetBuilder open={Boolean(building)} widget={building?.uuid ? building : null} saving={saving} environmentUuid={environmentUuid}
+      onClose={() => setBuilding(null)}
+      onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
     <WidgetEditor open={Boolean(draft)} widget={draft?.uuid ? draft : null} initialDraft={draft} saving={saving} onClose={() => setDraft(null)}
       onSave={(item) => mutate(() => item.uuid ? updateWidget(item.uuid, item) : createWidget(item))} />
   </Box>;

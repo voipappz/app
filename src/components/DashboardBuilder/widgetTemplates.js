@@ -13,7 +13,9 @@ import { isCallsType } from './callsWidgets';
 
 export const WIDGET_TYPES = ['counter', 'gauge', 'stat', 'trend', 'line', 'bar', 'pie', 'table', 'explorer',
   // Calls widgets (callsWidgets.js): the calls chart split by a CDR tag, and live calls.
-  'calls_stat', 'calls_chart', 'calls_outcome', 'live_calls'];
+  'calls_stat', 'calls_chart', 'calls_outcome', 'live_calls',
+  // Built in the widget builder: a metric query with tag filters and a split.
+  'query'];
 
 // Widget type → whether it's a live Influx metric query or the calls table.
 export const isInfluxType = (type) => type !== 'table' && !isCallsType(type);
@@ -40,7 +42,11 @@ export const DEFAULT_WIDGET = {
   // Calls widgets only: the CDR tag to split by, and which number a
   // calls_stat shows (total | answered | groups | busiest).
   groupBy: 'direction',
-  metric: 'total'
+  metric: 'total',
+  // Query widgets only (WidgetBuilder): tag filters, split-by tag, and view.
+  where: {},
+  splitBy: '',
+  view: 'line'
 };
 
 // Measurements/fields below are the ones this platform's InfluxDB actually
@@ -218,7 +224,8 @@ export function withDefaults(widget = {}) {
     ...widget,
     type: WIDGET_TYPES.includes(widget.type) ? widget.type : DEFAULT_WIDGET.type,
     thresholds: { ...DEFAULT_WIDGET.thresholds, ...(widget.thresholds || {}) },
-    fields: Array.isArray(widget.fields) ? [...widget.fields] : []
+    fields: Array.isArray(widget.fields) ? [...widget.fields] : [],
+    where: widget.where && typeof widget.where === 'object' ? { ...widget.where } : {}
   };
 }
 

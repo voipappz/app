@@ -15,12 +15,14 @@ import { useWidgetValue } from './useWidgetValue';
 import MetricChart from './MetricChart';
 import InfluxMetricExplorer from '../Monitoring/InfluxMetricExplorer/InfluxMetricExplorer.jsx';
 import CallsWidgetBody from './CallsWidgetBody.jsx';
+import MetricResult from './MetricResult';
+import { useMetricQuery } from './useMetricQuery';
 import { isCallsType } from './callsWidgets';
 
 const STAT_TYPES = new Set(['counter', 'gauge', 'stat']);
 const CHART_TYPES = new Set(['trend', 'line', 'bar', 'pie']);
 // Runs its own query on demand; the board must not poll for it.
-const ON_DEMAND_TYPES = new Set(['table', 'explorer']);
+const ON_DEMAND_TYPES = new Set(['table', 'explorer', 'query']);
 
 function TrendPreview({ series, type }) {
   return <MetricChart series={series} type={type} />;
@@ -53,6 +55,17 @@ function TablePreview({ rows, fields }) {
       </Dialog>
     </Box>
   );
+}
+
+// A widget saved from the builder: its own query (filters, split), drawn the
+// way it was previewed. The board's window and refresh apply.
+function QueryBody({ widget, queryOptions = {} }) {
+  const result = useMetricQuery(widget, {
+    runKey: queryOptions.refreshKey, refreshInterval: queryOptions.refreshInterval ?? 30_000,
+    minutes: queryOptions.minutes, environmentUuid: queryOptions.environmentUuid,
+  });
+  return <MetricResult rows={result.rows} view={widget.view} splitBy={widget.splitBy} aggregation={widget.aggregation}
+    loading={result.loading} error={result.error} unit={widget.unit} />;
 }
 
 /**
@@ -89,7 +102,7 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
       <Stack direction="row" spacing={1} alignItems="center" className="widget-drag-handle" sx={{ px: 1.75, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover', cursor: 'grab' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 750 }} noWrap>{widget.title}</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{isCalls ? 'calls' : widget.type}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{isCalls ? 'calls' : widget.type === 'query' ? `${widget.measurement} · ${widget.field}` : widget.type}</Typography>
         </Box>
         <IconButton size="small" disabled={saving} aria-label="Widget actions" onClick={(event) => setMenuAnchor(event.currentTarget)}>
           <MoreVertIcon fontSize="small" />
@@ -127,6 +140,7 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
 
       <Box sx={{ flex: 1, p: 2, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         {isCalls && <CallsWidgetBody widget={widget} scope={callsScope} queryOptions={queryOptions} />}
+        {widget.type === 'query' && <QueryBody widget={widget} queryOptions={queryOptions} />}
         {STAT_TYPES.has(widget.type) && (
           <Stack sx={{ height: '100%' }} justifyContent="center" alignItems="center" spacing={1}>
             <Box sx={{ width: 48, height: 48, borderRadius: 2.5, display: 'grid', placeItems: 'center', bgcolor: 'action.hover', color: accent }}><Icon /></Box>
