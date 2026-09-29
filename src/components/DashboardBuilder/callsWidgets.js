@@ -21,7 +21,7 @@ export const CALLS_METRICS = [
   { key: 'busiest', label: 'Busiest group' },
 ];
 
-export const ANSWERED = /^(answer|answered|normal_clearing)$/i;
+export const ANSWERED = /^(answer|answered|contact_answer|normal_clearing)$/i;
 
 // The API's bucket and the chart's axis for a window.
 export const bucketFor = (minutes) => {
