@@ -69,7 +69,8 @@ describe('AdminDashboard', () => {
     for (const title of ['Today at a glance', 'Calls by environment', 'Status over time', 'Top callers', 'Top callees']) {
       expect(within(grid).getByText(title)).toBeInTheDocument();
     }
-    expect(within(grid).getAllByRole('button', { name: 'Widget actions' }).length).toBe(DASHBOARD_SEED.widgets.length);
+    // The reports plus the board's own starter widgets, every one editable.
+    expect(within(grid).getAllByRole('button', { name: 'Widget actions' }).length).toBeGreaterThanOrEqual(DASHBOARD_SEED.widgets.length);
   });
 
   it('reads the reports for the selected customer and shows real numbers', async () => {
@@ -80,8 +81,9 @@ describe('AdminDashboard', () => {
       dimensions: ['environment'], customerUuid: 'c-1',
     })));
     const grid = await screen.findByTestId('widget-grid');
-    expect(await within(grid).findByText('75%')).toBeInTheDocument();
-    expect(within(grid).getByText('1h 2m')).toBeInTheDocument();
+    // Answer rate on the KPI tiles and in the per-environment table.
+    expect((await within(grid).findAllByText('75%')).length).toBeGreaterThanOrEqual(2);
+    expect(within(grid).getAllByText('1h 2m').length).toBeGreaterThanOrEqual(1);
     expect(await within(grid).findByText('Main office')).toBeInTheDocument();
   });
 
