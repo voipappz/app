@@ -7,6 +7,7 @@ import AddWidgetMenu from './AddWidgetMenu';
 import WidgetEditor from './WidgetEditor';
 import WidgetBuilder from './WidgetBuilder';
 import BuilderWidget from './BuilderWidget';
+import CdrEditor from './CdrEditor';
 import { getWidgets, createWidget, updateWidget, deleteWidget, updateWidgetLayout, setDashboardStorageScope, seedWidgets } from '../../services/api/dashboardWidgetsApi';
 import { monitoringApi } from '../../services/api/monitoringApi';
 import { mapCdrCall } from '../Dashboard/useDashboardSnapshot';
@@ -18,12 +19,15 @@ import { GRID_COLS, ROW_HEIGHT, layoutFor, layoutChanges } from './widgetLayout'
 // `callsScope` ({ customerUuid, environmentUuid, fleet }) is what the calls
 // widgets follow; `seed` ({ key, widgets }) puts a starter set on the board
 // once (seedWidgets). `heading` false drops the "Your widgets" intro when the
-// board IS the page.
-export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true }) {
+// board IS the page. `editor` puts the CDR query editor above the board: it
+// saves 'cdr' widgets onto it, and editing one opens it there.
+export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true, editor = false }) {
   const [widgets, setWidgets] = useState([]);
   const [draft, setDraft] = useState(null);
   // The query widget open in the builder: {} for a new one, the widget to edit.
   const [building, setBuilding] = useState(null);
+  // The 'cdr' widget open in the query editor.
+  const [editingCdr, setEditingCdr] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [minutes, setMinutes] = useState(0);
@@ -69,7 +73,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
   const mutate = async (action) => {
     setSaving(true); setError(null);
     setDashboardStorageScope(storageScope);
-    try { await action(); await reload(); setDraft(null); setBuilding(null); }
+    try { await action(); await reload(); setDraft(null); setBuilding(null); setEditingCdr(null); }
     catch (err) { setError(err.message || 'Could not save widgets'); }
     finally { setSaving(false); }
   };
@@ -84,7 +88,18 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
       return change ? { ...widget, layout: change.layout } : widget;
     }));
   };
+  const editWidget = (item) => {
+    if (item.type === 'query') setBuilding(item);
+    else if (item.type === 'cdr' && editor) { setEditingCdr(item); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }
+    else setDraft(item);
+  };
+  // A report template goes straight onto the board; the editor tunes it later.
+  const pickTemplate = (item) => (item.type === 'cdr' ? mutate(() => createWidget(item)) : setDraft(item));
   return <Box sx={{ mt: heading ? 3 : 0, width: '100%' }}>
+    {editor && (
+      <CdrEditor scope={callsScope} editing={editingCdr} saving={saving} onCancelEdit={() => setEditingCdr(null)}
+        onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
+    )}
     {heading && <>
       <Typography variant="h6">Your widgets</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -94,7 +109,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
       </Typography>
     </>}
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
-      <AddWidgetMenu onPick={setDraft} disabled={saving} />
+      <AddWidgetMenu onPick={pickTemplate} disabled={saving} />
       <Button variant="outlined" size="small" onClick={() => setBuilding({})} disabled={saving} data-testid="build-widget" sx={{ textTransform: 'none' }}>Build widget</Button>
       <TextField select size="small" label="Widget time range" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} sx={{ minWidth: 190 }}>
         <MenuItem value={0}>Each widget’s time range</MenuItem><MenuItem value={60}>Last hour</MenuItem><MenuItem value={1440}>Last 24 hours</MenuItem><MenuItem value={10080}>Last 7 days</MenuItem>
@@ -118,7 +133,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
           <div key={widget.uuid}>
             <BuilderWidget widget={widget} snapshot={{ recent_calls: calls }} saving={saving} callsScope={callsScope}
               queryOptions={{ minutes: minutes || undefined, refreshKey, refreshInterval: auto ? 30000 : 0, environmentUuid }}
-              onEdit={(item) => (item.type === 'query' ? setBuilding(item) : setDraft(item))} onDelete={(item) => mutate(() => deleteWidget(item.uuid))}
+              onEdit={editWidget} onDelete={(item) => mutate(() => deleteWidget(item.uuid))}
               onDuplicate={(item) => mutate(() => { const { uuid: _uuid, layout: _layout, ...copy } = item; return createWidget({ ...copy, title: `${copy.title} copy` }); })} />
           </div>
         ))}

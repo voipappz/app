@@ -91,6 +91,33 @@ export const monitoringApi = {
     const res = await apiService.get(`/api/monitoring/influxdb/tag_values?${qs.toString()}`, {}, 'fetching tag values', false, true);
     return Array.isArray(res?.values) ? res.values : [];
   },
+
+  // The CDR report (InfluxDB `cdr` over SQL, built by the API from names —
+  // see voipappz-api InfluxDB::CdrReport). What this deployment can answer:
+  getCdrCatalog: async () => apiService.get('/api/monitoring/cdr/catalog', {}, 'fetching CDR catalog', false, true),
+
+  // Call-centre measures grouped by CDR dimensions. Scope: environmentUuids
+  // (the ones picked) > customerUuid > neither (root: every customer); the
+  // server only ever narrows the session's own scope with them.
+  runCdrReport: async ({ measures = ['calls'], dimensions = [], bucket = '', minutes = 1440, where = {}, order = '', limit = 100, slSeconds = 20, environmentUuids = [], customerUuid = '' } = {}) => {
+    const qs = new URLSearchParams({ minutes: String(minutes), limit: String(limit), sl_seconds: String(slSeconds) });
+    measures.forEach((m) => qs.append('measures[]', m));
+    dimensions.forEach((d) => qs.append('dimensions[]', d));
+    if (bucket) qs.append('bucket', bucket);
+    if (order) qs.append('order', order);
+    Object.entries(where || {}).forEach(([dim, value]) => {
+      const list = Array.isArray(value) ? value : [value];
+      const joined = list.filter((v) => v !== '' && v != null).map(String).join(',');
+      if (joined) qs.append(`where[${dim}]`, joined);
+    });
+    if (environmentUuids.length) qs.append('environment_uuids', environmentUuids.join(','));
+    else if (customerUuid) qs.append('customer_uuid', customerUuid);
+    return apiService.get(`/api/monitoring/cdr/report?${qs.toString()}`, {}, 'running CDR report', false, true);
+  },
+
+  // Hand-written SQL — root accounts only (the API refuses anyone else).
+  runCdrSql: async (sql) => apiService.post('/api/monitoring/cdr/sql', new URLSearchParams({ sql }),
+    { 'Content-Type': 'application/x-www-form-urlencoded' }, 'running SQL', false, true),
 };
 
 export default monitoringApi;

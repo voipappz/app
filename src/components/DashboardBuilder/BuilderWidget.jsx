@@ -18,11 +18,14 @@ import CallsWidgetBody from './CallsWidgetBody.jsx';
 import MetricResult from './MetricResult';
 import { useMetricQuery } from './useMetricQuery';
 import { isCallsType } from './callsWidgets';
+import CdrResult from './CdrResult';
+import { useCdrReport } from './useCdrReport';
+import { useCdrCatalog } from './CdrEditor';
 
 const STAT_TYPES = new Set(['counter', 'gauge', 'stat']);
 const CHART_TYPES = new Set(['trend', 'line', 'bar', 'pie']);
 // Runs its own query on demand; the board must not poll for it.
-const ON_DEMAND_TYPES = new Set(['table', 'explorer', 'query']);
+const ON_DEMAND_TYPES = new Set(['table', 'explorer', 'query', 'cdr']);
 
 function TrendPreview({ series, type }) {
   return <MetricChart series={series} type={type} />;
@@ -68,6 +71,17 @@ function QueryBody({ widget, queryOptions = {} }) {
     loading={result.loading} error={result.error} unit={widget.unit} />;
 }
 
+// A report saved from the query editor, for the top bar's scope; the board's
+// time range (if set) and refresh apply.
+function CdrBody({ widget, scope, queryOptions = {} }) {
+  const catalog = useCdrCatalog();
+  const result = useCdrReport(widget, {
+    scope, runKey: queryOptions.refreshKey, refreshInterval: queryOptions.refreshInterval ?? 30_000, minutes: queryOptions.minutes,
+  });
+  if (!result.hasScope) return <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', my: 'auto' }}>Select a customer or application in the top bar.</Typography>;
+  return <CdrResult result={result} query={widget} catalog={catalog} />;
+}
+
 /**
  * Compact, live-data preview used inside the builder grid. Influx types
  * (counter/gauge/stat/trend/line/bar/pie) query themselves via
@@ -102,7 +116,7 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
       <Stack direction="row" spacing={1} alignItems="center" className="widget-drag-handle" sx={{ px: 1.75, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover', cursor: 'grab' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 750 }} noWrap>{widget.title}</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{isCalls ? 'calls' : widget.type === 'query' ? `${widget.measurement} · ${widget.field}` : widget.type}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{isCalls ? 'calls' : widget.type === 'cdr' ? 'call report' : widget.type === 'query' ? `${widget.measurement} · ${widget.field}` : widget.type}</Typography>
         </Box>
         <IconButton size="small" disabled={saving} aria-label="Widget actions" onClick={(event) => setMenuAnchor(event.currentTarget)}>
           <MoreVertIcon fontSize="small" />
@@ -141,6 +155,7 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
       <Box sx={{ flex: 1, p: 2, minHeight: 0, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         {isCalls && <CallsWidgetBody widget={widget} scope={callsScope} queryOptions={queryOptions} />}
         {widget.type === 'query' && <QueryBody widget={widget} queryOptions={queryOptions} />}
+        {widget.type === 'cdr' && <CdrBody widget={widget} scope={callsScope} queryOptions={queryOptions} />}
         {STAT_TYPES.has(widget.type) && (
           <Stack sx={{ height: '100%' }} justifyContent="center" alignItems="center" spacing={1}>
             <Box sx={{ width: 48, height: 48, borderRadius: 2.5, display: 'grid', placeItems: 'center', bgcolor: 'action.hover', color: accent }}><Icon /></Box>

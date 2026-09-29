@@ -16,6 +16,7 @@ import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, withDefaults } fr
 import { resolveIcon } from './widgetPresentation';
 
 const CATEGORY_LABELS = {
+  reports: 'Call reports',
   calls: 'Calls',
   live: 'Right now',
   counters: 'Numbers',

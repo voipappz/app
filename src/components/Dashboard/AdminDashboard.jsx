@@ -1,4 +1,5 @@
-// The console's dashboard IS the widget board: every panel on it, including
+// The console's dashboard: the CDR query editor at its heart, and the widget
+// board below it. Every panel on the board, including
 // the calls panels this screen used to hard-code (totals, answered, calls over
 // time, how they ended, live calls), is a widget that can be moved, resized,
 // edited, duplicated or removed, and more are added from "Add widget". The
@@ -17,19 +18,18 @@ import PageHeader from '../common/PageHeader.jsx';
 import WidgetBoard from '../DashboardBuilder/WidgetBoard';
 import { applyTemplate } from '../DashboardBuilder/widgetTemplates';
 
-// What the fixed top section used to show, now as widgets placed on top of
-// the board once (dashboardWidgetsApi.seedWidgets), above anything already
-// there. Layout is in board units: 4 columns, 120px rows.
+// The starter board, placed on top once (dashboardWidgetsApi.seedWidgets) —
+// call-centre reports from the CDR report, the same data the query editor
+// reads. Boards that already carry the older calls panels keep them below.
+// Layout is in board units: 4 columns, 120px rows.
 export const DASHBOARD_SEED = {
-  key: 'calls-panels-v1',
+  key: 'cdr-reports-v1',
   widgets: [
-    { key: 'callsTotal', layout: { x: 0, y: 0, col: 1, row: 2 } },
-    { key: 'callsAnswered', layout: { x: 1, y: 0, col: 1, row: 2 } },
-    { key: 'callsGroups', layout: { x: 2, y: 0, col: 1, row: 2 } },
-    { key: 'callsBusiest', layout: { x: 3, y: 0, col: 1, row: 2 } },
-    { key: 'liveCalls', layout: { x: 0, y: 2, col: 2, row: 2 } },
-    { key: 'callsOutcome', layout: { x: 2, y: 2, col: 2, row: 3 } },
-    { key: 'callsByDirection', layout: { x: 0, y: 4, col: 2, row: 3 } },
+    { key: 'cdrKpis', layout: { x: 0, y: 0, col: 4, row: 2 } },
+    { key: 'cdrByEnvironment', layout: { x: 0, y: 2, col: 2, row: 3 } },
+    { key: 'cdrStatusOverTime', layout: { x: 2, y: 2, col: 2, row: 3 } },
+    { key: 'cdrTopCallers', layout: { x: 0, y: 5, col: 2, row: 3 } },
+    { key: 'cdrTopCallees', layout: { x: 2, y: 5, col: 2, row: 3 } },
   ],
 };
 const seed = {
@@ -55,6 +55,7 @@ export default function AdminDashboard() {
   const callsScope = {
     customerUuid: selectedCustomer?.uuid || null,
     environmentUuid: environment?.uuid || null,
+    environmentUuids: (selectedEnvironments || []).map((env) => env?.uuid).filter(Boolean),
     fleet,
   };
 
@@ -66,7 +67,7 @@ export default function AdminDashboard() {
         actions={can('calls', 'read') ? <Button variant="outlined" onClick={() => navigate('/calls')}>View call history</Button> : null}
       />
       {accountUuid && (
-        <WidgetBoard key={accountUuid} storageScope={`admin-metrics:${accountUuid}`} callsScope={callsScope} seed={seed} heading={false} />
+        <WidgetBoard key={accountUuid} storageScope={`admin-metrics:${accountUuid}`} callsScope={callsScope} seed={seed} heading={false} editor />
       )}
     </Box>
   );

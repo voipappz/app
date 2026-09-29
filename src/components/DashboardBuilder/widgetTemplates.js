@@ -15,7 +15,9 @@ export const WIDGET_TYPES = ['counter', 'gauge', 'stat', 'trend', 'line', 'bar',
   // Calls widgets (callsWidgets.js): the calls chart split by a CDR tag, and live calls.
   'calls_stat', 'calls_chart', 'calls_outcome', 'live_calls',
   // Built in the widget builder: a metric query with tag filters and a split.
-  'query'];
+  'query',
+  // Saved from the dashboard's query editor: a CDR report (cdrReport.js).
+  'cdr'];
 
 // Widget type → whether it's a live Influx metric query or the calls table.
 export const isInfluxType = (type) => type !== 'table' && !isCallsType(type);
@@ -46,7 +48,11 @@ export const DEFAULT_WIDGET = {
   // Query widgets only (WidgetBuilder): tag filters, split-by tag, and view.
   where: {},
   splitBy: '',
-  view: 'line'
+  view: 'line',
+  // CDR report widgets only (CdrEditor): measures, group-by fields, time bucket.
+  measures: [],
+  dimensions: [],
+  bucket: ''
 };
 
 // Measurements/fields below are the ones this platform's InfluxDB actually
@@ -177,6 +183,32 @@ export const WIDGET_TEMPLATES = {
   liveCalls: {
     title: 'Live calls', type: 'live_calls', icon: 'Call'
   },
+  // CDR report widgets — the dashboard's call-centre KPIs, from the query
+  // editor's report (InfluxDB `cdr`, grouped by any CDR field).
+  cdrKpis: {
+    title: 'Today at a glance', type: 'cdr', view: 'number', minutes: 1440,
+    measures: ['calls', 'answer_rate', 'billsec', 'avg_talk', 'avg_wait', 'service_level'], dimensions: []
+  },
+  cdrByEnvironment: {
+    title: 'Calls by environment', type: 'cdr', view: 'table', minutes: 1440, limit: 50,
+    measures: ['calls', 'answered', 'answer_rate', 'billsec', 'avg_talk', 'abandon_rate', 'billed'], dimensions: ['environment']
+  },
+  cdrStatusOverTime: {
+    title: 'Status over time', type: 'cdr', view: 'bar', minutes: 1440, bucket: '1h',
+    measures: ['calls'], dimensions: ['status']
+  },
+  cdrTopCallers: {
+    title: 'Top callers', type: 'cdr', view: 'table', minutes: 1440, limit: 10,
+    measures: ['calls', 'billsec', 'answer_rate'], dimensions: ['caller']
+  },
+  cdrTopCallees: {
+    title: 'Top callees', type: 'cdr', view: 'table', minutes: 1440, limit: 10,
+    measures: ['calls', 'billsec', 'answer_rate'], dimensions: ['callee']
+  },
+  cdrByHour: {
+    title: 'Calls by hour of day', type: 'cdr', view: 'bar', minutes: 1440,
+    measures: ['calls'], dimensions: ['hour']
+  },
   // The Monitoring metric explorer pinned to the board: the saved query is
   // where it opens, and it runs only when asked.
   metricExplorer: {
@@ -188,6 +220,7 @@ export const WIDGET_TEMPLATES = {
 
 /** Template keys grouped for the editor's quick-start chip row. */
 export const TEMPLATE_CATEGORIES = {
+  reports: ['cdrKpis', 'cdrByEnvironment', 'cdrStatusOverTime', 'cdrTopCallers', 'cdrTopCallees', 'cdrByHour'],
   calls: ['liveCalls', 'callsTotal', 'callsAnswered', 'callsGroups', 'callsBusiest', 'callsByDirection', 'callsOutcome'],
   live: ['callsInProgress'],
   counters: ['callsToday', 'totalCalls', 'peakIncoming', 'peakOutgoing', 'extensionsTotal', 'avgCallDuration', 'avgTalkTime'],
@@ -213,6 +246,8 @@ export function applyTemplate(templateKey, overrides = {}) {
     minutes: template.minutes === 'today' ? minutesSinceMidnight() : (template.minutes ?? DEFAULT_WIDGET.minutes),
     thresholds: { ...DEFAULT_WIDGET.thresholds, ...(template.thresholds || {}) },
     fields: [...(template.fields || [])],
+    measures: [...(template.measures || [])],
+    dimensions: [...(template.dimensions || [])],
     ...overrides
   };
 }
@@ -225,7 +260,9 @@ export function withDefaults(widget = {}) {
     type: WIDGET_TYPES.includes(widget.type) ? widget.type : DEFAULT_WIDGET.type,
     thresholds: { ...DEFAULT_WIDGET.thresholds, ...(widget.thresholds || {}) },
     fields: Array.isArray(widget.fields) ? [...widget.fields] : [],
-    where: widget.where && typeof widget.where === 'object' ? { ...widget.where } : {}
+    where: widget.where && typeof widget.where === 'object' ? { ...widget.where } : {},
+    measures: Array.isArray(widget.measures) ? [...widget.measures] : [],
+    dimensions: Array.isArray(widget.dimensions) ? [...widget.dimensions] : []
   };
 }
 
