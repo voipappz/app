@@ -106,15 +106,12 @@ export const extensionsApi = {
    * @returns {Promise<Object>} - Import result
    */
   importCSV: async (file, environmentUuid) => {
-    // NOT /api/devices/import — that route doesn't exist and 404s, which is
-    // why importing never did anything. The importer is mounted at
-    // /api/users/import (legacy naming: extensions are FreeSWITCH "users"),
-    // defined outside the /extensions namespace in endpoints/extensions.rb.
-    //
-    // Expected CSV headers are Username,Name,Password — a file whose headers
-    // don't match parses zero rows and still answers 200 OK, so a silent
-    // "success" that imports nothing means the header row is wrong.
-    const url = `/api/users/import`;
+    // POST /api/devices/import adds the devices in the request and answers with
+    // what happened to every row: { added, existing, failed: [{ line,
+    // username, error }], message }. (The old /api/users/import queued a job
+    // that could not find the uploaded file and imported nothing, silently.)
+    // Headers: Username,Name,Password,CallerID.
+    const url = `/api/devices/import`;
     const formData = new FormData();
     formData.append('file', file);
     formData.append('environment_uuid', environmentUuid);

@@ -33,6 +33,7 @@ import { extensionsApi } from '../../../services/api/extensionsApi';
 import DynamicProfileEditor from '../../common/DynamicProfileEditor/DynamicProfileEditor';
 import { Z } from '../../../utils/zIndex.js';
 import { useIsUserSession } from '../../../hooks/useIsUserSession';
+import { deviceErrors, generateDevicePassword } from './deviceRules';
 import SecretField from '../../common/SecretField.jsx';
 
 /**
@@ -163,20 +164,8 @@ export const ExtensionBridge = ({
 
   // Validate form
   const validateForm = () => {
-    const errors = {};
-
-    if (!formData.name?.trim()) {
-      errors.name = 'Name is required';
-    }
-
-    if (!formData.username?.trim()) {
-      errors.username = 'Device number is required';
-    }
-
-    // Password is required for create mode
-    if (!isEditMode && !formData.password?.trim()) {
-      errors.password = 'Password is required for new devices';
-    }
+    // Same rules as the CSV import (deviceRules.js); a password only for a new device.
+    const errors = deviceErrors(formData, { requirePassword: !isEditMode });
 
     // Environment required if shown
     if (!hideEnvironment && !formData.environment_uuid) {
@@ -189,23 +178,13 @@ export const ExtensionBridge = ({
 
   // Generate random password (with UI update)
   const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    handleChange('password', password);
+    handleChange('password', generateDevicePassword());
     setShowPassword(true);
   };
 
   // Generate password without showing it (for initial create mode)
   const generatePasswordSilent = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setFormData(prev => ({ ...prev, password }));
+    setFormData(prev => ({ ...prev, password: generateDevicePassword() }));
   };
 
   // Copy password to clipboard

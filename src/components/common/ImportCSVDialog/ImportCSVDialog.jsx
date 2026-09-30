@@ -1,3 +1,4 @@
+import { alpha } from '@mui/material/styles';
 import { useState, useRef } from 'react';
 import {
   Dialog,
@@ -69,7 +70,12 @@ const ImportCSVDialog = ({
   formatHint = '',
   showTemplateOption = false,
   templateHeaders = [],
-  templateData = []
+  templateData = [],
+  // Optional per-row rules: validateRow(row) -> { column: message } marks bad
+  // cells and holds Import until they are fixed; prepareRow(row) -> row fills
+  // defaults (e.g. a generated password) on every row loaded or added.
+  validateRow = null,
+  prepareRow = (row) => row,
 }) => {
   const isNarrow = useMediaQuery((t) => t.breakpoints.down('sm'));
   const [importFile, setImportFile] = useState(null);
@@ -110,7 +116,7 @@ const ImportCSVDialog = ({
 
         const headers = results.meta.fields || [];
         setCsvHeaders(headers);
-        setCsvPreviewData(results.data);
+        setCsvPreviewData(results.data.map(prepareRow));
         setShowPreview(true);
         setError(null);
       },
@@ -171,7 +177,7 @@ const ImportCSVDialog = ({
   // already existed, so a 2-row template couldn't become a real import and a
   // bad row couldn't be dropped without going back to a spreadsheet.
   const handleAddRow = () => {
-    const blank = Object.fromEntries(csvHeaders.map((h) => [h, '']));
+    const blank = prepareRow(Object.fromEntries(csvHeaders.map((h) => [h, ''])));
     setCsvPreviewData([...(csvPreviewData || []), blank]);
     setEditingCell({ row: (csvPreviewData || []).length, column: csvHeaders[0] });
   };
@@ -189,9 +195,16 @@ const ImportCSVDialog = ({
     setEditingCell(null);
   };
 
+  const rowErrors = (csvPreviewData || []).map((row) => (validateRow ? validateRow(row) : {}));
+  const badRows = rowErrors.filter((errors) => Object.keys(errors).length > 0).length;
+
   const handleImportSubmit = async () => {
     if (requireEnvironment && !environmentUuid) {
-      setError('Please select an environment');
+      setError('Choose an application');
+      return;
+    }
+    if (badRows) {
+      setError(`Fix the ${badRows === 1 ? 'row' : `${badRows} rows`} marked in red first`);
       return;
     }
     if (!importFile && !csvPreviewData) {
@@ -218,8 +231,15 @@ const ImportCSVDialog = ({
 
       const result = await onImport(fileToUpload, environmentUuid);
 
-      setSuccess(`${entityName} imported successfully! ${result?.message || ''}`);
-      onSuccess?.(result);
+      // An importer that reports per row ({ added, existing, failed }) is taken
+      // at its word: rows that failed keep the dialog open with their reasons.
+      const failed = Array.isArray(result?.failed) ? result.failed : [];
+      if (result?.added?.length || !failed.length) onSuccess?.(result);
+      if (failed.length) {
+        setError(`${result?.message || `${failed.length} failed`}. ${failed.map((f) => `Line ${f.line}${f.username ? ` (${f.username})` : ''}: ${f.error}`).join(' · ')}`);
+        return;
+      }
+      setSuccess(result?.message ? `${entityName}: ${result.message}` : `${entityName} imported`);
 
       // Close dialog after 2 seconds on success
       setTimeout(() => {
@@ -267,7 +287,7 @@ const ImportCSVDialog = ({
   const handleLoadTemplate = () => {
     if (templateHeaders.length > 0 && templateData.length > 0) {
       setCsvHeaders(templateHeaders);
-      setCsvPreviewData([...templateData]);
+      setCsvPreviewData(templateData.map(prepareRow));
       setShowPreview(true);
       // Create a fake file object for the import submission
       const csvString = Papa.unparse(templateData, {
@@ -392,13 +412,18 @@ const ImportCSVDialog = ({
                         const isEditing =
                           editingCell?.row === rowIndex &&
                           editingCell?.column === header;
+                        const cellError = rowErrors[rowIndex]?.[header];
 
                         return (
                           <TableCell
                             key={colIndex}
                             onClick={() => handleCellClick(rowIndex, header)}
+                            title={cellError || undefined}
+                            data-invalid={cellError ? 'true' : undefined}
                             sx={{
                               cursor: 'pointer',
+                              bgcolor: cellError ? (t) => alpha(t.palette.error.main, 0.08) : undefined,
+                              boxShadow: cellError ? (t) => `inset 0 0 0 1px ${t.palette.error.main}` : undefined,
                               '&:hover': { bgcolor: 'action.hover' }
                             }}
                           >
@@ -413,8 +438,8 @@ const ImportCSVDialog = ({
                                 variant="standard"
                               />
                             ) : (
-                              <Typography variant="body2">
-                                {row[header] || '-'}
+                              <Typography variant="body2" color={cellError ? 'error' : undefined}>
+                                {row[header] || (cellError ? cellError : '-')}
                               </Typography>
                             )}
                           </TableCell>
@@ -450,6 +475,11 @@ const ImportCSVDialog = ({
               <Typography variant="caption" color="text.secondary">
                 {(csvPreviewData || []).length} row{(csvPreviewData || []).length === 1 ? '' : 's'} will be imported
               </Typography>
+              {badRows > 0 && (
+                <Typography variant="caption" color="error" data-testid="bad-rows">
+                  · {badRows} {badRows === 1 ? 'row needs' : 'rows need'} fixing
+                </Typography>
+              )}
             </Box>
           </Box>
         )}
@@ -549,7 +579,7 @@ const ImportCSVDialog = ({
         <Button
           variant="contained"
           onClick={handleImportSubmit}
-          disabled={(requireEnvironment && !environmentUuid) || !importFile || loading}
+          disabled={(requireEnvironment && !environmentUuid) || !importFile || loading || badRows > 0}
           startIcon={loading ? <CircularProgress size={20} /> : <UploadIcon />}
         >
           {loading ? 'Importing...' : 'Import'}
