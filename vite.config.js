@@ -3,6 +3,15 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import { readFileSync } from 'fs'
 
+// Which packages share a vendor chunk (see manualChunks below).
+const VENDOR_CHUNKS = {
+  vendor: ['react', 'react-dom', 'react-router', 'scheduler', '@remix-run/router'],
+  mui: ['@mui/material', '@mui/icons-material', '@mui/x-data-grid', '@mui/x-date-pickers', '@mui/x-date-pickers-pro', '@emotion/react', '@emotion/styled'],
+  dates: ['date-fns', 'moment', 'react-date-range'],
+  viz: ['d3'],
+  net: ['axios'],
+}
+
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
 
 // https://vite.dev/config/
@@ -104,30 +113,12 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: 'index.html',
         output: {
-          manualChunks: {
-            'vendor': [
-              'react',
-              'react-dom',
-              'react-router',
-              'scheduler',
-              '@remix-run/router'
-            ],
-            'mui': [
-              '@mui/material',
-              '@mui/icons-material',
-              '@mui/x-data-grid',
-              '@mui/x-date-pickers',
-              '@mui/x-date-pickers-pro',
-              '@emotion/react',
-              '@emotion/styled'
-            ],
-            'dates': [
-              'date-fns',
-              'moment',
-              'react-date-range'
-            ],
-            'viz': ['d3'],
-            'net': ['axios']
+          // A function, not a { chunk: [packages] } map: Vite 8's bundler
+          // (Rolldown) only takes the function form. Same chunks as before.
+          manualChunks(id) {
+            const match = id.match(/node_modules\/((?:@[^/]+\/)?[^/]+)\//)
+            if (!match) return undefined
+            return Object.keys(VENDOR_CHUNKS).find((chunk) => VENDOR_CHUNKS[chunk].includes(match[1]))
           }
         }
       },
