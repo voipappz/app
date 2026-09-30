@@ -9,6 +9,13 @@ import {
 
 const environments = [{ uuid: 'env-1', name: 'Sales' }];
 
+// jsdom's File has no .text(); FileReader it is.
+const readText = (blob) => new Promise((resolve) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.readAsText(blob);
+});
+
 function renderDialog(props) {
   // The dialog reads breakpoints (full screen on a phone), so it needs a theme.
   return render(
@@ -66,7 +73,7 @@ describe('ImportCSVDialog with row rules', () => {
 
     const [file, environmentUuid] = onImport.mock.calls[0];
     expect(environmentUuid).toBe('env-1');
-    const sent = await file.text();
+    const sent = await readText(file);
     expect(sent.split('\n')[0].trim()).toBe('Username,Name,Password,CallerID');
     // The blank password was filled before sending.
     expect(sent.split('\n')[1]).toMatch(/^804,Maya,[A-Za-z0-9]{12},/);
