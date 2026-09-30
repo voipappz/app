@@ -49,6 +49,10 @@ export const useZendeskWidget = (enabled, user, customerUuid) => {
         }
       });
     }
+    // The widget is an iframe: it cannot read the app's CSS tokens, so it is
+    // handed the accent's resolved value.
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim();
+    if (accent) zE('webWidget', 'updateSettings', { webWidget: { color: { theme: accent } } });
     zE('webWidget', 'show');
   }, [enabled]);
 

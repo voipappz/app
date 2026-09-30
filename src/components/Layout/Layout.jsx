@@ -16,7 +16,7 @@ import useIdleTimeout from '../../hooks/useIdleTimeout';
 import { useZendeskWidget } from '../../services/zendeskWidget';
 import './Layout.css';
 
-const SIDEBAR_EXPANDED_KEY = 'sidebar-expanded';
+const SIDEBAR_HIDDEN_KEY = 'sidebar-hidden';
 
 const Layout = ({ children }) => {
   useLayout();
@@ -68,20 +68,19 @@ const Layout = ({ children }) => {
 
   // Sidebar state — desktop collapse + mobile drawer (shared by the hamburger).
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const sidebarCollapsed = false;
-  // Expanded is a per-browser preference: it survives a reload.
-  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
-    try { return localStorage.getItem(SIDEBAR_EXPANDED_KEY) === '1'; } catch { return false; }
+  // The rail has one width; the hamburger hides or shows it. A per-browser
+  // preference: it survives a reload.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_HIDDEN_KEY) === '1'; } catch { return false; }
   });
   useEffect(() => {
-    try { localStorage.setItem(SIDEBAR_EXPANDED_KEY, sidebarExpanded ? '1' : '0'); } catch { /* storage disabled */ }
-  }, [sidebarExpanded]);
+    try { localStorage.setItem(SIDEBAR_HIDDEN_KEY, sidebarCollapsed ? '1' : '0'); } catch { /* storage disabled */ }
+  }, [sidebarCollapsed]);
   const isMobile = useMediaQuery((t) => t.breakpoints.down('md'));
   const handleToggleSidebar = () => {
     if (isMobile) setMobileDrawerOpen(open => !open);
-    else setSidebarExpanded(expanded => !expanded);
+    else setSidebarCollapsed(hidden => !hidden);
   };
-  const handleToggleExpand = handleToggleSidebar;
 
   return (
     <Box className="layout-container" data-testid="layout-container">
@@ -103,7 +102,7 @@ const Layout = ({ children }) => {
             {/* Fixed sidebar — hidden on mobile, shown via the drawer */}
             {!isMcpWorkspace && (
               <Box className="sidebar-desktop">
-                <Sidebar collapsed={sidebarCollapsed} expanded={sidebarExpanded} />
+                <Sidebar collapsed={sidebarCollapsed} />
               </Box>
             )}
 
@@ -115,23 +114,21 @@ const Layout = ({ children }) => {
               ModalProps={{ keepMounted: true }}
               sx={{
                 display: { xs: 'block', md: 'none' },
-                '& .MuiDrawer-paper': { width: 68, boxSizing: 'border-box' }
+                '& .MuiDrawer-paper': { width: 'var(--sidebar-width)', boxSizing: 'border-box' }
               }}
             >
-              <Sidebar expanded onNavigate={() => setMobileDrawerOpen(false)} />
+              <Sidebar onNavigate={() => setMobileDrawerOpen(false)} />
             </Drawer>}
 
             {/* TopBar — fixed at top, offset by the sidebar */}
             {!isMcpWorkspace && <TopBar
               sidebarCollapsed={sidebarCollapsed}
-              sidebarExpanded={sidebarExpanded}
-              menuOpen={isMobile ? mobileDrawerOpen : sidebarExpanded}
+              menuOpen={isMobile ? mobileDrawerOpen : !sidebarCollapsed}
               onToggleSidebar={handleToggleSidebar}
-              onToggleExpand={handleToggleExpand}
             />}
 
             {/* Main content area */}
-            <Box className={`content-container ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${sidebarExpanded ? 'sidebar-expanded' : ''} ${isMcpWorkspace ? 'mcp-fullscreen' : ''}`} data-testid="main-content">
+            <Box className={`content-container ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${isMcpWorkspace ? 'mcp-fullscreen' : ''}`} data-testid="main-content">
               <Box sx={{ flex: '1 1 0', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {children}
               </Box>
