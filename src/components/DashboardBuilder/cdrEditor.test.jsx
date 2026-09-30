@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { monitoringApi } from '../../services/api/monitoringApi';
 import CdrEditor from './CdrEditor';
 import { formatMeasure, formatSeconds, scopeParams, timeSeries } from './cdrReport';
+import { REPORT_UNAVAILABLE, reportError } from './useCdrReport';
 
 vi.mock('../../services/api/monitoringApi', () => ({ monitoringApi: {
   runCdrReport: vi.fn(), getCdrCatalog: vi.fn(), runCdrSql: vi.fn(),
@@ -46,6 +47,12 @@ describe('CDR report helpers', () => {
     ], { dimensions: ['status'], measures: ['calls'] });
     expect(series).toEqual(['answer', 'busy']);
     expect(data).toEqual([{ time: 't1', answer: 3, busy: 1 }, { time: 't2', answer: 2 }]);
+  });
+
+  it('explains a failed report in words', () => {
+    expect(reportError({ status: 404, message: 'Failed running CDR report: HTTP 404: {}' })).toBe(REPORT_UNAVAILABLE);
+    expect(reportError({ status: 422, message: 'Failed running CDR report: HTTP 422: {"error":"Too much data for this time range"}' }))
+      .toBe('Too much data for this time range');
   });
 
   it('scopes to the customer, else to the picked applications', () => {

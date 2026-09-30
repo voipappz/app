@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-router', () => ({ useNavigate: () => vi.fn() }));
@@ -58,19 +59,44 @@ beforeEach(() => {
 });
 
 describe('AdminDashboard', () => {
-  it('puts the query editor at the top and call reports on the board', async () => {
+  it('is the board: call reports on it, the report builder behind Build widget', async () => {
     scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [{ uuid: 'env-1', name: 'main' }] });
     render(<AdminDashboard />);
 
     const page = screen.getByTestId('admin-dashboard-page');
     expect(page).toHaveTextContent('Activity for acme · all applications');
-    expect(screen.getByTestId('cdr-editor')).toBeInTheDocument();
+    expect(screen.queryByTestId('cdr-editor')).not.toBeInTheDocument();
     const grid = await screen.findByTestId('widget-grid');
     for (const title of ['Today at a glance', 'Calls by environment', 'Status over time', 'Top callers', 'Top callees']) {
       expect(within(grid).getByText(title)).toBeInTheDocument();
     }
     // The reports plus the board's own starter widgets, every one editable.
     expect(within(grid).getAllByRole('button', { name: 'Widget actions' }).length).toBeGreaterThanOrEqual(DASHBOARD_SEED.widgets.length);
+  });
+
+  it('builds a call report widget from Build widget', async () => {
+    scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [] });
+    const user = userEvent.setup();
+    render(<AdminDashboard />);
+    await screen.findByText('Top callees');
+
+    await user.click(screen.getByTestId('build-widget'));
+    await user.click(screen.getByRole('menuitem', { name: /Call report/ }));
+    const builder = await screen.findByTestId('cdr-editor');
+    await user.type(within(builder).getByLabelText('Widget title'), 'Calls per site');
+    await user.click(within(builder).getByRole('button', { name: 'Save as widget' }));
+
+    await waitFor(() => expect(screen.queryByTestId('cdr-editor')).not.toBeInTheDocument());
+    expect(within(screen.getByTestId('widget-grid')).getByText('Calls per site')).toBeInTheDocument();
+  });
+
+  it('says the server lacks call reports instead of a raw 404', async () => {
+    scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [] });
+    monitoringApi.runCdrReport.mockRejectedValue(Object.assign(new Error('Failed running CDR report: HTTP 404: {}'), { status: 404 }));
+    render(<AdminDashboard />);
+
+    expect((await screen.findAllByText(/Call reports aren’t available on this server yet/)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/HTTP 404/)).not.toBeInTheDocument();
   });
 
   it('reads the reports for the selected customer and shows real numbers', async () => {
