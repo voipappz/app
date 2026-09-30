@@ -16,7 +16,7 @@ import { announcementsApi } from '../../../services/api/announcementsApi.js';
  */
 export const useAnnouncement = () => {
   // Mode state
-  const [mode, setMode] = useState('file'); // 'file' | 'tts'
+  const [mode, setMode] = useState('file'); // 'file' | 'tts' | 'builtin'
 
   // File upload state
   const [file, setFile] = useState(null);
@@ -120,6 +120,10 @@ export const useAnnouncement = () => {
         );
 
         setUploadStatus('success');
+      } else if (mode === 'builtin') {
+        // Built-in (MOH / RINGING / SILENCE): the name decides the audio, the
+        // API plays its local file, nothing to upload.
+        result = await announcementsApi.createBuiltin(formData);
       } else {
         // TTS mode - use the path from TTS generation
         if (!ttsPath) {
