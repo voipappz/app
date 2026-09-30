@@ -4,8 +4,8 @@ import { useSoftphone } from '../../context/SoftphoneContext';
 import { usePortalSidebar } from '../../context/PortalSidebarContext';
 
 // The phone in the account console's top bar: opens the right-hand sidebar,
-// as the shared command palette's phone action does. Green when
-// registered; the dot carries the finer states.
+// as the shared command palette's phone action does. It looks like the other
+// top bar tools; the dot carries the registration state.
 const DOT = { registered: '#22c55e', registering: '#f59e0b', connecting: '#f59e0b', failed: '#ef4444', unregistered: '#94a3b8' };
 
 export default function TopBarPhoneButton() {
@@ -19,8 +19,9 @@ export default function TopBarPhoneButton() {
       <IconButton
         size="small" aria-label={label} data-testid="topbar-phone-button" onClick={() => toggle('phone')}
         sx={{
-          color: '#15803d', bgcolor: 'rgba(34, 197, 94, 0.14)', border: '1px solid rgba(34, 197, 94, 0.35)',
-          '&:hover': { bgcolor: 'rgba(34, 197, 94, 0.24)' },
+          color: open ? 'var(--accent-primary)' : 'var(--theme-text-secondary)',
+          bgcolor: open ? 'var(--accent-primary-alpha-15)' : 'transparent',
+          '&:hover': { bgcolor: 'var(--theme-hover)' },
         }}
       >
         <Badge

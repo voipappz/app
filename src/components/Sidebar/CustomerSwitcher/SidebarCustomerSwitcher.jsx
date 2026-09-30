@@ -12,12 +12,6 @@ import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentCont
 import { useAuth } from '../../../context/AuthContext';
 import './SidebarCustomerSwitcher.css';
 
-// Deterministic, pleasant avatar color from the customer name (no extra fetch).
-const avatarColor = (name = '') => {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
-  return `hsl(${h}, 42%, 38%)`;
-};
 const initial = (name = '?') => (name.trim()[0] || '?').toUpperCase();
 const tagsOf = (c) => ((c?.meta && typeof c.meta === 'object')
   ? Object.entries(c.meta).map(([k, v]) => (v ? `${k}:${v}` : k))
@@ -94,7 +88,7 @@ const SidebarCustomerSwitcher = () => {
           aria-haspopup={switchable ? 'dialog' : undefined}
           data-testid="sidebar-customer-switcher"
         >
-          <Box className="scs-avatar" sx={{ bgcolor: avatarColor(currentName) }}>{initial(currentName)}</Box>
+          <Box className="scs-avatar">{initial(currentName)}</Box>
         </Box>
       </Tooltip>
 
@@ -129,7 +123,7 @@ const SidebarCustomerSwitcher = () => {
             return (
               <Box key={c.uuid} className={`scs-row ${active ? 'active' : ''}`} onClick={() => handleSelect(c)}>
                 <Box className="scs-check-slot">{active && <CheckIcon className="scs-check" />}</Box>
-                <Box className="scs-row-avatar" sx={{ bgcolor: avatarColor(c.name) }}>{initial(c.name)}</Box>
+                <Box className="scs-row-avatar">{initial(c.name)}</Box>
                 <Typography className="scs-row-name" noWrap>{c.name}</Typography>
                 {c.enabled === false && <span className="scs-row-tag">Disabled</span>}
                 {canEdit(c) && (
