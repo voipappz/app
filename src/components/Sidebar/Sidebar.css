@@ -1,15 +1,16 @@
-/* Sidebar container — a narrow, tinted rail: icons only when closed, icon above
-   label when the hamburger opens it. The tint, not a shadow, separates
-   navigation from content. */
+/* Sidebar container — one narrow, tinted rail: icon above label. The hamburger
+   hides or shows it. The tint, not a shadow, separates navigation from
+   content. */
 .sidebar-container {
   position: fixed;
   left: 0;
   top: 0;
   height: 100vh;
-  width: 56px;
+  width: var(--sidebar-width);
   box-sizing: border-box;
-  background: #eceff5;
-  border-right: 1px solid #e1e5ec;
+  /* Same tint as the top bar: the two read as one frame around the page. */
+  background: var(--topbar-bg);
+  border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   z-index: 1200;
@@ -23,11 +24,6 @@
   width: 0;
   border-right: none;
   box-shadow: none;
-}
-
-/* Open (labeled) rail — toggled by the hamburger */
-.sidebar-container.expanded {
-  width: 68px;
 }
 
 /* Top of the rail: the customer tile */
@@ -118,7 +114,7 @@
   border-radius: 0;
   margin: 0;
   padding: 5px 2px;
-  color: #5b6472;
+  color: var(--theme-text-secondary);
   transition: color 0.15s ease;
   position: relative;
   display: flex;
@@ -126,10 +122,6 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  min-height: 40px;
-}
-
-.sidebar-container.expanded .sidebar-nav-button {
   min-height: 50px;
 }
 
@@ -139,17 +131,17 @@
 }
 
 .sidebar-nav-button:hover {
-  color: #1f2733;
+  color: var(--theme-text-primary);
 }
 
 .sidebar-nav-button.active {
-  color: #755cd6;
+  color: var(--accent-primary);
 }
 
 .sidebar-container .sidebar-nav-icon {
   color: inherit;
   min-width: auto;
-  width: 40px;
+  width: 48px;
   height: 28px;
   border-radius: 14px;
   display: flex;
@@ -161,24 +153,15 @@
 }
 
 .sidebar-nav-button:hover .sidebar-nav-icon {
-  background-color: rgba(31, 39, 51, 0.08);
+  background-color: var(--theme-hover);
 }
 
 .sidebar-nav-button.active .sidebar-nav-icon {
-  background-color: rgba(117, 92, 214, 0.16);
-}
-
-.sidebar-container.expanded .sidebar-nav-icon {
-  width: 48px;
+  background-color: var(--accent-primary-alpha-15);
 }
 
 .sidebar-nav-icon svg {
   font-size: 20px;
-}
-
-/* Closed rail: icons only — the label is the tooltip. */
-.sidebar-container:not(.expanded) .sidebar-nav-text {
-  display: none;
 }
 
 .sidebar-nav-text {
@@ -190,7 +173,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 64px;
+  max-width: calc(var(--sidebar-width) - 4px);
   color: inherit;
 }
 
@@ -335,9 +318,11 @@
   background-color: #f3f4f6;
 }
 
-.sidebar-profile-avatar {
-  width: 30px;
-  height: 30px;
+/* The account avatar and the customer tile are the same size: one at each end
+   of the rail. */
+.sidebar-container .sidebar-profile-avatar {
+  width: 32px;
+  height: 32px;
   background-color: #65758E;
   font-size: 0.82rem;
   font-weight: 600;
@@ -363,31 +348,6 @@
 }
 
 /* Dark Mode Support */
-[data-theme="dark"] .sidebar-container {
-  background: #1a202c;
-  border-right: 1px solid #4a5568;
-}
-
-[data-theme="dark"] .sidebar-nav-button {
-  color: #a0aec0;
-}
-
-[data-theme="dark"] .sidebar-nav-button:hover {
-  color: #e2e8f0;
-}
-
-[data-theme="dark"] .sidebar-nav-button:hover .sidebar-nav-icon {
-  background-color: #2d3748;
-}
-
-[data-theme="dark"] .sidebar-nav-button.active {
-  color: #b79df2;
-}
-
-[data-theme="dark"] .sidebar-nav-button.active .sidebar-nav-icon {
-  background-color: rgba(159, 122, 234, 0.22);
-}
-
 [data-theme="dark"] .sidebar-top-section {
   border-bottom: 1px solid #4a5568;
 }
@@ -432,7 +392,6 @@
 @media (max-width: 899px) {
   .sidebar-container {
     position: relative;
-    width: 68px;
   }
 }
 

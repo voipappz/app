@@ -1,10 +1,11 @@
 /* ── Sidebar customer switcher ─────────────────────────────────────────── */
+/* Colours are the app's tokens (index.css), so light and dark follow the theme. */
 :root{
-  --scs-accent:#755cd6;        /* matches the sidebar active state */
-  --scs-accent-soft:rgba(117, 92, 214, .14);
-  --scs-line:#e7ebf0;
-  --scs-ink:#1f2733;
-  --scs-muted:#6b7686;
+  --scs-accent:var(--accent-primary);
+  --scs-accent-soft:var(--accent-primary-alpha-15);
+  --scs-line:var(--border-light);
+  --scs-ink:var(--theme-text-primary);
+  --scs-muted:var(--theme-text-secondary);
 }
 
 /* trigger — a square tile, so it reads as "where you are", not a destination */
@@ -13,18 +14,19 @@
   padding:3px;border-radius:12px;border:2px solid transparent;
   transition:border-color .15s ease, box-shadow .15s ease;
 }
-.scs-trigger:hover{ border-color:#cfd6df; }
+.scs-trigger:hover{ border-color:var(--scs-line); }
 .scs-trigger:focus-visible{ outline:none;border-color:var(--scs-accent); }
 .scs-trigger.open{ border-color:var(--scs-accent);box-shadow:0 0 0 3px var(--scs-accent-soft); }
 
 .scs-avatar{
-  width:36px;height:36px;border-radius:10px;
-  display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;letter-spacing:.01em;
+  width:32px;height:32px;border-radius:9px;background:var(--scs-accent);
+  display:grid;place-items:center;color:#fff;font-weight:600;font-size:14px;letter-spacing:.01em;
 }
 
 /* panel */
 .scs-panel{
-  width:280px;margin-left:6px;border:1px solid var(--scs-line) !important;border-radius:14px !important;
+  width:280px;margin-left:6px;border:1px solid var(--scs-line) !important;border-radius:12px !important;
+  background:var(--theme-bg-primary) !important;
   box-shadow:0 18px 44px -12px rgba(16,24,40,.26),0 4px 10px -6px rgba(16,24,40,.12) !important;
   overflow:hidden;
 }
@@ -32,13 +34,15 @@
 .scs-list{ padding:6px;display:flex;flex-direction:column;gap:1px;max-height:320px;overflow:auto; }
 .scs-empty{ padding:10px 12px !important;font-size:13px !important;color:var(--scs-muted) !important; }
 .scs-row{ display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:9px;cursor:pointer;min-height:36px; }
-.scs-row:hover{ background:#f6f8fb; }
+.scs-row:hover{ background:var(--theme-hover); }
 .scs-check-slot{ width:16px;flex:0 0 auto;display:grid;place-items:center; }
 .scs-check{ font-size:16px !important;color:var(--scs-accent); }
 .scs-row-avatar{
   width:22px;height:22px;border-radius:6px;flex:0 0 auto;
-  display:grid;place-items:center;color:#fff;font-weight:700;font-size:11px;
+  display:grid;place-items:center;font-weight:600;font-size:11px;
+  background:var(--theme-bg-tertiary);color:var(--scs-muted);
 }
+.scs-row.active .scs-row-avatar{ background:var(--scs-accent);color:#fff; }
 .scs-row-name{ flex:1;min-width:0;font-size:13.5px !important;font-weight:500 !important;color:var(--scs-ink); }
 .scs-row.active .scs-row-name{ font-weight:600 !important; }
 .scs-row-tag{
@@ -57,18 +61,7 @@
   display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:9px;cursor:pointer;
   font-size:13.5px;font-weight:500;color:var(--scs-ink);
 }
-.scs-action:hover{ background:#f6f8fb; }
+.scs-action:hover{ background:var(--theme-hover); }
 .scs-action-ic{ font-size:18px !important;color:var(--scs-muted);width:18px;flex:0 0 auto; }
 .scs-action.primary{ color:var(--scs-accent); }
 .scs-action.primary .scs-action-ic{ color:var(--scs-accent); }
-
-/* dark mode */
-[data-theme="dark"] .scs-trigger:hover{ border-color:#445069; }
-[data-theme="dark"] .scs-panel{ background:#1f2733 !important;border-color:#33415a !important; }
-[data-theme="dark"] .scs-row:hover,
-[data-theme="dark"] .scs-action:hover{ background:#2a3342; }
-[data-theme="dark"] .scs-row-name{ color:#e6ebf2; }
-[data-theme="dark"] .scs-row-tag{ border-color:#33415a;color:#a0aec0; }
-[data-theme="dark"] .scs-action{ color:#e6ebf2; }
-[data-theme="dark"] .scs-search,
-[data-theme="dark"] .scs-divider{ border-color:#33415a !important; }
