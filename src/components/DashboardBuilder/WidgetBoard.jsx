@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, FormControlLabel, MenuItem, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, FormControlLabel, ListItemText, Menu, MenuItem, Switch, TextField, Typography } from '@mui/material';
 import ReactGridLayout, { useContainerWidth } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -19,15 +19,17 @@ import { GRID_COLS, ROW_HEIGHT, layoutFor, layoutChanges } from './widgetLayout'
 // `callsScope` ({ customerUuid, environmentUuid, fleet }) is what the calls
 // widgets follow; `seed` ({ key, widgets }) puts a starter set on the board
 // once (seedWidgets). `heading` false drops the "Your widgets" intro when the
-// board IS the page. `editor` puts the CDR query editor above the board: it
-// saves 'cdr' widgets onto it, and editing one opens it there.
-export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true, editor = false }) {
+// board IS the page. "Build widget" opens a builder: a call report (CdrEditor,
+// the CDR report for `callsScope`) or a metric from any InfluxDB measurement
+// (WidgetBuilder); editing a widget reopens the builder that made it.
+export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true }) {
   const [widgets, setWidgets] = useState([]);
   const [draft, setDraft] = useState(null);
   // The query widget open in the builder: {} for a new one, the widget to edit.
   const [building, setBuilding] = useState(null);
-  // The 'cdr' widget open in the query editor.
+  // The call-report builder: {} for a new report, the 'cdr' widget to edit.
   const [editingCdr, setEditingCdr] = useState(null);
+  const [buildMenu, setBuildMenu] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [minutes, setMinutes] = useState(0);
@@ -90,16 +92,12 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
   };
   const editWidget = (item) => {
     if (item.type === 'query') setBuilding(item);
-    else if (item.type === 'cdr' && editor) { setEditingCdr(item); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }
+    else if (item.type === 'cdr') setEditingCdr(item);
     else setDraft(item);
   };
-  // A report template goes straight onto the board; the editor tunes it later.
+  // A report template goes straight onto the board; the builder tunes it later.
   const pickTemplate = (item) => (item.type === 'cdr' ? mutate(() => createWidget(item)) : setDraft(item));
   return <Box sx={{ mt: heading ? 3 : 0, width: '100%' }}>
-    {editor && (
-      <CdrEditor scope={callsScope} editing={editingCdr} saving={saving} onCancelEdit={() => setEditingCdr(null)}
-        onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
-    )}
     {heading && <>
       <Typography variant="h6">Your widgets</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -110,7 +108,15 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
     </>}
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
       <AddWidgetMenu onPick={pickTemplate} disabled={saving} />
-      <Button variant="outlined" size="small" onClick={() => setBuilding({})} disabled={saving} data-testid="build-widget" sx={{ textTransform: 'none' }}>Build widget</Button>
+      <Button variant="outlined" size="small" onClick={(event) => setBuildMenu(event.currentTarget)} disabled={saving} data-testid="build-widget" sx={{ textTransform: 'none' }}>Build widget</Button>
+      <Menu anchorEl={buildMenu} open={Boolean(buildMenu)} onClose={() => setBuildMenu(null)}>
+        <MenuItem onClick={() => { setBuildMenu(null); setEditingCdr({}); }}>
+          <ListItemText primary="Call report" secondary="Calls, answer rate, billed time… by environment, caller, status" />
+        </MenuItem>
+        <MenuItem onClick={() => { setBuildMenu(null); setBuilding({}); }}>
+          <ListItemText primary="Metric" secondary="Any InfluxDB measurement, with filters and a split" />
+        </MenuItem>
+      </Menu>
       <TextField select size="small" label="Widget time range" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} sx={{ minWidth: 190 }}>
         <MenuItem value={0}>Each widget’s time range</MenuItem><MenuItem value={60}>Last hour</MenuItem><MenuItem value={1440}>Last 24 hours</MenuItem><MenuItem value={10080}>Last 7 days</MenuItem>
       </TextField>
@@ -139,6 +145,13 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
         ))}
       </ReactGridLayout>
     </Box>
+    {/* Mounted only while open: the builder asks the API for its catalog, and
+        a board that nobody is building on (Live) must not call the API. */}
+    {editingCdr && (
+      <CdrEditor open scope={callsScope} editing={editingCdr.uuid ? editingCdr : null} saving={saving}
+        onClose={() => setEditingCdr(null)}
+        onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
+    )}
     <WidgetBuilder open={Boolean(building)} widget={building?.uuid ? building : null} saving={saving} environmentUuid={environmentUuid}
       onClose={() => setBuilding(null)}
       onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />

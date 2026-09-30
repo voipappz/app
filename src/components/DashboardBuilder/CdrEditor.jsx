@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert, Autocomplete, Box, Button, Checkbox, Chip, Collapse, Divider, FormControlLabel, MenuItem, Paper, Stack,
+  Alert, Autocomplete, Box, Button, Checkbox, Chip, Collapse, Dialog, Divider, FormControlLabel, IconButton, MenuItem, Stack,
   TextField, ToggleButton, ToggleButtonGroup, Typography,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CodeIcon from '@mui/icons-material/Code';
 import AddIcon from '@mui/icons-material/Add';
@@ -75,12 +76,13 @@ function RawTable({ rows, columns }) {
 }
 
 /**
- * The dashboard's query editor — the heart of the board. Pick measures, group
- * by up to two CDR fields, optionally over time, filter, and see the answer
- * and the SQL the API ran. A root account can also edit and run the SQL.
- * "Save as widget" pins the query to the board.
+ * Build a call-report widget: the board's "Build widget" helper, full screen.
+ * Pick measures, group by up to two CDR fields, optionally over time, filter,
+ * and see the answer and the SQL the API ran (a root account can also edit
+ * and run the SQL). "Save as widget" puts the query on the board; editing a
+ * report widget reopens it here.
  */
-export default function CdrEditor({ scope = {}, editing = null, onSave, onCancelEdit, saving = false }) {
+export default function CdrEditor({ open = true, scope = {}, editing = null, onSave, onClose, saving = false }) {
   const { isRoot } = useAuth();
   const catalog = useCdrCatalog();
   const [draft, setDraft] = useState(NEW_CDR_QUERY);
@@ -90,10 +92,13 @@ export default function CdrEditor({ scope = {}, editing = null, onSave, onCancel
   const [sqlText, setSqlText] = useState('');
   const [sqlResult, setSqlResult] = useState(null);
   useEffect(() => {
-    if (editing) setDraft({ ...NEW_CDR_QUERY, ...editing, where: { ...(editing.where || {}) } });
-  }, [editing]);
+    if (!open) return;
+    setDraft(editing ? { ...NEW_CDR_QUERY, ...editing, where: { ...(editing.where || {}) } } : NEW_CDR_QUERY);
+    setShowSql(false);
+    setSqlResult(null);
+  }, [open, editing]);
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
-  const result = useCdrReport(draft, { scope, runKey });
+  const result = useCdrReport(draft, { scope, runKey, enabled: open });
   const labels = { ...filterLabels, ...result.labels };
 
   const available = useMemo(() => new Set(catalog.measures.map((m) => m.key)), [catalog]);
@@ -127,9 +132,9 @@ export default function CdrEditor({ scope = {}, editing = null, onSave, onCancel
   const openSql = () => { setShowSql((v) => !v); if (!sqlText && result.sql) setSqlText(result.sql); };
 
   return (
-    <Paper elevation={0} data-testid="cdr-editor" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2.5, overflow: 'hidden', mb: 2 }}>
+    <Dialog fullScreen open={open} onClose={onClose} aria-labelledby="cdr-editor-title" PaperProps={{ 'data-testid': 'cdr-editor' }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, px: 2, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 750 }}>{editing ? `Editing “${editing.title}”` : 'Query calls'}</Typography>
+        <Typography id="cdr-editor-title" variant="subtitle1" sx={{ fontWeight: 750 }}>{editing ? `Edit “${editing.title}”` : 'Build a call report widget'}</Typography>
         <TextField select size="small" label="Time range" value={draft.minutes} onChange={(e) => set({ minutes: Number(e.target.value) })} sx={{ minWidth: 160 }}>
           {CDR_RANGES.map((r) => <MenuItem key={r.minutes} value={r.minutes}>{r.label}</MenuItem>)}
         </TextField>
@@ -137,18 +142,19 @@ export default function CdrEditor({ scope = {}, editing = null, onSave, onCancel
         {result.tookMs != null && !result.loading && <Typography variant="caption" color="text.secondary">{result.rows.length} rows · {result.tookMs} ms</Typography>}
         <Box sx={{ flex: 1 }} />
         <TextField size="small" label="Widget title" value={draft.title} onChange={(e) => set({ title: e.target.value })} sx={{ width: { xs: '100%', sm: 220 } }} />
-        {editing && <Button size="small" onClick={() => { setDraft(NEW_CDR_QUERY); onCancelEdit?.(); }}>Cancel</Button>}
+        <Button size="small" onClick={onClose}>Cancel</Button>
         <Button size="small" variant="outlined" disabled={saving || !cdrQueryReady(draft) || !draft.title.trim()}
           onClick={() => onSave?.({ ...draft, type: 'cdr', title: draft.title.trim() })}>
           {editing ? 'Save widget' : 'Save as widget'}
         </Button>
+        <IconButton size="small" aria-label="Close" onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
       </Box>
 
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: 0 }}>
-        <Stack spacing={2} sx={{ width: { xs: '100%', md: 280 }, flexShrink: 0, p: 2, borderRight: { md: '1px solid' }, borderColor: 'divider' }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: 0, overflow: 'auto' }}>
+        <Stack spacing={2} sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0, p: 2, borderRight: { md: '1px solid' }, borderColor: 'divider', overflow: 'auto' }}>
           <Box>
             <Typography variant="overline" color="text.secondary">Measures</Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', maxHeight: 220, overflow: 'auto' }} data-testid="cdr-measures">
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr' }} data-testid="cdr-measures">
               {FALLBACK_CATALOG.measures.filter((m) => available.has(m.key)).map((m) => (
                 <FormControlLabel key={m.key} sx={{ m: 0 }} label={<Typography variant="body2">{m.label}</Typography>}
                   control={<Checkbox size="small" sx={{ py: 0.25 }} checked={draft.measures.includes(m.key)} onChange={() => toggleMeasure(m.key)} />} />
@@ -193,7 +199,7 @@ export default function CdrEditor({ scope = {}, editing = null, onSave, onCancel
           {!result.hasScope ? <Alert severity="info">Select a customer or application in the top bar.</Alert>
             : !cdrQueryReady(draft) ? <Alert severity="info">Tick at least one measure.</Alert>
             : (
-              <Box sx={{ height: { xs: 320, md: 380 }, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <Box sx={{ flex: 1, minHeight: 320, display: 'flex', flexDirection: 'column' }}>
                 <CdrResult result={result} query={draft} catalog={catalog} onDrill={drill} />
               </Box>
             )}
@@ -219,6 +225,6 @@ export default function CdrEditor({ scope = {}, editing = null, onSave, onCancel
           </Collapse>
         </Box>
       </Box>
-    </Paper>
+    </Dialog>
   );
 }
