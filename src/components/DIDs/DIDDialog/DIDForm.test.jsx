@@ -56,14 +56,23 @@ const pick = (label, option) => {
 beforeEach(() => { vi.clearAllMocks(); mockUserSession = false; });
 
 describe('DIDForm', () => {
-  it('asks for the type first, in words', () => {
+  it('puts Enabled on top, then asks for the type, in words', () => {
     const { container } = renderForm();
     const labels = [...container.querySelectorAll('label')].map(l => l.textContent.replace(/\s*\*$/, ''));
-    expect(labels[0]).toBe('Route Type');
+    expect(labels[0]).toBe('Enabled');
+    expect(labels[1]).toBe('Route Type');
     fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
     expect(screen.getByRole('option', { name: 'Trunk – outgoing calls' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Feature – agent log in' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: /FEATURE:/ })).not.toBeInTheDocument();
+  });
+
+  it('sends enabled=false when the switch is turned off', () => {
+    renderForm({ did: route('dst') });
+    const toggle = screen.getByRole('checkbox', { name: 'Enabled' });
+    expect(toggle).toBeChecked();
+    fireEvent.click(toggle);
+    expect(toggle).not.toBeChecked();
   });
 
   describe('every type, as the edit screen opens it', () => {
