@@ -267,7 +267,7 @@ const Templates = () => {
 };
 
 /* ─── Template Create/Edit Dialog ───────────────────── */
-const TemplateDialog = ({ open, onClose, onSave, template, loading, templateTypes, canWrite = true }) => {
+const TemplateDialog = ({ open, onClose, onSave, template, loading, templateTypes, canWrite = true, zIndex }) => {
   const isEdit = !!template;
   const [formData, setFormData] = useState({ name: '', type: 'sms', text: '', enabled: true, notes: '' });
   const [errors, setErrors] = useState({});
@@ -312,7 +312,7 @@ const TemplateDialog = ({ open, onClose, onSave, template, loading, templateType
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={zIndex ? { zIndex } : undefined}>
       <DialogTitle sx={{ pr: 6 }}>
         {isEdit ? 'Edit Template' : 'Add Template'}
         <IconButton onClick={onClose} disabled={loading}
@@ -331,7 +331,8 @@ const TemplateDialog = ({ open, onClose, onSave, template, loading, templateType
             error={!!errors.name} helperText={errors.name} disabled={loading} />
           <FormControl fullWidth required>
             <InputLabel>Type</InputLabel>
-            <Select value={formData.type} label="Type" onChange={e => handleChange('type', e.target.value)} disabled={loading}>
+            <Select value={formData.type} label="Type" onChange={e => handleChange('type', e.target.value)} disabled={loading}
+              MenuProps={zIndex ? { style: { zIndex: zIndex + 50 } } : undefined}>
               {templateTypes.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
             </Select>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>

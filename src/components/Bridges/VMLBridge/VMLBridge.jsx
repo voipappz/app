@@ -52,7 +52,7 @@ import { TemplateDialog } from '../../Templates/Templates.jsx';
 import { TEMPLATE_TYPES } from '../../Templates/Templates.js';
 import { templatesApi } from '../../../services/api/templatesApi';
 import { snippetCategories, scriptTemplates } from './luaFreeSwitchCompletions.js';
-import { Z } from '../../../utils/zIndex.js';
+import { Z, menuProps } from '../../../utils/zIndex.js';
 import { useConfirm } from '../../ui';
 import { useIsUserSession } from '../../../hooks/useIsUserSession';
 
@@ -367,6 +367,7 @@ export const VMLBridge = ({
             value={formData.type}
             label="Type"
             onChange={(e) => handleChange('type', e.target.value)}
+            MenuProps={menuProps(layer)}
           >
             {vmlTypes.map((type) => (
               <MenuItem key={type} value={type}>{type}</MenuItem>
@@ -388,6 +389,7 @@ export const VMLBridge = ({
               value={formData.environment_uuid}
               label="Application"
               onChange={(e) => handleChange('environment_uuid', e.target.value)}
+              MenuProps={menuProps(layer)}
             >
               {selectedEnvironments?.map(env => (
                 <MenuItem key={env.uuid} value={env.uuid}>{env.name}</MenuItem>
@@ -440,6 +442,7 @@ export const VMLBridge = ({
           anchorEl={templateAnchor}
           open={Boolean(templateAnchor)}
           onClose={() => setTemplateAnchor(null)}
+          style={{ zIndex: layer.MENU }}
         >
           {scriptTemplates.map((t) => (
             <MenuItem key={t.label} onClick={() => handleApplyTemplate(t)}>
@@ -467,6 +470,7 @@ export const VMLBridge = ({
           anchorEl={snippetAnchor}
           open={Boolean(snippetAnchor)}
           onClose={() => setSnippetAnchor(null)}
+          style={{ zIndex: layer.MENU }}
           slotProps={{ paper: { sx: { maxHeight: 420, width: 280 } } }}
         >
           {snippetCategories.map((cat) => [
@@ -652,6 +656,7 @@ export const VMLBridge = ({
         template={templateData}
         loading={false}
         templateTypes={TEMPLATE_TYPES}
+        zIndex={Z.L3.DIALOG}
       />
 
       {error && (

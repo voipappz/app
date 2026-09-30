@@ -9,6 +9,8 @@ export const Z = {
   L1: { DIALOG: 1300, MENU: 1350 },
   L2: { DIALOG: 1400, BACKDROP: 1399, MENU: 1450 },
   L3: { DIALOG: 1500, BACKDROP: 1499, MENU: 1550 },
+  // The one confirmation dialog: asked from any layer, so above all of them.
+  CONFIRM: 1600,
 };
 
 // Helper: MUI Select MenuProps shorthand.
