@@ -37,7 +37,7 @@ class RecordingAnalysisService {
       return result;
     } catch (error) {
       console.error('Error analyzing recording:', error);
-      throw new Error(`Failed to analyze recording: ${error.message}`);
+      throw new Error(`Failed to analyze recording: ${error.message}`, { cause: error });
     }
   }
 

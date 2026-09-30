@@ -436,7 +436,7 @@ const ServicesInner = () => {
   const runSim = useCallback(async () => {
     if (!selected?.uuid || !simEvent) return;
     setSimRunning(true); setSimResult(null);
-    let event_data = {};
+    let event_data;
     try { event_data = simData.trim() ? JSON.parse(simData) : {}; }
     catch { setSimResult({ error: 'Event data is not valid JSON' }); setSimRunning(false); return; }
     try {

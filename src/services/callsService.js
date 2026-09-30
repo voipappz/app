@@ -25,7 +25,7 @@ export const getSegments = async (token) => {
     const data = await response.json();
     return { success: true, data };
   } catch (error) {
-    throw new Error(`Failed to fetch segments: ${error.message}`);
+    throw new Error(`Failed to fetch segments: ${error.message}`, { cause: error });
   }
 };
 
@@ -51,7 +51,7 @@ export const getFields = async (token) => {
     const data = await response.json();
     return { success: true, data };
   } catch (error) {
-    throw new Error(`Failed to fetch fields: ${error.message}`);
+    throw new Error(`Failed to fetch fields: ${error.message}`, { cause: error });
   }
 };
 
@@ -77,7 +77,7 @@ export const getColumns = async (token) => {
     const data = await response.json();
     return { success: true, data };
   } catch (error) {
-    throw new Error(`Failed to fetch columns: ${error.message}`);
+    throw new Error(`Failed to fetch columns: ${error.message}`, { cause: error });
   }
 };
 
@@ -123,7 +123,7 @@ export const saveFilterParameters = async (searchParams, token) => {
     // API returns no response according to README
     return { success: true };
   } catch (error) {
-    throw new Error(`Failed to save parameters: ${error.message}`);
+    throw new Error(`Failed to save parameters: ${error.message}`, { cause: error });
   }
 };
 
@@ -144,7 +144,7 @@ export const loadFilterParameters = async (token) => {
     const data = await response.json();
     return { success: true, data };
   } catch (error) {
-    throw new Error(`Failed to load parameters: ${error.message}`);
+    throw new Error(`Failed to load parameters: ${error.message}`, { cause: error });
   }
 };
 

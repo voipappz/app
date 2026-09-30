@@ -27,7 +27,7 @@ const KINDS = {
 export const logLoginDebug = (kind, { token, response, authData, parsed } = {}) => {
   const meta = KINDS[kind] || { label: `UNKNOWN (${kind})`, color: '#e53935' };
 
-  let tokenPayload = null;
+  let tokenPayload;
   try {
     tokenPayload = token ? jwtDecode(token) : '(no token in response)';
   } catch (error) {

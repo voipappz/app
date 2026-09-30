@@ -128,7 +128,7 @@ const formatTicketFromSentryEvent = (event) => {
   description += `**View in Sentry:** https://sentry.io/organizations/your-org/issues/?query=${event.event_id}`;
 
   // Determine priority based on error level
-  let priority = 'normal';
+  let priority;
   if (level === 'fatal' || level === 'error') {
     priority = 'high';
   } else if (level === 'warning') {

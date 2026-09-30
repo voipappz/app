@@ -46,7 +46,7 @@ async function downloadAudio(audioUrl) {
     }
     return await response.buffer();
   } catch (error) {
-    throw new Error(`Download failed: ${error.message}`);
+    throw new Error(`Download failed: ${error.message}`, { cause: error });
   }
 }
 

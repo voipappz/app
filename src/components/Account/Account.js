@@ -110,7 +110,7 @@ export const useAccount = () => {
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Failed to update account:', error);
-      throw new Error(error.message || 'Failed to update account');
+      throw new Error(error.message || 'Failed to update account', { cause: error });
     } finally {
       setSaving(false);
     }
@@ -170,7 +170,7 @@ export const useAccount = () => {
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Failed to update customer:', error);
-      throw new Error(error.message || 'Failed to update customer');
+      throw new Error(error.message || 'Failed to update customer', { cause: error });
     } finally {
       setSaving(false);
     }
@@ -206,7 +206,7 @@ export const useAccount = () => {
       return result;
     } catch (error) {
       console.error('Failed to create customer:', error);
-      throw new Error(error.message || 'Failed to create customer');
+      throw new Error(error.message || 'Failed to create customer', { cause: error });
     } finally {
       setSaving(false);
     }
@@ -303,7 +303,7 @@ export const useAccount = () => {
       return result;
     } catch (error) {
       console.error('Failed to create account:', error);
-      throw new Error(error.message || 'Failed to create account');
+      throw new Error(error.message || 'Failed to create account', { cause: error });
     } finally {
       setSaving(false);
     }

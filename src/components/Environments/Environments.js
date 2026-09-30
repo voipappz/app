@@ -202,7 +202,7 @@ export const useEnvironments = () => {
         (selectedEnvironment ? 'Failed to update environment' : 'Failed to create environment');
       showError(errorMessage);
       // Re-throw so the dialog can show the error too
-      throw new Error(errorMessage);
+      throw new Error(errorMessage, { cause: error });
     } finally {
       setLoading(false);
     }

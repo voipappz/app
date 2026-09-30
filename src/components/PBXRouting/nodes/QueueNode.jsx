@@ -146,7 +146,7 @@ const QueueNode = memo(({ data, selected }) => {
             height: 6,
             background: '#0288d1',
             border: '2px solid #fff',
-            top: `${72 + (rightHandleIndex++) * 22}px`,
+            top: `${72 + rightHandleIndex * 22}px`,
             right: -3,
           }}
         />

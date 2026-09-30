@@ -39,8 +39,8 @@ const TourOverlay = () => {
 
       // Calculate tooltip position
       const padding = 16;
-      let top = rect.bottom + padding;
-      let left = rect.left;
+      let top;
+      let left;
 
       switch (step.position) {
         case 'top':

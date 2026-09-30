@@ -66,7 +66,7 @@ export async function buildDidTopology(didUuid, ctx, opts = {}) {
     const key = `${type}:${uuid}`;
     if (cache.has(key)) return cache.get(key);
 
-    let result = null;
+    let result;
     try {
       switch (type) {
         case 'queue': {
