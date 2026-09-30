@@ -10,7 +10,11 @@ vi.mock('./VMLBridge.js', () => ({ useVML: () => ({
   validateMetaFields: () => true, availableVariables: [], insertVariable: vi.fn(),
   loading: false, error: null, clearError: vi.fn(), saveVML: vi.fn(), reset: vi.fn(),
 }) }));
-vi.mock('./useVMLChat.js', () => ({ useVMLChat: () => ({ messages: [], sessions: [], getLastAgentCode: () => '' }) }));
+vi.mock('./useVMLChat.js', () => ({ useVMLChat: () => ({
+  messages: [], inputValue: '', setInputValue: vi.fn(), isStreaming: false, error: null, sessionId: null,
+  sessions: [], isLoadingSessions: false, loadSession: vi.fn(), deleteSession: vi.fn(), sendMessage: vi.fn(),
+  cancelRequest: vi.fn(), clearChat: vi.fn(), fetchSessions: vi.fn(), getLastAgentCode: () => '',
+}) }));
 vi.mock('./CodeEditor.jsx', () => ({ CodeEditor: () => null }));
 vi.mock('../shared/MetaPropertiesEditor.jsx', () => ({ MetaPropertiesEditor: () => null }));
 vi.mock('../../Templates/Templates.jsx', () => ({ TemplateDialog: () => null }));
@@ -31,7 +35,7 @@ describe('the VML dialog', () => {
 
   it('shows the type list above the dialog', () => {
     open();
-    fireEvent.mouseDown(screen.getByRole('combobox', { name: /Type/ }));
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
     const list = screen.getByRole('listbox');
     expect(within(list).getByText('webhook')).toBeInTheDocument();
     expect(layerOf(list)).toBeGreaterThan(Z.L2.DIALOG);
