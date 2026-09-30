@@ -723,7 +723,7 @@ const Calls = () => {
                     component="span"
                     sx={{
                       width: 7, height: 7, borderRadius: '50%', ml: 0.75,
-                      bgcolor: chartMode === 'live' ? '#fff' : '#5c6bc0',
+                      bgcolor: chartMode === 'live' ? '#fff' : 'var(--accent-primary)',
                       animation: chartMode === 'live' ? 'calls-live-pulse 1.6s ease-in-out infinite' : 'none',
                       '@keyframes calls-live-pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.25 } },
                     }}
@@ -732,10 +732,10 @@ const Calls = () => {
                 label={liveCallsTotal != null ? `Live now · ${liveCallsTotal}` : 'Live now'}
                 sx={{
                   height: 24, borderRadius: 1.5, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
-                  color: chartMode === 'live' ? '#fff' : '#5c6bc0',
-                  bgcolor: chartMode === 'live' ? '#5c6bc0' : undefined,
-                  borderColor: '#5c6bc0',
-                  '&:hover': { bgcolor: chartMode === 'live' ? '#3f4fb5' : 'var(--theme-hover)' },
+                  color: chartMode === 'live' ? '#fff' : 'var(--accent-primary)',
+                  bgcolor: chartMode === 'live' ? 'var(--accent-primary)' : undefined,
+                  borderColor: 'var(--accent-primary)',
+                  '&:hover': { bgcolor: chartMode === 'live' ? 'var(--accent-primary-hover)' : 'var(--accent-primary-alpha-8)' },
                 }}
               />
             </Tooltip>}

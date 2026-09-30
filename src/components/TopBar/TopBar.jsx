@@ -172,7 +172,7 @@ function SortableEnvChip({ env, onDelete, canDelete }) {
 }
 
 // --- TopBar Component ---
-const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, onToggleSidebar, onToggleExpand }) => {
+const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
   const navigate = useNavigate();
 
   const { isAuthenticated, user, logout } = useAuth();
@@ -188,7 +188,6 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
 
   // Responsive: below md the fixed sidebar is hidden (hamburger drives the drawer);
   // on phones the secondary top-right tools collapse into a single ⋮ overflow menu.
-  const isMobile = useMediaQuery((t) => t.breakpoints.down('md'));
   const isPhone = useMediaQuery((t) => t.breakpoints.down('sm'));
   const [toolsMenuAnchor, setToolsMenuAnchor] = useState(null);
   const { deleteNotification, fetchNotificationDetails } = useNotifications();
@@ -714,7 +713,7 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
       setEnvironmentSearchValue('');
       setTagFilters([]);
       orgBreadcrumbRef.current?.animate?.(
-        [{ boxShadow: '0 0 0 0 rgba(117, 92, 214, 0.45)' }, { boxShadow: '0 0 0 8px rgba(117, 92, 214, 0)' }],
+        [{ boxShadow: '0 0 0 0 var(--accent-primary-alpha-20)' }, { boxShadow: '0 0 0 8px transparent' }],
         { duration: 900, iterations: 2 }
       );
     };
@@ -852,14 +851,14 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
 
   return (
     <>
-      <Box className={`topbar-container ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${sidebarExpanded ? 'sidebar-expanded' : ''}`}>
-        {/* The single hamburger toggles the tile rail or mobile drawer. */}
+      <Box className={`topbar-container ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        {/* The single hamburger shows or hides the rail, or the mobile drawer. */}
         <IconButton
           className="topbar-hamburger"
-          onClick={isMobile ? onToggleSidebar : (onToggleExpand || onToggleSidebar)}
+          onClick={onToggleSidebar}
           size="small"
           aria-label="Toggle menu"
-          aria-expanded={isMobile ? undefined : sidebarExpanded}
+          aria-expanded={menuOpen}
           sx={{ display: 'inline-flex' }}
         >
           <MenuIcon sx={{ fontSize: 22, transition: 'transform 220ms ease', transform: menuOpen ? 'rotate(90deg)' : 'rotate(0deg)' }} />
