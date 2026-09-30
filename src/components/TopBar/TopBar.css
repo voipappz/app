@@ -1,8 +1,8 @@
 .topbar-container {
   position: fixed;
   top: 0;
-  left: 56px;
-  width: calc(100% - 56px);
+  left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
   height: 48px;
   background-color: var(--topbar-bg, #f6f7f9);
   border-bottom: 1px solid var(--border-light);
@@ -18,11 +18,6 @@
 .topbar-container.sidebar-collapsed {
   left: 0;
   width: 100%;
-}
-
-.topbar-container.sidebar-expanded {
-  left: 68px;
-  width: calc(100% - 68px);
 }
 
 /* Hamburger */
@@ -231,8 +226,7 @@
 
 /* Responsive */
 @media (max-width: 899px) {
-  .topbar-container,
-  .topbar-container.sidebar-expanded {
+  .topbar-container {
     left: 0;
     width: 100%;
   }

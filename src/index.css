@@ -3,8 +3,8 @@
 /* Global Design System - Sentry Inspired (LIGHT THEME) */
 :root {
   /* Layout */
-  --sidebar-width: 56px;
-  --sidebar-width-collapsed: 56px;
+  --sidebar-width: 72px;
+  --sidebar-width-collapsed: 0px;
 
   /* Light Theme Colors (Sentry inspired) */
   --bg-primary: #ffffff;
@@ -217,6 +217,7 @@
 
   /* Accent colors for dark mode — lighter indigo for contrast */
   --accent-primary: #7986cb;
+  --topbar-bg: #1e2028;
   --accent-primary-hover: #5c6bc0;
 
   /* Semantic Colors with better dark mode contrast */

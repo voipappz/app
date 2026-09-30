@@ -28,7 +28,7 @@ import './Sidebar.css';
 import SidebarCustomerSwitcher from './CustomerSwitcher/SidebarCustomerSwitcher.jsx';
 
 
-const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
+const Sidebar = ({ collapsed, onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const account = useAuth();
@@ -86,8 +86,7 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
     const IconComp = item.iconComponent;
     const badge = navBadge(item.path);
     return (
-      <Tooltip key={item.path || index} title={item.text} placement="right" arrow disableHoverListener={expanded}>
-        <ListItem disablePadding className="sidebar-nav-item">
+      <ListItem key={item.path || index} disablePadding className="sidebar-nav-item">
           <ListItemButton
             onClick={() => handleNavigate(item.path)}
             aria-label={item.text}
@@ -108,13 +107,12 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
             </ListItemIcon>
             <span className="sidebar-nav-text">{item.text}</span>
           </ListItemButton>
-        </ListItem>
-      </Tooltip>
+      </ListItem>
     );
   };
 
   return (
-    <Box className={`sidebar-container ${collapsed ? 'collapsed' : ''} ${expanded ? 'expanded' : ''}`}>
+    <Box className={`sidebar-container ${collapsed ? 'collapsed' : ''}`}>
 
       {/* The customer — an account's only. A user has one environment and no
           selectors. */}
@@ -131,7 +129,6 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
 
       {!userSession && (
         <List disablePadding>
-          <Tooltip title="Support" placement="right" arrow disableHoverListener={expanded}>
             <ListItem disablePadding className="sidebar-nav-item">
               <ListItemButton
                 id="sidebar-support-button"
@@ -146,7 +143,6 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
                 <span className="sidebar-nav-text">Support</span>
               </ListItemButton>
             </ListItem>
-          </Tooltip>
           <Menu
             id="sidebar-support-menu"
             anchorEl={supportMenuAnchor}
