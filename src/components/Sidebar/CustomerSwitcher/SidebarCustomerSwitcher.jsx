@@ -1,16 +1,15 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  Box, Popover, TextField, InputAdornment, Typography, Tooltip, Divider
+  Box, Popover, TextField, InputAdornment, Typography, Tooltip, Divider, IconButton
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import { useAuth } from '../../../context/AuthContext';
-import { customersApi } from '../../../services/api/customersApi';
-import CustomerEditDialog from '../../Account/CustomerEditDialog/CustomerEditDialog.jsx';
 import './SidebarCustomerSwitcher.css';
 
 // Deterministic, pleasant avatar color from the customer name (no extra fetch).
@@ -20,33 +19,52 @@ const avatarColor = (name = '') => {
   return `hsl(${h}, 42%, 38%)`;
 };
 const initial = (name = '?') => (name.trim()[0] || '?').toUpperCase();
+const tagsOf = (c) => ((c?.meta && typeof c.meta === 'object')
+  ? Object.entries(c.meta).map(([k, v]) => (v ? `${k}:${v}` : k))
+  : []);
+
+// The search only earns its row once the list no longer fits at a glance.
+const SEARCH_FROM = 8;
+
+// The customer dialog (create / edit / duplicate) is the top bar's: it holds
+// the full record and the save path. This only asks for it.
+const openCustomer = (mode, customer) => window.dispatchEvent(
+  new CustomEvent('openCustomerEdit', { detail: { mode, customer } })
+);
 
 /**
- * Enterprise workspace-style customer switcher pinned at the top of the sidebar.
- * Root accounts get the full list + search + "Add customer"; non-root see their
- * own customer with "Manage". Mirrors the topbar switcher's data flow.
+ * The customer, as a tile at the top of the sidebar. `root` only decides how
+ * many customers an account sees: with several the tile opens the switcher;
+ * with one there is nothing to switch to, so it opens that customer's settings.
  */
-const SidebarCustomerSwitcher = ({ expanded = false }) => {
-  const { customers, selectedCustomer, selectCustomer, isRoot, fetchCustomers } = useCustomerEnvironment();
-  const { user, accountCustomer } = useAuth();
+const SidebarCustomerSwitcher = () => {
+  const { customers, selectedCustomer, selectCustomer, isRoot } = useCustomerEnvironment();
+  const { accountCustomer } = useAuth();
   const triggerRef = useRef(null);
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState('edit'); // 'edit' | 'create'
-  const [saving, setSaving] = useState(false);
 
-  const accountLabel = user?.fullName || user?.firstName || user?.email?.split('@')[0] || 'Account';
   const current = selectedCustomer || accountCustomer || null;
   const currentName = current?.name || 'No customer';
 
+  const all = useMemo(() => (
+    (customers && customers.length ? customers : (accountCustomer ? [accountCustomer] : []))
+      .filter(c => c && c.name && c.name.trim())
+  ), [customers, accountCustomer]);
+
+  // Matches the name or a meta tag (key or key:value).
   const list = useMemo(() => {
-    const base = (customers && customers.length ? customers : (accountCustomer ? [accountCustomer] : []))
-      .filter(c => c && c.name && c.name.trim());
     const q = search.trim().toLowerCase();
-    return q ? base.filter(c => c.name.toLowerCase().includes(q)) : base;
-  }, [customers, accountCustomer, search]);
+    if (!q) return all;
+    return all.filter(c => c.name.toLowerCase().includes(q)
+      || tagsOf(c).some(t => t.toLowerCase().includes(q)));
+  }, [all, search]);
+
+  // Editing is tenancy-gated by the API, not by `root`: an account may always
+  // edit its own customer. Create and duplicate act outside its tenant.
+  const canEdit = (c) => Boolean(c) && (isRoot || c.uuid === accountCustomer?.uuid);
+  const switchable = isRoot || all.length > 1;
 
   const close = () => { setOpen(false); setSearch(''); };
 
@@ -55,57 +73,40 @@ const SidebarCustomerSwitcher = ({ expanded = false }) => {
     if (c?.uuid && c.uuid !== selectedCustomer?.uuid) await selectCustomer(c);
   };
 
-  const openDialog = (mode) => { setDialogMode(mode); setDialogOpen(true); close(); };
-
-  const handleSave = async (formData) => {
-    setSaving(true);
-    try {
-      if (dialogMode === 'create') {
-        const created = await customersApi.createCustomer(formData);
-        const fresh = (await fetchCustomers()) || [];
-        const match = fresh.find(c => c.uuid === created?.uuid);
-        if (match) await selectCustomer(match);
-      } else if (current?.uuid) {
-        await customersApi.updateCustomer(current.uuid, formData);
-        await fetchCustomers();
-      }
-      setDialogOpen(false);
-      setDialogMode('edit');
-    } finally {
-      setSaving(false);
-    }
+  const handleTrigger = () => {
+    if (switchable) setOpen(true);
+    else if (canEdit(current)) openCustomer('edit', current);
   };
+
+  const act = (e, mode, customer) => { e.stopPropagation(); close(); openCustomer(mode, customer); };
 
   return (
     <>
-      <Box
-        ref={triggerRef}
-        className={`scs-trigger ${expanded ? 'expanded' : 'rail'} ${open ? 'open' : ''}`}
-        onClick={() => setOpen(true)}
-        role="button"
-        aria-label="Switch customer"
-      >
-        {expanded ? (
-          <>
-            <Typography className="scs-name" noWrap>{currentName}</Typography>
-            <UnfoldMoreIcon className="scs-chev" />
-          </>
-        ) : (
-          <Tooltip title={currentName} placement="right" arrow>
-            <Box className="scs-avatar" sx={{ bgcolor: avatarColor(currentName) }}>{initial(currentName)}</Box>
-          </Tooltip>
-        )}
-      </Box>
+      <Tooltip title={open ? '' : currentName} placement="right" arrow>
+        <Box
+          ref={triggerRef}
+          className={`scs-trigger ${open ? 'open' : ''}`}
+          onClick={handleTrigger}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTrigger(); } }}
+          role="button"
+          tabIndex={0}
+          aria-label={switchable ? 'Switch customer' : 'Manage customer'}
+          aria-haspopup={switchable ? 'dialog' : undefined}
+          data-testid="sidebar-customer-switcher"
+        >
+          <Box className="scs-avatar" sx={{ bgcolor: avatarColor(currentName) }}>{initial(currentName)}</Box>
+        </Box>
+      </Tooltip>
 
       <Popover
         open={open}
         anchorEl={triggerRef.current}
         onClose={close}
-        anchorOrigin={{ vertical: expanded ? 'bottom' : 'top', horizontal: expanded ? 'left' : 'right' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         slotProps={{ paper: { className: 'scs-panel' } }}
       >
-        {isRoot && (
+        {all.length >= SEARCH_FROM && (
           <Box className="scs-search">
             <TextField
               autoFocus fullWidth size="small" variant="standard" placeholder="Search customers…"
@@ -120,8 +121,6 @@ const SidebarCustomerSwitcher = ({ expanded = false }) => {
           </Box>
         )}
 
-        <Typography className="scs-acct">{accountLabel}'s account</Typography>
-
         <Box className="scs-list">
           {list.length === 0 ? (
             <Typography className="scs-empty">No customers</Typography>
@@ -130,7 +129,25 @@ const SidebarCustomerSwitcher = ({ expanded = false }) => {
             return (
               <Box key={c.uuid} className={`scs-row ${active ? 'active' : ''}`} onClick={() => handleSelect(c)}>
                 <Box className="scs-check-slot">{active && <CheckIcon className="scs-check" />}</Box>
+                <Box className="scs-row-avatar" sx={{ bgcolor: avatarColor(c.name) }}>{initial(c.name)}</Box>
                 <Typography className="scs-row-name" noWrap>{c.name}</Typography>
+                {c.enabled === false && <span className="scs-row-tag">Disabled</span>}
+                {canEdit(c) && (
+                  <Box className="scs-row-actions">
+                    {isRoot && (
+                      <Tooltip title="Duplicate customer">
+                        <IconButton size="small" aria-label={`Duplicate ${c.name}`} onClick={(e) => act(e, 'duplicate', c)}>
+                          <ContentCopyIcon sx={{ fontSize: 13 }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Edit customer">
+                      <IconButton size="small" aria-label={`Edit ${c.name}`} onClick={(e) => act(e, 'edit', c)}>
+                        <EditIcon sx={{ fontSize: 14 }} />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                )}
               </Box>
             );
           })}
@@ -140,25 +157,17 @@ const SidebarCustomerSwitcher = ({ expanded = false }) => {
 
         <Box className="scs-actions">
           {isRoot && (
-            <Box className="scs-action primary" onClick={() => openDialog('create')}>
+            <Box className="scs-action primary" role="button" onClick={(e) => act(e, 'create', null)}>
               <AddIcon className="scs-action-ic" /> Add customer
             </Box>
           )}
-          {current && (
-            <Box className="scs-action" onClick={() => openDialog('edit')}>
+          {canEdit(current) && (
+            <Box className="scs-action" role="button" onClick={(e) => act(e, 'edit', current)}>
               <SettingsOutlinedIcon className="scs-action-ic" /> Manage customer
             </Box>
           )}
         </Box>
       </Popover>
-
-      <CustomerEditDialog
-        open={dialogOpen}
-        onClose={() => { setDialogOpen(false); setDialogMode('edit'); }}
-        onSave={handleSave}
-        customerData={dialogMode === 'create' ? null : current}
-        loading={saving}
-      />
     </>
   );
 };

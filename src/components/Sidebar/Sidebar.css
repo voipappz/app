@@ -1,17 +1,18 @@
-/* Sidebar Container - LIGHT Theme inspired by Sentry */
+/* Sidebar container — a narrow, tinted rail: icons only when closed, icon above
+   label when the hamburger opens it. The tint, not a shadow, separates
+   navigation from content. */
 .sidebar-container {
   position: fixed;
   left: 0;
   top: 0;
   height: 100vh;
-  width: 80px;
+  width: 56px;
   box-sizing: border-box;
-  background: #f9fafb;
-  border-right: 1px solid #e5e7eb;
+  background: #eceff5;
+  border-right: 1px solid #e1e5ec;
   display: flex;
   flex-direction: column;
   z-index: 1200;
-  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.05);
   /* Desktop expand/collapse is immediate; retain transform-only motion. */
   transition: transform 0.25s ease;
   overflow-x: hidden;
@@ -24,26 +25,18 @@
   box-shadow: none;
 }
 
-/* Expanded (labeled) rail — toggled by the hamburger */
+/* Open (labeled) rail — toggled by the hamburger */
 .sidebar-container.expanded {
-  width: 104px;
+  width: 68px;
 }
 
-/* Hamburger row at the top (replaces the logo) */
+/* Top of the rail: the customer tile */
 .sidebar-top {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 8px 0 6px 0;
+  padding: 6px 0 2px;
   flex-shrink: 0;
-}
-
-.sidebar-container.expanded .sidebar-top {
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 8px 6px 8px;
 }
 
 .sidebar-menu-toggle {
@@ -64,59 +57,6 @@
 
 [data-theme="dark"] .sidebar-brand-logo {
   filter: invert(1) brightness(2);
-}
-
-/* Expanded: compact icon-above-label navigation, matching the portal rail. */
-.sidebar-container.expanded .sidebar-nav-button {
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  padding: 8px 6px;
-  margin: 0;
-  border-radius: 0;
-  min-height: 54px;
-}
-
-.sidebar-container.expanded .sidebar-nav-button.active {
-  background-color: rgba(117, 92, 214, 0.08);
-  color: #755cd6;
-}
-
-.sidebar-container.expanded .sidebar-nav-button.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background-color: #755cd6;
-}
-
-.sidebar-container.expanded .sidebar-nav-icon svg {
-  font-size: 22px;
-}
-
-/* Compact (icon) mode: icons only — no label text next to the icon */
-.sidebar-container:not(.expanded) .sidebar-nav-text {
-  display: none;
-}
-
-/* Labels remain readable without widening the rail into a text menu. */
-.sidebar-container.expanded .sidebar-nav-text {
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-align: center;
-  font-size: 10px;
-  font-weight: 500;
-  opacity: 1;
-}
-
-.sidebar-container.expanded .sidebar-bottom-tools {
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px;
 }
 
 [data-theme="dark"] .sidebar-menu-toggle {
@@ -168,52 +108,83 @@
   background: #9ca3af;
 }
 
-/* Navigation Items - Icon Only (Sentry Style) */
+/* Navigation items — icon above label. The state (hover, active) is a pill
+   behind the icon only; the label just gains weight. */
 .sidebar-nav-item {
   margin-bottom: 0;
 }
 
-.sidebar-nav-button {
-  border-radius: 9px;
-  margin: 0 8px;
-  padding: 4px 4px;
-  color: #6b7280;
-  transition: background-color 0.15s ease, color 0.15s ease;
+.sidebar-container .sidebar-nav-button {
+  border-radius: 0;
+  margin: 0;
+  padding: 5px 2px;
+  color: #5b6472;
+  transition: color 0.15s ease;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  min-height: 36px;
+  gap: 3px;
+  min-height: 40px;
+}
+
+.sidebar-container.expanded .sidebar-nav-button {
+  min-height: 50px;
+}
+
+.sidebar-container .sidebar-nav-button:hover,
+.sidebar-container .sidebar-nav-button.active {
+  background-color: transparent;
 }
 
 .sidebar-nav-button:hover {
-  background-color: #f3f4f6;
-  color: #374151;
+  color: #1f2733;
 }
 
 .sidebar-nav-button.active {
-  background-color: rgba(101, 117, 142, 0.14);
-  color: #65758E;
-  font-weight: 600;
+  color: #755cd6;
 }
 
-.sidebar-nav-icon {
+.sidebar-container .sidebar-nav-icon {
   color: inherit;
   min-width: auto;
+  width: 40px;
+  height: 28px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
   justify-content: center;
   margin: 0;
+  position: relative;
+  transition: background-color 0.15s ease;
+}
+
+.sidebar-nav-button:hover .sidebar-nav-icon {
+  background-color: rgba(31, 39, 51, 0.08);
+}
+
+.sidebar-nav-button.active .sidebar-nav-icon {
+  background-color: rgba(117, 92, 214, 0.16);
+}
+
+.sidebar-container.expanded .sidebar-nav-icon {
+  width: 48px;
 }
 
 .sidebar-nav-icon svg {
-  font-size: 18px;
+  font-size: 20px;
+}
+
+/* Closed rail: icons only — the label is the tooltip. */
+.sidebar-container:not(.expanded) .sidebar-nav-text {
+  display: none;
 }
 
 .sidebar-nav-text {
   font-family: 'Rubik', sans-serif;
-  font-size: 0.62rem;
-  font-weight: 400;
+  font-size: 10px;
+  font-weight: 500;
   line-height: 1.15;
   text-align: center;
   white-space: nowrap;
@@ -221,12 +192,10 @@
   text-overflow: ellipsis;
   max-width: 64px;
   color: inherit;
-  opacity: 0.9;
 }
 
 .sidebar-nav-button.active .sidebar-nav-text {
   font-weight: 600;
-  opacity: 1;
 }
 
 /* Admin section — flows right after the day-to-day items (no gap, no divider) */
@@ -376,54 +345,6 @@
   flex-shrink: 0;
 }
 
-/* Expanded: full profile row (avatar + name + email + chevron) */
-.sidebar-profile-section.expanded {
-  display: block;
-  padding: 6px 8px 8px;
-}
-.sidebar-profile-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 9px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-.sidebar-profile-row:hover {
-  background-color: #f3f4f6;
-}
-.sidebar-profile-meta {
-  flex: 1;
-  width: 100%;
-  text-align: center;
-  min-width: 0;
-}
-.sidebar-profile-name {
-  font-size: 13.5px !important;
-  font-weight: 600 !important;
-  line-height: 1.2;
-  color: #1f2733;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sidebar-profile-email {
-  font-size: 11px !important;
-  color: #6b7686;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sidebar-profile-chev {
-  font-size: 18px !important;
-  color: #9aa4b2;
-  flex-shrink: 0;
-}
-[data-theme="dark"] .sidebar-profile-row:hover { background-color: #2a3342; }
-[data-theme="dark"] .sidebar-profile-name { color: #e6ebf2; }
-
 /* Dark Mode Toggle Section (legacy — kept until cleanup) */
 .sidebar-theme-toggle {
   display: flex;
@@ -452,13 +373,19 @@
 }
 
 [data-theme="dark"] .sidebar-nav-button:hover {
-  background-color: #2d3748;
   color: #e2e8f0;
 }
 
+[data-theme="dark"] .sidebar-nav-button:hover .sidebar-nav-icon {
+  background-color: #2d3748;
+}
+
 [data-theme="dark"] .sidebar-nav-button.active {
-  background-color: rgba(159, 122, 234, 0.18);
-  color: #9f7aea;
+  color: #b79df2;
+}
+
+[data-theme="dark"] .sidebar-nav-button.active .sidebar-nav-icon {
+  background-color: rgba(159, 122, 234, 0.22);
 }
 
 [data-theme="dark"] .sidebar-top-section {
@@ -505,7 +432,7 @@
 @media (max-width: 899px) {
   .sidebar-container {
     position: relative;
-    width: 80px;
+    width: 68px;
   }
 }
 
@@ -537,11 +464,4 @@
   font-weight: 600;
   background-color: #65758E;
   flex-shrink: 0;
-}
-
-/* Collapsed rail: name/chevron hide (.sidebar-nav-text) — center the avatar so
-   it doesn't sit broken/left-aligned. */
-.sidebar-container:not(.expanded) .sidebar-env-trigger {
-  justify-content: center;
-  padding: 8px 0 !important;
 }

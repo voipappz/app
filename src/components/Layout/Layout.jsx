@@ -115,7 +115,7 @@ const Layout = ({ children }) => {
               ModalProps={{ keepMounted: true }}
               sx={{
                 display: { xs: 'block', md: 'none' },
-                '& .MuiDrawer-paper': { width: 104, boxSizing: 'border-box' }
+                '& .MuiDrawer-paper': { width: 68, boxSizing: 'border-box' }
               }}
             >
               <Sidebar expanded onNavigate={() => setMobileDrawerOpen(false)} />

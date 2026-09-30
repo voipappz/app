@@ -1,8 +1,8 @@
 .topbar-container {
   position: fixed;
   top: 0;
-  left: 80px;
-  width: calc(100% - 80px);
+  left: 56px;
+  width: calc(100% - 56px);
   height: 48px;
   background-color: var(--topbar-bg, #f6f7f9);
   border-bottom: 1px solid var(--border-light);
@@ -21,8 +21,8 @@
 }
 
 .topbar-container.sidebar-expanded {
-  left: 104px;
-  width: calc(100% - 104px);
+  left: 68px;
+  width: calc(100% - 68px);
 }
 
 /* Hamburger */
