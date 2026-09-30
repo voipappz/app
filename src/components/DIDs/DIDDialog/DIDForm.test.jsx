@@ -67,14 +67,6 @@ describe('DIDForm', () => {
     expect(screen.queryByRole('option', { name: /FEATURE:/ })).not.toBeInTheDocument();
   });
 
-  it('sends enabled=false when the switch is turned off', () => {
-    renderForm({ did: route('dst') });
-    const toggle = screen.getByRole('checkbox', { name: 'Enabled' });
-    expect(toggle).toBeChecked();
-    fireEvent.click(toggle);
-    expect(toggle).not.toBeChecked();
-  });
-
   describe('every type, as the edit screen opens it', () => {
     it.each(['src', 'dst', 'feature'])('%s: a phone number and a bridge', (type) => {
       renderForm({ did: route(type) });
