@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import ImportCSVDialog from './ImportCSVDialog';
 import {
   DEVICE_CSV_HEADERS, deviceErrors, deviceRowErrors, generateDevicePassword, prepareDeviceRow, randomDeviceRows,
@@ -9,10 +10,13 @@ import {
 const environments = [{ uuid: 'env-1', name: 'Sales' }];
 
 function renderDialog(props) {
+  // The dialog reads breakpoints (full screen on a phone), so it needs a theme.
   return render(
+    <ThemeProvider theme={createTheme()}>
     <ImportCSVDialog open onClose={vi.fn()} title="Import Devices from CSV" entityName="Devices"
       environments={environments} selectedEnvironment="env-1" showTemplateOption
-      templateHeaders={DEVICE_CSV_HEADERS} validateRow={deviceRowErrors} prepareRow={prepareDeviceRow} {...props} />,
+      templateHeaders={DEVICE_CSV_HEADERS} validateRow={deviceRowErrors} prepareRow={prepareDeviceRow} {...props} />
+    </ThemeProvider>,
   );
 }
 
