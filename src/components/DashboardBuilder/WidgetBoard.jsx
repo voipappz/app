@@ -145,9 +145,13 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
         ))}
       </ReactGridLayout>
     </Box>
-    <CdrEditor open={Boolean(editingCdr)} scope={callsScope} editing={editingCdr?.uuid ? editingCdr : null} saving={saving}
-      onClose={() => setEditingCdr(null)}
-      onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
+    {/* Mounted only while open: the builder asks the API for its catalog, and
+        a board that nobody is building on (Live) must not call the API. */}
+    {editingCdr && (
+      <CdrEditor open scope={callsScope} editing={editingCdr.uuid ? editingCdr : null} saving={saving}
+        onClose={() => setEditingCdr(null)}
+        onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
+    )}
     <WidgetBuilder open={Boolean(building)} widget={building?.uuid ? building : null} saving={saving} environmentUuid={environmentUuid}
       onClose={() => setBuilding(null)}
       onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
