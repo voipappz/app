@@ -16,6 +16,8 @@ import {
   Typography,
   Tabs,
   Tab,
+  ToggleButton,
+  ToggleButtonGroup,
   Paper,
   CircularProgress,
   Alert,
@@ -107,6 +109,26 @@ export const AnnouncementBridge = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [fullAnnouncement, setFullAnnouncement] = useState(null);
   const [fetchingDetails, setFetchingDetails] = useState(false);
+  const [builtins, setBuiltins] = useState([]);
+  const [builtin, setBuiltin] = useState('');
+
+  // Built-in announcements (MOH / RINGING / SILENCE) for the third tab.
+  useEffect(() => {
+    if (!open || editMode === 'edit') return;
+    let live = true;
+    import('../../../services/api/announcementsApi.js')
+      .then(({ getBuiltins }) => getBuiltins())
+      .then((list) => { if (live) setBuiltins(list); });
+    return () => { live = false; };
+  }, [open, editMode]);
+
+  // Picking a built-in names the announcement after it: the API plays the
+  // local file by name, so the name must start with the built-in's name.
+  const pickBuiltin = (name) => {
+    setBuiltin(name);
+    setFormData(prev => ({ ...prev, name }));
+    setFormErrors(prev => ({ ...prev, builtin: undefined, name: undefined }));
+  };
 
   // Audio URL from full announcement details (fetched) or passed-in data
   const existingAudioUrl = fullAnnouncement?.path || announcement?.path || null;
@@ -166,6 +188,7 @@ export const AnnouncementBridge = ({
   useEffect(() => {
     if (!open) {
       reset();
+      setBuiltin('');
       setFormData({
         name: '',
         environment_uuid: '',
@@ -244,6 +267,14 @@ export const AnnouncementBridge = ({
       if (mode === 'tts' && !ttsPreviewUrl) {
         errors.tts = 'Please generate audio preview before creating';
       }
+
+      if (mode === 'builtin') {
+        if (!builtin) {
+          errors.builtin = 'Please choose music on hold, ringing or silence';
+        } else if (!formData.name?.startsWith(builtin)) {
+          errors.name = `The name must start with ${builtin} to play the ${builtin} audio`;
+        }
+      }
     }
 
     setFormErrors(errors);
@@ -285,7 +316,8 @@ export const AnnouncementBridge = ({
 
   // Check if form is valid
   const isFormValid = formData.name && formData.environment_uuid && (
-    editMode === 'edit' || (mode === 'file' && file) || (mode === 'tts' && ttsPreviewUrl)
+    editMode === 'edit' || (mode === 'file' && file) || (mode === 'tts' && ttsPreviewUrl) ||
+    (mode === 'builtin' && builtin)
   );
 
   // ---------------------------------------------------------------------------
@@ -322,8 +354,32 @@ export const AnnouncementBridge = ({
             >
               <Tab label="Upload File" value="file" />
               <Tab label="Text-to-Speech" value="tts" />
+              <Tab label="Music on hold / Ringing / Silence" value="builtin" />
             </Tabs>
           </Paper>
+
+          {/* Built-in Tab: MOH / RINGING / SILENCE, played from the API's local files */}
+          {mode === 'builtin' && (
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>Built-in audio</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                No upload needed: the platform plays its own file for this announcement.
+              </Typography>
+              <ToggleButtonGroup
+                exclusive
+                value={builtin}
+                onChange={(e, value) => value && pickBuiltin(value)}
+                aria-label="Built-in audio"
+              >
+                {builtins.map(b => (
+                  <ToggleButton key={b.name} value={b.name}>{b.label}</ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+              {formErrors.builtin && (
+                <Alert severity="error" sx={{ mt: 2 }}>{formErrors.builtin}</Alert>
+              )}
+            </Paper>
+          )}
 
           {/* File Upload Tab */}
           {mode === 'file' && (

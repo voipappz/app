@@ -455,9 +455,40 @@ export const getTTSProviders = async () => {
   }
 };
 
+/**
+ * Built-in announcements the API plays from local files: MOH (music on hold),
+ * RINGING and SILENCE. GET /api/announcements?action=builtins -> [{name, label}].
+ * Falls back to the same three if the API is older than the action.
+ */
+export const BUILTIN_FALLBACK = [
+  { name: 'MOH', label: 'Music on hold' },
+  { name: 'RINGING', label: 'Ringing' },
+  { name: 'SILENCE', label: 'Silence' },
+];
+
+export const getBuiltins = async () => {
+  try {
+    const response = await apiService.get('/api/announcements?action=builtins', {}, 'fetching built-in announcements', false);
+    return Array.isArray(response) && response.length ? response : BUILTIN_FALLBACK;
+  } catch {
+    return BUILTIN_FALLBACK;
+  }
+};
+
+/**
+ * Create a built-in announcement: POST its name with no file. The API plays
+ * the local file for that name, so there is nothing to upload.
+ */
+export const createBuiltin = async (formDataInput) => {
+  const { path: _ignored, ...data } = formDataInput;
+  return createFromTTS(data);
+};
+
 export const announcementsApi = {
   uploadFile,
   createFromTTS,
+  createBuiltin,
+  getBuiltins,
   generateTTS,
   getTTSProviders,
   getAnnouncement,
