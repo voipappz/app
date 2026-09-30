@@ -24,7 +24,7 @@ import CallMobileView from './CallMobileView/CallMobileView.jsx';
 import CallDetailPanel from './CallDetailPanel/CallDetailPanel.jsx';
 import CallConversationPanel from './CallDetailPanel/CallConversationPanel.jsx';
 import CallLogsPanel from './CallDetailPanel/CallLogsPanel.jsx';
-import CallStatCard from './CallStatCard.jsx';
+import StatCounter from '../common/StatCounter/StatCounter.jsx';
 import { DirectionIcon, CauseIcon, RecordingControls } from './CallIcons.jsx';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 import LiveDrawer from '../Live/LiveDrawer.jsx';
@@ -646,7 +646,7 @@ const Calls = () => {
           Rendered even with an empty grid — "0 calls" is an answer; the row
           vanishing is not. A null value renders "—", never a confident 0. */}
       {!isMobile && (
-        <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1, mb: 1.25, mt: 0.5, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0.5, mb: 1, mt: 0.25, flexWrap: 'wrap' }}>
           {[
             { label: 'Total', value: summaryCounts.total, color: 'var(--counter-total)', filterKey: null, tooltip: 'All calls matching the current filters' },
             { label: 'Answered', value: summaryCounts.answered, color: 'var(--counter-answered)', filterKey: 'answered', tooltip: 'Show only answered calls' },
@@ -654,7 +654,8 @@ const Calls = () => {
             { label: 'Outgoing', value: summaryCounts.outgoing, color: 'var(--counter-outgoing)', filterKey: 'outgoing', tooltip: 'Show only outgoing calls' },
             { label: 'Incoming', value: summaryCounts.incoming, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: 'Show only incoming calls' },
           ].map((item) => (
-            <CallStatCard
+            <StatCounter
+              variant="minimal"
               key={item.label}
               label={item.label}
               value={item.value}
