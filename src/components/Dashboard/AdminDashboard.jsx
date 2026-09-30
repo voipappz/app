@@ -1,4 +1,5 @@
-// The console's dashboard IS the widget board: every panel on it, including
+// The console's dashboard: the CDR query editor at its heart, and the widget
+// board below it. Every panel on the board, including
 // the calls panels this screen used to hard-code (totals, answered, calls over
 // time, how they ended, live calls), is a widget that can be moved, resized,
 // edited, duplicated or removed, and more are added from "Add widget". The
@@ -66,7 +67,7 @@ export default function AdminDashboard() {
         actions={can('calls', 'read') ? <Button variant="outlined" onClick={() => navigate('/calls')}>View call history</Button> : null}
       />
       {accountUuid && (
-        <WidgetBoard key={accountUuid} storageScope={`admin-metrics:${accountUuid}`} callsScope={callsScope} seed={seed} heading={false} />
+        <WidgetBoard key={accountUuid} storageScope={`admin-metrics:${accountUuid}`} callsScope={callsScope} seed={seed} heading={false} editor />
       )}
     </Box>
   );
