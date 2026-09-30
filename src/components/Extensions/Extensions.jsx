@@ -45,6 +45,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { ExtensionBridge as ExtensionDialog } from '../Bridges/ExtensionBridge/ExtensionBridge';
+import { DEVICE_CSV_HEADERS, deviceRowErrors, prepareDeviceRow, randomDeviceRows } from '../Bridges/ExtensionBridge/deviceRules';
 import ImportCSVDialog from '../common/ImportCSVDialog/ImportCSVDialog';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 import StatChips from '../shared/StatChips/StatChips.jsx';
@@ -326,10 +327,13 @@ const Extensions = () => {
     }
   }, []);
 
-  const handleImportSuccess = useCallback(() => {
-    showSuccess('Devices imported successfully');
+  const handleImportSuccess = useCallback((result) => {
+    showSuccess(result?.message ? `Devices: ${result.message}` : 'Devices imported');
     fetchExtensions();
   }, [showSuccess, fetchExtensions]);
+
+  // Fresh example rows every time the import opens (deviceRules.js).
+  const importExamples = useMemo(() => (importDialogOpen ? randomDeviceRows(3) : []), [importDialogOpen]);
 
   return (
     <Box
@@ -718,13 +722,12 @@ const Extensions = () => {
         environments={environments}
         requireEnvironment={true}
         onSuccess={handleImportSuccess}
-        formatHint="Username,Name,Password,CallerID — headers must match exactly"
+        formatHint="Username,Name,Password,CallerID — Username and Name are required; a missing password is generated"
         showTemplateOption={true}
-        templateHeaders={['Username', 'Name', 'Password', 'CallerID']}
-        templateData={[
-          { Username: '801', Name: 'Eli', Password: 'P6Pq8fZxoj801', CallerID: '08-3819793' },
-          { Username: '802', Name: 'Costa', Password: 'P6Pq8fZxoj802', CallerID: '08-3819793' }
-        ]}
+        templateHeaders={DEVICE_CSV_HEADERS}
+        templateData={importExamples}
+        validateRow={deviceRowErrors}
+        prepareRow={prepareDeviceRow}
       />
 
       {/* Click-to-Call Dialog */}
