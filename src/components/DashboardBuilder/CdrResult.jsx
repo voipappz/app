@@ -3,6 +3,7 @@ import { Box, LinearProgress, Stack, Typography } from '@mui/material';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
+import StatCounter from '../common/StatCounter/StatCounter.jsx';
 import { dimensionLabel, dimensionText, formatMeasure, groupName, measureOf, timeSeries } from './cdrReport';
 
 const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#64748b'];
@@ -13,18 +14,25 @@ const tick = (bucket) => (value) => {
   return bucket === '1d' ? date.toLocaleDateString([], { month: 'short', day: 'numeric' }) : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+// Each measure in the colour the Calls counters use for the same meaning.
+const MEASURE_COLOR = {
+  calls: 'var(--counter-total)', unique_callers: 'var(--counter-total)',
+  answered: 'var(--counter-answered)', answer_rate: 'var(--counter-answered)', service_level: 'var(--counter-answered)',
+  missed: 'var(--counter-no-answer)', abandoned: 'var(--counter-no-answer)', abandon_rate: 'var(--counter-no-answer)', short_calls: 'var(--counter-no-answer)',
+  billsec: 'var(--counter-outgoing)', duration: 'var(--counter-outgoing)', avg_talk: 'var(--counter-outgoing)', max_talk: 'var(--counter-outgoing)',
+  avg_duration: 'var(--counter-outgoing)', avg_wait: 'var(--counter-incoming)', billed: 'var(--counter-incoming)', mos: 'var(--counter-incoming)',
+};
+
+// The number view: the Calls counter design (StatCounter), one per measure.
 function Tiles({ row, measures, catalog }) {
   return (
-    <Box data-testid="cdr-tiles" sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 1.5, height: '100%', alignContent: 'center' }}>
+    <Box data-testid="cdr-tiles" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, height: '100%', alignContent: 'center' }}>
       {measures.map((key) => {
         const m = measureOf(catalog, key);
+        const value = row?.[key];
         return (
-          <Stack key={key} alignItems="center" justifyContent="center" spacing={0.5} sx={{ py: 1 }}>
-            <Typography variant={measures.length > 2 ? 'h4' : 'h3'} sx={{ fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-              {formatMeasure(m.unit, row?.[key])}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>{m.label}</Typography>
-          </Stack>
+          <StatCounter key={key} label={m.label} color={MEASURE_COLOR[key]}
+            value={value === undefined || value === null ? null : formatMeasure(m.unit, value)} />
         );
       })}
     </Box>
