@@ -18,7 +18,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin-left: 80px;
+  margin-left: 56px;
   margin-top: 48px;
   height: calc(100vh - 48px);
   background-color: var(--theme-bg-secondary);
@@ -30,7 +30,7 @@
   margin-left: 0;
 }
 
-.content-container.sidebar-expanded { margin-left: 104px; }
+.content-container.sidebar-expanded { margin-left: 68px; }
 
 .content-container.mcp-fullscreen {
   margin: 0;

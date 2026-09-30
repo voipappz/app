@@ -3,8 +3,8 @@
 /* Global Design System - Sentry Inspired (LIGHT THEME) */
 :root {
   /* Layout */
-  --sidebar-width: 80px;
-  --sidebar-width-collapsed: 80px;
+  --sidebar-width: 56px;
+  --sidebar-width-collapsed: 56px;
 
   /* Light Theme Colors (Sentry inspired) */
   --bg-primary: #ffffff;

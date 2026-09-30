@@ -18,7 +18,6 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import CodeIcon from '@mui/icons-material/Code';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { useThemeMode } from '../../context/ThemeContext';
@@ -26,7 +25,7 @@ import { useIsUserSession } from '../../hooks/useIsUserSession';
 import { getPermittedNavItems } from '../../config/navConfig';
 import useNavBadges from '../../hooks/useNavBadges';
 import './Sidebar.css';
-import CopyableEmail from '../common/CopyableEmail/CopyableEmail.jsx';
+import SidebarCustomerSwitcher from './CustomerSwitcher/SidebarCustomerSwitcher.jsx';
 
 
 const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
@@ -99,7 +98,7 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
               <IconComp />
               {badge && (
                 <Box component="span" sx={{
-                  position: 'absolute', top: -4, right: -6, minWidth: 14, height: 14, px: 0.4,
+                  position: 'absolute', top: -3, right: 2, minWidth: 14, height: 14, px: 0.4,
                   borderRadius: '7px', backgroundColor: badge.color, color: '#fff',
                   fontSize: '0.58rem', fontWeight: 700, lineHeight: '14px', textAlign: 'center',
                 }}>
@@ -116,6 +115,14 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
 
   return (
     <Box className={`sidebar-container ${collapsed ? 'collapsed' : ''} ${expanded ? 'expanded' : ''}`}>
+
+      {/* The customer — an account's only. A user has one environment and no
+          selectors. */}
+      {!userSession && (
+        <Box className="sidebar-top">
+          <SidebarCustomerSwitcher />
+        </Box>
+      )}
 
       {/* Day-to-day navigation — flat list, no groups */}
       <List className="sidebar-nav-list">
@@ -179,49 +186,30 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate }) => {
       </Box>
       )}
 
-      {/* Account — pinned at the bottom. Expanded: a full profile row
-          (avatar + name + email); collapsed rail: just the avatar. */}
-      <Box className={`sidebar-profile-section ${expanded ? 'expanded' : ''}`}>
-        {expanded ? (
-          <Box
-            className="sidebar-profile-row"
+      {/* Account — pinned at the bottom: the avatar, named in its tooltip. */}
+      <Box className="sidebar-profile-section">
+        <Tooltip
+          placement="right"
+          arrow
+          title={
+            <Box sx={{ textAlign: 'center', py: 0.25 }}>
+              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>{accountName}</Typography>
+              {user?.email && (
+                <Typography variant="caption" sx={{ opacity: 0.85 }}>{user.email}</Typography>
+              )}
+            </Box>
+          }
+        >
+          <IconButton
+            className="sidebar-profile-button"
             onClick={openProfile}
-            role="button"
-            aria-label="Account"
+            aria-label="Edit account"
           >
             <Avatar className="sidebar-profile-avatar">
               {user?.email?.[0]?.toUpperCase() || 'U'}
             </Avatar>
-            <Box className="sidebar-profile-meta">
-              <Typography className="sidebar-profile-name" noWrap>{accountName}</Typography>
-              {user?.email && <Typography className="sidebar-profile-email" noWrap><CopyableEmail email={user.email} /></Typography>}
-            </Box>
-            <KeyboardArrowUpIcon className="sidebar-profile-chev" />
-          </Box>
-        ) : (
-          <Tooltip
-            placement="right"
-            arrow
-            title={
-              <Box sx={{ textAlign: 'center', py: 0.25 }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>{accountName}</Typography>
-                {user?.email && (
-                  <Typography variant="caption" sx={{ opacity: 0.85 }}>{user.email}</Typography>
-                )}
-              </Box>
-            }
-          >
-            <IconButton
-              className="sidebar-profile-button"
-              onClick={openProfile}
-              aria-label="Edit account"
-            >
-              <Avatar className="sidebar-profile-avatar">
-                {user?.email?.[0]?.toUpperCase() || 'U'}
-              </Avatar>
-            </IconButton>
-          </Tooltip>
-        )}
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* A user's profile menu: appearance and sign out (the account dialog

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 
 import {
-  Avatar,
   Autocomplete,
   Box,
   IconButton,
@@ -110,10 +109,10 @@ import LiveDrawer from '../Live/LiveDrawer.jsx';
 import { EnvironmentChartsPanel } from '../Live/panels/EntityChartsPanels.jsx';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import MenuIcon from '@mui/icons-material/Menu';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { TOPBAR_NAV_ITEMS } from '../../config/navConfig';
 import EditIcon from '@mui/icons-material/Edit';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import StorageIcon from '@mui/icons-material/Storage';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
@@ -134,7 +133,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { ConfirmDialog } from '../ui';
 
-const ITEM_HEIGHT = 68; // application rows: name + type, status/date/id, meta chips
+const ITEM_HEIGHT = 40; // application rows: one line — name, status, dates (id and tags in the tooltip)
 
 // The API's own dependencies as /health?verbose reports them. `process` is
 // the API itself, which the pill as a whole already stands for.
@@ -176,7 +175,7 @@ function SortableEnvChip({ env, onDelete, canDelete }) {
 const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, onToggleSidebar, onToggleExpand }) => {
   const navigate = useNavigate();
 
-  const { isAuthenticated, user, logout, accountCustomer } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
   useTour();
   // A portal USER signs in to this same console, with the account's ACL model:
@@ -194,8 +193,6 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
   const [toolsMenuAnchor, setToolsMenuAnchor] = useState(null);
   const { deleteNotification, fetchNotificationDetails } = useNotifications();
   const {
-    customers,
-    isRoot,
     selectedCustomer,
     selectedEnvironments,
     uncommittedEnvironments,
@@ -210,32 +207,6 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
     fetchAllEnvironments,
     fetchCustomers
   } = useCustomerEnvironment();
-  // Customer-column search for the combined customer+environment box.
-  const [custSearch, setCustSearch] = useState('');
-  const [custTag, setCustTag] = useState('');   // filter customers by a meta tag (key:value)
-  // Available tags across all customers' meta, derived client-side.
-  const customerTags = useMemo(() => {
-    const set = new Set();
-    (customers || []).forEach((c) => {
-      const m = c?.meta;
-      if (m && typeof m === 'object') {
-        Object.entries(m).forEach(([k, v]) => set.add(v ? `${k}:${v}` : k));
-      }
-    });
-    return Array.from(set).sort();
-  }, [customers]);
-  const customerList = useMemo(() => {
-    let base = (customers || []).filter((c) => c && c.name && c.name.trim());
-    const q = custSearch.trim().toLowerCase();
-    if (q) base = base.filter((c) => c.name.toLowerCase().includes(q));
-    if (custTag) {
-      base = base.filter((c) => {
-        const m = c?.meta;
-        return m && typeof m === 'object' && Object.entries(m).some(([k, v]) => (v ? `${k}:${v}` : k) === custTag);
-      });
-    }
-    return base;
-  }, [customers, custSearch, custTag]);
   const {
     loading: accountLoading,
     saving: accountSaving,
@@ -623,7 +594,13 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
     if (!env) return null;
     const selected = isEnvSelected(env.uuid);
     const metaEntries = env.meta && typeof env.meta === 'object' ? Object.entries(env.meta) : [];
-    const metaFull = metaEntries.map(([k, v]) => (v ? `${k}: ${v}` : k)).join('\n');
+    // Short id and tags are reference data: in the tooltip, not on the row.
+    const details = [
+      env.uuid ? `ID ${env.uuid.slice(0, 8)}` : null,
+      ...metaEntries.map(([k, v]) => (v ? `${k}: ${v}` : k)),
+    ].filter(Boolean).join('\n');
+    const day = (value) => (value ? new Date(value).toLocaleDateString() : '—');
+    const cell = { fontSize: '0.62rem', color: 'var(--theme-text-secondary)', flexShrink: 0, whiteSpace: 'nowrap' };
     return (
       <Box
         style={style}
@@ -631,10 +608,15 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
         sx={{
           display: 'flex',
           alignItems: 'center',
-          px: 1.5,
+          gap: 1,
+          pl: '9px',
+          pr: 1.5,
           cursor: 'pointer',
+          boxSizing: 'border-box',
+          // Reserved on every row, so selecting one never shifts its content.
+          borderLeft: '3px solid transparent',
           '&:hover': { backgroundColor: 'var(--theme-hover)', '& .env-edit': { opacity: 1 } },
-          ...(selected && { backgroundColor: 'var(--theme-active, rgba(25, 118, 210, 0.08))', borderLeft: '3px solid', borderLeftColor: 'primary.main' }),
+          ...(selected && { backgroundColor: 'var(--theme-active, rgba(25, 118, 210, 0.08))', borderLeftColor: 'primary.main' }),
           borderBottom: '1px solid var(--border-light, #e0e0e0)',
         }}
       >
@@ -644,13 +626,12 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
           onClick={(event) => event.stopPropagation()}
           onChange={() => handleToggleEnvironment(env)}
           inputProps={{ 'aria-label': `${selected ? 'Deselect' : 'Select'} ${env.name}` }}
-          sx={{ p: 0.25, mr: 0.75, flexShrink: 0 }}
+          sx={{ p: 0.25, flexShrink: 0 }}
         />
 
-        <Box sx={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
-          {/* Name + type/production badge */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography variant="body2" noWrap sx={{ flex: 1, minWidth: 0, fontWeight: 500, fontSize: '0.78rem', color: env.enabled ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)' }}>
+        <Tooltip title={<Box sx={{ whiteSpace: 'pre-line' }}>{details}</Box>} placement="bottom-start" enterDelay={600} disableHoverListener={!details}>
+          <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography variant="body2" noWrap sx={{ minWidth: 0, fontWeight: 500, fontSize: '0.78rem', color: env.enabled ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)' }}>
               {env.name}
             </Typography>
             {(env.application?.production === true || env.type) && (
@@ -661,27 +642,10 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
               />
             )}
           </Box>
-          {/* Status · created · short id */}
-          <Typography variant="caption" noWrap sx={{ fontSize: '0.6rem', color: 'var(--theme-text-secondary)', opacity: 0.85, display: 'block' }}>
-            {env.enabled ? 'Active' : 'Inactive'}
-            {env.created_at ? ` · ${new Date(env.created_at).toLocaleDateString()}` : ''}
-            {env.uuid ? ` · ${env.uuid.slice(0, 8)}` : ''}
-          </Typography>
-          {/* Metadata chips (full set in tooltip) */}
-          {metaEntries.length > 0 && (
-            <Tooltip title={metaFull} placement="bottom-start">
-              <Box sx={{ display: 'flex', gap: 0.25, mt: 0.2, flexWrap: 'nowrap', overflow: 'hidden' }}>
-                {metaEntries.slice(0, 3).map(([k, v]) => (
-                  <Chip key={k} size="small" label={v ? `${k}:${v}` : k}
-                    sx={{ height: 14, fontSize: '0.5rem', flexShrink: 0, bgcolor: 'var(--theme-bg-secondary)', '& .MuiChip-label': { px: 0.4 } }} />
-                ))}
-                {metaEntries.length > 3 && (
-                  <Typography sx={{ fontSize: '0.5rem', color: 'var(--theme-text-secondary)', alignSelf: 'center' }}>+{metaEntries.length - 3}</Typography>
-                )}
-              </Box>
-            </Tooltip>
-          )}
-        </Box>
+        </Tooltip>
+        <Typography sx={{ ...cell, width: 52 }}>{env.enabled ? 'Active' : 'Inactive'}</Typography>
+        <Typography sx={{ ...cell, width: 64 }}>{day(env.created_at)}</Typography>
+        <Typography sx={{ ...cell, width: 64 }}>{day(env.updated_at)}</Typography>
 
         {/* Edit application — opens the same EnvironmentDialog used for create */}
         <Tooltip title="Edit application" placement="left">
@@ -689,7 +653,7 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
             className="env-edit"
             size="small"
             onClick={(e) => { e.stopPropagation(); openEnvEdit(env); }}
-            sx={{ flexShrink: 0, ml: 0.5, p: 0.25, opacity: selected ? 0.7 : 0, transition: 'opacity 0.15s' }}
+            sx={{ flexShrink: 0, p: 0.25, opacity: selected ? 0.7 : 0, transition: 'opacity 0.15s' }}
           >
             <EditIcon sx={{ fontSize: 14 }} />
           </IconButton>
@@ -728,6 +692,35 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
     );
   }, [selectedEnvironments]);
 
+
+  // The sidebar's customer switcher asks for the customer dialog here, where
+  // the full record and the save path live.
+  useEffect(() => {
+    const handler = (e) => {
+      const { mode, customer } = e.detail || {};
+      if (mode === 'create') openCustomerCreate();
+      else if (mode === 'duplicate') openCustomerDuplicate(customer);
+      else openCustomerEdit(customer || null);
+    };
+    window.addEventListener('openCustomerEdit', handler);
+    return () => window.removeEventListener('openCustomerEdit', handler);
+  }, []);
+
+  // A customer switch (from the sidebar) changes whose applications these are:
+  // drop the picker's search and tag, and pulse the trigger so the new scope
+  // is noticed.
+  useEffect(() => {
+    const handler = () => {
+      setEnvironmentSearchValue('');
+      setTagFilters([]);
+      orgBreadcrumbRef.current?.animate?.(
+        [{ boxShadow: '0 0 0 0 rgba(117, 92, 214, 0.45)' }, { boxShadow: '0 0 0 8px rgba(117, 92, 214, 0)' }],
+        { duration: 900, iterations: 2 }
+      );
+    };
+    window.addEventListener('nimbus:customerSwitched', handler);
+    return () => window.removeEventListener('nimbus:customerSwitched', handler);
+  }, []);
 
   // Route sidebar "openCustomerDialog" event to the unified panel
   useEffect(() => {
@@ -871,7 +864,7 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
         >
           <MenuIcon sx={{ fontSize: 22, transition: 'transform 220ms ease', transform: menuOpen ? 'rotate(90deg)' : 'rotate(0deg)' }} />
         </IconButton>
-        {/* Selected applications and the customer/environment selector. */}
+        {/* Selected applications and their selector. The customer is the sidebar's. */}
         {userSession ? (
           <Typography data-testid="topbar-user-environment" sx={{ fontSize: '0.75rem', fontWeight: 600, px: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--theme-text-primary)' }}>
             {userEnvironmentName}
@@ -886,7 +879,7 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
             sx={{
               textTransform: 'none',
               minWidth: 0,
-              maxWidth: { xs: 150, sm: 320, md: 460 },
+              maxWidth: { xs: 150, sm: 260, md: 320 },
               px: 1,
               py: 0.25,
               gap: 0.5,
@@ -896,6 +889,7 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+              <LayersOutlinedIcon sx={{ fontSize: 16, flexShrink: 0, color: 'var(--theme-text-secondary)' }} />
               <Typography
                 component="span"
                 sx={{
@@ -1082,10 +1076,11 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         sx={{
           '& .MuiPaper-root': {
-            width: customerList.length > 0 ? 690 : 360,
+            width: 460,
+            maxWidth: 'calc(100vw - 24px)',
             maxHeight: '75vh',
             display: 'flex',
-            flexDirection: 'row',
+            flexDirection: 'column',
             borderRadius: '12px',
             border: '1px solid var(--border-light)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
@@ -1094,136 +1089,6 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
           }
         }}
       >
-        {/* LEFT column — Customers. Always shows the current customer(s); root
-            can add/edit/search and switch. Pick one → its environments branch
-            into the right column. One box for both. */}
-        {customerList.length > 0 && (
-          <Box sx={{ width: 280, flexShrink: 0, borderRight: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <Box sx={{ px: 1.25, pt: 1.25, pb: 0.75 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: isRoot ? 0.75 : 0 }}>
-                <Typography sx={{ fontWeight: 700, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--theme-text-secondary)' }}>
-                  Customer{isRoot ? ` (${customerList.length})` : ''}
-                </Typography>
-                <Box sx={{ flex: 1 }} />
-                <Tooltip title="Setup wizard">
-                  <IconButton
-                    size="small"
-                    onClick={() => { setCustomerEnvDialogOpen(false); setCustomerEnvAnchorEl(null); window.dispatchEvent(new Event('openWizardModal')); }}
-                    sx={{ p: 0.25 }}
-                    aria-label="Setup wizard"
-                  >
-                    <AutoFixHighIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Tooltip>
-                {isRoot && (
-                  <Tooltip title="Add customer">
-                    <IconButton size="small" onClick={openCustomerCreate} sx={{ p: 0.25 }}>
-                      <AddIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Box>
-              {isRoot && (
-                <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                  <TextField
-                    value={custSearch}
-                    onChange={(e) => setCustSearch(e.target.value)}
-                    placeholder="Search customers…"
-                    variant="outlined" size="small" fullWidth
-                    sx={{ '& .MuiInputBase-root': { fontSize: '0.8rem', height: 34 } }}
-                    InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 15, color: 'var(--theme-text-secondary)' }} /></InputAdornment> }}
-                  />
-                  {customerTags.length > 0 && (
-                    <Select
-                      value={custTag}
-                      onChange={(e) => setCustTag(e.target.value)}
-                      displayEmpty
-                      size="small"
-                      renderValue={(v) => v || 'Tag'}
-                      sx={{ height: 34, minWidth: 96, maxWidth: 130, fontSize: '0.72rem', flexShrink: 0, '& .MuiSelect-select': { py: 0.5 } }}
-                      MenuProps={{ style: { zIndex: Z.L2.MENU }, PaperProps: { sx: { maxHeight: 320 } } }}
-                    >
-                      <MenuItem value=""><em>All tags</em></MenuItem>
-                      {customerTags.map((t) => <MenuItem key={t} value={t} sx={{ fontSize: '0.75rem' }}>{t}</MenuItem>)}
-                    </Select>
-                  )}
-                </Box>
-              )}
-            </Box>
-            <Divider />
-            <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0, py: 0.5 }}>
-              {customerList.map((c) => {
-                const active = c.uuid === selectedCustomer?.uuid;
-                // Editing a customer is NOT root-only. The API gates PATCH
-                // /api/customers/:id on tenancy -- Account#customer_uuids, the
-                // account's own customer plus its AccountResource grants -- and
-                // never on the `root` JWT claim, which the serializer that signs
-                // it calls a "UI hint only". Gating the pencil on isRoot hid an
-                // edit the server would have accepted, and left an account with
-                // no way at all to reach its own customer's settings (login OTP
-                // among them), since SidebarCustomerSwitcher's ungated "Manage
-                // customer" action is imported nowhere. Create and duplicate act
-                // outside the caller's tenant, so those stay root-only.
-                const canEditCustomer = isRoot || c.uuid === accountCustomer?.uuid;
-                const metaEntries = (c.meta && typeof c.meta === 'object') ? Object.entries(c.meta) : [];
-                const created = c.created_at ? new Date(c.created_at).toLocaleDateString() : null;
-                return (
-                  <Box
-                    key={c.uuid}
-                    onClick={async () => {
-                      if (active) return;
-                      setEnvironmentSearchValue('');
-                      setTagFilters([]);
-                      // Keep the picker open. The right pane reacts to the
-                      // context change and fetches this customer's applications
-                      // in place, so selecting a customer is one step.
-                      await selectCustomer(c);
-                    }}
-                    sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.75, cursor: 'pointer', borderLeft: active ? '3px solid var(--accent-primary)' : '3px solid transparent', backgroundColor: active ? 'var(--theme-hover)' : 'transparent', '&:hover': { backgroundColor: 'var(--theme-hover)', '& .cust-actions': { opacity: 1 } } }}
-                  >
-                    <Avatar sx={{ width: 26, height: 26, fontSize: '0.72rem', bgcolor: active ? 'var(--accent-primary)' : 'var(--theme-bg-secondary)', color: active ? '#fff' : 'var(--theme-text-secondary)', flexShrink: 0 }}>
-                      {(c.name || '?').trim()[0]?.toUpperCase()}
-                    </Avatar>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography sx={{ fontWeight: active ? 600 : 500, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.1 }}>
-                        <Typography sx={{ fontSize: '0.62rem', color: 'var(--theme-text-secondary)', whiteSpace: 'nowrap' }}>
-                          {c.enabled === false ? 'Disabled' : 'Active'}{created ? ` · ${created}` : ''}
-                        </Typography>
-                        {metaEntries.slice(0, 2).map(([k, v]) => (
-                          <Chip key={k} label={v ? `${k}:${v}` : k} size="small" sx={{ height: 15, fontSize: '0.55rem', bgcolor: 'var(--theme-bg-secondary)', '& .MuiChip-label': { px: 0.5 } }} />
-                        ))}
-                        {metaEntries.length > 2 && <Typography sx={{ fontSize: '0.55rem', color: 'var(--theme-text-secondary)' }}>+{metaEntries.length - 2}</Typography>}
-                      </Box>
-                    </Box>
-                    {canEditCustomer && (
-                      <Box className="cust-actions" sx={{ display: 'flex', flexShrink: 0, opacity: active ? 0.7 : 0, transition: 'opacity 0.15s' }}>
-                        {isRoot && (
-                          <Tooltip title="Duplicate customer">
-                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); openCustomerDuplicate(c); }} sx={{ p: 0.25 }}>
-                              <ContentCopyIcon sx={{ fontSize: 13 }} />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        <Tooltip title="Edit customer">
-                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); openCustomerEdit(c); }} sx={{ p: 0.25 }}>
-                            <EditIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    )}
-                  </Box>
-                );
-              })}
-              {customerList.length === 0 && (
-                <Typography sx={{ p: 2, fontSize: '0.8rem', color: 'var(--theme-text-secondary)' }}>No customers</Typography>
-              )}
-            </Box>
-          </Box>
-        )}
-
-        {/* RIGHT column — Applications belonging to the selected customer */}
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {/* Hierarchy header: these applications belong to the selected customer */}
         <Box sx={{ px: 1.5, pt: 1, pb: 0.25, display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
           <Typography variant="caption" sx={{ fontWeight: 700, color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontSize: '0.62rem', letterSpacing: 0.5, flexShrink: 0 }}>
@@ -1347,7 +1212,7 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
 
         {/* Inline sortable column headers (like the list screens) — sorting
             re-queries the SERVER with order_by/order_type. */}
-        <Box sx={{ px: 1.5, py: 0.25, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid var(--border-light)' }}>
+        <Box sx={{ pl: '44px', pr: '38px', py: 0.25, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid var(--border-light)' }}>
           {[
             { field: 'name',       label: 'Name',    sx: { flex: 1 } },
             { field: 'enabled',    label: 'Active',  sx: { width: 52 } },
@@ -1417,6 +1282,11 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
             </>
           )}
           <Box sx={{ flex: 1 }} />
+          {!hasUncommittedChanges ? (
+            <Typography data-testid="env-picker-applied" sx={{ fontSize: '0.72rem', color: 'var(--theme-text-secondary)', py: 0.5 }}>
+              {selectedEnvironments.length > 0 ? 'Applied' : 'Nothing selected'}
+            </Typography>
+          ) : (
           <Button
             variant="contained"
             color="primary"
@@ -1427,14 +1297,14 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, menuOpen = false, o
               setCustomerEnvAnchorEl(null);
               setEnvironmentSearchValue('');
             }}
-            disabled={!hasUncommittedChanges || uncommittedEnvironments.length === 0 || applyingEnvironments}
+            disabled={uncommittedEnvironments.length === 0 || applyingEnvironments}
             sx={{ fontSize: '0.78rem', textTransform: 'none', fontWeight: 600 }}
             startIcon={applyingEnvironments ? <CircularProgress size={12} color="inherit" /> : null}
           >
             {applyingEnvironments ? 'Applying...' : `Apply (${uncommittedEnvironments.length})`}
           </Button>
+          )}
         </Box>
-        </Box>{/* end right column */}
       </Popover>
 
       {/* Customer Edit/Create Dialog — Edit (✏) opens with the loaded customer;
