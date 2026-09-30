@@ -409,6 +409,20 @@ const DIDForm = forwardRef(({
         </Box>
       ) : (
         <>
+          {/* Enabled first: whether this Route takes calls at all. A disabled
+              route is skipped by every lookup; the API honours enabled=false
+              on create too (it used to force every new row live). */}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!formData.enabled}
+                onChange={(e) => handleChange('enabled', e.target.checked)}
+                inputProps={{ 'aria-label': 'Enabled' }}
+              />
+            }
+            label="Enabled"
+          />
+
           {/* ── Type first: it decides every field below ── */}
           <FormSection label="Route Type" />
           <FormControl fullWidth required error={!!errors.type || (submitAttempted && !formData.type)}>
@@ -741,17 +755,6 @@ const DIDForm = forwardRef(({
             multiline
             rows={3}
             placeholder="Optional notes about this Route"
-          />
-
-          {/* Enabled toggle */}
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.enabled}
-                onChange={(e) => handleChange('enabled', e.target.checked)}
-              />
-            }
-            label="Enabled"
           />
 
           {/* Meta Properties */}
