@@ -8,6 +8,7 @@ import {
   DialogTitle,
   Typography,
 } from '@mui/material';
+import { Z } from '../../utils/zIndex.js';
 
 /**
  * ConfirmDialog — the one confirmation dialog.
@@ -79,6 +80,7 @@ const ConfirmDialog = ({
       onKeyDown={onKeyDown}
       maxWidth="xs"
       fullWidth
+      sx={{ zIndex: Z.CONFIRM }}
       data-testid={testId}
       aria-labelledby={titleId}
       aria-describedby={descId}

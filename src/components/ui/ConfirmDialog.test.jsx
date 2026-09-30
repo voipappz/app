@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import { ConfirmProvider, useConfirm } from './useConfirm.jsx';
+import { Z } from '../../utils/zIndex.js';
 
 describe('ConfirmDialog', () => {
   it('names what is being deleted and is labelled for screen readers', () => {
@@ -9,6 +10,14 @@ describe('ConfirmDialog', () => {
     const dialog = screen.getByRole('dialog', { name: 'Delete User' });
     expect(dialog).toHaveTextContent('Are you sure you want to delete Dana?');
     expect(dialog).toHaveAccessibleDescription(/cannot be undone/);
+  });
+
+  // A confirmation asked from inside a layered dialog (the VML editor's
+  // "replace content?") opened underneath it, where it could not be answered.
+  it('stacks above every dialog layer', () => {
+    render(<ConfirmDialog open title="Replace" onClose={() => {}} onConfirm={() => {}} />);
+    const root = screen.getByRole('dialog').closest('.MuiModal-root');
+    expect(Number(getComputedStyle(root).zIndex)).toBeGreaterThan(Z.L3.MENU);
   });
 
   it('confirms with the button and with Enter, cancels with Esc', () => {
