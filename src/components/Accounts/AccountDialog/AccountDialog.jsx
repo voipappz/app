@@ -97,6 +97,9 @@ const AccountDialog = ({
   account,
   loading,
   environments = [],
+  // Offered in the picker: the top bar's selection. The account's own
+  // applications stay in the field even when not selected up there.
+  selectableEnvironments = null,
   environmentsLoading,
   acls = [],
   aclsLoading,
@@ -416,6 +419,13 @@ const AccountDialog = ({
     }
   };
 
+  const pickerOptions = (() => {
+    if (!selectableEnvironments) return environments || [];
+    const byUuid = new Map(selectableEnvironments.map((e) => [e.uuid, e]));
+    (formData.selectedEnvironments || []).forEach((e) => { if (e?.uuid && !byUuid.has(e.uuid)) byUuid.set(e.uuid, e); });
+    return [...byUuid.values()];
+  })();
+
   return (
     <>
       <Dialog
@@ -586,7 +596,7 @@ const AccountDialog = ({
             <Grid size={12}>
               <Autocomplete
                 multiple
-                options={environments || []}
+                options={pickerOptions}
                 value={formData.selectedEnvironments}
                 onChange={(_event, newValue) => {
                   handleChange('selectedEnvironments', newValue);
@@ -598,7 +608,7 @@ const AccountDialog = ({
                 filterOptions={filterOptions}
                 getOptionLabel={(option) => option.name || ''}
                 isOptionEqualToValue={(option, value) => option.uuid === value.uuid}
-                ListboxComponent={environments?.length > 100 ? VirtualizedListbox : undefined}
+                ListboxComponent={pickerOptions.length > 100 ? VirtualizedListbox : undefined}
                 PopperComponent={environments?.length > 100 ? VirtualizedPopper : undefined}
                 renderInput={(params) => (
                   <TextField

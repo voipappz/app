@@ -75,6 +75,7 @@ const Accounts = () => {
     sortBy,
     sortOrder,
     environments,
+    selectableEnvironments,
     acls,
     referenceDataLoading,
     handleOpenDialog,
@@ -424,6 +425,7 @@ const Accounts = () => {
         account={selectedAccount}
         loading={dialogLoading || referenceDataLoading}
         environments={environments}
+        selectableEnvironments={selectableEnvironments}
         environmentsLoading={referenceDataLoading}
         acls={acls}
         aclsLoading={referenceDataLoading}
