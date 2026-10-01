@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Z } from '../../../utils/zIndex.js';
 
@@ -28,6 +28,9 @@ vi.mock('../../../hooks/useIsUserSession', () => ({ useIsUserSession: () => fals
 const scope = { selectedEnvironments: [{ uuid: 'env-1', name: 'Sales' }] };
 vi.mock('../../../context/CustomerEnvironmentContext', () => ({ useCustomerEnvironment: () => scope }));
 
+const vmlsApi = { getVML: vi.fn(), updateVML: vi.fn() };
+vi.mock('../../../services/api/vmlsApi.js', () => vmlsApi);
+
 import { VMLBridge } from './VMLBridge.jsx';
 
 // A menu is only usable when it stacks above the dialog that opened it.
@@ -54,5 +57,43 @@ describe('the VML dialog', () => {
     open();
     fireEvent.click(screen.getByRole('button', { name: /Snippets/ }));
     expect(layerOf(screen.getByRole('menu'))).toBeGreaterThan(Z.L2.DIALOG);
+  });
+});
+
+// Edit loads the VML itself: what a list or a route hands in can be partial or
+// old, and saving that would write it back over the real script.
+describe('editing a VML', () => {
+  const stored = { uuid: 'v1', name: 'my_script', type: 'eval', environment_uuid: 'env-1', enabled: true, notes: '', data: '-- fresh' };
+  const edit = () => render(<VMLBridge open mode="edit" vml={{ uuid: 'v1', name: 'stale' }} onClose={() => {}} onSave={() => {}} />);
+  const nameField = () => screen.getByRole('textbox', { name: /^Name/ });
+
+  it('loads the VML from the API and saves what it loaded', async () => {
+    vml.vmlContent = '-- fresh';
+    vmlsApi.getVML.mockResolvedValue(stored);
+    vmlsApi.updateVML.mockResolvedValue({ uuid: 'v1' });
+    edit();
+
+    await waitFor(() => expect(nameField()).toHaveValue('my_script'));
+    expect(vmlsApi.getVML).toHaveBeenCalledWith('v1');
+    fireEvent.click(screen.getByRole('button', { name: 'Update VML' }));
+    await waitFor(() => expect(vmlsApi.updateVML).toHaveBeenCalledWith('v1', expect.objectContaining({ name: 'my_script', type: 'eval' })));
+  });
+
+  it('refuses a name the API would refuse, and shows why a save failed', async () => {
+    vml.vmlContent = '-- fresh';
+    vmlsApi.getVML.mockResolvedValue(stored);
+    vmlsApi.updateVML.mockReset();
+    edit();
+    await waitFor(() => expect(nameField()).toHaveValue('my_script'));
+
+    fireEvent.change(nameField(), { target: { value: 'My Script' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Update VML' }));
+    expect(screen.getByText('Use letters, numbers, _ or - only (no spaces)')).toBeInTheDocument();
+    expect(vmlsApi.updateVML).not.toHaveBeenCalled();
+
+    fireEvent.change(nameField(), { target: { value: 'my_script' } });
+    vmlsApi.updateVML.mockRejectedValue(new Error('name is invalid'));
+    fireEvent.click(screen.getByRole('button', { name: 'Update VML' }));
+    expect(await screen.findByText('name is invalid')).toBeInTheDocument();
   });
 });

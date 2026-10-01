@@ -476,12 +476,21 @@ export const getBuiltins = async () => {
 };
 
 /**
- * Create a built-in announcement: POST its name with no file. The API plays
- * the local file for that name, so there is nothing to upload.
+ * The application's built-in announcement (MOH / RINGING / SILENCE):
+ * POST /api/announcements/builtin finds or creates it, so there is one per
+ * application and its uuid never changes. Nothing to upload — the API plays its
+ * own file. An API older than that endpoint (404) gets the old by-name create.
  */
 export const createBuiltin = async (formDataInput) => {
-  const { path: _ignored, ...data } = formDataInput;
-  return createFromTTS(data);
+  const body = new URLSearchParams({ name: formDataInput.name, environment_uuid: formDataInput.environment_uuid || '' });
+  try {
+    return await apiService.post('/api/announcements/builtin', body,
+      { 'Content-Type': 'application/x-www-form-urlencoded' }, 'creating built-in announcement', true);
+  } catch (err) {
+    if (err?.status !== 404) throw err;
+    const { path: _ignored, ...data } = formDataInput;
+    return createFromTTS(data);
+  }
 };
 
 export const announcementsApi = {
