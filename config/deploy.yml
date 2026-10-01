@@ -1,0 +1,100 @@
+# Kamal BASE configuration for the admin — the static React bundle behind nginx
+# (`Dockerfile`), deployed as one container per destination.
+#
+# This layout, the hooks in .kamal/ and the Makefile targets came from the
+# portal repo (voipappz/connectix), which ran Kamal against four live
+# destinations from 2026-08 to 2026-09 and moved to xamal afterwards. Every
+# comment marked "measured" below records something that cost a real deploy
+# there; docs/deployment.md has the longer story. Read that file before adding
+# a destination.
+#
+#     make kamal-config DEST=connectix      # render + verify, read-only
+#     make deploy DEST=connectix            # build, push, swap
+#
+# THIS FILE NAMES NO LIVE HOST — DELIBERATELY. In the portal the base file
+# pointed at a real box that was a DIFFERENT host with a DIFFERENT image from
+# every named destination, so a `kamal deploy` with a forgotten `-d` did not
+# fail: it deployed, somewhere else, and the first symptom was a timeout
+# against a host nobody meant to touch. Here a bare deploy tries to SSH to a
+# name that does not resolve and stops. The Makefile refuses a missing DEST
+# as well; this is the second lock.
+
+service: voipappz-admin
+
+# Docker Hub, same account CI publishes to (`nirlevi/va-admin` in ci.yml). A
+# separate repository so a kamal deploy and a CI push never race for the same
+# `:latest`. Kamal tags every image by the commit sha it built from, which is
+# how a running container is traced back to its source — rewriting history
+# orphans that tag (measured), so redeploy after a rebase.
+image: nirlevi/voipappz-admin
+
+# Boot wait. nginx serving static files is ready in well under a second; the
+# time that matters is the image PULL on a small host. 60s leaves room for
+# that and is still short enough that a genuinely dead container is noticed.
+# Too LOW is the expensive mistake: kamal has already started the swap.
+deploy_timeout: 60
+
+servers:
+  web:
+    hosts:
+      # Unresolvable on purpose — see the header. Every destination overrides
+      # this; a bare deploy must not reach a host.
+      - dest-required.invalid
+
+builder:
+  arch: amd64
+  # Build with the DAEMON, not a bridged buildkit container.
+  #
+  # The default `docker-container` driver runs buildkit in its own container
+  # and pushes to the registry from inside it. On the network these deploys
+  # run from, that upload stalls dead — measured three times in a row on the
+  # portal: frozen at `exporting to registry` with 0 bytes of traffic and 0%
+  # CPU for minutes, after a successful build. The same image pushed first try
+  # with `docker push`, which uploads from the daemon in the host's network
+  # namespace. MTU was 1500 everywhere, so it is the container's egress, not
+  # fragmentation. `driver: docker` gives up cross-arch builds and inline
+  # cache; an amd64 image for an amd64 host needs neither.
+  driver: docker
+  # THE nginx IMAGE, not Dockerfile.production. That file was the old
+  # React-plus-Deno image; it copied an `api/` directory that no longer exists
+  # and was deleted with this config's arrival.
+  dockerfile: Dockerfile
+  # VITE BAKES THESE INTO THE BUNDLE AT BUILD TIME. An image built for one API
+  # cannot be repointed with an env var at run time, so the API host is a
+  # BUILD ARG and lives in each destination's file: one destination, one API,
+  # one image. Nothing goes in `env:` for the app itself — nginx reads none.
+  args:
+    # The commit this image was built from, for `docker inspect` on the host
+    # when "which build is this?" comes up. Shell-out in ERB, evaluated where
+    # kamal runs — which is inside the kamal container, where the checkout is
+    # mounted (the Makefile marks it safe.directory for exactly this line).
+    RELEASE_SHA: <%= `git rev-parse --short HEAD`.strip %>
+
+proxy:
+  # nginx listens on 80 INSIDE the container. kamal-proxy fronts it and owns
+  # the host's 80/443. A destination that shares a host with a Kamal app
+  # already using kamal-proxy (the portal on nimbus-connectix, until it moves
+  # to xamal) simply adds its hostname; the proxy routes by Host header.
+  app_port: 80
+  healthcheck:
+    # `/` is the SPA's index.html, served by nginx from disk: a 200 means the
+    # bundle is in the image and nginx is up, which is everything there is to
+    # check. No auth, no content negotiation, so a probe with no Accept header
+    # is fine.
+    path: /
+    interval: 3
+    timeout: 5
+
+registry:
+  username: nirlevi
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+# The mothership fleet's SSH convention. Destinations override any of it —
+# the portal's connectix host answers on 22 with id_ed25519, and getting this
+# wrong presents as `Connection refused ... :2228`, which reads as the host
+# being down rather than the port being wrong (measured).
+ssh:
+  user: root
+  port: 2228
+  keys: ["~/.ssh/kamal_deploy"]

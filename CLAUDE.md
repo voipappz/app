@@ -1107,3 +1107,23 @@ is up.
   must equal the API's signing key. For local work against a node with a
   different key, `localStorage.va_cable_token` overrides the token for the
   cable only; remove it once the node has the real key.
+
+## Deploy
+
+Kamal, from this repo — `make destinations`, `make kamal-config DEST=x`,
+`make deploy DEST=x`. The tool and every lesson learned running it came from
+the portal repo; [docs/deployment.md](docs/deployment.md) is the reference,
+read it before touching `config/deploy*.yml` or `.kamal/`.
+
+Two rules that follow from this repo being **public**:
+
+- **Nothing sensitive in git.** Registry token in `.kamal/secrets-common`,
+  host address and SSH details in `.kamal/env.<dest>`, both gitignored. A
+  destination yaml names only the public hostname and the public API URL.
+- **Never deploy.** Rendering the config and probing a live site are fine;
+  `make deploy` and anything that swaps a container on a live host is the
+  operator's call. Say the command, let a person run it.
+
+`Dockerfile` (nginx) is the image kamal builds. `Dockerfile.production` was the
+old React-plus-Deno image; it referenced a deleted `api/` directory and was
+removed when Kamal arrived.

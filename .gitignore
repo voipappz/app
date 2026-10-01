@@ -72,3 +72,17 @@ reference/
 Thumbs.db
 *.swp
 *~
+
+# ---------------------------------------------------------------------------
+# Kamal — deploy-time material. This repo is public: only the hooks, the base
+# and destination configs and the two *.example files are tracked. Registry
+# tokens, per-destination host details and any TLS material stay local.
+# ---------------------------------------------------------------------------
+.kamal/secrets
+.kamal/secrets-common
+.kamal/secrets.*
+!.kamal/secrets.example
+.kamal/env.*
+!.kamal/env.example
+.kamal/*.key
+.kamal/*.pem
