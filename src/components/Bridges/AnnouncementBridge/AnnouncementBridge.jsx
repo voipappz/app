@@ -122,8 +122,8 @@ export const AnnouncementBridge = ({
     return () => { live = false; };
   }, [open, editMode]);
 
-  // Picking a built-in names the announcement after it: the API plays the
-  // local file by name, so the name must start with the built-in's name.
+  // Picking a built-in names the announcement after it (MOH, RINGING,
+  // SILENCE); the API keeps one per application and plays its own file.
   const pickBuiltin = (name) => {
     setBuiltin(name);
     setFormData(prev => ({ ...prev, name }));
@@ -271,8 +271,6 @@ export const AnnouncementBridge = ({
       if (mode === 'builtin') {
         if (!builtin) {
           errors.builtin = 'Please choose music on hold, ringing or silence';
-        } else if (!formData.name?.startsWith(builtin)) {
-          errors.name = `The name must start with ${builtin} to play the ${builtin} audio`;
         }
       }
     }

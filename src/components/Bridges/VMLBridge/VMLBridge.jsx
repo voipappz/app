@@ -112,6 +112,11 @@ export const VMLBridge = ({
   });
 
   const [formErrors, setFormErrors] = useState({});
+  // Edit loads the VML itself (GET /api/vmls/:id) — the object a list or a
+  // route hands in can be partial or old, and saving it would write that back.
+  const [loadedVml, setLoadedVml] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
   const [selectedVariable, setSelectedVariable] = useState(null);
   const editorRef = useRef(null);
 
@@ -218,10 +223,24 @@ export const VMLBridge = ({
     }
   }, [vmlChat.messages, aiDialogOpen]);
 
+  useEffect(() => {
+    if (!open || mode !== 'edit' || !vml?.uuid) { setLoadedVml(null); setLoadError(null); return undefined; }
+    let live = true;
+    setLoadedVml(null);
+    setLoadError(null);
+    import('../../../services/api/vmlsApi.js')
+      .then(({ getVML }) => getVML(vml.uuid))
+      .then((full) => { if (live) setLoadedVml(full?.data && typeof full.data === 'object' && full.data.uuid ? full.data : full); })
+      .catch((err) => { if (live) setLoadError(err?.message || 'Could not load this VML'); });
+    return () => { live = false; };
+  }, [open, mode, vml?.uuid]);
+
   // Initialize form data
   useEffect(() => {
     if (open) {
       const envUuid = environmentUuid || selectedEnvironments?.[0]?.uuid || '';
+      // In edit mode the form waits for the loaded VML.
+      const vml = mode === 'edit' ? loadedVml : null;
 
       if (mode === 'edit' && vml) {
         setFormData({
@@ -243,7 +262,7 @@ export const VMLBridge = ({
         setFormData(prev => ({ ...prev, environment_uuid: envUuid }));
       }
     }
-  }, [open, environmentUuid, selectedEnvironments, mode, vml, setVMLContent]);
+  }, [open, environmentUuid, selectedEnvironments, mode, loadedVml, setVMLContent]);
 
   // Reset on close
   useEffect(() => {
@@ -257,6 +276,7 @@ export const VMLBridge = ({
         notes: ''
       });
       setFormErrors({});
+      setSubmitError(null);
       setSelectedVariable(null);
       setShowMeta(false);
       setEditorFullscreen(false);
@@ -296,6 +316,8 @@ export const VMLBridge = ({
   const validateForm = () => {
     const errors = {};
     if (!formData.name?.trim()) errors.name = 'Name is required';
+    // The API's rule (Vml#validate): letters, digits, _ and - only.
+    else if (!/^[0-9a-zA-Z_-]+$/.test(formData.name.trim())) errors.name = 'Use letters, numbers, _ or - only (no spaces)';
     if (!formData.type) errors.type = 'VML type is required';
     if (!formData.environment_uuid) errors.environment_uuid = 'Application is required';
     if (!vmlContent?.trim()) errors.vmlContent = 'VML content is required';
@@ -306,6 +328,8 @@ export const VMLBridge = ({
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
+    if (mode === 'edit' && !loadedVml) return;
+    setSubmitError(null);
 
     try {
       let result;
@@ -327,6 +351,9 @@ export const VMLBridge = ({
       onClose();
     } catch (err) {
       console.error('Submit error:', err);
+      // Say why it was not saved (e.g. the API refusing the name), instead of
+      // leaving the dialog open with nothing on screen.
+      setSubmitError(err?.message || 'Could not save this VML');
     }
   };
 
@@ -659,6 +686,15 @@ export const VMLBridge = ({
         zIndex={Z.L3.DIALOG}
       />
 
+      {loadError && (
+        <Alert severity="error">Could not load this VML: {loadError}</Alert>
+      )}
+      {mode === 'edit' && !loadedVml && !loadError && (
+        <Alert severity="info">Loading the VML…</Alert>
+      )}
+      {submitError && (
+        <Alert severity="error" onClose={() => setSubmitError(null)}>{submitError}</Alert>
+      )}
       {error && (
         <Alert severity="error" onClose={clearError}>
           {error}
