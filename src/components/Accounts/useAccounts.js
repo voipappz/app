@@ -388,6 +388,10 @@ export const useAccounts = () => {
 
     // Reference data
     environments,
+    // What the account dialog offers: the applications selected in the top
+    // bar. `environments` (all of the customer's) only resolves the names of
+    // applications an account already has.
+    selectableEnvironments: selectedEnvironments || [],
     acls,
     referenceDataLoading,
 

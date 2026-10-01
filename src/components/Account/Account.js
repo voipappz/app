@@ -7,7 +7,7 @@ import { customersApi } from '../../services/api/customersApi';
 
 export const useAccount = () => {
   const { user, accountUuid, logout } = useAuth();
-  const { selectedEnvironments, selectedCustomer } = useCustomerEnvironment();
+  const { selectedEnvironments } = useCustomerEnvironment();
 
   // UI state
   const [saving, setSaving] = useState(false);
@@ -20,7 +20,7 @@ export const useAccount = () => {
   // Create account state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [environments, setEnvironments] = useState([]);
-  const [environmentsLoading, setEnvironmentsLoading] = useState(false);
+  const environmentsLoading = false; // the list is the top bar's selection, already in memory
   const [acls, setAcls] = useState([]);
   const [aclsLoading, setAclsLoading] = useState(false);
 
@@ -219,31 +219,13 @@ export const useAccount = () => {
   // hunting for some other environment needs options, and then one searched
   // page is enough — this used to pull the whole tenant (per_page=9999) to
   // filter it in the browser.
+  // Only the applications selected in the top bar are offered; the search
+  // narrows that list and never reaches other applications.
   const searchEnvironments = useCallback(async (term = '') => {
-    const query = term.trim();
-    if (!query) {
-      setEnvironments(selectedEnvironments || []);
-      return;
-    }
-    setEnvironmentsLoading(true);
-    try {
-      const response = await accountsApi.getEnvironments({
-        search: query,
-        customer_uuid: selectedCustomer?.uuid,
-      });
-      const environmentsList = Array.isArray(response) ? response : response.data || [];
-      // Keep the selected ones present whatever the search returns, so their
-      // chips never turn into bare uuids mid-search.
-      const bySelection = new Map((selectedEnvironments || []).map((e) => [e.uuid, e]));
-      environmentsList.forEach((e) => bySelection.set(e.uuid, e));
-      setEnvironments([...bySelection.values()]);
-    } catch (error) {
-      console.error('Failed to search environments:', error);
-      setEnvironments(selectedEnvironments || []);
-    } finally {
-      setEnvironmentsLoading(false);
-    }
-  }, [selectedEnvironments, selectedCustomer]);
+    const query = term.trim().toLowerCase();
+    const selected = selectedEnvironments || [];
+    setEnvironments(query ? selected.filter((e) => String(e.name || '').toLowerCase().includes(query)) : selected);
+  }, [selectedEnvironments]);
 
   // Fetch ACLs for create account dialog
   const fetchAcls = useCallback(async () => {
