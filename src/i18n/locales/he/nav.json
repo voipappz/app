@@ -1,0 +1,25 @@
+{
+  "group": {
+    "manage": "ניהול",
+    "monitor": "ניטור",
+    "admin": "מנהל"
+  },
+  "routes": "מסלולים",
+  "services": "שירותים",
+  "devices": "שלוחות",
+  "subscriptions": "מנויים",
+  "tariffs": "תעריפים",
+  "dashboard": "לוח בקרה",
+  "calls": "שיחות",
+  "messages": "הודעות",
+  "logs": "לוגים",
+  "events": "אירועים",
+  "monitoring": "ניטור",
+  "nodes": "צמתים",
+  "reports": "דוחות",
+  "users": "משתמשים",
+  "accounts": "חשבונות",
+  "providers": "ספקים",
+  "templates": "תבניות",
+  "apiDocs": "תיעוד API"
+}

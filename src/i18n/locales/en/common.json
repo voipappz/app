@@ -1,0 +1,48 @@
+{
+  "action": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "add": "Add",
+    "remove": "Remove",
+    "close": "Close",
+    "search": "Search",
+    "refresh": "Refresh",
+    "export": "Export",
+    "apply": "Apply",
+    "clear": "Clear",
+    "back": "Back",
+    "next": "Next",
+    "duplicate": "Duplicate",
+    "importCsv": "Import CSV"
+  },
+  "state": {
+    "loading": "Loading…",
+    "empty": "No results",
+    "error": "Something went wrong",
+    "noDataForPeriod": "No data for this period",
+    "all": "All"
+  },
+  "label": {
+    "name": "Name",
+    "description": "Description",
+    "status": "Status",
+    "enabled": "Enabled",
+    "actions": "Actions",
+    "total": "Total",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "environment": "Application"
+  },
+  "value": {
+    "yes": "Yes",
+    "no": "No"
+  },
+  "confirm": {
+    "title": "Are you sure?",
+    "description": "This action cannot be undone."
+  }
+}

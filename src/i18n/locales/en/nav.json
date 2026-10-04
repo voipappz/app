@@ -1,0 +1,25 @@
+{
+  "group": {
+    "manage": "MANAGE",
+    "monitor": "MONITOR",
+    "admin": "ADMIN"
+  },
+  "routes": "Routes",
+  "services": "Services",
+  "devices": "Devices",
+  "subscriptions": "Subscriptions",
+  "tariffs": "Tariffs",
+  "dashboard": "Dashboard",
+  "calls": "Calls",
+  "messages": "Messages",
+  "logs": "Logs",
+  "events": "Events",
+  "monitoring": "Monitoring",
+  "nodes": "Nodes",
+  "reports": "Reports",
+  "users": "Users",
+  "accounts": "Accounts",
+  "providers": "Providers",
+  "templates": "Templates",
+  "apiDocs": "API Docs"
+}

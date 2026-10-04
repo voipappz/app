@@ -1,0 +1,48 @@
+{
+  "action": {
+    "save": "שמור",
+    "cancel": "בטל",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "create": "צור",
+    "update": "עדכן",
+    "add": "הוסף",
+    "remove": "הסר",
+    "close": "סגור",
+    "search": "חפש",
+    "refresh": "רענן",
+    "export": "ייצוא",
+    "apply": "החל",
+    "clear": "נקה",
+    "back": "חזור",
+    "next": "הבא",
+    "duplicate": "שכפל",
+    "importCsv": "ייבוא CSV"
+  },
+  "state": {
+    "loading": "טוען…",
+    "empty": "אין תוצאות",
+    "error": "משהו השתבש",
+    "noDataForPeriod": "אין נתונים לתקופה זו",
+    "all": "הכל"
+  },
+  "label": {
+    "name": "שם",
+    "description": "תיאור",
+    "status": "סטטוס",
+    "enabled": "מופעל",
+    "actions": "פעולות",
+    "total": "סך הכל",
+    "createdAt": "נוצר בתאריך",
+    "updatedAt": "עודכן בתאריך",
+    "environment": "יישום"
+  },
+  "value": {
+    "yes": "כן",
+    "no": "לא"
+  },
+  "confirm": {
+    "title": "האם אתה בטוח?",
+    "description": "לא ניתן לבטל פעולה זו."
+  }
+}
