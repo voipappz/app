@@ -1,4 +1,19 @@
 import '@testing-library/jest-dom';
+import { configure } from '@testing-library/react';
+
+// testing-library gives each findBy*/waitFor 1000ms, a budget separate from
+// (and nested inside) vitest's testTimeout. The DataGrid specs exceed it on a
+// loaded machine: PortalCalls' "full filtered count" test clicks to page two
+// and waits for the new row, which needs a mock to resolve, state to settle
+// and a 25-row grid to re-render. It passed on some runs and not others, and
+// raising only vitest's timeout just moved the failure from the test's own
+// deadline to this one.
+//
+// Timing, not logic -- vitest's summary attributes ~30% of total runtime to
+// building jsdom 48 times. Raised together so the outer budget still exceeds
+// the sum of the inner ones; a query for something genuinely absent still
+// fails, 5s later instead of 1s.
+configure({ asyncUtilTimeout: 5000 });
 
 // Add DOM environment globals
 Object.defineProperty(window, 'location', {
