@@ -31,3 +31,8 @@ printf 'http://127.0.0.1:9 gate@example.invalid\n%s\n' "$(jwt 30)" > .env.token
 VITE_API_BASE_URL=http://127.0.0.1:9 "$gate" >/dev/null 2>&1 && fail "expiring token accepted"
 [ ! -f .env.token ] || fail "failed login left a token behind"
 echo "ok  expiring token signs in again, a failed login clears the cache"
+
+rm -f .env .env.token
+out=$(VITE_API_BASE_URL=http://127.0.0.1:9 TEST_EMAIL=ci@example.invalid TEST_PASSWORD=x "$gate" 2>&1) && fail "unreachable API accepted"
+echo "$out" | grep -q "login failed" || fail "no .env (CI): wrong message: $out"
+echo "ok  without .env (as in CI) it uses the environment and reports a failed login"

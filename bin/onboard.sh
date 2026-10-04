@@ -6,7 +6,7 @@
 set -e -o pipefail
 
 [ -f .env ] || [ -n "$VITE_API_BASE_URL" ] || cp .env.example .env
-get() { [ -f .env ] && sed -n "s/^$1=//p" .env | tail -1; }
+get() { [ -f .env ] || return 0; sed -n "s/^$1=//p" .env | tail -1; }
 api=${VITE_API_BASE_URL:-$(get VITE_API_BASE_URL)}
 case "$api" in ''|*example.com*) api=https://switch.voipappz.io
   sed -i.bak "s|^VITE_API_BASE_URL=.*|VITE_API_BASE_URL=$api|" .env && rm -f .env.bak ;;
