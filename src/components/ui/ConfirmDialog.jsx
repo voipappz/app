@@ -114,7 +114,12 @@ const ConfirmDialog = ({
               : t('common:confirm.continue', { defaultValue: 'Are you sure you want to continue?' })}
           </Typography>
         )}
-        {description && (
+        {/* Guard on the RESOLVED value, not the prop. Removing the prop's
+            literal default made `description` undefined when not passed, so a
+            guard on the prop silently dropped the consequence line — and with
+            it the dialog's accessible description. A caller can still suppress
+            it with description={null} or "". */}
+        {dialogDescription && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             {dialogDescription}
           </Typography>
