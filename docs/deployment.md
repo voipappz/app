@@ -166,3 +166,20 @@ Building, rendering the config and probing a deployed site are fine for an
 agent to do. `make deploy`, pushing a tag anything reads as `:latest`, and
 recreating a container on a live host are an operator's calls. Say what the
 command is and let a person run it.
+
+## Onboarding a customer on switch
+
+1. **Login.** On the API host (voipappz-api), the operator runs
+   `make tenant CUSTOMER=<name> EMAIL=<admin@customer>`. It prints the email
+   and password. Give the developers or agents those two values plus the API's
+   `VA_TEST_OTP` code.
+2. **Connect.** In this repo, `make setup` and then `make onboard`. The second
+   one points `.env` at `https://switch.voipappz.io`, signs in, and names any
+   missing value. `make onboard TOKEN=1` prints the access JWT for curl or an
+   agent. There is no separate auth URL: sign-in goes to `/auth/*` on the API.
+3. **Phone.** The customer's environment needs `domain` and `wss_server` set.
+   The browser phone reads both from the user's environment.
+4. **Own hostname.** Add `config/deploy.<customer>.yml` with `proxy.hosts` and
+   `VITE_API_BASE_URL: https://switch.voipappz.io`. The customer adds a DNS A
+   record, switch adds the hostname to its CORS policy, and an operator runs
+   `make deploy DEST=<customer>`.
