@@ -171,8 +171,8 @@ command is and let a person run it.
 
 1. **Login.** On the API host (voipappz-api), the operator runs
    `make tenant CUSTOMER=<name> EMAIL=<admin@customer>`. It prints the email
-   and password. Give the developers or agents those two values plus the API's
-   `VA_TEST_OTP` code.
+   and password. Give the developers or agents those two values. OTP is off by
+   default; only if it is enabled on the API do they also need its `VA_TEST_OTP` code.
 2. **Connect.** In this repo, `make setup` and then `make onboard`. The second
    one points `.env` at `https://switch.voipappz.io`, signs in, and names any
    missing value. `make onboard TOKEN=1` prints the access JWT for curl or an
