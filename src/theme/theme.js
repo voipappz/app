@@ -41,7 +41,26 @@ const scheme = (t, sev) => ({
   },
 });
 
-const theme = createTheme({
+/**
+ * Build the theme for a reading direction.
+ *
+ * `direction` is a TOP-LEVEL createTheme option — it cannot live inside
+ * `colorSchemes` the way the palettes do, so the theme has to be built per
+ * direction rather than flipped on an existing object. Hence a factory.
+ *
+ * Do NOT rebuild this as `createTheme({ ...builtTheme, direction })`: spreading
+ * an already-built theme back through createTheme drops the `cssVariables` /
+ * `colorSchemes` wiring above, and dark mode stops working — quietly, because
+ * `theme.palette` still answers with light values.
+ *
+ * Direction-dependent COMPONENT defaults (Drawer anchor, Tooltip placement)
+ * are deliberately not set here yet. MUI already maps some of them through
+ * `theme.direction` itself, so adding our own flip risks double-flipping, and
+ * nothing can render RTL until the locale provider lands. They belong with the
+ * change that can actually test them.
+ */
+export const createAppTheme = (direction = 'ltr') => createTheme({
+  direction,
   cssVariables: { colorSchemeSelector: 'data-theme' },
   colorSchemes: {
     light: scheme(light, severity.light),
@@ -250,4 +269,6 @@ const theme = createTheme({
   },
 });
 
-export default theme;
+// The LTR theme, for the many modules that just want "the theme". App.jsx will
+// call the factory directly once direction becomes state.
+export default createAppTheme('ltr');
