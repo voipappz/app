@@ -43,6 +43,8 @@
   },
   "confirm": {
     "title": "Are you sure?",
-    "description": "This action cannot be undone."
+    "description": "This action cannot be undone.",
+    "deleteEntity": "Are you sure you want to delete <strong>{{name}}</strong>?",
+    "continue": "Are you sure you want to continue?"
   }
 }

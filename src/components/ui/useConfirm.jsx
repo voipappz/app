@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import i18n from '../../i18n';
 import ConfirmDialog from './ConfirmDialog.jsx';
 
 /**
@@ -52,15 +53,22 @@ export const ConfirmProvider = ({ children }) => {
 // Outside a provider (a component rendered on its own, as unit tests do) it
 // degrades to window.confirm with the same text, so behaviour — and any test
 // that stubs window.confirm — is unchanged there.
-const DEFAULT_DESCRIPTION = 'This action cannot be undone.';
-
+//
+// Translated through the i18next singleton rather than useTranslation: this is
+// a plain function, not a component, so it cannot use a hook. Same reason
+// dateUtils reads the singleton. Every defaultValue is the exact English this
+// used to hardcode.
 const fallback = async (opts = {}) => {
+  const t = i18n.t.bind(i18n);
   const question = typeof opts.message === 'string' ? opts.message
-    : opts.entityName ? `${opts.title || 'Delete'} ${opts.entityName}?`
-    : opts.title || 'Are you sure?';
+    : opts.entityName
+      ? `${opts.title || t('common:action.delete', { defaultValue: 'Delete' })} ${opts.entityName}?`
+      : opts.title || t('common:confirm.title', { defaultValue: 'Are you sure?' });
   // Keep the consequence line: the dialog shows it by default, so a fallback
   // that dropped it warned the user less than the dialog would have.
-  const description = opts.description === undefined ? DEFAULT_DESCRIPTION : opts.description;
+  const description = opts.description === undefined
+    ? t('common:confirm.description', { defaultValue: 'This action cannot be undone.' })
+    : opts.description;
   return window.confirm([question, typeof description === 'string' ? description : null]
     .filter(Boolean).join('\n\n'));
 };

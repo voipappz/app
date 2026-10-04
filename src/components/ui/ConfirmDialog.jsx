@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   Button,
   CircularProgress,
@@ -37,18 +38,29 @@ const ConfirmDialog = ({
   open,
   onClose,
   onConfirm,
-  title = 'Are you sure?',
+  title,
   message,
   entityName,
-  description = 'This action cannot be undone.',
-  confirmLabel = 'Delete',
-  cancelLabel = 'Cancel',
+  description,
+  confirmLabel,
+  cancelLabel,
   destructive = true,
   loading = false,
   children,
   'data-testid': testId,
   confirmTestId = 'confirm-delete-button',
 }) => {
+  const { t } = useTranslation();
+  // Defaults resolved here rather than in the destructuring, because they are
+  // translated and a hook cannot run in a parameter list. `defaultValue` keys
+  // them to the exact English they replaced, so a locale file that lacks a key
+  // renders what this component always rendered.
+  const dialogTitle = title ?? t('common:confirm.title', { defaultValue: 'Are you sure?' });
+  const dialogDescription = description
+    ?? t('common:confirm.description', { defaultValue: 'This action cannot be undone.' });
+  const confirmText = confirmLabel ?? t('common:action.delete', { defaultValue: 'Delete' });
+  const cancelText = cancelLabel ?? t('common:action.cancel', { defaultValue: 'Cancel' });
+
   const id = useId();
   const titleId = `${id}-title`;
   const descId = `${id}-desc`;
@@ -83,25 +95,35 @@ const ConfirmDialog = ({
       aria-labelledby={titleId}
       aria-describedby={descId}
     >
-      <DialogTitle id={titleId}>{title}</DialogTitle>
+      <DialogTitle id={titleId}>{dialogTitle}</DialogTitle>
       <DialogContent id={descId}>
         {message ?? (
           <Typography>
             {entityName
-              ? <>Are you sure you want to delete <strong>{entityName}</strong>?</>
-              : 'Are you sure you want to continue?'}
+              ? (
+                // Trans, not t(): the name stays bold, and Hebrew puts it in a
+                // different place in the sentence than English does.
+                <Trans
+                  i18nKey="confirm.deleteEntity"
+                  ns="common"
+                  values={{ name: entityName }}
+                  components={{ strong: <strong /> }}
+                  defaults="Are you sure you want to delete <strong>{{name}}</strong>?"
+                />
+              )
+              : t('common:confirm.continue', { defaultValue: 'Are you sure you want to continue?' })}
           </Typography>
         )}
         {description && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {description}
+            {dialogDescription}
           </Typography>
         )}
         {children}
       </DialogContent>
       <DialogActions>
         <Button onClick={close} disabled={loading}>
-          {cancelLabel}
+          {cancelText}
         </Button>
         <Button
           data-testid={confirmTestId}
@@ -111,7 +133,7 @@ const ConfirmDialog = ({
           disabled={loading}
           startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
         >
-          {confirmLabel}
+          {confirmText}
         </Button>
       </DialogActions>
     </Dialog>

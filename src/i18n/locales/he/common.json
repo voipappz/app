@@ -43,6 +43,8 @@
   },
   "confirm": {
     "title": "האם אתה בטוח?",
-    "description": "לא ניתן לבטל פעולה זו."
+    "description": "לא ניתן לבטל פעולה זו.",
+    "deleteEntity": "האם אתה בטוח שברצונך למחוק את <strong>{{name}}</strong>?",
+    "continue": "האם אתה בטוח שברצונך להמשיך?"
   }
 }
