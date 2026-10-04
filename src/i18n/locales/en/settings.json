@@ -1,0 +1,12 @@
+{
+  "appearance": {
+    "title": "Appearance",
+    "description": "Language and theme, remembered in this browser",
+    "intro": "These settings are remembered in this browser.",
+    "language": "Language",
+    "languageHint": "Switching reloads the screen. Hebrew also flips the layout right-to-left.",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}

@@ -4,6 +4,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import FlagIcon from '@mui/icons-material/Flag';
 import DescriptionIcon from '@mui/icons-material/Description';
 import TuneIcon from '@mui/icons-material/Tune';
+import PaletteIcon from '@mui/icons-material/Palette';
 import WidgetsIcon from '@mui/icons-material/Widgets';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -11,6 +12,7 @@ import RedisViewer from './RedisViewer.jsx';
 import FeatureFlags from './FeatureFlags.jsx';
 import SystemConfig from './SystemConfig.jsx';
 import AppConfig, { YamlView } from './AppConfig.jsx';
+import Appearance from './Appearance.jsx';
 import screenReviewUrl from '../../../docs/uat/UAT-screens.xlsx?url';
 import customerJourneyUrl from '../../../docs/uat/UAT-review.xlsx?url';
 import fullRegressionUrl from '../../../docs/uat/UAT-v2.xlsx?url';
@@ -88,6 +90,15 @@ const ProvisioningCatalog = () => (
 
 // Settings option views — add a new entry here and it appears in the sidebar.
 const SECTIONS = [
+  // First because it is the only section here that a non-engineer wants, and
+  // because until now the console had no reachable theme toggle at all.
+  {
+    key: 'appearance',
+    label: 'Appearance',
+    description: 'Language and theme, remembered in this browser',
+    icon: <PaletteIcon fontSize="small" />,
+    component: Appearance,
+  },
   {
     key: 'app-config',
     label: 'Config & Metrics',

@@ -22,8 +22,10 @@ import { initReactI18next } from 'react-i18next';
 
 import enCommon from './locales/en/common.json';
 import enNav from './locales/en/nav.json';
+import enSettings from './locales/en/settings.json';
 import heCommon from './locales/he/common.json';
 import heNav from './locales/he/nav.json';
+import heSettings from './locales/he/settings.json';
 
 export const DEFAULT_LANGUAGE = 'en';
 export const SUPPORTED_LANGUAGES = ['en', 'he'];
@@ -48,13 +50,13 @@ export const normalizeLanguage = (language) => {
 
 i18next.use(initReactI18next).init({
   resources: {
-    en: { common: enCommon, nav: enNav },
-    he: { common: heCommon, nav: heNav },
+    en: { common: enCommon, nav: enNav, settings: enSettings },
+    he: { common: heCommon, nav: heNav, settings: heSettings },
   },
   lng: DEFAULT_LANGUAGE,
   fallbackLng: DEFAULT_LANGUAGE,
   supportedLngs: SUPPORTED_LANGUAGES,
-  ns: ['common', 'nav'],
+  ns: ['common', 'nav', 'settings'],
   defaultNS: 'common',
   // React escapes interpolated values already; letting i18next do it too
   // turns an apostrophe in a name into `&#39;`.

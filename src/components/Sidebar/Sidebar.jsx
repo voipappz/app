@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import {
   Avatar,
   Box,
@@ -35,6 +36,7 @@ import CopyableEmail from '../common/CopyableEmail/CopyableEmail.jsx';
 const customerInitial = (name) => (name?.trim()?.[0] || '🏢').toUpperCase();
 
 const Sidebar = ({ collapsed, expanded = false, onNavigate, onToggleExpand, onToggleSidebar }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { acl, user } = useAuth();
@@ -127,8 +129,11 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate, onToggleExpand, onTo
   const renderNavItem = (item, index) => {
     const IconComp = item.iconComponent;
     const badge = navBadge(item.path);
+    // defaultValue keeps a key that is missing from a locale file rendering as
+    // English rather than as `nav:whatever`.
+    const label = item.labelKey ? t(item.labelKey, { defaultValue: item.text }) : item.text;
     return (
-      <Tooltip key={item.path || index} title={item.text} placement="right" arrow disableHoverListener={expanded}>
+      <Tooltip key={item.path || index} title={label} placement="right" arrow disableHoverListener={expanded}>
         <ListItem disablePadding className="sidebar-nav-item">
           <ListItemButton
             onClick={() => handleNavigate(item.path)}
@@ -146,7 +151,7 @@ const Sidebar = ({ collapsed, expanded = false, onNavigate, onToggleExpand, onTo
                 </Box>
               )}
             </ListItemIcon>
-            <span className="sidebar-nav-text">{item.text}</span>
+            <span className="sidebar-nav-text">{label}</span>
             {badge && expanded && (
               <Box component="span" sx={{
                 ml: 'auto', minWidth: 18, height: 16, px: 0.6, borderRadius: '8px',
