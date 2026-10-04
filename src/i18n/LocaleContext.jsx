@@ -28,12 +28,27 @@ const readStored = () => {
   }
 };
 
-// Two caches, built once. Passing `stylisPlugins` REPLACES Emotion's defaults,
-// so `prefixer` has to be listed explicitly — omit it and every vendor prefix
-// silently disappears. rtlPlugin is what mirrors the ~226 `ml:`/`mr:`/`pl:`/
-// `pr:` sx declarations across the app for free; it does NOT touch plain .css
-// files, which are converted to logical properties by hand instead.
-const ltrCache = createCache({ key: 'mui', stylisPlugins: [prefixer] });
+// Two caches, built once.
+//
+// The LTR one passes NO stylisPlugins, so Emotion uses its own defaults —
+// which already include its own prefixer, from its own stylis. That matters:
+// `stylisPlugins` REPLACES the defaults, and a plugin imported from a
+// different stylis INSTANCE than the one Emotion runs internally crashes its
+// serializer ("can't access property push, array is undefined"). Emotion's
+// style insertion then throws on every mount, the error boundary recreates the
+// tree, and the remount loop re-fires every request on the screen.
+//
+// package.json therefore pins stylis to exactly 4.2.0, the version
+// @emotion/cache itself depends on (an exact pin, not a range), so npm
+// resolves ONE copy and the prefixer below is the same module Emotion uses.
+// Both halves are needed: the pin makes the RTL cache correct, and omitting
+// the plugin keeps the LTR path — the only one in use today — immune either
+// way. If you ever add a plugin to the LTR cache, add `prefixer` with it.
+//
+// rtlPlugin is what mirrors the ~226 `ml:`/`mr:`/`pl:`/`pr:` sx declarations
+// across the app for free; it does NOT touch plain .css files, which are
+// converted to logical properties by hand instead.
+const ltrCache = createCache({ key: 'mui' });
 const rtlCache = createCache({ key: 'muirtl', stylisPlugins: [prefixer, rtlPlugin] });
 
 /**

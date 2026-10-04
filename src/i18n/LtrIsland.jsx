@@ -1,16 +1,17 @@
 import { useMemo } from 'react';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
-import { prefixer } from 'stylis';
 import { ThemeProvider } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import { createAppTheme } from '../theme/theme';
 
 // One cache for every island on the page — they all want the same thing, and
 // building one per mount would re-insert the same rules repeatedly.
-// `prefixer` is listed explicitly because passing `stylisPlugins` REPLACES
-// Emotion's defaults; omit it and every vendor prefix silently disappears.
-const ltrCache = createCache({ key: 'mui-ltr', stylisPlugins: [prefixer] });
+//
+// No stylisPlugins: Emotion's defaults already prefix, using its own stylis.
+// Passing a plugin from a different stylis instance crashes its serializer —
+// see the longer note in LocaleContext.jsx.
+const ltrCache = createCache({ key: 'mui-ltr' });
 const ltrTheme = createAppTheme('ltr');
 
 /**

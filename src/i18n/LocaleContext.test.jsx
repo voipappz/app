@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { useTheme } from '@mui/material/styles';
+import Button from '@mui/material/Button';
 import { LocaleProvider, useLocale, LANGUAGE_STORAGE_KEY } from './LocaleContext';
 import i18n from './index';
 
@@ -126,6 +127,38 @@ describe('LocaleProvider', () => {
       }));
     });
     expect(probe().language).toBe('en');
+  });
+
+  /**
+   * These two exist because the eleven above all passed while the app was
+   * unusable. Probe renders a plain <div>, so Emotion never had to serialize
+   * anything and the style pipeline was never exercised. A plugin taken from a
+   * different stylis instance than the one Emotion runs internally crashes its
+   * serializer, Emotion's <Insertion> throws on mount, the error boundary
+   * recreates the tree, and the remount loop re-fires every request on screen.
+   *
+   * Rendering a STYLED MUI component is what forces insertion, so these fail
+   * loudly on that mistake. One per cache, since each has its own plugin list.
+   */
+  it('inserts styles without crashing in ltr', () => {
+    render(
+      <LocaleProvider>
+        <Button sx={{ marginInlineStart: 1, color: 'primary.main' }}>ok</Button>
+      </LocaleProvider>
+    );
+    expect(screen.getByRole('button', { name: 'ok' })).toBeInTheDocument();
+  });
+
+  it('inserts styles without crashing in rtl', () => {
+    // The RTL cache is the one that DOES pass stylisPlugins, so it is the half
+    // that depends on stylis resolving to a single copy.
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, 'he');
+    render(
+      <LocaleProvider>
+        <Button sx={{ marginInlineStart: 1, color: 'primary.main' }}>בסדר</Button>
+      </LocaleProvider>
+    );
+    expect(screen.getByRole('button', { name: 'בסדר' })).toBeInTheDocument();
   });
 
   it('throws if used outside the provider', () => {
