@@ -18,10 +18,10 @@ import { TourOverlay } from './components/Tour';
 import { usePermissions } from './hooks/usePermissions';
 import { canAccessScreen } from './utils/jwt';
 import { CircularProgress, Box, Typography, Button } from '@mui/material';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { ConfirmProvider } from './components/ui';
-// ONE theme, light + dark, driven by src/theme/tokens.js — see theme.js.
-import muiTheme from './theme/theme';
+// Language + reading direction, and with them the Emotion cache and the MUI
+// theme (ONE theme, light + dark, driven by src/theme/tokens.js).
+import { LocaleProvider } from './i18n/LocaleContext';
 
 // Eager: Login and UserLogin are the entry points for unauthenticated users
 import Login from './components/Login/Login.jsx';
@@ -656,10 +656,13 @@ function AppContent() {
 function App() {
   return (
     <ErrorBoundary>
-      {/* modeStorageKey/defaultMode match ThemeContext, so MUI's own mode
-          state boots in step with the app's `data-theme` (ThemeContext keeps
-          them in step afterwards through useColorScheme). */}
-      <MuiThemeProvider theme={muiTheme} modeStorageKey="theme-preference" defaultMode="light" disableTransitionOnChange>
+      {/* Owns the Emotion cache and the MUI theme, because both depend on
+          reading direction: the theme has to be REBUILT per direction
+          (`direction` is a top-level createTheme option) and the cache has to
+          be in place before any style is inserted. ThemeContext stays inside
+          it — it calls MUI's useColorScheme() and needs the MUI provider
+          above. See src/i18n/LocaleContext.jsx. */}
+      <LocaleProvider>
         <ThemeProvider>
           {/* One confirmation dialog for the whole app (useConfirm). */}
           <ConfirmProvider>
@@ -688,7 +691,7 @@ function App() {
           </QueryProvider>
           </ConfirmProvider>
         </ThemeProvider>
-      </MuiThemeProvider>
+      </LocaleProvider>
     </ErrorBoundary>
   );
 }

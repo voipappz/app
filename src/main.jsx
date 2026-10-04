@@ -2,6 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import * as Sentry from "@sentry/react";
 import { installHttpDebug } from './utils/httpDebug';
+// Side-effect import: initialises i18next before any component can call
+// useTranslation. LocaleProvider sets the real language once it has resolved
+// the preference; this only has to happen first.
+import './i18n'
 import './index.css'
 import App from './App.jsx'
 

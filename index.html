@@ -5,15 +5,25 @@
     <link rel="icon" type="image/svg+xml" href="https://voipappz.com/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>voipappz</title>
-    <!-- Set the theme before first paint: ThemeContext applies it in an
-         effect, which flashed a stored dark theme light on every reload. -->
+    <!-- Set the theme and the reading direction before first paint: both
+         contexts apply them in an effect, which flashed a stored dark theme
+         light — and would flash a Hebrew session left-to-right — on every
+         reload. -->
     <script>
       (function () {
         try {
           var t = localStorage.getItem('theme-preference');
           if (t !== 'light' && t !== 'dark') t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
           document.documentElement.setAttribute('data-theme', t);
-        } catch (e) { /* storage blocked: the app sets it on mount */ }
+
+          // Unlike the theme, language does NOT follow the browser: a
+          // Hebrew-locale browser must not silently get a Hebrew console.
+          // English is the default until someone chooses otherwise.
+          var l = localStorage.getItem('app-language');
+          if (l !== 'he' && l !== 'en') l = 'en';
+          document.documentElement.lang = l;
+          document.documentElement.dir = (l === 'he') ? 'rtl' : 'ltr';
+        } catch (e) { /* storage blocked: the app sets them on mount */ }
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
