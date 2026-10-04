@@ -47,7 +47,7 @@ STOP  = PORT=$(PORT) $(M) stop >/dev/null
 
 # The login gate: a valid token for the API in .env before anything that talks
 # to it. Reuses the cached token while it is valid, signs in again otherwise.
-LOGIN = TOKEN="$(TOKEN)" FORCE="$(FORCE)" SKIP_LOGIN="$(SKIP_LOGIN)" bin/onboard.sh
+LOGIN = TOKEN="$(TOKEN)" bin/onboard.sh
 
 # Every target in one place so `check-make` can prove each still has a rule.
 # Add a target: add it here.
@@ -96,7 +96,7 @@ browsers: ## Install the Playwright browser the suite drives
 
 # Never overwrites an existing .env: that file holds the only copy of your
 # credentials, and a clobber is silent and unrecoverable.
-onboard: ## [TOKEN=1 FORCE=1] Fill .env for switch, check or renew the login token, name what is missing
+onboard: ## [TOKEN=1] Make sure there is a valid login token for the API
 	@$(LOGIN)
 
 env: ## Create .env from .env.example (never overwrites an existing one)
@@ -105,7 +105,7 @@ env: ## Create .env from .env.example (never overwrites an existing one)
 
 ##@ Develop
 
-dev: ## [PORT=3000 DOCKER=1 SKIP_LOGIN=1] Check the login token, then start the dev server
+dev: ## [PORT=3000 DOCKER=1] Check the login token, then start the dev server
 	@$(LOGIN)
 	@if [ -n "$(DOCKER)" ]; then $(DC) up app; else $(NPM) run dev -- --port $(PORT); fi
 
