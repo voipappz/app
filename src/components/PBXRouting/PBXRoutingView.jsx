@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
+import DesktopRecommended from '../common/DesktopRecommended.jsx';
 import ReactFlow, {
   Controls,
   MiniMap,
@@ -1020,6 +1021,10 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
         {/* Canvas + Editor */}
         {activeDid && !loading && !error && nodes.length > 0 && (
           <>
+            {/* Below md the canvas is pannable but not practically editable —
+                see DesktopRecommended. Shown above it rather than replacing it:
+                reading a flow you already built is still useful on a phone. */}
+            <DesktopRecommended />
             {/* ReactFlow Canvas — full width */}
             <Box className="pbx-routing-canvas" sx={{ flex: 1, minHeight: 0 }}>
               <ReactFlow

@@ -15,7 +15,6 @@ import {
   ListItemIcon,
   Tooltip,
   Typography,
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -119,7 +118,12 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, useSortable, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import './TopBar.css';
-import { ConfirmDialog } from '../ui';
+// `ResponsiveDialog as Dialog`: every <Dialog> below is MUI's apart from going
+// full-screen on a phone, and this file has thirteen of them. Aliasing the
+// import converts all thirteen without touching their markup — which is the
+// point, because this file is 1,900 lines of shared popovers and is the last
+// place anyone should be restructuring JSX.
+import { ConfirmDialog, ResponsiveDialog as Dialog } from '../ui';
 
 const ITEM_HEIGHT = 68; // application rows: name + type, status/date/id, meta chips
 
@@ -1702,9 +1706,18 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, onToggleSidebar, on
 
         {/* Content: Table + Detail View side by side or stacked */}
         <DialogContent sx={{ p: 0, flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          {/* Side by side on desktop, stacked on a phone: 45/55 of 375px
+              leaves about 170px for a ticket thread, which is unreadable.
+              borderInlineEnd rather than borderRight so the divider sits
+              between the panes under RTL too. */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, overflow: 'hidden' }}>
             {/* Tickets Table */}
-            <Box sx={{ flex: ticketDetailOpen ? '0 0 45%' : 1, overflow: 'auto', borderRight: ticketDetailOpen ? '1px solid var(--border-color, #e5e7eb)' : 'none' }}>
+            <Box sx={{
+              flex: { xs: ticketDetailOpen ? '0 0 40%' : 1, md: ticketDetailOpen ? '0 0 45%' : 1 },
+              overflow: 'auto',
+              borderInlineEnd: { xs: 'none', md: ticketDetailOpen ? '1px solid var(--border-color, #e5e7eb)' : 'none' },
+              borderBlockEnd: { xs: ticketDetailOpen ? '1px solid var(--border-color, #e5e7eb)' : 'none', md: 'none' },
+            }}>
               <TableContainer>
                 <Table stickyHeader size="small">
                   <TableHead>
@@ -1818,7 +1831,7 @@ const TopBar = ({ sidebarCollapsed, sidebarExpanded = false, onToggleSidebar, on
 
             {/* Ticket Detail View — conversations, replies, status/priority editing */}
             {ticketDetailOpen && (
-              <Box sx={{ flex: '0 0 55%', overflow: 'auto' }}>
+              <Box sx={{ flex: { xs: '1 1 60%', md: '0 0 55%' }, overflow: 'auto' }}>
                 <TicketDetailView
                   ticket={selectedTicket}
                   comments={ticketComments}

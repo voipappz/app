@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import DesktopRecommended from '../common/DesktopRecommended.jsx';
 import ReactFlow, {
   Controls,
   MiniMap,
@@ -1289,6 +1290,10 @@ const WorkflowCanvas = () => {
             </Box>
           ) : (
             <>
+              {/* See DesktopRecommended: a node-graph editor is not usable at
+                  phone width, and saying so beats a canvas that renders and
+                  cannot be worked with. */}
+              <DesktopRecommended />
               {/* Canvas */}
               <Box className="wf-canvas" ref={reactFlowWrapper} sx={{ flex: 1, minHeight: 0 }}>
                 <ReactFlow

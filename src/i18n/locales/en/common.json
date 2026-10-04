@@ -24,7 +24,8 @@
     "empty": "No results",
     "error": "Something went wrong",
     "noDataForPeriod": "No data for this period",
-    "all": "All"
+    "all": "All",
+    "desktopRecommended": "This screen is designed for a larger display. You can pan and zoom here, but editing a flow is much easier on a desktop."
   },
   "label": {
     "name": "Name",
