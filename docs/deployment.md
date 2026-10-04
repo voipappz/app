@@ -177,6 +177,9 @@ command is and let a person run it.
    one points `.env` at `https://switch.voipappz.io`, signs in, and names any
    missing value. `make onboard TOKEN=1` prints the access JWT for curl or an
    agent. There is no separate auth URL: sign-in goes to `/auth/*` on the API.
+   `make dev`, `serve` and `test` run the same check first and stop if there is
+   no valid token. A cached token (`.env.token`) is reused while it is valid;
+   `FORCE=1` signs in again and `SKIP_LOGIN=1` skips the check for offline UI work.
 3. **Phone.** The customer's environment needs `domain` and `wss_server` set.
    The browser phone reads both from the user's environment.
 4. **Own hostname.** Add `config/deploy.<customer>.yml` with `proxy.hosts` and

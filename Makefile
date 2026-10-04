@@ -45,6 +45,10 @@ DC ?= $(shell if docker compose version >/dev/null 2>&1; then echo 'docker compo
 SERVE = PORT=$(PORT) bin/dev-serve.sh
 STOP  = PORT=$(PORT) $(M) stop >/dev/null
 
+# The login gate: a valid token for the API in .env before anything that talks
+# to it. Reuses the cached token while it is valid, signs in again otherwise.
+LOGIN = TOKEN="$(TOKEN)" FORCE="$(FORCE)" SKIP_LOGIN="$(SKIP_LOGIN)" bin/onboard.sh
+
 # Every target in one place so `check-make` can prove each still has a rule.
 # Add a target: add it here.
 PHONY_TARGETS := help setup install browsers env dev build preview serve stop \
@@ -92,8 +96,8 @@ browsers: ## Install the Playwright browser the suite drives
 
 # Never overwrites an existing .env: that file holds the only copy of your
 # credentials, and a clobber is silent and unrecoverable.
-onboard: ## [TOKEN=1] Fill .env for switch, sign in, and say which credential is missing
-	@TOKEN="$(TOKEN)" bin/onboard.sh
+onboard: ## [TOKEN=1 FORCE=1] Fill .env for switch, check or renew the login token, name what is missing
+	@$(LOGIN)
 
 env: ## Create .env from .env.example (never overwrites an existing one)
 	@if [ -f .env ]; then echo ".env exists, leaving it alone"; \
@@ -101,7 +105,8 @@ env: ## Create .env from .env.example (never overwrites an existing one)
 
 ##@ Develop
 
-dev: ## [PORT=3000 DOCKER=1] Start the dev server (DOCKER=1 needs no host node)
+dev: ## [PORT=3000 DOCKER=1 SKIP_LOGIN=1] Check the login token, then start the dev server
+	@$(LOGIN)
 	@if [ -n "$(DOCKER)" ]; then $(DC) up app; else $(NPM) run dev -- --port $(PORT); fi
 
 build: ## [DOCKER=1] Build the production bundle
@@ -112,7 +117,8 @@ preview: ## Serve the production build locally
 
 # The background server the test targets use. It refuses a port held by another
 # app rather than testing against it -- see the comment in bin/dev-serve.sh.
-serve: ## [PORT=3000] Start the dev server in the background and wait for it
+serve: ## [PORT=3000] Check the login token, start the dev server in the background and wait for it
+	@$(LOGIN)
 	@$(SERVE)
 
 # One line, one decision: `exit 0` would end only its own line, and make runs
@@ -148,7 +154,8 @@ check: ## check-make, secrets, lint, unit and a build -- the pre-push gate
 # ONE target for Playwright. SPEC= narrows it, HEADED=1 and DEBUG=1 are flags
 # rather than separate targets, because two names for one action is a question
 # every reader has to answer before they can use either.
-test: ## [SPEC=x HEADED=1 DEBUG=1 DOCKER=1] Run Playwright specs
+test: ## [SPEC=x HEADED=1 DEBUG=1 DOCKER=1] Check the login token, then run Playwright specs
+	@$(LOGIN)
 	@if [ -n "$(DOCKER)" ]; then \
 	   $(DC) run --rm -T test; \
 	 else \
