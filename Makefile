@@ -50,7 +50,7 @@ STOP  = PORT=$(PORT) $(M) stop >/dev/null
 PHONY_TARGETS := help setup install browsers env dev build preview serve stop \
                  lint fix unit check test test-list report doctor secrets \
                  docker-build docker-run check-make clean \
-                 kamal-config kamal-push deploy destinations
+                 kamal-config kamal-push deploy destinations onboard
 
 .PHONY: $(PHONY_TARGETS)
 .DEFAULT_GOAL := help
@@ -92,6 +92,9 @@ browsers: ## Install the Playwright browser the suite drives
 
 # Never overwrites an existing .env: that file holds the only copy of your
 # credentials, and a clobber is silent and unrecoverable.
+onboard: ## [TOKEN=1] Fill .env for switch, sign in, and say which credential is missing
+	@TOKEN="$(TOKEN)" bin/onboard.sh
+
 env: ## Create .env from .env.example (never overwrites an existing one)
 	@if [ -f .env ]; then echo ".env exists, leaving it alone"; \
 	 else cp .env.example .env; echo "created .env from .env.example -- fill it in"; fi
