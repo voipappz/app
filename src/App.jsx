@@ -21,7 +21,8 @@ import { CircularProgress, Box, Typography, Button } from '@mui/material';
 import { ConfirmProvider } from './components/ui';
 // Language + reading direction, and with them the Emotion cache and the MUI
 // theme (ONE theme, light + dark, driven by src/theme/tokens.js).
-import { LocaleProvider } from './i18n/LocaleContext';
+import { LocaleProvider, useLocale } from './i18n/LocaleContext';
+import LocaleSync from './i18n/LocaleSync';
 
 // Eager: Login and UserLogin are the entry points for unauthenticated users
 import Login from './components/Login/Login.jsx';
@@ -653,6 +654,26 @@ function AppContent() {
   );
 }
 
+/**
+ * Remounts the app when the reading direction changes.
+ *
+ * Switching direction swaps the Emotion cache, which regenerates every class
+ * name in the tree. Components that cached measured geometry against the old
+ * styles keep stale numbers — DataGrid's column widths and React Flow's node
+ * positions are the ones that bite. A remount is the honest fix, and the cost
+ * is acceptable for something a person does roughly once: the session, auth,
+ * the React Query cache and the URL all live above here and survive, as does
+ * an active SIP call (SoftphoneProvider is mounted above too). What does not
+ * survive is an open dialog or half-filled form, which is the right trade.
+ *
+ * A separate component because App() renders LocaleProvider rather than
+ * sitting inside it, so it cannot read the context itself.
+ */
+const DirectionKeyedContent = () => {
+  const { direction } = useLocale();
+  return <AppContent key={direction} />;
+};
+
 function App() {
   return (
     <ErrorBoundary>
@@ -670,6 +691,11 @@ function App() {
             <AuthProvider>
               <UserAuthProvider>
               <PortalPreferencesProvider>
+                {/* Applies the customer's default language after login, unless
+                    this browser has chosen one. Needs a session, so it cannot
+                    live in LocaleProvider (which must sit above everything to
+                    own the Emotion cache). Renders nothing. */}
+                <LocaleSync />
                 {/* Mounted above the Router (and above both auth providers, so
                     it can see either session) so SIP registration and any
                     active call survive page navigation — see SoftphoneContext.jsx. */}
@@ -678,7 +704,7 @@ function App() {
                     <CustomerEnvironmentProvider>
                       <PhoneProvider>
                       <TourProvider>
-                        <AppContent />
+                        <DirectionKeyedContent />
                         <TourOverlay />
                       </TourProvider>
                       </PhoneProvider>

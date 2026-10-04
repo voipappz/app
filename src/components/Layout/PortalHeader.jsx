@@ -28,9 +28,6 @@ export default function PortalHeader() {
   const dashboardAllowed = canAccessScreen(acl, 'dashboard');
   const callsAllowed = canAccessScreen(acl, 'calls');
   const { logo: brandIcon, color: brandColor } = parseCustomerBrand(portalData);
-  const language = portalData?.language || user?.profile?.language || user?.language
-    || (typeof document !== 'undefined' ? document.documentElement.lang : 'en');
-  const direction = /^(he|ar|fa|ur)(-|$)/i.test(language) ? 'rtl' : 'ltr';
   useEffect(() => {
     let alive = true;
     loadCustomerPortalData().then((data) => { if (alive) setPortalData(data); });
@@ -57,7 +54,7 @@ export default function PortalHeader() {
     ...(callsAllowed ? [{ label: 'Calls', path: '/my-calls' }] : []),
   ];
   return (
-    <Box component="header" dir={direction} sx={{ position: 'sticky', top: 0, zIndex: 1100, minHeight: 72, bgcolor: brandColor || '#141414', color: '#fff', px: { xs: 2, md: 4 }, py: 1.25, display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2.5 }, flexWrap: { xs: 'wrap', lg: 'nowrap' }, boxShadow: '0 1px 0 rgba(255,255,255,0.08)' }}>
+    <Box component="header" sx={{ position: 'sticky', top: 0, zIndex: 1100, minHeight: 72, bgcolor: brandColor || '#141414', color: '#fff', px: { xs: 2, md: 4 }, py: 1.25, display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2.5 }, flexWrap: { xs: 'wrap', lg: 'nowrap' }, boxShadow: '0 1px 0 rgba(255,255,255,0.08)' }}>
       <Box component="img" src={brandIcon || '/images/VA_logo_white.png'} alt={portalData?.logo_title || portalData?.name || 'VoipAppz'} sx={{ order: 0, width: { xs: 88, md: 108 }, height: 36, objectFit: 'contain', flexShrink: 0 }} />
       <Box component="nav" aria-label="Portal navigation" sx={{ order: { xs: 2, lg: 0 }, width: { xs: '100%', lg: 'auto' }, display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, overflowX: { xs: 'auto', lg: 'visible' }, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
         {links.map(({ label, path }) => {
