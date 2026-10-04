@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import {
-  Box, CircularProgress, Table, TableBody, TableCell, TableContainer,
+  Box, CircularProgress, Skeleton, Table, TableBody, TableCell, TableContainer,
   TableHead, TablePagination, TableRow, TableSortLabel, Typography,
 } from '@mui/material';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -42,6 +42,16 @@ const ResponsiveTable = ({
   getRowId,
   onRowClick,
   loading = false,
+  // Which row reads as selected. Screens that keep a selection (a detail pane,
+  // a sidebar bound to the current row) need the highlight, not just a click
+  // handler — without it, converting such a screen loses the only indication
+  // of what you are looking at.
+  selectedRowId,
+  // Rows of skeleton to show while loading, instead of a spinner. The tables
+  // being converted render skeletons today, and a spinner in their place is a
+  // visible downgrade: a skeleton keeps the layout and tells you how much is
+  // coming.
+  skeletonRows = 0,
   emptyMessage = 'No results',
   endMessage,
   // sorting (server-side; this only renders the affordance)
@@ -71,7 +81,12 @@ const ResponsiveTable = ({
   const forCards = useMemo(() => cardColumns(columns), [columns]);
   const paginated = typeof onPageChange === 'function' && typeof count === 'number';
 
-  if (loading && (!rows || rows.length === 0)) {
+  const showSkeleton = loading && (!rows || rows.length === 0) && skeletonRows > 0;
+
+  // A spinner only when the caller has not asked for skeletons AND there is
+  // nothing to show yet. With rows already on screen, a reload leaves them
+  // in place rather than blanking the table.
+  if (loading && (!rows || rows.length === 0) && !showSkeleton) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }} data-testid={testId}>
         <CircularProgress size={28} />
@@ -133,7 +148,15 @@ const ResponsiveTable = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {(!rows || rows.length === 0) ? (
+            {showSkeleton ? (
+              Array.from({ length: skeletonRows }).map((_, rowIndex) => (
+                <TableRow key={`skeleton-${rowIndex}`}>
+                  {columns.map((column) => (
+                    <TableCell key={column.id}><Skeleton height={20} /></TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (!rows || rows.length === 0) ? (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">{emptyMessage}</Typography>
@@ -145,6 +168,7 @@ const ResponsiveTable = ({
                 <TableRow
                   key={key}
                   hover
+                  selected={selectedRowId !== undefined && key === selectedRowId}
                   sx={{ ...stripedTableRowSx, cursor: onRowClick ? 'pointer' : 'default' }}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                 >

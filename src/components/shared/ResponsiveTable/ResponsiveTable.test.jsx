@@ -114,6 +114,38 @@ describe('ResponsiveTable — desktop', () => {
     renderTable({ rows: [], loading: true });
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
+
+  it('shows skeleton rows instead, when asked', () => {
+    // The screens being converted render skeletons today; a spinner in their
+    // place keeps less of the layout and says less about what is coming.
+    const { container } = renderTable({ rows: [], loading: true, skeletonRows: 3 });
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    // One skeleton per cell: rows x columns.
+    expect(container.querySelectorAll('.MuiSkeleton-root').length).toBe(3 * columns.length);
+    // Headers stay, so the table does not jump when data lands.
+    expect(screen.getByRole('columnheader', { name: 'Extension' })).toBeInTheDocument();
+  });
+
+  it('keeps existing rows visible during a reload', () => {
+    // Blanking a populated table on every refresh is worse than stale rows.
+    renderTable({ loading: true });
+    expect(screen.getByText('101')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('marks the selected row', () => {
+    // A screen with a detail pane needs the highlight, not just a click
+    // handler — otherwise nothing shows what you are looking at.
+    renderTable({ selectedRowId: 'b' });
+    const selected = document.querySelectorAll('tbody .Mui-selected');
+    expect(selected.length).toBe(1);
+    expect(selected[0]).toHaveTextContent('102');
+  });
+
+  it('marks nothing when no row is selected', () => {
+    renderTable();
+    expect(document.querySelectorAll('tbody .Mui-selected').length).toBe(0);
+  });
 });
 
 describe('ResponsiveTable — phone', () => {
