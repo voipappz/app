@@ -2,10 +2,9 @@
 // the bottom on phones.
 //
 // Extracted from UserRail, which already had this working and was the only
-// genuinely responsive navigation in the app. The admin Sidebar's mobile story
-// is a temporary Drawer at the icon-only width, with no labels; this exists so
-// that can be replaced with the pattern that already works rather than a
-// second invention of it.
+// genuinely responsive navigation in the app. Now shared: the portal's
+// UserRail and the console's AdminMobileNav are both thin configs over it,
+// rather than two inventions of the same bar.
 //
 // The flip is pure CSS, not a media-query branch in JS: one element whose
 // width/height/position/flexDirection all switch at the breakpoint. That keeps
@@ -16,7 +15,14 @@ import Typography from '@mui/material/Typography';
 
 /** Desktop rail width. */
 export const RAIL_WIDTH = 88;
-/** Phone tab-bar height, before the safe-area inset is added. */
+/**
+ * Phone tab-bar height, before the safe-area inset is added.
+ *
+ * The value that STYLES the bar is `--bottom-nav-height` in index.css, which
+ * Layout.css also reads to keep content clear of it — one source, as with the
+ * sidebar widths. This constant mirrors it for callers that need a number
+ * rather than a CSS value.
+ */
 export const BOTTOM_NAV_HEIGHT = 64;
 
 /**
@@ -105,7 +111,7 @@ export default function ResponsiveRail({ children, ariaLabel, testId, sx }) {
       sx={{
         width: { xs: '100%', md: RAIL_WIDTH },
         flexShrink: 0,
-        height: { xs: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom))`, md: '100vh' },
+        height: { xs: 'calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom))', md: '100vh' },
         position: { xs: 'fixed', md: 'sticky' },
         insetInlineStart: 0,
         bottom: { xs: 0, md: 'auto' },

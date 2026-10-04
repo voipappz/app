@@ -1,9 +1,10 @@
-import { Box, Drawer, Dialog, Typography, Snackbar, Button, IconButton, useMediaQuery } from '@mui/material';
+import { Box, Dialog, Typography, Snackbar, Button, IconButton, useMediaQuery } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useLayout } from './Layout';
 import { useLocation } from 'react-router';
 import Sidebar from '../Sidebar/Sidebar.jsx';
+import AdminMobileNav from '../Sidebar/AdminMobileNav.jsx';
 import TopBar from '../TopBar/TopBar.jsx';
 import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
@@ -158,8 +159,9 @@ const Layout = ({ children }) => {
     });
   };
 
-  // Sidebar state — desktop collapse + mobile drawer (shared by the hamburger).
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  // Sidebar state — desktop collapse only. The phone has no sidebar to toggle
+  // any more: AdminMobileNav is a persistent bottom bar, so the hamburger is a
+  // desktop affordance and does nothing below md.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // Desktop: compact icon rail (default) vs labeled rail, toggled by the
   // sidebar-top hamburger and remembered across sessions.
@@ -168,8 +170,8 @@ const Layout = ({ children }) => {
   });
   const isMobile = useMediaQuery((t) => t.breakpoints.down('md'));
   const handleToggleSidebar = () => {
-    if (isMobile) setMobileDrawerOpen(open => !open);
-    else setSidebarCollapsed(collapsed => !collapsed);
+    if (isMobile) return; // nothing to collapse; the bottom bar is always there
+    setSidebarCollapsed(collapsed => !collapsed);
   };
   const handleToggleExpand = () => {
     setSidebarExpanded(prev => {
@@ -247,21 +249,13 @@ const Layout = ({ children }) => {
               <Sidebar collapsed={sidebarCollapsed} expanded={sidebarExpanded} onToggleExpand={handleToggleExpand} onToggleSidebar={handleToggleSidebar} />
             </Box>
 
-            {/* Mobile sidebar drawer */}
-            <Drawer
-              variant="temporary"
-              open={mobileDrawerOpen}
-              onClose={() => setMobileDrawerOpen(false)}
-              ModalProps={{ keepMounted: true }}
-              sx={{
-                display: { xs: 'block', md: 'none' },
-                // The rail's width lives in index.css (--sidebar-width) so this
-                // and Sidebar.css cannot drift apart.
-                '& .MuiDrawer-paper': { width: 'var(--sidebar-width)', boxSizing: 'border-box' }
-              }}
-            >
-              <Sidebar expanded onNavigate={() => setMobileDrawerOpen(false)} onToggleSidebar={handleToggleSidebar} />
-            </Drawer>
+            {/* Phone/tablet navigation: a bottom tab bar plus a "More" sheet.
+                This replaced a temporary Drawer whose paper was the 80px icon
+                width while the Sidebar inside it rendered `expanded` at 210px,
+                so every label was clipped off — the console's mobile nav was
+                unlabelled icons behind a hamburger. Same ResponsiveRail the
+                portal uses. */}
+            <AdminMobileNav />
 
             {/* TopBar — fixed at top, offset by the sidebar */}
             <TopBar

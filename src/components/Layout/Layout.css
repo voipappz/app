@@ -100,7 +100,10 @@
   .content-container.sidebar-expanded {
     margin-inline-start: 0;
     margin-top: 0;
-    height: 100vh;
+    /* Room for AdminMobileNav, which is position:fixed at the bottom. Without
+       this the bar covers the last rows of every table — and on an iPhone the
+       safe-area inset on top of that. */
+    height: calc(100vh - var(--bottom-nav-height) - env(safe-area-inset-bottom));
   }
 
   .login-left-container {

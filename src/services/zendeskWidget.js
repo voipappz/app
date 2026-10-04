@@ -59,6 +59,23 @@ export const useZendeskWidget = (enabled, user, customerUuid) => {
     });
   }, [enabled, customerUuid]);
 
+  // Lift the launcher clear of the phone's bottom navigation bar. Zendesk
+  // floats it bottom-right with a z-index above ours, so by default it sits on
+  // top of the last tab and makes it untappable. `offset.mobile` is Zendesk's
+  // own narrow-screen variant, so the desktop position is unaffected.
+  //
+  // The value has to be a literal: this is a third-party iframe, so it cannot
+  // read --bottom-nav-height. 64px bar + 12px gap; if that variable changes,
+  // change this too.
+  useEffect(() => {
+    if (!enabled) return;
+    zE('webWidget', 'updateSettings', {
+      webWidget: {
+        offset: { mobile: { vertical: '76px' } },
+      },
+    });
+  }, [enabled]);
+
   const name = user?.name || '';
   const email = user?.email || '';
   useEffect(() => {

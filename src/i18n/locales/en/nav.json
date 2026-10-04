@@ -21,5 +21,8 @@
   "accounts": "Accounts",
   "providers": "Providers",
   "templates": "Templates",
-  "apiDocs": "API Docs"
+  "apiDocs": "API Docs",
+  "ariaLabel": "Main navigation",
+  "more": "More",
+  "allScreens": "All screens"
 }

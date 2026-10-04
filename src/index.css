@@ -10,6 +10,9 @@
   --sidebar-width: 80px;            /* icon rail, the default */
   --sidebar-width-expanded: 210px;  /* icon + label, toggled by the hamburger */
   --sidebar-width-collapsed: 0px;   /* hidden entirely */
+  /* Phone bottom tab bar (AdminMobileNav / UserRail). The safe-area inset is
+     added on top wherever this is used, not baked in here. */
+  --bottom-nav-height: 64px;
 
   /* Light Theme Colors (Sentry inspired) */
   --bg-primary: #ffffff;

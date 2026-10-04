@@ -21,5 +21,8 @@
   "accounts": "חשבונות",
   "providers": "ספקים",
   "templates": "תבניות",
-  "apiDocs": "תיעוד API"
+  "apiDocs": "תיעוד API",
+  "ariaLabel": "ניווט ראשי",
+  "more": "עוד",
+  "allScreens": "כל המסכים"
 }

@@ -51,7 +51,9 @@ export default function PhoneFab({ open, onToggle }) {
         sx={{
           position: 'fixed',
           right: 20,
-          bottom: { xs: 'calc(80px + env(safe-area-inset-bottom))', md: 20 },
+          // 16px above the bottom nav bar, derived from the one place its
+          // height is declared (index.css) rather than a second copy of 80.
+          bottom: { xs: 'calc(var(--bottom-nav-height, 64px) + 16px + env(safe-area-inset-bottom))', md: 20 },
           zIndex: (theme) => theme.zIndex.drawer + 2,
         }}
       >
