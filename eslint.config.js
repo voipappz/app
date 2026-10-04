@@ -31,7 +31,35 @@ export default [
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
       'react-refresh/only-export-components': 'off',
       'react-hooks/exhaustive-deps': 'off',
+      // Formatting a date or number locale-blind is how the same timestamp
+      // came to render three different ways depending on the screen: ~50 call
+      // sites, variously pinned to 'en-GB', to 'en-US', or to nothing at all.
+      // src/utils/{dateUtils,numberUtils}.js are the only places that may
+      // reach for Intl directly; everything else goes through them, so the
+      // active language reaches every screen.
+      //
+      // `warn`, not `error`, for now: the existing violations are real and
+      // numerous, and converting them belongs in batches by directory rather
+      // than in whatever change happens to trip over them first. Promote to
+      // error once the count is zero.
+      'no-restricted-syntax': ['warn',
+        {
+          selector: "CallExpression[callee.property.name=/^toLocale(String|DateString|TimeString)$/]",
+          message: 'Locale-blind. Use formatDate/formatOnlyDate from src/utils/dateUtils.js or formatNumber from src/utils/numberUtils.js.',
+        },
+        {
+          selector: "NewExpression[callee.object.name='Intl']",
+          message: 'Use src/utils/dateUtils.js or src/utils/numberUtils.js, which follow the active language.',
+        },
+      ],
     },
+  },
+  {
+    // The modules allowed to call Intl directly: the two choke points, and the
+    // test that proves English still formats as en-GB — which can only do that
+    // by building a raw en-GB reference to compare against.
+    files: ['src/utils/dateUtils.js', 'src/utils/numberUtils.js', 'src/utils/dateUtils.test.js'],
+    rules: { 'no-restricted-syntax': 'off' },
   },
   // TypeScript files configuration
   ...tseslint.configs.recommended,
