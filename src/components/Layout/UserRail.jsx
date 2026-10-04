@@ -24,56 +24,12 @@ import { useAIChatSidebar } from '../../context/AIChatSidebarContext';
 import { useThemeMode } from '../../context/ThemeContext';
 import { canAccessScreen } from '../../utils/jwt';
 import CopyableEmail from '../common/CopyableEmail/CopyableEmail.jsx';
+import ResponsiveRail, { RailItem, RailSpacer, RAIL_WIDTH } from '../common/ResponsiveRail/ResponsiveRail.jsx';
 
-export const RAIL_WIDTH = 88;
-
-function RailItem({ icon, label, active, badge, onClick, testId }) {
-  return (
-    <Box
-      role="button"
-      onClick={onClick}
-      data-testid={testId}
-      tabIndex={0}
-      aria-current={active ? 'page' : undefined}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick();
-        }
-      }}
-      sx={{
-        width: { xs: 'auto', md: '100%' },
-        flex: { xs: 1, md: '0 0 auto' },
-        minWidth: 0,
-        minHeight: 56,
-        py: { xs: 0.75, md: 1.25 },
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 0.25,
-        cursor: 'pointer',
-        userSelect: 'none',
-        position: 'relative',
-        color: active ? 'primary.main' : '#6b7280',
-        bgcolor: active ? 'rgba(92, 107, 192, 0.08)' : 'transparent',
-        // Left accent bar on the active item, like the admin rail's.
-        '&::before': active ? {
-          content: '""', position: 'absolute', insetInlineStart: 0, top: 8, bottom: 8,
-          width: 3, borderRadius: 2, bgcolor: 'primary.main'
-        } : undefined,
-        '&:hover': { bgcolor: active ? 'rgba(92, 107, 192, 0.12)' : '#f3f4f6' }
-      }}
-    >
-      <Box sx={{ position: 'relative', display: 'flex' }}>
-        {icon}
-        {badge}
-      </Box>
-      <Typography sx={{ fontSize: '0.68rem', fontWeight: active ? 700 : 500, lineHeight: 1.2 }}>
-        {label}
-      </Typography>
-    </Box>
-  );
-}
+// Re-exported only to keep this module's public surface unchanged. Nothing
+// imports it (and nothing ever has — it has been unused since the initial
+// commit); ResponsiveRail is where the value now lives.
+export { RAIL_WIDTH };
 
 export default function UserRail() {
   const location = useLocation();
@@ -88,29 +44,7 @@ export default function UserRail() {
   const dashboardAllowed = canAccessScreen(acl, 'dashboard');
 
   return (
-    <Box
-      component="nav"
-      data-testid="user-rail"
-      sx={{
-        width: { xs: '100%', md: RAIL_WIDTH },
-        flexShrink: 0,
-        height: { xs: 'calc(64px + env(safe-area-inset-bottom))', md: '100vh' },
-        position: { xs: 'fixed', md: 'sticky' },
-        insetInlineStart: 0,
-        bottom: { xs: 0, md: 'auto' },
-        top: { xs: 'auto', md: 0 },
-        zIndex: (theme) => theme.zIndex.drawer + 1,
-        bgcolor: 'var(--mui-palette-surface-muted)',
-        borderRight: '1px solid var(--mui-palette-divider)',
-        display: 'flex',
-        flexDirection: { xs: 'row', md: 'column' },
-        alignItems: 'center',
-        pt: { xs: 0, md: 1 },
-        pb: { xs: 'env(safe-area-inset-bottom)', md: 1 },
-        px: { xs: 0.5, md: 0 },
-        boxShadow: { xs: '0 -6px 18px rgba(15, 23, 42, 0.08)', md: 'none' },
-      }}
-    >
+    <ResponsiveRail ariaLabel="Portal navigation" testId="user-rail">
       {dashboardAllowed && <RailItem
         testId="rail-dashboard"
         icon={<DashboardIcon />}
@@ -163,7 +97,7 @@ export default function UserRail() {
           on the opposite side of the screen — so it now sits where the dock
           actually appears. Its registration dot moved with it. */}
 
-      <Box sx={{ flex: 1, display: { xs: 'none', md: 'block' } }} />
+      <RailSpacer />
       <Divider flexItem sx={{ mb: 1, display: { xs: 'none', md: 'block' } }} />
 
       {/* Theme toggle as its own rail item, above the avatar — the slot the
@@ -215,6 +149,6 @@ export default function UserRail() {
           <ListItemText primary="Sign out" />
         </MenuItem>
       </Menu>
-    </Box>
+    </ResponsiveRail>
   );
 }
