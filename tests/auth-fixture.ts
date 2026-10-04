@@ -31,7 +31,8 @@ function decodeJwt(token: string) {
 // throttles, so keep one session for the lifetime of the worker.
 let cachedAuth: { data: any; savedAt: number } | null = null;
 
-// Shared authentication fixture — OTP login flow with VA_TEST_OTP
+// Shared authentication fixture — login, plus the OTP step with VA_TEST_OTP
+// only when the API asks for one (OTP is off by default)
 export const test = base.extend<{
   authenticatedPage: AuthenticatedPage;
 }>({
@@ -43,9 +44,6 @@ export const test = base.extend<{
 
     if (!email || !password || !apiBaseUrl) {
       throw new Error('Required environment variables missing: TEST_EMAIL, TEST_PASSWORD, VITE_API_BASE_URL');
-    }
-    if (!testOtp) {
-      throw new Error('VA_TEST_OTP environment variable is required for test authentication');
     }
 
     const cachedToken = cachedAuth?.data?.access;
@@ -114,8 +112,16 @@ export const test = base.extend<{
     expect(loginResponse.ok()).toBeTruthy();
     const loginData = JSON.parse(loginText);
 
+    if (loginData.access) {
+      // OTP off: the login itself answers with the tokens.
+      authResponseText = loginText;
+      tokenData = loginData;
+    } else {
     if (!loginData.otp_sent || !loginData.temp_token) {
-      throw new Error('Login did not return OTP data. Response: ' + loginText.substring(0, 300));
+      throw new Error('Login returned neither tokens nor OTP data. Response: ' + loginText.substring(0, 300));
+    }
+    if (!testOtp) {
+      throw new Error('The API asked for an OTP: set VA_TEST_OTP to its bypass code');
     }
 
     // Step 2: Verify OTP with test code → get JWT tokens
@@ -131,6 +137,7 @@ export const test = base.extend<{
 
     expect(otpResponse.ok()).toBeTruthy();
       tokenData = JSON.parse(otpText);
+    }
       cachedAuth = { data: tokenData, savedAt: Date.now() };
     }
 
@@ -139,10 +146,10 @@ export const test = base.extend<{
     const csrfToken = tokenData.csrf || '';
 
     if (!accessToken) {
-      throw new Error('OTP verify did not return access token. Response: ' + authResponseText.substring(0, 300));
+      throw new Error('Login did not return an access token. Response: ' + authResponseText.substring(0, 300));
     }
 
-    console.log('✅ OTP login succeeded');
+    console.log('✅ Login succeeded');
 
     const decoded = decodeJwt(accessToken);
     const accountUuid = decoded?.account_uuid || decoded?.uuid || null;

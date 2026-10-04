@@ -40,12 +40,12 @@ if [ -f "$CACHE" ] && [ "$(sed -n 1p $CACHE)" = "$api $email" ]; then
 fi
 
 rm -f "$CACHE"
-resp=$(curl -s --max-time 15 -X POST "$api/auth/login?email=$(enc "$email")&password=$(enc "$pass")")
+resp=$(curl -s --max-time 15 -X POST "$api/auth/login?email=$(enc "$email")&password=$(enc "$pass")" || true)
 access=$(printf '%s' "$resp" | field access)
 temp=$(printf '%s' "$resp" | field temp_token)
 # OTP is off by default; only when the API asks for it is VA_TEST_OTP used.
 if [ -z "$access" ] && [ -n "$temp" ]; then
-  resp=$(curl -s --max-time 15 -X POST "$api/auth/otp/verify?temp_token=$(enc "$temp")&code=$(enc "$otp")&email=$(enc "$email")&password=$(enc "$pass")")
+  resp=$(curl -s --max-time 15 -X POST "$api/auth/otp/verify?temp_token=$(enc "$temp")&code=$(enc "$otp")&email=$(enc "$email")&password=$(enc "$pass")" || true)
   access=$(printf '%s' "$resp" | field access)
 fi
 [ -n "$access" ] || { echo "login failed at $api for $email: ${resp:-no answer}"; exit 1; }
