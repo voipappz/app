@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Box, Paper, Typography, CircularProgress } from '@mui/material';
+import { Paper, Typography, CircularProgress } from '@mui/material';
+import LtrIsland from '../../i18n/LtrIsland.jsx';
 import {
   LineChart,
   Line,
@@ -138,7 +139,10 @@ const SeverityLineChart = ({ data, loading, height = 250, timeInterval = 'hour' 
       <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
         Log Severity Over Time
       </Typography>
-      <Box sx={{ width: '100%', height }}>
+      {/* LtrIsland: the x-axis is time, and time reads left-to-right in every
+          locale. Without this the RTL cache mirrors the plot and the series
+          runs backwards. */}
+      <LtrIsland sx={{ width: '100%', height, m: 0 }}>
         <ResponsiveContainer>
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
@@ -167,7 +171,7 @@ const SeverityLineChart = ({ data, loading, height = 250, timeInterval = 'hour' 
             ))}
           </LineChart>
         </ResponsiveContainer>
-      </Box>
+      </LtrIsland>
     </Paper>
   );
 };

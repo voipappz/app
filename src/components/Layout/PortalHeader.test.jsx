@@ -7,6 +7,9 @@ vi.mock('../../context/UserAuthContext', () => ({ useUserAuth: () => ({ user: { 
 vi.mock('../../context/PortalPreferencesContext', () => ({ usePortalPreferences: () => ({ preferences: { theme: 'light' }, ready: true, save: vi.fn(), reset: vi.fn() }) }));
 vi.mock('../../context/AIChatSidebarContext', () => ({ useAIChatSidebar: () => ({ openAIDrawer: vi.fn() }) }));
 vi.mock('../../context/SoftphoneContext', () => ({ useSoftphone: () => ({ connected: true }) }));
+// The header gained the portal's language toggle, and useLocale throws outside
+// its provider. Mocked rather than wrapped, to match the other four above.
+vi.mock('../../i18n/LocaleContext', () => ({ useLocale: () => ({ language: 'en', setLanguage: vi.fn() }) }));
 function CurrentRoute() { const location = useLocation(); return <output data-testid="route">{location.pathname}{location.search}</output>; }
 
 describe('Portal header', () => {

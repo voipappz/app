@@ -13,6 +13,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import moment from 'moment';
 import ReactCountryFlag from 'react-country-flag';
 import { formatPhoneNumber, extractCountryFromPhone, formatDuration } from '../../../utils/phoneUtils';
+import Bdi from '../../../i18n/Bdi.jsx';
 
 const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
   const caller = call.profile?.caller || 'N/A';
@@ -105,7 +106,7 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Tooltip title={caller} placement="top">
               <Typography variant="h6" noWrap sx={{ maxWidth: '120px' }}>
-                {caller}
+                <Bdi>{caller}</Bdi>
               </Typography>
             </Tooltip>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -151,7 +152,7 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
             <PhoneIcon fontSize="small" className="detail-icon" />
             <Typography variant="body2" className="detail-label">Client:</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Typography variant="body2" className="detail-value">{formattedCallee}</Typography>
+              <Typography variant="body2" className="detail-value"><Bdi>{formattedCallee}</Bdi></Typography>
               {getCountryFlag()}
             </Box>
           </Box>
@@ -184,7 +185,7 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
 
           <Box className="detail-item">
             <Typography variant="body2" className="detail-label" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-              Call ID: {cid}
+              Call ID: <Bdi>{cid}</Bdi>
             </Typography>
           </Box>
         </Box>

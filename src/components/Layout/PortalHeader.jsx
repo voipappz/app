@@ -6,6 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { usePortalPreferences } from '../../context/PortalPreferencesContext';
+import { useLocale } from '../../i18n/LocaleContext';
 import { useAIChatSidebar } from '../../context/AIChatSidebarContext';
 import { useSoftphone } from '../../context/SoftphoneContext';
 import { canAccessScreen } from '../../utils/jwt';
@@ -15,6 +16,7 @@ import { parseCustomerBrand } from '../../utils/customerBrand';
 export default function PortalHeader() {
   const { user, acl, logout } = useUserAuth();
   const { preferences, ready, save, reset } = usePortalPreferences();
+  const { language, setLanguage } = useLocale();
   const { openAIDrawer } = useAIChatSidebar();
   const { connected } = useSoftphone();
   const { pathname } = useLocation();
@@ -75,6 +77,18 @@ export default function PortalHeader() {
       <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
         <MenuItem disabled>{user?.name || user?.email}</MenuItem>
         <MenuItem disabled={!ready} onClick={() => save({ theme: preferences.theme === 'dark' ? 'light' : 'dark' })}>{preferences.theme === 'dark' ? 'Light appearance' : 'Dark appearance'}</MenuItem>
+        {/* Language sits beside appearance because they are the same kind of
+            choice. The admin reaches this through Settings -> Appearance, but
+            Settings is an admin screen, so without this a portal user had no
+            way to switch language at all -- on the surface where Hebrew
+            matters most. 'user' marks it an explicit choice, which outranks
+            the customer's default from then on (LocaleSync). */}
+        <MenuItem
+          data-testid="portal-language-toggle"
+          onClick={() => { setLanguage(language === 'he' ? 'en' : 'he', 'user'); setAnchor(null); }}
+        >
+          {language === 'he' ? 'English' : 'עברית'}
+        </MenuItem>
         <MenuItem disabled={!ready} onClick={() => { reset(); setAnchor(null); }}>Reset my preferences</MenuItem>
         <MenuItem onClick={logout}>Sign out</MenuItem>
       </Menu>

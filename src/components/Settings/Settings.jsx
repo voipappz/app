@@ -157,10 +157,30 @@ const Settings = () => {
   const active = SECTIONS.find((s) => s.key === section) || SECTIONS[0];
   const ActiveView = active.component;
 
+  // Stacked on a phone. A fixed 240px nav beside the detail leaves about
+  // 135px for the detail at 375px, which is unusable; stacking gives the nav
+  // its own full-width row and the detail the rest. The same shape repeats in
+  // RedisViewer, Account, Monitoring and Studio.
   return (
-    <Box sx={{ display: 'flex', gap: 2, p: { xs: 1, sm: 2, md: 3 }, height: '100%', overflow: 'hidden' }}>
+    <Box sx={{
+      display: 'flex',
+      flexDirection: { xs: 'column', md: 'row' },
+      gap: 2,
+      p: { xs: 1, sm: 2, md: 3 },
+      height: '100%',
+      overflow: { xs: 'auto', md: 'hidden' },
+    }}>
       {/* Option views */}
-      <Paper elevation={0} sx={{ width: 240, flexShrink: 0, border: '1px solid var(--mui-palette-divider)', borderRadius: 2, overflow: 'auto' }}>
+      <Paper elevation={0} sx={{
+        width: { xs: '100%', md: 240 },
+        flexShrink: 0,
+        // Capped on a phone so a long section list cannot push the detail off
+        // the screen entirely.
+        maxHeight: { xs: '40vh', md: 'none' },
+        border: '1px solid var(--mui-palette-divider)',
+        borderRadius: 2,
+        overflow: 'auto',
+      }}>
         <Typography variant="subtitle2" sx={{ px: 2, pt: 2, pb: 1, fontWeight: 700, color: 'var(--mui-palette-text-primary)' }}>
           Settings
         </Typography>

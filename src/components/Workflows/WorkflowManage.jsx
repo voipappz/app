@@ -1295,7 +1295,9 @@ const WorkflowCanvas = () => {
                   cannot be worked with. */}
               <DesktopRecommended />
               {/* Canvas */}
-              <Box className="wf-canvas" ref={reactFlowWrapper} sx={{ flex: 1, minHeight: 0 }}>
+              {/* dir only — see the note in PBXRoutingView. The ref is used
+                  for drop coordinates, so it must stay on this element. */}
+              <Box dir="ltr" className="wf-canvas" ref={reactFlowWrapper} sx={{ flex: 1, minHeight: 0 }}>
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}

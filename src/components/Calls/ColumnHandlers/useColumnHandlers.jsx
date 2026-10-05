@@ -17,6 +17,7 @@ import BuildIcon from '@mui/icons-material/Build';
 import PublicIcon from '@mui/icons-material/Public';
 import ReactCountryFlag from 'react-country-flag';
 import CellWithHover from '../CellWithHover/CellWithHover.jsx';
+import Bdi from '../../../i18n/Bdi.jsx';
 
 // Column header icon mapping (matched by logical name)
 const COLUMN_ICONS = {
@@ -446,7 +447,12 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
               onSearch={cellSearchFor("caller")}
               onCopy={handleCopy}
             >
-              {value}
+              {/* Bdi: a phone number is a left-to-right string whose leading
+                  '+' and separators the bidi algorithm drags to the wrong end
+                  inside Hebrew — +972-3-555-1234 renders as 1234-555-3-972+.
+                  Invisible in English, which is why it needs the element
+                  rather than care. Shared by the admin and portal grids. */}
+              <Bdi>{value}</Bdi>
             </CellWithHover>
           );
         },
@@ -462,7 +468,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
               onSearch={cellSearchFor("callee")}
               onCopy={handleCopy}
             >
-              {formattedCallee}
+              <Bdi>{formattedCallee}</Bdi>
             </CellWithHover>
           );
         },

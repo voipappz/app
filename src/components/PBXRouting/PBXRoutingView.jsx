@@ -1026,7 +1026,12 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
                 reading a flow you already built is still useful on a phone. */}
             <DesktopRecommended />
             {/* ReactFlow Canvas — full width */}
-            <Box className="pbx-routing-canvas" sx={{ flex: 1, minHeight: 0 }}>
+            {/* dir, not an LtrIsland: React Flow positions nodes with
+                JS-computed transforms and its own stylesheet, which Emotion
+                never sees, so the RTL cache does not mirror it. Only text
+                inherits direction — and a wrapper element here would land in
+                the flex chain that gives the canvas its height. */}
+            <Box dir="ltr" className="pbx-routing-canvas" sx={{ flex: 1, minHeight: 0 }}>
               <ReactFlow
                 nodes={nodes}
                 edges={edges}

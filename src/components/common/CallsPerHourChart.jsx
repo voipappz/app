@@ -1,5 +1,6 @@
 import { Paper, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import LtrIsland from '../../i18n/LtrIsland.jsx';
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid
@@ -26,6 +27,10 @@ export default function CallsPerHourChart({ points = [], title = 'Calls per hour
           No call data yet.
         </Typography>
       ) : (
+        /* LtrIsland: the x-axis is the hour of day, and time reads
+           left-to-right in every locale. Without it the RTL cache mirrors the
+           plot and the series runs backwards. */
+        <LtrIsland sx={{ m: 0 }}>
         <ResponsiveContainer width="100%" height={isNarrow ? 220 : 300}>
           {variant === 'line' ? (
             <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -55,6 +60,7 @@ export default function CallsPerHourChart({ points = [], title = 'Calls per hour
             </BarChart>
           )}
         </ResponsiveContainer>
+        </LtrIsland>
       )}
     </Paper>
   );
