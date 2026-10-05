@@ -101,12 +101,28 @@ function handlerSummary(handler, p = {}, meta = {}) {
 
 // Fixed action per service type. Workflow services are NOT service flows: they
 // render their Roast workflow unchanged.
+// Types whose test can really be sent: the API stops a simulated event before
+// the HTTP request unless the caller asks for delivery.
+const DELIVERABLE_TYPES = ['webhook', 'subscription', 'scalla'];
+
+// The event data the test dialog starts from. Scalla gets an example incoming
+// call, shaped the way the platform's own events are, so a test sends something
+// the CRM can show; add a Call UUID to send a real call's details instead.
+const SIM_DEFAULT_DATA = '{ "simulated": true }';
+const SIM_EXAMPLES = {
+  scalla: JSON.stringify({
+    simulated: true, leg: 'leg_a', profile: 'sofia_external',
+    user_from: '0541234567', user_to: '035550100',
+  }, null, 2),
+};
+
 function pocketAction(service) {
   const p = service.profile || {};
   // Dispatch is absolute by service.type (server-declared node)
   switch (service.type === 'notification' ? 'notify' : service.type) {
     case 'powerlink':
     case 'fireberry': return { label: 'Fireberry CRM', sub: 'managed contact + ticket flow', icon: <WebhookIcon sx={{ fontSize: 18 }} />, ok: 'contact · ticket' };
+    case 'scalla': return { label: 'Scalla CRM', sub: 'call ringing + hangup events', icon: <WebhookIcon sx={{ fontSize: 18 }} />, ok: 'event sent' };
     case 'transcribe': return { label: 'Transcribe', sub: 'call recording → text', icon: <ArticleIcon sx={{ fontSize: 18 }} />, ok: 'transcript saved' };
     case 'webhook': return { label: 'Send webhook', sub: handlerSummary('webhook', p, service.meta), icon: <WebhookIcon sx={{ fontSize: 18 }} />, ok: 'HTTP response' };
     case 'sms': return { label: 'Send SMS', sub: handlerSummary('sms', p), icon: <SmsIcon sx={{ fontSize: 18 }} />, ok: 'delivered' };
@@ -244,7 +260,9 @@ const ServicesInner = () => {
   // Simulate — fire a (call) event through the service and see what runs.
   const [simOpen, setSimOpen] = useState(false);
   const [simEvent, setSimEvent] = useState('');
-  const [simData, setSimData] = useState('{ "simulated": true }');
+  const [simData, setSimData] = useState(SIM_DEFAULT_DATA);
+  const [simCallUuid, setSimCallUuid] = useState('');
+  const [simDeliver, setSimDeliver] = useState(false);
   const [simRunning, setSimRunning] = useState(false);
   const [simResult, setSimResult] = useState(null);
 
@@ -429,7 +447,9 @@ const ServicesInner = () => {
   const openSim = useCallback(() => {
     setSimResult(null);
     setSimEvent(svc?.triggers?.[0] || '');
-    setSimData('{ "simulated": true }');
+    setSimData(SIM_EXAMPLES[svc?.type] || SIM_DEFAULT_DATA);
+    setSimCallUuid('');
+    setSimDeliver(false);
     setSimOpen(true);
   }, [svc]);
 
@@ -440,12 +460,16 @@ const ServicesInner = () => {
     try { event_data = simData.trim() ? JSON.parse(simData) : {}; }
     catch { setSimResult({ error: 'Event data is not valid JSON' }); setSimRunning(false); return; }
     try {
-      const res = await servicesApi.simulate(selected.uuid, { event_name: simEvent, event_data });
+      const res = await servicesApi.simulate(selected.uuid, {
+        event_name: simEvent, event_data,
+        call_uuid: simCallUuid.trim() || undefined,
+        deliver: simDeliver && DELIVERABLE_TYPES.includes(svc?.type),
+      });
       setSimResult(res || { event_name: simEvent, results: [] });
     } catch (err) {
       setSimResult({ error: err.message || 'Simulation failed' });
     } finally { setSimRunning(false); }
-  }, [selected, simEvent, simData]);
+  }, [selected, svc, simEvent, simData, simCallUuid, simDeliver]);
 
   const serviceTypes = useMemo(() => Object.keys(typeConfigs), [typeConfigs]);
   const { nodes, edges } = useMemo(
@@ -777,6 +801,29 @@ const ServicesInner = () => {
             fullWidth size="small" multiline minRows={2}
             sx={{ '& textarea': { fontFamily: 'monospace', fontSize: '0.8rem' } }}
           />
+          <TextField
+            label="Call UUID (optional)"
+            value={simCallUuid}
+            onChange={(e) => setSimCallUuid(e.target.value)}
+            fullWidth size="small" sx={{ mt: 2 }}
+            helperText="Build the event from a real call instead of the example data."
+          />
+          {DELIVERABLE_TYPES.includes(svc?.type) && (
+            <FormControlLabel
+              sx={{ mt: 1 }}
+              control={<Switch checked={simDeliver} onChange={(e) => setSimDeliver(e.target.checked)} />}
+              label={(
+                <Typography variant="body2">
+                  Send it for real
+                  <Typography component="span" variant="caption" sx={{ color: 'var(--text-secondary)', ml: 1 }}>
+                    {simDeliver
+                      ? 'The endpoint will receive this event.'
+                      : 'Off: the event is routed but nothing is sent.'}
+                  </Typography>
+                </Typography>
+              )}
+            />
+          )}
           {simResult && (
             <Alert severity={simResult.error ? 'error' : 'success'} sx={{ mt: 2 }} onClose={() => setSimResult(null)}>
               {simResult.error ? (
@@ -784,6 +831,9 @@ const ServicesInner = () => {
               ) : (
                 <Box>
                   <Typography variant="caption" fontWeight={700} display="block">Simulated: {simResult.event_name || simEvent}</Typography>
+                  <Typography variant="caption" display="block">
+                    {simResult.delivered ? 'Sent to the endpoint.' : 'Not sent: this was a dry run.'}
+                  </Typography>
                   {(simResult.results || []).map((r, i) => (
                     <Box key={i} sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
                       <Chip label={r.status} size="small" color={r.status === 'success' ? 'success' : 'error'} sx={{ height: 18, fontSize: '0.6rem' }} />
