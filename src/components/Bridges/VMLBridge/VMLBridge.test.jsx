@@ -23,7 +23,8 @@ vi.mock('./CodeEditor.jsx', () => ({ CodeEditor: () => null }));
 vi.mock('../shared/MetaPropertiesEditor.jsx', () => ({ MetaPropertiesEditor: () => null }));
 vi.mock('../../Templates/Templates.jsx', () => ({ TemplateDialog: () => null }));
 vi.mock('../../Templates/Templates.js', () => ({ TEMPLATE_TYPES: [] }));
-vi.mock('../../../services/api/templatesApi', () => ({ templatesApi: {} }));
+const templatesApi = { getVmlTemplate: vi.fn() };
+vi.mock('../../../services/api/templatesApi', () => ({ templatesApi }));
 vi.mock('../../../hooks/useIsUserSession', () => ({ useIsUserSession: () => false }));
 const scope = { selectedEnvironments: [{ uuid: 'env-1', name: 'Sales' }] };
 vi.mock('../../../context/CustomerEnvironmentContext', () => ({ useCustomerEnvironment: () => scope }));
@@ -95,5 +96,34 @@ describe('editing a VML', () => {
     vmlsApi.updateVML.mockRejectedValue(new Error('name is invalid'));
     fireEvent.click(screen.getByRole('button', { name: 'Update VML' }));
     expect(await screen.findByText('name is invalid')).toBeInTheDocument();
+  });
+});
+
+// A new VML starts from its type's template and is linked to it.
+describe('creating a VML', () => {
+  it("fills the editor with the type's template and links it", async () => {
+    vml.vmlContent = '';
+    vml.setVMLContent.mockClear();
+    vml.setMetaFields.mockClear();
+    templatesApi.getVmlTemplate.mockResolvedValue({ uuid: 't-bot', type: 'vml_bot', text: '-- openai realtime' });
+    render(<VMLBridge open onClose={() => {}} onSave={() => {}} />);
+
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('webhook'));
+
+    await waitFor(() => expect(templatesApi.getVmlTemplate).toHaveBeenCalledWith('webhook', 'env-1'));
+    await waitFor(() => expect(vml.setVMLContent).toHaveBeenCalledWith('-- openai realtime'));
+    const update = vml.setMetaFields.mock.calls.at(-1)[0];
+    expect(update([])).toEqual([{ key: 'template_uuid', value: 't-bot' }]);
+  });
+
+  it('leaves what someone already wrote alone', async () => {
+    vml.vmlContent = '-- my own script';
+    templatesApi.getVmlTemplate.mockClear();
+    render(<VMLBridge open onClose={() => {}} onSave={() => {}} />);
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('webhook'));
+    expect(templatesApi.getVmlTemplate).not.toHaveBeenCalled();
+    vml.vmlContent = '';
   });
 });
