@@ -31,6 +31,7 @@ import LiveDrawer from '../Live/LiveDrawer.jsx';
 import LiveCallsPanel from '../Live/panels/LiveCallsPanel.jsx';
 import TimeHistogram from '../../views/syslogs/TimeHistogram';
 import { convertAggregateToHistogramFormat } from '../../utils/logFormatting';
+import LogTabs from '../shared/LogTabs/LogTabs.jsx';
 import ReportsPanel from '../Reports/ReportsPanel/ReportsPanel.jsx';
 import LiveChartStrip from '../Live/LiveChartStrip.jsx';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
@@ -562,6 +563,7 @@ const Calls = () => {
       display: 'flex',
       flexDirection: 'column'
     }}>
+      <LogTabs />
       {/* Search + the four filters worth keeping on screen. The other nine
           segments stay behind the ⚙ panel, which is where a 13-field grid
           belongs. */}

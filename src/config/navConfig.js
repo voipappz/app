@@ -38,8 +38,9 @@ export const NAV_ITEMS = [
   // same thing, so Live sits above it. Reachable from both surfaces: LiveRoute
   // in App.jsx checks each session against its own ACL vocabulary.
   { text: 'Live',          path: '/live',           iconComponent: SensorsIcon,               aclKey: 'reports',                        group: 'MONITOR'  },
-  { text: 'Calls',         path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
-  { text: 'Messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
+  // Logs is Calls and Messages as one screen: it opens on Calls, and the
+  // tabs at the top of the screen (LogTabs) switch between the two.
+  { text: 'Logs',          path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR',  alsoPaths: ['/messages'] },
   { text: 'Reports',       path: '/reports',        iconComponent: AssessmentIcon,            aclKey: 'reports',                        group: 'MONITOR'  },
   { text: 'Users',         path: '/users',          iconComponent: PeopleIcon,                aclKey: 'users',                          group: 'MANAGE'   },
   { text: 'Accounts',      path: '/accounts',       iconComponent: BadgeIcon,                 aclKey: 'accounts',                       group: 'MANAGE'   },
@@ -58,11 +59,12 @@ export const TOPBAR_NAV_ITEMS = [
 ];
 
 // Screens with a route but no menu entry: they open from the screen they
-// belong to (Providers from Routes). Listed so a visit still has a name and
+// belong to (Providers from Routes, Messages from the Logs tabs). Listed so a visit still has a name and
 // icon in breadcrumbs and recent pages. Nodes has no route at all: it is
 // managed from the customer dialog.
 export const OFF_MENU_NAV_ITEMS = [
   { text: 'Providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'ADMIN'    },
+  { text: 'Messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'messages',                       group: 'MONITOR'  },
 ];
 
 // `strict` (a portal USER session — same ACL model as an account): an item is
