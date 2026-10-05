@@ -67,7 +67,7 @@
     "reactflow": "^11.11.4",
     "recharts": "^3.6.0",
     "sip.js": "^0.21.2",
-    "swagger-ui-react": "^5.32.15",
+    "swagger-ui-react": "^5.33.1",
     "ts-node": "^10.9.2",
     "ws": "^8.21.3"
   },
