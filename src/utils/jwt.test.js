@@ -847,4 +847,30 @@ describe('JWT Utilities', () => {
       expect(canAccessScreen(acl, 'users')).toBe(false);
     });
   });
+
+  // Calls is one read/write permission; `call` (user) and `calls` (account)
+  // are the same capability, and a history-only role reads as read (as the API).
+  describe('Calls permission', () => {
+    it('answers calls for a user role that says call', () => {
+      expect(hasPermission({ data: { call: { main: ['read'] } } }, 'calls', 'read')).toBe(true);
+    });
+
+    it('answers call for an account role that says calls', () => {
+      expect(hasPermission({ data: { calls: { main: 'read,write' } } }, 'call', 'write')).toBe(true);
+    });
+
+    it('reads a legacy history-only role as read, never write', () => {
+      const acl = { data: { call: { history: ['view', 'filter'] } } };
+      expect(hasPermission(acl, 'calls', 'read')).toBe(true);
+      expect(hasPermission(acl, 'calls', 'write')).toBe(false);
+    });
+
+    it('refuses read when the entry is empty', () => {
+      expect(hasPermission({ data: { call: { main: [] } } }, 'calls', 'read')).toBe(false);
+    });
+
+    it('does not apply the history rule to other screens', () => {
+      expect(hasPermission({ data: { voicemail: { message: ['view'] } } }, 'voicemail', 'read')).toBe(false);
+    });
+  });
 });
