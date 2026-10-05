@@ -32,6 +32,18 @@ test.describe('Top bar', () => {
     await expect(popup).toBeHidden();
   });
 
+  test('the search field takes the whole bar between the selector and the tools', async ({ authenticatedPage: page }) => {
+    await page.setViewportSize({ width: 1920, height: 900 });
+    await page.goto('/calls', { waitUntil: 'domcontentloaded', timeout: 20000 });
+
+    const slot = page.locator('#topbar-search-slot');
+    await expect(slot.getByPlaceholder('Search caller, callee, user, route or call ID')).toBeVisible({ timeout: 30000 });
+
+    const bar = await page.locator('.topbar-container').boundingBox();
+    const field = await slot.boundingBox();
+    expect(field!.width).toBeGreaterThan(bar!.width * 0.6);
+  });
+
   test('the top-right tools are Help and the health dot only', async ({ authenticatedPage: page }) => {
     await page.goto('/calls', { waitUntil: 'domcontentloaded', timeout: 20000 });
 
