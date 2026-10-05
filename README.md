@@ -15,6 +15,12 @@ make setup          # dependencies, then asks for the API and your login, and si
 make dev            # http://localhost:3000
 ```
 
+**Windows:** use WSL 2. In PowerShell, once: `wsl --install -d Ubuntu`, then
+open Ubuntu and run `sudo apt install -y make git python3 curl`. Clone inside
+the Ubuntu home (`~/`), not under `/mnt/c`, and run the same three commands;
+open http://localhost:3000 in your Windows browser. Node is installed by
+`make setup` (through mise) if Ubuntu's is too old.
+
 `make` on its own lists the six commands: setup, onboard, dev, test, check, deploy.
 
 ---

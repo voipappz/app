@@ -42,6 +42,15 @@ fi
 
 if ! command -v node >/dev/null 2>&1 || \
    [ "$(node --version | sed 's/v//; s/\..*//')" -lt "${want%%.*}" ]; then
+  # Installed through mise but not on this shell's PATH: every npm call in the
+  # Makefile goes through bin/npm.sh, which runs mise's node by itself, so
+  # setup can carry on. Activating mise is only needed to type node/npm by hand.
+  if command -v mise >/dev/null 2>&1 && \
+     [ "$(mise exec -- node --version 2>/dev/null | sed 's/v//; s/\..*//')" -ge "${want%%.*}" ] 2>/dev/null; then
+    echo "using mise's node $(mise exec -- node --version) for this repo"
+    echo "(to use it in your own shell too:  eval \"\$(mise activate bash)\")"
+    exit 0
+  fi
   cat <<MSG
 
 The pinned node is installed but not on PATH in this shell. Activate it, then
