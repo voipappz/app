@@ -8,7 +8,6 @@ import HubIcon from '@mui/icons-material/Hub';
 import MiscellaneousServicesIcon from '@mui/icons-material/MiscellaneousServices';
 import ArticleIcon from '@mui/icons-material/Article';
 import TimelineIcon from '@mui/icons-material/Timeline';
-import DnsIcon from '@mui/icons-material/Dns';
 import SchemaIcon from '@mui/icons-material/Schema';
 import CallIcon from '@mui/icons-material/Call';
 import HomeIcon from '@mui/icons-material/Home';
@@ -50,10 +49,19 @@ export const NAV_ITEMS = [
 // Professional tools — top-right icons on desktop and overflow menu on phones.
 // Also consumed by global search and breadcrumbs.
 export const TOPBAR_NAV_ITEMS = [
-  { text: 'Events',        path: '/events',         iconComponent: BoltIcon,                  aclKey: 'logs',                           group: 'MONITOR'  },
-  { text: 'Syslog',        path: '/logs',           iconComponent: SubjectIcon,               aclKey: 'logs',                           group: 'MONITOR'  },
-  { text: 'Monitoring',    path: '/monitoring',     iconComponent: TimelineIcon,              aclKey: 'monitors',                       group: 'MONITOR'  },
-  { text: 'Nodes',         path: '/nodes',          iconComponent: DnsIcon,                   aclKey: 'nodes',                          group: 'MONITOR'  },
+  // `noIcon`: no top bar icon; reached from elsewhere — Events from a list
+  // row (RowEventsButton), Monitoring from the health dot, Syslog from the
+  // Logs view of Monitoring.
+  { text: 'Events',        path: '/events',         iconComponent: BoltIcon,                  aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
+  { text: 'Syslog',        path: '/logs',           iconComponent: SubjectIcon,               aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
+  { text: 'Monitoring',    path: '/monitoring',     iconComponent: TimelineIcon,              aclKey: 'monitors',                       group: 'MONITOR',  noIcon: true },
+];
+
+// Screens with a route but no menu entry: they open from the screen they
+// belong to (Providers from Routes). Listed so a visit still has a name and
+// icon in breadcrumbs and recent pages. Nodes has no route at all: it is
+// managed from the customer dialog.
+export const OFF_MENU_NAV_ITEMS = [
   { text: 'Providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'ADMIN'    },
 ];
 
@@ -80,6 +88,6 @@ export function getPermittedTopbarItems(acl, { strict = false } = {}) {
 }
 
 export function findNavItemByPath(pathname) {
-  const all = [...NAV_ITEMS, ...TOPBAR_NAV_ITEMS];
+  const all = [...NAV_ITEMS, ...TOPBAR_NAV_ITEMS, ...OFF_MENU_NAV_ITEMS];
   return all.find(item => item.path === pathname) || null;
 }

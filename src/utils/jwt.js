@@ -96,7 +96,17 @@ export const getAccountDataFromToken = (accessToken) => {
  * here, an account whose ACL says `dids` failed canAccess('routes'), and the
  * Routes screen bounced to /account ("Edit Account") for everyone.
  */
-export const CAPABILITY_ALIASES = Object.freeze({ routes: 'dids', dids: 'routes' });
+// `call` (user role) and `calls` (account role) are one capability, as in the API.
+export const CAPABILITY_ALIASES = Object.freeze({ routes: 'dids', dids: 'routes', calls: 'call', call: 'calls' });
+
+// Calls is one read/write permission. A role saved before that may list only
+// `history: [view, ...]` for it, which always meant "may see calls" -- the API
+// reads it the same way (Acl#can?).
+const legacyCallsRead = (screen, permission, screenPerms) =>
+  permission === 'read' && (screen === 'calls' || screen === 'call') &&
+  typeof screenPerms === 'object' && screenPerms !== null && !Array.isArray(screenPerms) &&
+  Object.entries(screenPerms).some(([key, perms]) =>
+    key !== 'main' && (Array.isArray(perms) ? perms.length > 0 : Boolean(perms)));
 
 export const hasPermission = (acl, screen, permission = 'read') => {
   // SECURITY: If no ACL is defined, deny all access
@@ -146,13 +156,13 @@ export const hasPermission = (acl, screen, permission = 'read') => {
 
   // Match legacy admin logic: check exact screen name first
   if (aclData[screen]) {
-    return checkScreenPerms(aclData[screen]);
+    return checkScreenPerms(aclData[screen]) || legacyCallsRead(screen, permission, aclData[screen]);
   }
 
-  // Then the renamed spelling of the same capability (routes <-> dids).
+  // Then the other spelling of the same capability (routes <-> dids, calls <-> call).
   const alias = CAPABILITY_ALIASES[screen];
   if (alias && aclData[alias]) {
-    return checkScreenPerms(aclData[alias]);
+    return checkScreenPerms(aclData[alias]) || legacyCallsRead(screen, permission, aclData[alias]);
   }
 
   // Then check singular form (screen name minus last character)

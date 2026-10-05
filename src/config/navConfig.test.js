@@ -1,23 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { getPermittedNavItems, getPermittedTopbarItems, findNavItemByPath } from './navConfig';
+import { getPermittedNavItems, getPermittedTopbarItems, findNavItemByPath, TOPBAR_NAV_ITEMS } from './navConfig';
 
-// The nodes list (MonitoringNodes) has its own top-right entry and its own ACL
-// key, "nodes" (it used to ride on "monitors"; the API's
-// `rake va:acl_grant_nodes` gave existing ACLs the same access).
-describe('navConfig Nodes entry', () => {
-  const withNodes = { data: { nodes: { main: ['read', 'write'] } } };
-  const withOnlyMonitors = { data: { monitors: { main: ['read', 'write'] } } };
+// Nodes and Providers left the top-right tools: nodes are managed from the
+// customer dialog, providers open from Routes.
+describe('navConfig Nodes and Providers', () => {
+  const acl = { data: { nodes: { main: ['read', 'write'] }, providers: { main: ['read', 'write'] } } };
 
-  it('lists Nodes only in the top-right tools for an account with nodes access', () => {
-    const paths = getPermittedTopbarItems(withNodes).map((item) => item.path);
-    expect(paths).toContain('/nodes');
-    expect(getPermittedNavItems(withNodes).map((item) => item.path)).not.toContain('/nodes');
-    expect(findNavItemByPath('/nodes')).toMatchObject({ text: 'Nodes', aclKey: 'nodes' });
+  it('lists neither in the top-right tools nor in the sidebar', () => {
+    const paths = [...getPermittedTopbarItems(acl), ...getPermittedNavItems(acl)].map((item) => item.path);
+    expect(paths).not.toContain('/nodes');
+    expect(paths).not.toContain('/providers');
   });
 
-  it('hides Nodes from an account without nodes access', () => {
-    const paths = getPermittedTopbarItems(withOnlyMonitors).map((item) => item.path);
-    expect(paths).not.toContain('/nodes');
+  it('still names the Providers route for breadcrumbs and recent pages', () => {
+    expect(findNavItemByPath('/providers')).toMatchObject({ text: 'Providers', aclKey: 'providers' });
+    expect(findNavItemByPath('/nodes')).toBeNull();
+  });
+});
+// The top bar keeps no tool icons: Events opens from a list row, Monitoring
+// from the health dot, Syslog from Monitoring's Logs view.
+describe('navConfig top bar tools', () => {
+  it('gives none of them an icon of its own', () => {
+    expect(TOPBAR_NAV_ITEMS.filter((item) => !item.noIcon)).toEqual([]);
+    expect(findNavItemByPath('/logs')).toMatchObject({ text: 'Syslog', aclKey: 'logs' });
   });
 });
 // Live is back in the account console (it was portal-only from 8cc1555). Gated

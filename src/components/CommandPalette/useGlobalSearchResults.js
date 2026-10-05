@@ -37,7 +37,7 @@ export { timeAgo, splitMatch };
 // navigation. Rendered by the CommandPalette dialog (⌘K / openResourceFinder).
 
 export const RESOURCE_TYPES = [
-  { key: 'calls',         label: 'Call',         endpoint: '/api/calls',         route: '/calls',      nameField: 'caller_id', subtitleField: 'destination', icon: PhoneInTalkIcon, searchParam: 'search[caller_id]' },
+  { key: 'calls',         label: 'Call',         endpoint: '/api/calls',         route: '/calls',      nameField: 'caller', subtitleField: 'callee', icon: PhoneInTalkIcon, searchParam: 'search[inline]', carryQuery: true },
   { key: 'extensions',    label: 'Device',       endpoint: '/api/devices',    route: '/extensions', nameField: 'name', subtitleField: 'username',  icon: PhoneIcon },
   { key: 'queues',        label: 'Queue',        endpoint: '/api/queues',        route: null,          nameField: 'name', subtitleField: 'strategy',  icon: GroupsIcon },
   { key: 'dids',          label: 'Route',          endpoint: '/api/routes',          route: '/routes/list',       nameField: 'number', subtitleField: 'name',    icon: DialpadIcon },
@@ -257,7 +257,10 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
                 if (rt.key === 'users' && id) {
                   openUserEditorEverywhere(navigate, { uuid: id, name: primaryText, path: '/users' });
                 } else if (rt.route) {
-                  navigate(rt.route);
+                  // carryQuery: land on the screen with the same search applied.
+                  navigate(rt.carryQuery
+                    ? `${rt.route}?${new URLSearchParams({ [rt.searchParam]: query.trim() })}`
+                    : rt.route);
                 }
                 onClose();
               },

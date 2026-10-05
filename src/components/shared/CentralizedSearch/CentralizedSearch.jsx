@@ -428,7 +428,7 @@ const getActiveFilters = (segments, currentSearchParams) => {
 
   for (const [key, value] of Object.entries(currentSearchParams)) {
     if (key === 'order_by' || key === 'order_type' || key === '_client') continue;
-    if (key === 'search[text]') continue;
+    if (key === 'search[text]' || key === 'search[inline]') continue;
     if (key.startsWith('search[meta]')) continue; // already handled above
 
     for (const segment of segments) {
@@ -591,6 +591,7 @@ const FilterPill = ({ segment, active, onApply, onRemove }) => {
  * @param {string} placeholder - Search input placeholder text
  * @param {Function} onExport - Optional. If provided, shows Export CSV button
  * @param {Function} onColumnSelectorOpen - Optional. If provided, shows Columns button
+ * @param {string} textParam - Param the bare search text is sent as (default search[name])
  */
 const CentralizedSearch = ({
   segments,
@@ -609,6 +610,7 @@ const CentralizedSearch = ({
   showExclude = false,
   hideSearchInput = false,
   inlineFilters = null,
+  textParam = 'search[name]',
 }) => {
   // The bearer for the raw fetches in AjaxInput/TagFilterInput (they bypass
   // apiService, which resolves this itself). Falls back to the portal token so
@@ -732,7 +734,7 @@ const CentralizedSearch = ({
       const text = quickSearchText.trim();
       if (segments && segments.length > 0 && text) {
         // Gmail-style colon-syntax parsing
-        const parsed = parseSearchInput(text, segments);
+        const parsed = parseSearchInput(text, segments, textParam);
         onFilterChange(parsed, false);
       } else {
         onQuickSearch(e);

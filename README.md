@@ -15,6 +15,13 @@ make setup          # dependencies, then asks for the API and your login, and si
 make dev            # http://localhost:3000
 ```
 
+**Windows:** use WSL 2. In Ubuntu: `sudo apt install -y make git curl`, clone
+inside `~/`, then the commands above (or the Docker ones below, with Docker
+Desktop's WSL integration on).
+
+**Docker (no Node on the host):** `make setup DOCKER=1`, `make dev DOCKER=1`,
+`make test DOCKER=1`. The login wizard runs in a `node:22-alpine` container too.
+
 `make` on its own lists the six commands: setup, onboard, dev, test, check, deploy.
 
 ---
@@ -231,6 +238,7 @@ module, and one spec named after the screen.
 | `make onboard` | Check the login token for the API (`TOKEN=1` prints it) |
 | `make dev` | Check the login, then the dev server on :3000 |
 | `make test` | Check the login, then the Playwright suite (`SPEC=users` for one spec, `HEADED=1` to watch) |
+| `make tenant CUSTOMER=x EMAIL=x` | Create a customer with its Account and User logins, through the API (needs a root login) |
 | `make check` | **The pre-push gate:** secrets, lint, unit, build |
 | `make deploy DEST=x` | Build, push and swap the container (an operator runs this) |
 

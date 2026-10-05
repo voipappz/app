@@ -77,8 +77,6 @@ const Events = lazy(() => import('../Events/Events.jsx'));
 const TOOL_SCREENS = {
   '/logs': lazy(() => import('../../views/syslogs/LogsScreen.jsx')),
   '/monitoring': lazy(() => import('../Monitoring/Monitoring.jsx')),
-  '/nodes': lazy(() => import('../Monitoring/MonitoringNodes.jsx')),
-  '/providers': lazy(() => import('../Providers/Providers.jsx')),
   '/templates': lazy(() => import('../Templates/Templates.jsx')),
   '/settings': lazy(() => import('../Settings/Settings.jsx')),
 };
@@ -102,7 +100,7 @@ import { useTickets } from '../Tickets/Tickets';
 import { openZendeskWidget } from '../../services/zendeskWidget';
 import { useApiHealth } from '../../hooks/useApiHealth';
 import { useGatusHealth } from '../../hooks/useGatusHealth';
-import { HEALTH_COLORS, checkLevel, overallHealth } from './healthLevel';
+import { HEALTH_COLORS, overallHealth } from './healthLevel';
 import GatusHealthPanel from '../Monitoring/GatusHealthPanel.jsx';
 import ApiHealthPanel from '../Monitoring/ApiHealthPanel.jsx';
 import LiveDrawer from '../Live/LiveDrawer.jsx';
@@ -135,9 +133,6 @@ import { ConfirmDialog } from '../ui';
 
 const ITEM_HEIGHT = 40; // application rows: one line — name, status, dates (id and tags in the tooltip)
 
-// The API's own dependencies as /health?verbose reports them. `process` is
-// the API itself, which the pill as a whole already stands for.
-const HEALTH_SERVICE_LABELS = { database: 'DB', redis: 'Redis', nats: 'NATS', disk: 'Disk' };
 
 // A selected-environment chip that can be dragged to reorder (drag handle =
 // the grip icon; the × still removes). Order persists into the selection.
@@ -774,7 +769,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
     return () => window.removeEventListener('openEventsModal', handler);
   }, []);
 
-  // Wizard (Schema) modal — the top-right "Wizard" icon for quick resource creation.
+  // Wizard (Schema) modal — opened from the customer switcher (openWizardModal)
+  // and from "Add application → From schema".
   const [wizardModalOpen, setWizardModalOpen] = useState(false);
   useEffect(() => {
     const handler = () => setWizardModalOpen(true);
@@ -825,7 +821,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
   // phone button, ACL-granted actions, and profile menu.
   if (!isAuthenticated && !userSession) return null;
 
-  const professionalTools = TOPBAR_NAV_ITEMS.filter(item => canAccess(item.aclKey)).map(item => {
+  const professionalTools = TOPBAR_NAV_ITEMS.filter(item => !item.noIcon && canAccess(item.aclKey)).map(item => {
     const Icon = item.iconComponent;
     return {
       key: item.path,
@@ -843,7 +839,6 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
   const activeToolItem = TOPBAR_NAV_ITEMS.find(item => item.path === activeTool && canAccess(item.aclKey))
     || (!userSession && ACCOUNT_TOOLS.find(item => item.path === activeTool));
   const overflowTools = [
-    { key: 'wizard', label: 'Wizard', icon: <AutoFixHighIcon fontSize="small" />, onClick: () => window.dispatchEvent(new Event('openWizardModal')) },
     ...professionalTools,
     // Appearance is the viewer's, not a permission: always offered.
     { key: 'theme', always: true, label: isDarkMode ? 'Light Mode' : 'Dark Mode', icon: isDarkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />, onClick: toggleTheme },
@@ -941,13 +936,6 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           {/* Actions + observability nav — inline on desktop, in ⋮ on phones */}
           {!isPhone && (
           <>
-          {allow(null) && (
-          <Tooltip title="Wizard">
-            <IconButton size="small" onClick={() => window.dispatchEvent(new Event('openWizardModal'))} sx={{ color: 'var(--theme-text-secondary)', '&:hover': { backgroundColor: 'var(--theme-hover)' } }}>
-              <AutoFixHighIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          )}
           {professionalTools.map(tool => (
             <Tooltip key={tool.key} title={tool.label}>
               <IconButton size="small" aria-label={tool.label} onClick={tool.onClick} sx={{ color: 'var(--theme-text-secondary)', '&:hover': { backgroundColor: 'var(--theme-hover)' } }}>
@@ -970,10 +958,12 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </>
           )}
 
-          {/* App Health — the API's own services from /health?verbose, always
-              visible at the top: one dot per service. Click opens the
-              Monitoring screen in the tool dialog. An account's. */}
-          {!userSession && (
+          {/* App Health — one dot, coloured by the overall level (the API's own
+              services from /health?verbose plus node probes); the tooltip
+              names whatever is failing. Click opens the Monitoring screen in
+              the tool dialog. An account's, or a user's whose ACL grants
+              `monitors`. */}
+          {allow('monitors') && (
           <Button
             aria-label="Health"
             onClick={() => setActiveTool('/monitoring')}
@@ -985,29 +975,9 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               '&:hover': { backgroundColor: 'var(--theme-hover)' },
             }}
           >
-            {healthStatus.checks ? (
-              Object.entries(healthStatus.checks).filter(([key]) => key !== 'process').map(([key, check]) => {
-                const label = HEALTH_SERVICE_LABELS[key] || key;
-                const level = checkLevel(check);
-                const tip = `${label}: ${level === 'down' ? `DOWN — ${check?.error || 'check failed'}` : level === 'degraded' ? 'warning' : `healthy${check?.ms != null ? ` (${check.ms}ms)` : ''}`}`;
-                return (
-                  <Tooltip key={key} title={tip}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                      <CircleIcon sx={{ fontSize: 9, color: HEALTH_COLORS[level] }} />
-                      <Typography sx={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--theme-text-secondary)', lineHeight: 1 }}>
-                        {label}
-                      </Typography>
-                    </Box>
-                  </Tooltip>
-                );
-              })
-            ) : (
-              // No per-service detail from this API: one dot, coloured by the
-              // overall level (API + node probes).
-              <Tooltip title={`Status — ${health.reason}`}>
-                <CircleIcon data-testid="health-dot" data-level={health.level} sx={{ fontSize: 12, color: HEALTH_COLORS[health.level] }} />
-              </Tooltip>
-            )}
+            <Tooltip title={`Status — ${health.reason}`}>
+              <CircleIcon data-testid="health-dot" data-level={health.level} sx={{ fontSize: 12, color: HEALTH_COLORS[health.level] }} />
+            </Tooltip>
           </Button>
           )}
 
@@ -1473,10 +1443,10 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         title={activeToolItem?.text || ''}
         open={Boolean(activeToolItem)}
         onClose={() => setActiveTool(null)}
-        confirmClose={activeTool === '/providers' || activeTool === '/templates'}
+        confirmClose={activeTool === '/templates'}
       >
         {ActiveToolScreen && <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
-          <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'auto', p: activeTool === '/nodes' ? 2 : 0 }}>
+          <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'auto' }}>
             <ActiveToolScreen />
           </Box>
         </Suspense>}

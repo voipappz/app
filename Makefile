@@ -46,9 +46,11 @@ STOP  = kill "$$(cat /tmp/vite-$(PORT).pid 2>/dev/null)" 2>/dev/null || true; rm
 
 # The login gate: a valid token for the API in .env before anything that talks
 # to it. Reuses the cached token while it is valid, signs in again otherwise.
-LOGIN = TOKEN="$(TOKEN)" bin/onboard.sh
+LOGIN = $(if $(DOCKER),docker run --rm $$([ -t 0 ] && echo -it) -u "$$(id -u):$$(id -g)" -v "$(CURDIR):/app" -w /app \
+          -e TOKEN="$(TOKEN)" -e PORT="$(PORT)" node:22-alpine node bin/onboard.mjs,\
+          TOKEN="$(TOKEN)" PORT="$(PORT)" $(NPM) exec -- node bin/onboard.mjs)
 
-.PHONY: help setup onboard dev test check deploy
+.PHONY: help setup onboard tenant dev test check deploy
 .DEFAULT_GOAL := help
 
 help: ## Show this help
@@ -64,16 +66,22 @@ help: ## Show this help
 # ONE command from a fresh clone to a machine that can run the app and the
 # suite. Idempotent, so it is also what to run when you do not know the state.
 # .env is never overwritten: it holds the only copy of your credentials.
-setup: ## [DOCKER=1] Everything a fresh clone needs, then asks for your login and signs in
+setup: ## [DOCKER=1] Node, dependencies and .env, then asks for your login and signs in
 	@if [ -z "$(DOCKER)" ]; then bin/dev-host-tools.sh; fi
 	@[ -f .env ] || { cp .env.example .env; echo "created .env from .env.example"; }
 	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app npm ci; else $(NPM) ci; fi
-	@if [ -z "$(DOCKER)" ]; then $(NPM) exec -- playwright install $(BROWSER) --with-deps; fi
 	@$(LOGIN)
 	@echo; echo "Ready:  make dev"
 
 onboard: ## [TOKEN=1] Check the login token for the API; asks for the login if missing
 	@$(LOGIN)
+
+# Through the API with your JWT, so it works from any machine; needs a root
+# login. voipappz-api's own `make tenant` does the same on the API host.
+tenant: ## [CUSTOMER=x EMAIL=x PASSWORD=x] Create a customer with its Account and User logins
+	@$(LOGIN) >/dev/null
+	@$(if $(DOCKER),docker run --rm -u "$$(id -u):$$(id -g)" -v "$(CURDIR):/app" -w /app -e CUSTOMER -e EMAIL -e PASSWORD -e PORT node:22-alpine node bin/tenant.mjs,\
+	  CUSTOMER="$(CUSTOMER)" EMAIL="$(EMAIL)" PASSWORD="$(PASSWORD)" PORT="$(PORT)" $(NPM) exec -- node bin/tenant.mjs)
 
 dev: ## [PORT=3000 DOCKER=1] Check the login token, then start the dev server
 	@$(LOGIN)
@@ -84,6 +92,7 @@ test: ## [SPEC=users HEADED=1 DOCKER=1] Check the login token, then run Playwrig
 	@if [ -n "$(DOCKER)" ]; then \
 	   $(DC) run --rm -T test; \
 	 else \
+	   $(NPM) exec -- playwright install $(BROWSER) >/dev/null; \
 	   $(SERVE); \
 	   $(NPM) exec -- playwright test $(if $(SPEC),tests/$(SPEC).spec.ts,) \
 	     --project=$(BROWSER) $(if $(HEADED),--headed,--reporter=line); \

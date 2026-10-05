@@ -46,6 +46,7 @@ import CampaignDialog from './CampaignDialog/CampaignDialog';
 import CampaignNumbersDialog from './CampaignNumbers/CampaignNumbers';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import { formatDate } from '../../utils/dateUtils';
 import { getEnabledChipProps, getStatusChipProps, getTypeChipColor } from '../../utils/chipStyles';
 import HelpButton from '../common/HelpButton';
@@ -427,6 +428,7 @@ const Campaigns = () => {
                                   </IconButton>
                                 </Tooltip>
                               )}
+                              <RowEventsButton subject="campaign" uuid={campaign.uuid} />
                               {canWrite && (
                                 <Tooltip title="Delete">
                                   <IconButton

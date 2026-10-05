@@ -41,6 +41,7 @@ import { ConfirmDialog } from '../ui';
 import { useSubscriptions } from './Subscriptions.js';
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import SubscriptionDialog from './SubscriptionDialog/SubscriptionDialog';
 import { PlanBridge } from '../Bridges/PlanBridge/PlanBridge.jsx';
 import { TariffBridge } from '../Bridges/TariffBridge/TariffBridge.jsx';
@@ -746,6 +747,7 @@ const Subscriptions = () => {
                                 </IconButton>
                               </Tooltip>
                             )}
+                            <RowEventsButton subject="subscription" uuid={subscription.uuid} />
                             {canWrite && (
                               <Tooltip title="Delete subscription">
                                 <IconButton

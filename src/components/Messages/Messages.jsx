@@ -6,6 +6,7 @@ import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import { config } from '../../config.js';
 
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import { stripedDataGridSx, EmptyValue } from '../shared/tableTheme.jsx';
 import CustomFooter from '../Calls/CustomFooter/CustomFooter.jsx';
 import HelpButton from '../common/HelpButton';
@@ -512,9 +513,12 @@ const Messages = () => {
                 <SmsIcon sx={{ fontSize: 20, color: 'var(--accent-primary)' }} />
                 <Typography variant="subtitle2" fontWeight={600}>Message Details</Typography>
               </Box>
-              <IconButton size="small" onClick={() => setSelectedMessage(null)}>
-                <CloseIcon fontSize="small" />
-              </IconButton>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <RowEventsButton subject="message" uuid={selectedMessage.uuid} />
+                <IconButton size="small" onClick={() => setSelectedMessage(null)}>
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Box>
             </Box>
             <Box sx={{ p: 2, overflow: 'auto', flex: 1 }}>
               {[

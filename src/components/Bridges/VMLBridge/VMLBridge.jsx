@@ -138,6 +138,26 @@ export const VMLBridge = ({
 
   const templateUuid = metaFields?.find(f => f.key === 'template_uuid')?.value;
 
+  // A new VML starts from its type's template (the customer's own copy, see
+  // templatesApi.getVmlTemplate) and is linked to it, so "Edit template"
+  // opens it. Never over what someone wrote: only an empty editor, or one
+  // still holding the previous type's template, is filled.
+  const lastTemplateText = useRef('');
+  const applyTypeTemplate = async (type) => {
+    if (mode === 'edit' || !type || !formData.environment_uuid) return;
+    if (vmlContent?.trim() && vmlContent !== lastTemplateText.current) return;
+    try {
+      const resp = await templatesApi.getVmlTemplate(type, formData.environment_uuid);
+      const template = resp?.data && resp.data.uuid ? resp.data : resp;
+      if (!template?.uuid) return;
+      lastTemplateText.current = template.text || '';
+      setVMLContent(template.text || '');
+      setMetaFields((prev) => [...(prev || []).filter((f) => f.key !== 'template_uuid'), { key: 'template_uuid', value: template.uuid }]);
+    } catch (err) {
+      console.error('Failed to load the VML template:', err);
+    }
+  };
+
   const handleEditTemplate = async () => {
     if (!templateUuid) return;
     try {
@@ -393,7 +413,7 @@ export const VMLBridge = ({
           <Select
             value={formData.type}
             label="Type"
-            onChange={(e) => handleChange('type', e.target.value)}
+            onChange={(e) => { handleChange('type', e.target.value); applyTypeTemplate(e.target.value); }}
             MenuProps={menuProps(layer)}
           >
             {vmlTypes.map((type) => (
