@@ -1,5 +1,5 @@
 import { Tabs, Tab } from '@mui/material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { usePermissions } from '../../../hooks/usePermissions';
 
 // Calls and Messages are one screen, "Logs": the same list of what went
