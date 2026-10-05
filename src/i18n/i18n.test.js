@@ -10,9 +10,11 @@ import i18n, {
 import enCommon from './locales/en/common.json';
 import enNav from './locales/en/nav.json';
 import enSettings from './locales/en/settings.json';
+import enExtensions from './locales/en/extensions.json';
 import heCommon from './locales/he/common.json';
 import heNav from './locales/he/nav.json';
 import heSettings from './locales/he/settings.json';
+import heExtensions from './locales/he/extensions.json';
 
 /** Every leaf key, as dotted paths, so two files can be compared as sets. */
 const leafKeys = (obj, prefix = '') =>
@@ -98,6 +100,7 @@ describe('en/he parity', () => {
     ['common', enCommon, heCommon],
     ['nav', enNav, heNav],
     ['settings', enSettings, heSettings],
+    ['extensions', enExtensions, heExtensions],
   ];
 
   it.each(namespaces)('%s has the same keys in both languages', (_ns, en, he) => {

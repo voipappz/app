@@ -1,5 +1,4 @@
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -15,6 +14,9 @@ import {
   Box,
   Tooltip
 } from '@mui/material';
+// Full-screen on a phone; identical above `sm`. A form dialog is the
+// worst offender at 375px — side-by-side fields with fixed widths.
+import { ResponsiveDialog as Dialog } from '../../ui';
 import { Close as CloseIcon, Add as AddIcon, Delete as DeleteIcon, ContentCopy as ContentCopyIcon } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import DynamicProfileEditor from '../../common/DynamicProfileEditor/DynamicProfileEditor';

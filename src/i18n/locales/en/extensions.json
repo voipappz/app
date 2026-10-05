@@ -1,0 +1,27 @@
+{
+  "title": "Devices",
+  "empty": "No devices found",
+  "table": {
+    "device": "Device",
+    "tags": "Tags",
+    "registration": "SIP Registration Status"
+  },
+  "registration": {
+    "online": "Registered (Online)",
+    "offline": "Not Registered (Offline)",
+    "userAgent": "User agent",
+    "contact": "Contact",
+    "ip": "IP",
+    "proto": "Proto",
+    "host": "Host",
+    "expires": "Expires"
+  },
+  "action": {
+    "webrtc": "Open WebRTC",
+    "click2call": "Click to Call",
+    "qrCode": "Show QR Code",
+    "edit": "Edit device",
+    "delete": "Delete device",
+    "editApplication": "Edit application"
+  }
+}

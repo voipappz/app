@@ -173,7 +173,9 @@ check: ## [DOCKER=1] check-make, secrets, lint, unit and a build -- the pre-push
 # every reader has to answer before they can use either.
 test: ## [SPEC=x HEADED=1 DEBUG=1 DOCKER=1] Run Playwright specs
 	@if [ -n "$(DOCKER)" ]; then \
-	   $(DC) run --rm -T test; \
+	   if [ -n "$(SPEC)" ]; then \
+	     $(DC) run --rm -T test sh -c "npm install && npx wait-on http://app:$${PORT:-3000} --timeout 120000 && npx playwright test tests/$(SPEC).spec.ts --project=$(BROWSER) --reporter=line"; \
+	   else $(DC) run --rm -T test; fi; \
 	 else \
 	   $(SERVE); \
 	   $(if $(DEBUG),PWDEBUG=1 ,)$(NPM) exec -- playwright test \
@@ -183,6 +185,14 @@ test: ## [SPEC=x HEADED=1 DEBUG=1 DOCKER=1] Run Playwright specs
 	   status=$$?; $(STOP); exit $$status; \
 	 fi
 
+# SPEC= previously worked only on the host path: the DOCKER path ran the
+# compose `test` service, whose command is fixed in docker-compose.yml, so
+# `make test SPEC=x DOCKER=1` silently ran the WHOLE suite instead of one
+# spec. Running 63 specs against a live API to check one screen is slow enough
+# that nobody does it, which is how an e2e suite stops being used. The SPEC
+# branch therefore overrides the service command; it repeats the install and
+# wait-on because overriding a command replaces all of it.
+#
 # Any spec name is its own target -- `make test-users`, `make test-dids` --
 # without a hand-written rule per spec. The 60 copy-pasted targets this
 # replaced drifted: some passed --timeout, some did not, and three named a

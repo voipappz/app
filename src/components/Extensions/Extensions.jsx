@@ -2,13 +2,6 @@ import {
   Box,
   Button,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   IconButton,
   Chip,
   Tooltip,
@@ -18,8 +11,6 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
-  Skeleton,
-  TableSortLabel,
   TextField
 } from '@mui/material';
 import {
@@ -37,6 +28,7 @@ import {
   EventNote as EventsIcon
 } from '@mui/icons-material';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '../ui';
 import { useExtensions } from './Extensions';
 import { extensionsApi } from '../../services/api/extensionsApi';
@@ -53,7 +45,9 @@ import LiveRegistrationsPanel from '../Live/panels/LiveRegistrationsPanel.jsx';
 import { useLiveRegistrations } from '../Live/useLiveRegistrations';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import useCentralizedSearch from '../../hooks/useCentralizedSearch';
-import { orEmpty, stripedTableRowSx } from '../shared/tableTheme.jsx';
+import { orEmpty } from '../shared/tableTheme.jsx';
+import { ResponsiveTable } from '../shared/ResponsiveTable';
+import Bdi from '../../i18n/Bdi.jsx';
 import MetaTagChips from '../common/MetaTagChips/MetaTagChips';
 import { formatDate } from '../../utils/dateUtils';
 import { getEnabledChipProps } from '../../utils/chipStyles';
@@ -70,6 +64,7 @@ import './Extensions.css';
  * Main component for extensions management with sidebar list and wide table
  */
 const Extensions = () => {
+  const { t } = useTranslation();
   const { can } = usePermissions();
   const canWrite = can('extensions', 'write');
   const canEditEnv = can('environments', 'write');
@@ -334,6 +329,147 @@ const Extensions = () => {
     fetchExtensions();
   }, [showSuccess, fetchExtensions]);
 
+  // The table as data rather than markup — see shared/ResponsiveTable/columns.js.
+  // `priority` is what a phone card shows: the extension number is what you
+  // scan for, its name is the subtitle, everything else is secondary detail.
+  const columns = useMemo(() => [
+    {
+      id: 'created_at', label: t('common:label.createdAt'), priority: 'meta', sortable: true,
+      render: (row) => <Typography variant="body2">{formatDate(row.created_at)}</Typography>,
+    },
+    {
+      id: 'updated_at', label: t('common:label.updatedAt'), priority: 'meta', sortable: true,
+      render: (row) => <Typography variant="body2">{formatDate(row.updated_at)}</Typography>,
+    },
+    {
+      // Icon header, so the label is carried by the tooltip instead.
+      id: 'registration', label: (
+        <Tooltip title={t('extensions:table.registration')}><RssFeedIcon fontSize="small" /></Tooltip>
+      ),
+      align: 'center', width: 50, priority: 'meta',
+      render: (row) => {
+        const isRegistered = row.switch === true || registeredUsers.has(row.username);
+        // The API attaches switch-side detail (user agent, contact, IP, expiry)
+        // to each row specifically for this tooltip — see registration_info()
+        // in endpoints/extensions.rb — and it was being thrown away for a
+        // static string.
+        const reg = row.registration;
+        const detail = reg && [
+          [t('extensions:registration.userAgent'), reg.user_agent],
+          [t('extensions:registration.contact'), reg.contact],
+          [t('extensions:registration.ip'), [reg.network_ip, reg.network_port].filter(Boolean).join(':')],
+          [t('extensions:registration.proto'), reg.network_proto],
+          [t('extensions:registration.host'), reg.hostname],
+          [t('extensions:registration.expires'), reg.expires],
+        ].filter(([, v]) => v);
+        return (
+          <Tooltip
+            title={
+              !isRegistered ? t('extensions:registration.offline')
+                : detail && detail.length ? (
+                  <Box sx={{ py: 0.25 }}>
+                    <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, mb: 0.25 }}>
+                      {t('extensions:registration.online')}
+                    </Typography>
+                    {detail.map(([label, value]) => (
+                      <Typography key={label} sx={{ fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
+                        {/* Bdi: contacts, IPs and ports are LTR identifiers
+                            whose punctuation would otherwise be dragged to the
+                            wrong end inside Hebrew text. */}
+                        {label}: <Bdi>{value}</Bdi>
+                      </Typography>
+                    ))}
+                  </Box>
+                ) : t('extensions:registration.online')
+            }
+          >
+            <RssFeedIcon
+              fontSize="small"
+              sx={{ color: isRegistered ? '#29AB87' : '#ccc', cursor: 'default' }}
+            />
+          </Tooltip>
+        );
+      },
+    },
+    {
+      id: 'enabled', label: t('common:label.enabled'), align: 'center', priority: 'meta', sortable: true,
+      render: (row) => <Chip {...getEnabledChipProps(row.enabled)} />,
+    },
+    {
+      // The SIP username — the thing you look for, so it leads the card.
+      id: 'username', label: t('extensions:table.device'), priority: 'primary', sortable: true,
+      render: (row) => (
+        <Typography variant="body2" fontWeight={600}><Bdi>{orEmpty(row.username)}</Bdi></Typography>
+      ),
+    },
+    {
+      id: 'name', label: t('common:label.name'), priority: 'secondary', sortable: true,
+      render: (row) => <Typography variant="body2">{orEmpty(row.name)}</Typography>,
+    },
+    {
+      id: 'environment', label: t('common:label.environment'), priority: 'meta',
+      render: (row) => (row.environment?.uuid && canEditEnv ? (
+        <Tooltip title={t('extensions:action.editApplication')} placement="top-start">
+          <Typography
+            variant="body2"
+            onClick={(e) => { e.stopPropagation(); handleEnvEdit(row.environment); }}
+            sx={{ cursor: 'pointer', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
+          >
+            {orEmpty(row.environment.name)}
+          </Typography>
+        </Tooltip>
+      ) : (
+        <Typography variant="body2">{orEmpty(row.environment?.name)}</Typography>
+      )),
+    },
+    {
+      id: 'meta', label: t('extensions:table.tags'), priority: 'meta',
+      render: (row) => <MetaTagChips meta={row.meta} />,
+    },
+    {
+      id: 'actions', label: t('common:label.actions'), align: 'center', priority: 'action',
+      render: (row) => (
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+          <Tooltip title={t('extensions:action.webrtc')}>
+            <IconButton data-testid="webrtc-extension-button" size="small"
+              onClick={() => handleOpenWebRTC(row)} disabled={loading} color="primary">
+              <PhoneIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t('extensions:action.click2call')}>
+            <IconButton data-testid="click2call-extension-button" size="small"
+              onClick={() => handleOpenClick2Call(row)} disabled={loading} color="success">
+              <CallIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={t('extensions:action.qrCode')}>
+            <IconButton data-testid="qrcode-extension-button" size="small"
+              onClick={() => handleOpenQRCode(row)} disabled={loading}>
+              <QrCodeIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {canWrite && (
+            <Tooltip title={t('extensions:action.edit')}>
+              <IconButton data-testid="edit-extension-button" size="small"
+                onClick={() => handleOpenDialog(row)} disabled={loading}>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {canWrite && (
+            <Tooltip title={t('extensions:action.delete')}>
+              <IconButton data-testid="delete-extension-button" size="small"
+                onClick={() => handleOpenDeleteDialog(row)} disabled={loading} color="error">
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      ),
+    },
+  ], [t, registeredUsers, canEditEnv, canWrite, loading, handleEnvEdit,
+      handleOpenWebRTC, handleOpenClick2Call, handleOpenQRCode, handleOpenDialog, handleOpenDeleteDialog]);
+
   return (
     <Box
       className="extensions-container"
@@ -417,271 +553,28 @@ const Extensions = () => {
             minHeight: 0
           }}
         >
-          {/* Extensions Table */}
+          {/* One ResponsiveTable in place of ~280 lines of hand-rolled
+              TableHead/TableBody. Desktop renders what it always did; a phone
+              gets cards built from each column's `priority`. */}
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-            <TableContainer>
-              <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'created_at'}
-                      direction={sortBy === 'created_at' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('created_at')}
-                    >
-                      Created At
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'updated_at'}
-                      direction={sortBy === 'updated_at' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('updated_at')}
-                    >
-                      Updated At
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell align="center" sx={{ width: 50 }}>
-                    <Tooltip title="SIP Registration Status">
-                      <RssFeedIcon fontSize="small" />
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell align="center">
-                    <TableSortLabel
-                      active={sortBy === 'enabled'}
-                      direction={sortBy === 'enabled' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('enabled')}
-                    >
-                      Enabled
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'username'}
-                      direction={sortBy === 'username' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('username')}
-                    >
-                      Device
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'name'}
-                      direction={sortBy === 'name' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('name')}
-                    >
-                      Name
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>Application</TableCell>
-                  <TableCell>Tags</TableCell>
-                  <TableCell align="center">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading && extensions.length === 0 ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {Array.from({ length: 9 }).map((__, j) => (
-                        <TableCell key={j}><Skeleton height={20} /></TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : extensions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No devices found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  extensions.map((extension) => {
-                    const extensionId = extension.id || extension.uuid;
-                    const isSelected = selectedExtensionId === extensionId;
-
-                    return (
-                      <TableRow
-                        key={extensionId}
-                        hover
-                        selected={isSelected}
-                        sx={{
-                          ...stripedTableRowSx,
-                          cursor: 'pointer',
-                          '&.Mui-selected': {
-                            bgcolor: '#e3f2fd !important'
-                          }
-                        }}
-                        onClick={() => handleSelectExtension(extensionId)}
-                      >
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatDate(extension.created_at)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatDate(extension.updated_at)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          {(() => {
-                            const isRegistered = extension.switch === true || registeredUsers.has(extension.username);
-                            // The API attaches switch-side detail (user agent, contact,
-                            // IP, expiry) to each row specifically for this tooltip —
-                            // see registration_info() in endpoints/extensions.rb — and
-                            // it was being thrown away for a static string.
-                            const reg = extension.registration;
-                            const detail = reg && [
-                              ['User agent', reg.user_agent],
-                              ['Contact', reg.contact],
-                              ['IP', [reg.network_ip, reg.network_port].filter(Boolean).join(':')],
-                              ['Proto', reg.network_proto],
-                              ['Host', reg.hostname],
-                              ['Expires', reg.expires],
-                            ].filter(([, v]) => v);
-                            return (
-                              <Tooltip
-                                title={
-                                  !isRegistered ? 'Not Registered (Offline)'
-                                    : detail && detail.length ? (
-                                      <Box sx={{ py: 0.25 }}>
-                                        <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, mb: 0.25 }}>
-                                          Registered (Online)
-                                        </Typography>
-                                        {detail.map(([label, value]) => (
-                                          <Typography key={label} sx={{ fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
-                                            {label}: {value}
-                                          </Typography>
-                                        ))}
-                                      </Box>
-                                    ) : 'Registered (Online)'
-                                }
-                              >
-                                <RssFeedIcon
-                                  fontSize="small"
-                                  sx={{
-                                    color: isRegistered ? '#29AB87' : '#ccc',
-                                    cursor: 'default'
-                                  }}
-                                />
-                              </Tooltip>
-                            );
-                          })()}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip {...getEnabledChipProps(extension.enabled)} />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={600}>
-                            {orEmpty(extension.username)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {orEmpty(extension.name)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {/* Application name links to the application edit dialog */}
-                          {extension.environment?.uuid && canEditEnv ? (
-                            <Tooltip title="Edit application" placement="top-start">
-                              <Typography
-                                variant="body2"
-                                onClick={(e) => { e.stopPropagation(); handleEnvEdit(extension.environment); }}
-                                sx={{ cursor: 'pointer', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
-                              >
-                                {orEmpty(extension.environment.name)}
-                              </Typography>
-                            </Tooltip>
-                          ) : (
-                            <Typography variant="body2">
-                              {orEmpty(extension.environment?.name)}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <MetaTagChips meta={extension.meta} />
-                        </TableCell>
-                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                            <Tooltip title="Open WebRTC">
-                              <IconButton
-                                data-testid="webrtc-extension-button"
-                                size="small"
-                                onClick={() => handleOpenWebRTC(extension)}
-                                disabled={loading}
-                                color="primary"
-                              >
-                                <PhoneIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Click to Call">
-                              <IconButton
-                                data-testid="click2call-extension-button"
-                                size="small"
-                                onClick={() => handleOpenClick2Call(extension)}
-                                disabled={loading}
-                                color="success"
-                              >
-                                <CallIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Show QR Code">
-                              <IconButton
-                                data-testid="qrcode-extension-button"
-                                size="small"
-                                onClick={() => handleOpenQRCode(extension)}
-                                disabled={loading}
-                              >
-                                <QrCodeIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            {canWrite && (
-                              <Tooltip title="Edit device">
-                                <IconButton
-                                  data-testid="edit-extension-button"
-                                  size="small"
-                                  onClick={() => handleOpenDialog(extension)}
-                                  disabled={loading}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {canWrite && (
-                              <Tooltip title="Delete device">
-                                <IconButton
-                                  data-testid="delete-extension-button"
-                                  size="small"
-                                  onClick={() => handleOpenDeleteDialog(extension)}
-                                  disabled={loading}
-                                  color="error"
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-            {/* Pagination */}
-            <TablePagination
-              component="div"
+            <ResponsiveTable
+              data-testid="extensions-table"
+              columns={columns}
+              rows={extensions}
+              getRowId={(row) => row.id || row.uuid}
+              onRowClick={(row) => handleSelectExtension(row.id || row.uuid)}
+              selectedRowId={selectedExtensionId}
+              loading={loading}
+              skeletonRows={8}
+              emptyMessage={t('extensions:empty')}
+              sortBy={sortBy}
+              sortDirection={sortOrder}
+              onSort={handleSortChange}
               count={totalCount}
               page={page}
               onPageChange={handlePageChange}
               rowsPerPage={rowsPerPage}
               onRowsPerPageChange={handleRowsPerPageChange}
-              rowsPerPageOptions={[10, 25, 50, 100]}
-              sx={{ borderTop: '1px solid var(--mui-palette-divider)' }}
             />
           </Box>
         </Paper>

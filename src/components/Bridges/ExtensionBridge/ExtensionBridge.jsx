@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -21,6 +20,9 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
+// Full-screen on a phone; identical above `sm`. A form dialog is the
+// worst offender at 375px — side-by-side fields with fixed widths.
+import { ResponsiveDialog as Dialog } from '../../ui';
 import {
   Phone as PhoneIcon,
   Close as CloseIcon,

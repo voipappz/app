@@ -1,0 +1,27 @@
+{
+  "title": "שלוחות",
+  "empty": "לא נמצאו שלוחות",
+  "table": {
+    "device": "שלוחה",
+    "tags": "תגיות",
+    "registration": "מצב רישום SIP"
+  },
+  "registration": {
+    "online": "רשום (מחובר)",
+    "offline": "לא רשום (לא מחובר)",
+    "userAgent": "סוכן משתמש",
+    "contact": "כתובת",
+    "ip": "כתובת IP",
+    "proto": "פרוטוקול",
+    "host": "מאחסן",
+    "expires": "תוקף"
+  },
+  "action": {
+    "webrtc": "פתח WebRTC",
+    "click2call": "חיוג בלחיצה",
+    "qrCode": "הצג קוד QR",
+    "edit": "ערוך שלוחה",
+    "delete": "מחק שלוחה",
+    "editApplication": "ערוך יישום"
+  }
+}
