@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
  * Tests run serially with only 2 forget_password calls to stay within limits.
  */
 
-const apiBaseUrl = process.env.VITE_API_BASE_URL || 'https://cloud.voipappz.io';
+const apiBaseUrl = process.env.VITE_API_BASE_URL!;
 const testEmail = process.env.TEST_EMAIL || '';
 const testPassword = process.env.TEST_PASSWORD || '';
 const testOtp = process.env.VA_TEST_OTP || '';

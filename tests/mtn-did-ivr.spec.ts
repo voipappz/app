@@ -13,7 +13,7 @@ import { test, expect, request as playwrightRequest } from '@playwright/test';
  *   6. Cleanup: delete DID, then IVR
  */
 
-const apiBaseUrl = process.env.VITE_API_BASE_URL || 'https://cloud.voipappz.io';
+const apiBaseUrl = process.env.VITE_API_BASE_URL!;
 const email = process.env.TEST_EMAIL || '';
 const password = process.env.TEST_PASSWORD || '';
 const testOtp = process.env.VA_TEST_OTP || '';

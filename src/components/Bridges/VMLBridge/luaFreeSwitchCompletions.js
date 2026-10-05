@@ -833,7 +833,7 @@ export const snippetCategories = [
       { label: 'Park', snippet: 'session:execute("park")\n', tip: 'Park the call (hold)' },
       { label: 'router_vml call', snippet: 'router_vml("${1:bridge_type}", "${2:bridge_uuid}")\n', tip: 'Route via API router' },
       { label: 'process_route call', snippet: '_r = {}\n_r["type"] = ${1:bridge_type}\n_r["route"] = router(${1:bridge_type}, ${2:bridge_uuid})\nprocess_route(_r)\n', tip: 'Build route object and process' },
-      { label: 'Playback URL', snippet: 'session:execute("playback", "${1:https://cloud.voipappz.io/tmp/}" .. ${2:file_uuid} .. ".wav")\n', tip: 'Play audio from URL' }
+      { label: 'Playback URL', snippet: 'session:execute("playback", "${1:https://<api-host>/tmp/}" .. ${2:file_uuid} .. ".wav")\n', tip: 'Play audio from URL' }
     ]
   },
   {
