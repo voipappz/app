@@ -9,6 +9,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import { useAuth } from '../../../context/AuthContext';
 import './SidebarCustomerSwitcher.css';
@@ -27,13 +28,16 @@ const openCustomer = (mode, customer) => window.dispatchEvent(
   new CustomEvent('openCustomerEdit', { detail: { mode, customer } })
 );
 
-// The wizard (guided setup from a schema) is the top bar's modal too.
+// The wizard (guided setup from a schema) and Settings are the top bar's
+// windows too.
 const openWizard = () => window.dispatchEvent(new Event('openWizardModal'));
+const openSettings = () => window.dispatchEvent(new Event('openSettingsTool'));
 
 /**
- * The customer, as a tile at the top of the sidebar. `root` only decides how
- * many customers an account sees: with several the tile opens the switcher;
- * with one there is nothing to switch to, so it opens that customer's settings.
+ * The customer, as a tile at the top of the sidebar. It opens the customer
+ * menu: the customers to switch between (`root` only decides how many an
+ * account sees), then what belongs to the customer — manage it, the wizard,
+ * Settings. With one customer the list is that one; the actions are the point.
  */
 const SidebarCustomerSwitcher = () => {
   const { customers, selectedCustomer, selectCustomer, isRoot } = useCustomerEnvironment();
@@ -71,10 +75,7 @@ const SidebarCustomerSwitcher = () => {
     if (c?.uuid && c.uuid !== selectedCustomer?.uuid) await selectCustomer(c);
   };
 
-  const handleTrigger = () => {
-    if (switchable) setOpen(true);
-    else if (canEdit(current)) openCustomer('edit', current);
-  };
+  const handleTrigger = () => setOpen(true);
 
   const act = (e, mode, customer) => { e.stopPropagation(); close(); openCustomer(mode, customer); };
 
@@ -88,8 +89,8 @@ const SidebarCustomerSwitcher = () => {
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTrigger(); } }}
           role="button"
           tabIndex={0}
-          aria-label={switchable ? 'Switch customer' : 'Manage customer'}
-          aria-haspopup={switchable ? 'dialog' : undefined}
+          aria-label={switchable ? 'Switch customer' : 'Customer menu'}
+          aria-haspopup="dialog"
           data-testid="sidebar-customer-switcher"
         >
           <Box className="scs-avatar">{initial(currentName)}</Box>
@@ -166,6 +167,9 @@ const SidebarCustomerSwitcher = () => {
           )}
           <Box className="scs-action" role="button" onClick={(e) => { e.stopPropagation(); close(); openWizard(); }}>
             <AutoFixHighIcon className="scs-action-ic" /> Wizard
+          </Box>
+          <Box className="scs-action" role="button" onClick={(e) => { e.stopPropagation(); close(); openSettings(); }}>
+            <TuneOutlinedIcon className="scs-action-ic" /> Settings
           </Box>
         </Box>
       </Popover>

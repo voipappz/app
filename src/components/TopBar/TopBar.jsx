@@ -58,7 +58,7 @@ import CodeIcon from '@mui/icons-material/Code';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import SettingsIcon from '@mui/icons-material/Settings';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -778,6 +778,13 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
     return () => window.removeEventListener('openWizardModal', handler);
   }, []);
 
+  // Settings opens from the customer menu in the sidebar (openSettingsTool).
+  useEffect(() => {
+    const handler = () => setActiveTool('/settings');
+    window.addEventListener('openSettingsTool', handler);
+    return () => window.removeEventListener('openSettingsTool', handler);
+  }, []);
+
   const handleNotificationClick = () => setNotificationDrawerOpen(true);
 
   const handleNotificationDrawerClose = () => {
@@ -943,19 +950,23 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               </IconButton>
             </Tooltip>
           ))}
+          </>
+          )}
+
+          {/* Help — the support widget (answers, articles, "Get in touch").
+              It has no floating launcher of its own any more. Settings moved
+              to the customer menu in the sidebar. An account's. */}
           {!userSession && (
-            <Tooltip title="Settings">
+            <Tooltip title="Help">
               <IconButton
                 size="small"
-                aria-label="Settings"
-                onClick={() => setActiveTool('/settings')}
+                aria-label="Help"
+                onClick={openZendeskWidget}
                 sx={{ color: 'var(--theme-text-secondary)', '&:hover': { backgroundColor: 'var(--theme-hover)' } }}
               >
-                <SettingsIcon fontSize="small" />
+                <HelpOutlineIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-          )}
-          </>
           )}
 
           {/* App Health — one dot, coloured by the overall level (the API's own

@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 
-// voipappz Zendesk Web Widget — the same embed as voipappz.com. It floats on
-// the right and carries Zendesk's own answer bot, Help Center articles and
-// "Get in touch" ticket form, so tickets opened here land in voipappz.zendesk.com.
+// voipappz Zendesk Web Widget — the same embed as voipappz.com. It carries
+// Zendesk's own answer bot, Help Center articles and "Get in touch" ticket
+// form, so tickets opened here land in voipappz.zendesk.com. Its floating
+// launcher is kept hidden: the top bar's Help button opens it, and it hides
+// again when closed, so nothing sits over the screen's bottom corner.
 const ZENDESK_HOST = 'voipappz.zendesk.com';
 
 /* eslint-disable */
@@ -20,16 +22,17 @@ const zE = (...args) => {
   if (typeof window.zE === 'function') window.zE(...args);
 };
 
-/** Opens the widget (e.g. from a sidebar button). */
+/** Opens the widget (the top bar's Help button). */
 export const openZendeskWidget = () => {
   zE('webWidget', 'show');
   zE('webWidget', 'open');
 };
 
 /**
- * Shows the widget while `enabled`, hides it otherwise. The script is
- * injected once on first enable and stays loaded; the signed-in admin's
- * name and email are prefilled so a ticket is attributed to them.
+ * Loads the widget while `enabled`, with its launcher hidden; openZendeskWidget
+ * shows it. The script is injected once on first enable and stays loaded; the
+ * signed-in admin's name and email are prefilled so a ticket is attributed to
+ * them.
  *
  * Tickets from the widget get the same `customer:<uuid>` tag the API puts on
  * tickets it creates (voipappz-api Mediators::Zendesk::CreateTicket), which is
@@ -48,12 +51,14 @@ export const useZendeskWidget = (enabled, user, customerUuid) => {
           window.dispatchEvent(new Event(ZENDESK_TICKET_SUBMITTED));
         }
       });
+      // Closed means gone: without this the launcher would stay floating.
+      zE('webWidget:on', 'close', () => zE('webWidget', 'hide'));
     }
     // The widget is an iframe: it cannot read the app's CSS tokens, so it is
     // handed the accent's resolved value.
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim();
     if (accent) zE('webWidget', 'updateSettings', { webWidget: { color: { theme: accent } } });
-    zE('webWidget', 'show');
+    zE('webWidget', 'hide');
   }, [enabled]);
 
   useEffect(() => {
