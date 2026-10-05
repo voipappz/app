@@ -15,17 +15,9 @@ make setup          # dependencies, then asks for the API and your login, and si
 make dev            # http://localhost:3000
 ```
 
-**Windows (PowerShell):** no make or WSL needed.
-
-```powershell
-git clone https://github.com/voipappz/app.git; cd app
-powershell -ExecutionPolicy Bypass -File .\setup.ps1   # Node 22 via winget if missing, dependencies, login
-npm start                                              # checks the login, then http://localhost:3000
-```
-
-`npm run onboard` checks or renews the login on its own; `npm run tenant -- <name> <email>` creates a tenant (root login). WSL 2 also works: in
-Ubuntu, `sudo apt install -y make git curl`, clone inside `~/`, and use the
-make commands above.
+**Windows:** use WSL 2. In Ubuntu: `sudo apt install -y make git curl`, clone
+inside `~/`, then the commands above (or the Docker ones below, with Docker
+Desktop's WSL integration on).
 
 **Docker (no Node on the host):** `make setup DOCKER=1`, `make dev DOCKER=1`,
 `make test DOCKER=1`. The login wizard runs in a `node:22-alpine` container too.
