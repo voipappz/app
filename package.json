@@ -6,6 +6,7 @@
   "scripts": {
     "onboard": "node bin/onboard.mjs",
     "start": "node bin/onboard.mjs && vite --port 3000",
+    "tenant": "node bin/onboard.mjs && node bin/tenant.mjs",
     "dev": "vite --port 3000",
     "build": "vite build",
     "lint": "eslint .",

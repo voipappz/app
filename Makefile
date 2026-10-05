@@ -50,7 +50,7 @@ LOGIN = $(if $(DOCKER),docker run --rm $$([ -t 0 ] && echo -it) -u "$$(id -u):$$
           -e TOKEN="$(TOKEN)" -e PORT="$(PORT)" node:22-alpine node bin/onboard.mjs,\
           TOKEN="$(TOKEN)" PORT="$(PORT)" $(NPM) exec -- node bin/onboard.mjs)
 
-.PHONY: help setup onboard dev test check deploy
+.PHONY: help setup onboard tenant dev test check deploy
 .DEFAULT_GOAL := help
 
 help: ## Show this help
@@ -75,6 +75,13 @@ setup: ## [DOCKER=1] Node, dependencies and .env, then asks for your login and s
 
 onboard: ## [TOKEN=1] Check the login token for the API; asks for the login if missing
 	@$(LOGIN)
+
+# Through the API with your JWT, so it works from any machine; needs a root
+# login. voipappz-api's own `make tenant` does the same on the API host.
+tenant: ## [CUSTOMER=x EMAIL=x PASSWORD=x] Create a customer with its Account and User logins
+	@$(LOGIN) >/dev/null
+	@$(if $(DOCKER),docker run --rm -u "$$(id -u):$$(id -g)" -v "$(CURDIR):/app" -w /app -e CUSTOMER -e EMAIL -e PASSWORD -e PORT node:22-alpine node bin/tenant.mjs,\
+	  CUSTOMER="$(CUSTOMER)" EMAIL="$(EMAIL)" PASSWORD="$(PASSWORD)" PORT="$(PORT)" $(NPM) exec -- node bin/tenant.mjs)
 
 dev: ## [PORT=3000 DOCKER=1] Check the login token, then start the dev server
 	@$(LOGIN)
