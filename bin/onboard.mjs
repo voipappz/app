@@ -4,7 +4,7 @@
 // otherwise. When a value is missing and a person is at the terminal, asks for
 // it, and saves the answers to .env only once the login works.
 // Values come from the environment first (CI), then from .env.
-// TOKEN=1 prints the token. Node only, so it runs the same on Windows,
+// TOKEN=1 prints the token. Node only, so it runs the same on
 // macOS, Linux and in the dev container.
 import fs from 'node:fs';
 import readline from 'node:readline';
@@ -35,7 +35,7 @@ const put = (key, value) => {
 // customer with an Account login (admin console) and a User login (portal).
 const tenantHint = (lead) => {
   console.log(`${lead} Someone with a root login creates a tenant for you:`);
-  console.log('    make tenant CUSTOMER=<name> EMAIL=<you@company.com>     (Windows: npm run tenant -- <name> <email>)');
+  console.log('    make tenant CUSTOMER=<name> EMAIL=<you@company.com>');
   console.log('  It prints an Account login (admin console) and a User login (user portal).');
 };
 
@@ -104,7 +104,7 @@ const done = (access) => {
     console.log();
     console.log(`  Admin console  http://localhost:${port}/admin   (Account login: ${email})`);
     console.log(`  User portal    http://localhost:${port}/        (User login, created in the console or by make tenant)`);
-    console.log('  Start it with  make dev   (Windows: npm start)');
+    console.log('  Start it with  make dev');
   }
   process.exit(0);
 };
