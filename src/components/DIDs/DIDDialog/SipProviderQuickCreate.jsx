@@ -66,7 +66,7 @@ const SipProviderQuickCreate = ({ open, onClose, onCreated }) => {
           error={!!errors.name} helperText={errors.name || 'e.g. PBX2 or Carrier IL'} />
         <TextField label="Address" value={form.address} onChange={set('address')} required
           error={!!errors.address} helperText={errors.address || 'IP or host the call is sent to'}
-          placeholder="192.168.137.20" />
+          placeholder="192.0.2.10" />
         <TextField label="Port" value={form.port} onChange={set('port')}
           error={!!errors.port} helperText={errors.port || 'SIP port, 5060 by default'}
           inputProps={{ inputMode: 'numeric' }} />

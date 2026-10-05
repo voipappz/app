@@ -18,7 +18,7 @@ import { testList } from './crud-helpers';
 test.describe('Customers', () => {
   test.setTimeout(process.env.CI ? 90000 : 30000);
 
-  const apiBaseUrl = process.env.VITE_API_BASE_URL || 'https://cloud.voipappz.io';
+  const apiBaseUrl = process.env.VITE_API_BASE_URL!;
   const rootEmail = process.env.VA_ROOT_EMAIL;
   const rootPassword = process.env.VA_ROOT_PASSWORD;
   const basicAuth =
