@@ -117,6 +117,33 @@ describe('creating a VML', () => {
     expect(update([])).toEqual([{ key: 'template_uuid', value: 't-bot' }]);
   });
 
+  it("offers the template's tags, and keeps template_uuid for a type that owns it", async () => {
+    vml.vmlContent = '';
+    vml.setMetaFields.mockClear();
+    templatesApi.getVmlTemplate.mockResolvedValue({ uuid: 't-conf', text: 'local vml = ...', vars: { prompt_enter_pin: 'Prompt', tries: 'Tries' } });
+    render(<VMLBridge open onClose={() => {}} onSave={() => {}} />);
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('webhook'));
+    await waitFor(() => expect(vml.setMetaFields).toHaveBeenCalled());
+    let update = vml.setMetaFields.mock.calls.at(-1)[0];
+    expect(update([{ key: 'tries', value: '5' }])).toEqual([
+      { key: 'tries', value: '5' },
+      { key: 'prompt_enter_pin', value: '' },
+      { key: 'template_uuid', value: 't-conf' },
+    ]);
+
+    vml.setMetaFields.mockClear();
+    templatesApi.getVmlTemplate.mockResolvedValue({ uuid: 't-sms', text: 'local vml = ...', vars: { template_uuid: 'Message template' } });
+    fireEvent.mouseDown(screen.getAllByRole('combobox')[0]);
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('eval'));
+    await waitFor(() => expect(vml.setMetaFields).toHaveBeenCalled());
+    update = vml.setMetaFields.mock.calls.at(-1)[0];
+    expect(update([{ key: 'prompt_enter_pin', value: '' }, { key: 'tries', value: '5' }, { key: 'template_uuid', value: 't-conf' }])).toEqual([
+      { key: 'tries', value: '5' },
+      { key: 'template_uuid', value: '' },
+    ]);
+  });
+
   it('leaves what someone already wrote alone', async () => {
     vml.vmlContent = '-- my own script';
     templatesApi.getVmlTemplate.mockClear();
