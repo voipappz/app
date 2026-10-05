@@ -255,11 +255,6 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
 
   const hasExtension = !!user?.extension?.uuid;
 
-  const getLoginUrl = () => {
-    // Display/enable only — the real phone open mints a short-lived token.
-    return user?.extension?.login_address || (hasExtension ? `/tasks/webrtc?extension_uuid=${user.extension.uuid}` : null);
-  };
-
   // QR is now token-gated (it expires); mint a token, then open the dialog
   // with a tokenized image URL.
   const handleOpenQrDialog = async () => {
@@ -730,7 +725,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                               variant="outlined"
                               startIcon={<QrCode2 />}
                               onClick={handleOpenQrDialog}
-                              disabled={!getLoginUrl()}
+                              disabled={!hasExtension}
                               sx={{ textTransform: 'none', minWidth: 150 }}
                             >
                               Device QR
@@ -1028,13 +1023,6 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   Failed to load QR code
                 </Typography>
               </Box>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ mt: 2, textAlign: 'center', wordBreak: 'break-all', maxWidth: 280 }}
-              >
-                {getLoginUrl()}
-              </Typography>
             </>
           )}
         </DialogContent>
