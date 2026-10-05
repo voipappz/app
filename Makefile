@@ -64,14 +64,15 @@ help: ## Show this help
 # ONE command from a fresh clone to a machine that can run the app and the
 # suite. Idempotent, so it is also what to run when you do not know the state.
 # .env is never overwritten: it holds the only copy of your credentials.
-setup: ## [DOCKER=1] Everything a fresh clone needs: node, .env, dependencies, browser
+setup: ## [DOCKER=1] Everything a fresh clone needs, then asks for your login and signs in
 	@if [ -z "$(DOCKER)" ]; then bin/dev-host-tools.sh; fi
 	@[ -f .env ] || { cp .env.example .env; echo "created .env from .env.example"; }
 	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app npm ci; else $(NPM) ci; fi
 	@if [ -z "$(DOCKER)" ]; then $(NPM) exec -- playwright install $(BROWSER) --with-deps; fi
-	@echo; echo "Ready. Put TEST_EMAIL and TEST_PASSWORD in .env, then:  make onboard"
+	@$(LOGIN)
+	@echo; echo "Ready:  make dev"
 
-onboard: ## [TOKEN=1] Make sure there is a valid login token for the API
+onboard: ## [TOKEN=1] Check the login token for the API; asks for the login if missing
 	@$(LOGIN)
 
 dev: ## [PORT=3000 DOCKER=1] Check the login token, then start the dev server
