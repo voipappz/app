@@ -15,6 +15,14 @@ export const templatesApi = {
     return apiService.get(url, {}, 'fetching templates', false);
   },
 
+  // The customer's template for a VML type — where a new VML of that type
+  // starts (GET /api/templates/vml/:type; created from the default the first
+  // time, then edited like any template).
+  getVmlTemplate: async (vmlType, environmentUuid) => {
+    const qs = new URLSearchParams({ environment_uuid: environmentUuid || '' });
+    return apiService.get(`/api/templates/vml/${encodeURIComponent(vmlType)}?${qs}`, {}, `fetching ${vmlType} VML template`, false);
+  },
+
   getTemplate: async (templateId) => {
     const url = `/api/templates/${templateId}`;
     return apiService.get(url, {}, `fetching template ${templateId}`, false);
