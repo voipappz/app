@@ -102,7 +102,7 @@ import { useTickets } from '../Tickets/Tickets';
 import { openZendeskWidget } from '../../services/zendeskWidget';
 import { useApiHealth } from '../../hooks/useApiHealth';
 import { useGatusHealth } from '../../hooks/useGatusHealth';
-import { HEALTH_COLORS, checkLevel, overallHealth } from './healthLevel';
+import { HEALTH_COLORS, overallHealth } from './healthLevel';
 import GatusHealthPanel from '../Monitoring/GatusHealthPanel.jsx';
 import ApiHealthPanel from '../Monitoring/ApiHealthPanel.jsx';
 import LiveDrawer from '../Live/LiveDrawer.jsx';
@@ -135,9 +135,6 @@ import { ConfirmDialog } from '../ui';
 
 const ITEM_HEIGHT = 40; // application rows: one line — name, status, dates (id and tags in the tooltip)
 
-// The API's own dependencies as /health?verbose reports them. `process` is
-// the API itself, which the pill as a whole already stands for.
-const HEALTH_SERVICE_LABELS = { database: 'DB', redis: 'Redis', nats: 'NATS', disk: 'Disk' };
 
 // A selected-environment chip that can be dragged to reorder (drag handle =
 // the grip icon; the × still removes). Order persists into the selection.
@@ -970,9 +967,10 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </>
           )}
 
-          {/* App Health — the API's own services from /health?verbose, always
-              visible at the top: one dot per service. Click opens the
-              Monitoring screen in the tool dialog. An account's. */}
+          {/* App Health — one dot, coloured by the overall level (the API's own
+              services from /health?verbose plus node probes); the tooltip
+              names whatever is failing. Click opens the Monitoring screen in
+              the tool dialog. An account's. */}
           {!userSession && (
           <Button
             aria-label="Health"
@@ -985,29 +983,9 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               '&:hover': { backgroundColor: 'var(--theme-hover)' },
             }}
           >
-            {healthStatus.checks ? (
-              Object.entries(healthStatus.checks).filter(([key]) => key !== 'process').map(([key, check]) => {
-                const label = HEALTH_SERVICE_LABELS[key] || key;
-                const level = checkLevel(check);
-                const tip = `${label}: ${level === 'down' ? `DOWN — ${check?.error || 'check failed'}` : level === 'degraded' ? 'warning' : `healthy${check?.ms != null ? ` (${check.ms}ms)` : ''}`}`;
-                return (
-                  <Tooltip key={key} title={tip}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                      <CircleIcon sx={{ fontSize: 9, color: HEALTH_COLORS[level] }} />
-                      <Typography sx={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--theme-text-secondary)', lineHeight: 1 }}>
-                        {label}
-                      </Typography>
-                    </Box>
-                  </Tooltip>
-                );
-              })
-            ) : (
-              // No per-service detail from this API: one dot, coloured by the
-              // overall level (API + node probes).
-              <Tooltip title={`Status — ${health.reason}`}>
-                <CircleIcon data-testid="health-dot" data-level={health.level} sx={{ fontSize: 12, color: HEALTH_COLORS[health.level] }} />
-              </Tooltip>
-            )}
+            <Tooltip title={`Status — ${health.reason}`}>
+              <CircleIcon data-testid="health-dot" data-level={health.level} sx={{ fontSize: 12, color: HEALTH_COLORS[health.level] }} />
+            </Tooltip>
           </Button>
           )}
 
