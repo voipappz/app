@@ -44,6 +44,20 @@ describe('the sidebar customer switcher', () => {
     expect(opened).toEqual([{ mode: 'create', customer: null }]);
   });
 
+  it('opens the wizard from the customer menu', () => {
+    const wizard = vi.fn();
+    window.addEventListener('openWizardModal', wizard);
+    ctx = { customers: [mtn, yello], selectedCustomer: mtn, selectCustomer, isRoot: true };
+    auth = { accountCustomer: mtn };
+    render(<SidebarCustomerSwitcher />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Switch customer' }));
+    fireEvent.click(screen.getByText('Wizard'));
+
+    expect(wizard).toHaveBeenCalledTimes(1);
+    window.removeEventListener('openWizardModal', wizard);
+  });
+
   it('opens its own customer directly when there is nothing to switch to', () => {
     ctx = { customers: [mtn], selectedCustomer: mtn, selectCustomer, isRoot: false };
     auth = { accountCustomer: mtn };

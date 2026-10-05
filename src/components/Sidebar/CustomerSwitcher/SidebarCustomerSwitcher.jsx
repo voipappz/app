@@ -8,6 +8,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import { useAuth } from '../../../context/AuthContext';
 import './SidebarCustomerSwitcher.css';
@@ -25,6 +26,9 @@ const SEARCH_FROM = 8;
 const openCustomer = (mode, customer) => window.dispatchEvent(
   new CustomEvent('openCustomerEdit', { detail: { mode, customer } })
 );
+
+// The wizard (guided setup from a schema) is the top bar's modal too.
+const openWizard = () => window.dispatchEvent(new Event('openWizardModal'));
 
 /**
  * The customer, as a tile at the top of the sidebar. `root` only decides how
@@ -160,6 +164,9 @@ const SidebarCustomerSwitcher = () => {
               <SettingsOutlinedIcon className="scs-action-ic" /> Manage customer
             </Box>
           )}
+          <Box className="scs-action" role="button" onClick={(e) => { e.stopPropagation(); close(); openWizard(); }}>
+            <AutoFixHighIcon className="scs-action-ic" /> Wizard
+          </Box>
         </Box>
       </Popover>
     </>

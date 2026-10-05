@@ -44,6 +44,7 @@ import { environmentsApi } from '../../services/api/environmentsApi';
 import { useNotification } from '../../context/NotificationContext';
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import { ExtensionBridge as ExtensionDialog } from '../Bridges/ExtensionBridge/ExtensionBridge';
 import { DEVICE_CSV_HEADERS, deviceRowErrors, prepareDeviceRow, randomDeviceRows } from '../Bridges/ExtensionBridge/deviceRules';
 import ImportCSVDialog from '../common/ImportCSVDialog/ImportCSVDialog';
@@ -639,6 +640,7 @@ const Extensions = () => {
                                 </IconButton>
                               </Tooltip>
                             )}
+                            <RowEventsButton subject="extension" uuid={extension.uuid} />
                             {canWrite && (
                               <Tooltip title="Delete device">
                                 <IconButton
