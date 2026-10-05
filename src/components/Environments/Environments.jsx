@@ -31,6 +31,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ConfirmDialog } from '../ui';
 import { useEnvironments } from './Environments';
 import { usePermissions } from '../../hooks/usePermissions';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import EnvironmentDialog from './EnvironmentDialog/EnvironmentDialog';
 import { formatDate } from '../../utils/dateUtils';
@@ -312,6 +313,7 @@ const Environments = () => {
                                   </IconButton>
                                 </Tooltip>
                               )}
+                              <RowEventsButton subject="environment" uuid={env.uuid} />
                               {canWrite && (
                                 <Tooltip title="Delete application">
                                   <IconButton

@@ -47,7 +47,10 @@ export const useEvents = (initialParams) => {
   );
 
   // Author/actor filter (set by clicking AUTHOR cell)
-  const [selectedActor, setSelectedActor] = useState('');
+  // Seeded from `actor=` so an Accounts row can open on what that account did.
+  const [selectedActor, setSelectedActor] = useState(
+    () => initialUrlParams.get('actor') || ''
+  );
 
   // Level multi-select (Set of active levels; empty = show all)
   const [selectedLevels, setSelectedLevels] = useState(new Set());

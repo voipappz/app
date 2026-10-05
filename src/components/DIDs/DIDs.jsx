@@ -34,10 +34,17 @@ import {
 } from '@mui/icons-material';
 import { ConfirmDialog } from '../ui';
 import MetaTagChips from '../common/MetaTagChips/MetaTagChips';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router';
 import { useDIDs } from './DIDs';
 import { usePermissions } from '../../hooks/usePermissions';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
+import ToolDialog from '../TopBar/ToolDialog.jsx';
+import HubIcon from '@mui/icons-material/Hub';
+
+// Providers are what routes send calls to and receive them from, so the
+// Providers screen opens from here rather than from the top bar.
+const Providers = lazy(() => import('../Providers/Providers.jsx'));
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 import useCentralizedSearch from '../../hooks/useCentralizedSearch';
@@ -71,7 +78,8 @@ import './DIDs.css';
  */
 const DIDs = ({ portalMode = false }) => {
   const navigate = useNavigate();
-  const { can } = usePermissions();
+  const { can, canAccess } = usePermissions();
+  const [providersOpen, setProvidersOpen] = useState(false);
   // Portal users' ACLs carry no dids entry, so can('dids','write') is false for
   // all of them — the screen would render as a read-only table with no Add,
   // Edit, Duplicate or Delete. Portal access is granted at the route instead
@@ -354,6 +362,13 @@ const DIDs = ({ portalMode = false }) => {
             placeholder="Search by name, or use field:value (e.g. enabled:true)"
           />
         </Box>
+        {!portalMode && canAccess('providers') && (
+          <Tooltip title="Providers">
+            <IconButton size="small" aria-label="Providers" onClick={() => setProvidersOpen(true)}>
+              <HubIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         {canWrite && !portalMode && (
           <Tooltip title="Import CSV">
             <IconButton
@@ -657,6 +672,7 @@ const DIDs = ({ portalMode = false }) => {
                                 </IconButton>
                               </Tooltip>
                             )}
+                            <RowEventsButton subject="did" uuid={did.uuid} />
                             {canWrite && (
                               <Tooltip title="Delete">
                                 <IconButton
@@ -737,6 +753,16 @@ const DIDs = ({ portalMode = false }) => {
           environment={envDialogEnvironment}
           loading={envDialogLoading}
         />
+      )}
+
+      {!portalMode && (
+        <ToolDialog title="Providers" open={providersOpen} onClose={() => setProvidersOpen(false)} confirmClose>
+          <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
+            <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'auto' }}>
+              <Providers />
+            </Box>
+          </Suspense>
+        </ToolDialog>
       )}
 
       {/* Import CSV Dialog */}

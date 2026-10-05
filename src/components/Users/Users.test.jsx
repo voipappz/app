@@ -23,7 +23,7 @@ vi.mock('./Users', () => ({ useUsers: () => ({
 }) }));
 
 const canWrite = vi.fn(() => true);
-vi.mock('../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: () => canWrite() }) }));
+vi.mock('../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: () => canWrite(), canAccess: () => false }) }));
 vi.mock('../../hooks/useIsUserSession', () => ({ useIsUserSession: () => false }));
 vi.mock('../../context/NotificationContext', () => ({ useNotification: () => ({ showSuccess: vi.fn(), showError: vi.fn() }) }));
 vi.mock('../../context/GlobalSearchContext', () => ({ useGlobalSearch: () => ({ registerScreen: vi.fn(), unregisterScreen: vi.fn() }) }));

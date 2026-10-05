@@ -38,6 +38,7 @@ import { usersApi } from '../../services/api/usersApi';
 import EventsCountBadge from '../common/EventsCountBadge/EventsCountBadge.jsx';
 import { useNotification } from '../../context/NotificationContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import UserDialog from './UserDialog/UserDialog';
 import ImportCSVDialog from '../common/ImportCSVDialog/ImportCSVDialog';
@@ -511,6 +512,7 @@ const Users = () => {
                                 </IconButton>
                               </Tooltip>
                             )}
+                            <RowEventsButton subject="user" uuid={user.uuid} />
                             {canWrite && (
                               <Tooltip title="Delete user">
                                 <IconButton

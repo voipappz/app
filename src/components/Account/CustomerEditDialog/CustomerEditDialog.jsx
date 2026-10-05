@@ -21,12 +21,19 @@ import {
   AccordionDetails,
 } from '@mui/material';
 import { Close as CloseIcon, ContentCopy as ContentCopyIcon, ExpandMore as ExpandMoreIcon, Add as AddIcon } from '@mui/icons-material';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import DynamicProfileEditor from '../../common/DynamicProfileEditor/DynamicProfileEditor';
 import SchemaBuilder from '../../Appz/SchemaBuilder/SchemaBuilder';
 import { nodesApi } from '../../../services/api/nodesApi';
 import { customersApi } from '../../../services/api/customersApi';
 import { formatDate } from '../../../utils/dateUtils';
+import { usePermissions } from '../../../hooks/usePermissions';
+import ToolDialog from '../../TopBar/ToolDialog.jsx';
+
+// The Nodes screen (list, health, create / edit / delete, va.yaml import),
+// opened from the Node field: the customer is where a node is chosen, so it is
+// where nodes are managed. Writes stay root-only, as the API enforces.
+const MonitoringNodes = lazy(() => import('../../Monitoring/MonitoringNodes.jsx'));
 
 const CustomerEditDialog = ({
   open,
@@ -57,22 +64,32 @@ const CustomerEditDialog = ({
   const [apiError, setApiError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Fetch nodes when dialog opens
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
+  const { canAccess } = usePermissions();
+  const [nodesManagerOpen, setNodesManagerOpen] = useState(false);
+
+  const loadNodes = useCallback((isCancelled = () => false) => {
     setNodesLoading(true);
-    nodesApi.getNodes()
+    return nodesApi.getNodes()
       .then(response => {
-        if (!cancelled) {
+        if (!isCancelled()) {
           const list = Array.isArray(response) ? response : (response?.data || response?.items || []);
           setNodes(list);
         }
       })
-      .catch(() => { if (!cancelled) setNodes([]); })
-      .finally(() => { if (!cancelled) setNodesLoading(false); });
+      .catch(() => { if (!isCancelled()) setNodes([]); })
+      .finally(() => { if (!isCancelled()) setNodesLoading(false); });
+  }, []);
+
+  // Fetch nodes when dialog opens
+  useEffect(() => {
+    if (!open) return undefined;
+    let cancelled = false;
+    loadNodes(() => cancelled);
     return () => { cancelled = true; };
-  }, [open]);
+  }, [open, loadNodes]);
+
+  // Whatever was added, renamed or deleted in the manager shows in the select.
+  const closeNodesManager = () => { setNodesManagerOpen(false); loadNodes(); };
 
   // Both call sites hand us a row out of the customers list, which is a
   // projection — it can arrive with no profile, meta or node_uuid, and the
@@ -158,6 +175,7 @@ const CustomerEditDialog = ({
   const handleClose = () => { if (!loading) onClose(); };
 
   return (
+    <>
     <Dialog
       open={open}
       onClose={handleClose}
@@ -243,7 +261,7 @@ const CustomerEditDialog = ({
           </Grid>
 
           {/* Node selector */}
-          <Grid size={12}>
+          <Grid size={12} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
             <TextField
               select
               fullWidth
@@ -268,6 +286,16 @@ const CustomerEditDialog = ({
                 </MenuItem>
               ))}
             </TextField>
+            {canAccess('nodes') && (
+              <Button
+                variant="outlined"
+                onClick={() => setNodesManagerOpen(true)}
+                sx={{ height: 56, flexShrink: 0, textTransform: 'none' }}
+                data-testid="customer-manage-nodes"
+              >
+                Manage nodes
+              </Button>
+            )}
           </Grid>
 
           {/* Profile Editor — the customer's OWN keys only (23 fields).
@@ -342,6 +370,15 @@ const CustomerEditDialog = ({
         </Button>
       </DialogActions>
     </Dialog>
+
+    <ToolDialog title="Nodes" open={nodesManagerOpen} onClose={closeNodesManager}>
+      <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
+        <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'auto', p: 2 }}>
+          <MonitoringNodes />
+        </Box>
+      </Suspense>
+    </ToolDialog>
+    </>
   );
 };
 
