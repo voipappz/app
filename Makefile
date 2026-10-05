@@ -64,11 +64,10 @@ help: ## Show this help
 # ONE command from a fresh clone to a machine that can run the app and the
 # suite. Idempotent, so it is also what to run when you do not know the state.
 # .env is never overwritten: it holds the only copy of your credentials.
-setup: ## [DOCKER=1] Everything a fresh clone needs, then asks for your login and signs in
+setup: ## [DOCKER=1] Node, dependencies and .env, then asks for your login and signs in
 	@if [ -z "$(DOCKER)" ]; then bin/dev-host-tools.sh; fi
 	@[ -f .env ] || { cp .env.example .env; echo "created .env from .env.example"; }
 	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app npm ci; else $(NPM) ci; fi
-	@if [ -z "$(DOCKER)" ]; then $(NPM) exec -- playwright install $(BROWSER) --with-deps; fi
 	@$(LOGIN)
 	@echo; echo "Ready:  make dev"
 
@@ -84,6 +83,7 @@ test: ## [SPEC=users HEADED=1 DOCKER=1] Check the login token, then run Playwrig
 	@if [ -n "$(DOCKER)" ]; then \
 	   $(DC) run --rm -T test; \
 	 else \
+	   $(NPM) exec -- playwright install $(BROWSER) >/dev/null; \
 	   $(SERVE); \
 	   $(NPM) exec -- playwright test $(if $(SPEC),tests/$(SPEC).spec.ts,) \
 	     --project=$(BROWSER) $(if $(HEADED),--headed,--reporter=line); \
