@@ -46,7 +46,9 @@ STOP  = kill "$$(cat /tmp/vite-$(PORT).pid 2>/dev/null)" 2>/dev/null || true; rm
 
 # The login gate: a valid token for the API in .env before anything that talks
 # to it. Reuses the cached token while it is valid, signs in again otherwise.
-LOGIN = TOKEN="$(TOKEN)" PORT="$(PORT)" bin/onboard.sh
+LOGIN = $(if $(DOCKER),docker run --rm $$([ -t 0 ] && echo -it) -u "$$(id -u):$$(id -g)" -v "$(CURDIR):/app" -w /app \
+          -e TOKEN="$(TOKEN)" -e PORT="$(PORT)" node:22-alpine node bin/onboard.mjs,\
+          TOKEN="$(TOKEN)" PORT="$(PORT)" $(NPM) exec -- node bin/onboard.mjs)
 
 .PHONY: help setup onboard dev test check deploy
 .DEFAULT_GOAL := help

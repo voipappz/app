@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "onboard": "node bin/onboard.mjs",
+    "start": "node bin/onboard.mjs && vite --port 3000",
     "dev": "vite --port 3000",
     "build": "vite build",
     "lint": "eslint .",
