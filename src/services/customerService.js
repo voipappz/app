@@ -4,6 +4,7 @@
  */
 
 import { config } from '../config.js';
+import { titleForRole } from '../utils/sessionTitle';
 
 const CUSTOMER_DATA_KEY = 'customerData';
 
@@ -135,7 +136,8 @@ export function applyCustomerBranding(customerData) {
 
   const title = customerData.logo_title || customerData.name;
   if (title) {
-    document.title = `${title} | Admin`;
+    // Branding is applied only to an account (admin) session.
+    document.title = titleForRole(title, 'admin');
   }
 
   if (customerData.logo_color) {

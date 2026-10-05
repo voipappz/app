@@ -12,6 +12,8 @@ import { GlobalSearchProvider } from '../../context/GlobalSearchContext';
 import { RecentPagesProvider } from '../../context/RecentPagesContext';
 import { loadCustomerData, applyCustomerBranding, getCustomerData } from '../../services/customerService';
 import { useVersionCheck } from '../../hooks/useVersionCheck';
+import { useSessionRole } from '../../hooks/useIsUserSession';
+import { titleForRole } from '../../utils/sessionTitle';
 import useIdleTimeout from '../../hooks/useIdleTimeout';
 import { useZendeskWidget } from '../../services/zendeskWidget';
 import './Layout.css';
@@ -41,6 +43,12 @@ const Layout = ({ children }) => {
     enabled: isAuthenticated && !isLoginPage,
     onTimeout: () => { logout(); navigate('/admin'); },
   });
+
+  // The tab title leads with the signed-in side: "Admin · …" or "User · …".
+  const sessionRole = useSessionRole();
+  useEffect(() => {
+    document.title = titleForRole(document.title, isLoginPage ? null : sessionRole);
+  }, [sessionRole, isLoginPage]);
 
   // Load and apply customer branding when authenticated (once)
   useEffect(() => {

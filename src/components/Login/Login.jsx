@@ -7,8 +7,11 @@ import {
   FormControl,
   FormHelperText,
   CircularProgress,
-  Alert
+  Alert,
+  Chip,
+  Link
 } from '@mui/material';
+import { Link as RouterLink } from 'react-router';
 import { useLogin } from './Login';
 import './Login.css';
 
@@ -46,16 +49,35 @@ const Login = ({ switcher = null }) => {
     handleForgotOtpSubmit,
     handleForgotResetSubmit
   } = useLogin();
+  // The user sign-in is this host's `/`; shown as an address people recognise.
+  const userSignInAddress = `${window.location.host}/`;
 
   const renderLoginForm = () => (
     <>
-      <Typography component="h3" className="form-title">
-        Sign In
+      {/* Clients use the user sign-in at `/` and never see this page, so it can
+          say plainly that it is the admin one, and where users go instead. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1.5 }}>
+        <Typography component="h3" className="form-title form-title--inline">
+          Admin sign-in
+        </Typography>
+        <Chip label="Admin" color="primary" size="small" data-testid="admin-login-badge"
+          sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }} />
+      </Box>
+      <Typography variant="body2" className="forgot-description">
+        For account administrators.
+        <br />
+        Users sign in at{' '}
+        <Link component={RouterLink} to="/" data-testid="admin-login-user-link">{userSignInAddress}</Link>
       </Typography>
 
       {error && (
         <Alert severity="error" className="login-alert" data-testid="error-message">
           {error}
+          <Box component="span" sx={{ display: 'block', mt: 0.5 }} data-testid="admin-login-wrong-door">
+            Signing in as a user? Use{' '}
+            <Link component={RouterLink} to="/" color="inherit" sx={{ fontWeight: 600 }}>{userSignInAddress}</Link>{' '}
+            instead.
+          </Box>
         </Alert>
       )}
 
