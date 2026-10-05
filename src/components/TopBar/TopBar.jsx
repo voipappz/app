@@ -83,6 +83,7 @@ const TOOL_SCREENS = {
 // Top-right tools that are not ACL screens but still open in the tool dialog.
 const ACCOUNT_TOOLS = [{ text: 'Settings', path: '/settings' }];
 import ToolDialog from './ToolDialog.jsx';
+import { TOPBAR_SEARCH_SLOT_ID } from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 const Schema = lazy(() => import('../Appz/Schema.jsx'));
 import AccountCreateDialog from '../Account/AccountCreateDialog/AccountCreateDialog.jsx';
 import CustomerEditDialog from '../Account/CustomerEditDialog/CustomerEditDialog.jsx';
@@ -912,6 +913,14 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         </Tooltip>
         )}
         <Box sx={{ width: 8 }} />
+
+        {/* The open screen's search field docks here (CentralizedSearch portals
+            into it); its date range and filters open as a popup under it.
+            Empty on a screen with nothing to search. Phones keep it in-screen. */}
+        <Box
+          id={TOPBAR_SEARCH_SLOT_ID}
+          sx={{ flex: '1 1 0', minWidth: 0, maxWidth: 640, display: { xs: 'none', sm: 'flex' }, alignItems: 'center' }}
+        />
 
         <Tooltip title="Assistant (Ctrl+K)">
           <Button

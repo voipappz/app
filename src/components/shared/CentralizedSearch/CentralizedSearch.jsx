@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Box,
   TextField,
@@ -17,6 +18,10 @@ import {
   ListItemText,
   Menu,
   Popover,
+  Popper,
+  Paper,
+  ClickAwayListener,
+  useMediaQuery,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import SearchIcon from '@mui/icons-material/Search';
@@ -46,6 +51,24 @@ const ICON_MAP = {
   'call.created_at': <CalendarTodayIcon sx={{ fontSize: 16 }} />,
   'name': <PersonIcon sx={{ fontSize: 16 }} />,
   'email': <PersonIcon sx={{ fontSize: 16 }} />,
+};
+
+// The top bar's slot for the docked search field (rendered by TopBar).
+export const TOPBAR_SEARCH_SLOT_ID = 'topbar-search-slot';
+
+// The date range in a few characters, for the docked field: "Today", "Oct 3",
+// "Oct 1 – Oct 5".
+const rangeLabel = (range) => {
+  const [from, to] = range || [];
+  if (!from || !to) return null;
+  const a = new Date(from);
+  const b = new Date(to);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null;
+  const day = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (a.toDateString() === b.toDateString()) {
+    return a.toDateString() === new Date().toDateString() ? 'Today' : day(a);
+  }
+  return `${day(a)} – ${day(b)}`;
 };
 
 const getSegmentIcon = (segmentName) => {
@@ -620,6 +643,19 @@ const CentralizedSearch = ({
   const { token: portalToken } = useUserAuth();
   const access = adminAuthenticated ? adminAccess : (portalToken || adminAccess);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+
+  // Where this renders: docked in the top bar when it offers a slot, unless
+  // this is a phone or the screen is open inside a dialog (the bar is behind it).
+  const rootRef = useRef(null);
+  const dockRef = useRef(null);
+  const isPhone = useMediaQuery('(max-width:599.95px)');
+  const [slot, setSlot] = useState(null);
+  useLayoutEffect(() => {
+    const el = document.getElementById(TOPBAR_SEARCH_SLOT_ID);
+    const inDialog = rootRef.current?.closest('[role="dialog"]');
+    setSlot(el && !inDialog && !isPhone && !hideSearchInput ? el : null);
+  }, [isPhone, hideSearchInput]);
+  const docked = Boolean(slot);
   const [filterValues, setFilterValues] = useState({});
   const [filterNegated, setFilterNegated] = useState({});
   const [filterNumericOps, setFilterNumericOps] = useState({});
@@ -739,6 +775,7 @@ const CentralizedSearch = ({
       } else {
         onQuickSearch(e);
       }
+      if (docked) setShowFilterPanel(false);
     }
   };
 
@@ -762,23 +799,33 @@ const CentralizedSearch = ({
     setShowFilterPanel(!showFilterPanel);
   };
 
-  return (
-    <Box className="centralized-search">
-      <Box className="centralized-search-row">
-        {!hideSearchInput && <Box className="centralized-search-input">
+
+  // Docked: the search field lives in the top bar (TopBar's
+  // #topbar-search-slot), beside the application selector, and everything that
+  // refines it — date range, filters — opens as a popup under it. `showFilterPanel`
+  // is that popup's open state. The screen itself keeps only the active-filter
+  // chips. Inline (the layout below) is kept for phones, for a screen opened
+  // inside a dialog, and wherever there is no top bar.
+  const openPopup = () => { if (!showFilterPanel) toggleFilterPanel(); };
+  const dateLabel = rangeLabel(dateRange);
+
+  const searchInput = !hideSearchInput && (<Box className="centralized-search-input">
           <TextField
             placeholder={placeholder}
             value={quickSearchText}
             onChange={(e) => onQuickSearchChange(e.target.value)}
             onKeyPress={handleKeyPress}
+            onFocus={docked ? openPopup : undefined}
+            inputProps={{ onClick: docked ? openPopup : undefined }}
+            onKeyDown={docked ? (e) => { if (e.key === 'Escape') setShowFilterPanel(false); } : undefined}
             size="small"
             fullWidth
             sx={{
               '& .MuiOutlinedInput-root': {
                 backgroundColor: 'var(--theme-bg-secondary, #fff)',
-                borderRadius: showFilterPanel ? '12px 12px 0 0' : '12px',
-                height: 44,
-                fontSize: '0.9rem',
+                borderRadius: showFilterPanel && !docked ? '12px 12px 0 0' : (docked ? '8px' : '12px'),
+                height: docked ? 34 : 44,
+                fontSize: docked ? '0.8rem' : '0.9rem',
                 fontFamily: 'Rubik, sans-serif',
                 color: 'var(--theme-text-primary)',
                 boxShadow: 'var(--shadow-subtle)',
@@ -812,6 +859,16 @@ const CentralizedSearch = ({
                       <ClearIcon sx={{ fontSize: '1rem' }} />
                     </IconButton>
                   )}
+                  {docked && dateLabel && (
+                    <Button
+                      size="small"
+                      onClick={openPopup}
+                      aria-label={`Date range: ${dateLabel}`}
+                      sx={{ minWidth: 0, px: 0.75, py: 0, mr: 0.25, textTransform: 'none', fontSize: '0.7rem', whiteSpace: 'nowrap', color: 'var(--theme-text-secondary)' }}
+                    >
+                      {dateLabel}
+                    </Button>
+                  )}
                   {segments && segments.length > 0 && (
                     <Tooltip title={showFilterPanel ? 'Hide filters' : 'Show filters'}>
                       <IconButton
@@ -836,13 +893,16 @@ const CentralizedSearch = ({
               ),
             }}
           />
-        </Box>}
+        </Box>);
 
+  const datePicker = (
         <EnhancedDateRangePicker
           dateRange={dateRange}
           setDateRange={onDateRangeChange}
         />
+  );
 
+  const actions = (
         <Box className="centralized-search-actions">
           <Tooltip title="Refresh">
             <IconButton onClick={onRefresh} size="small" sx={{ color: 'var(--theme-text-secondary)' }}>
@@ -864,10 +924,9 @@ const CentralizedSearch = ({
             </Tooltip>
           )}
         </Box>
-      </Box>
+  );
 
-      {/* Inline Filter Panel */}
-      {showFilterPanel && segments && segments.length > 0 && (
+  const filterPanel = segments && segments.length > 0 && (
         <Box className="centralized-search-filter-panel">
           <Box className="centralized-search-filter-grid">
             {segments.map((segment) => {
@@ -995,13 +1054,9 @@ const CentralizedSearch = ({
             </Button>
           </Box>
         </Box>
-      )}
+      );
 
-      {/* Opt-in pill row. It REPLACES the active-chip row below rather than
-          joining it: the chip row and a screen's own counters were each
-          rendering the same filter, which is what made selecting "Answered"
-          appear twice. One filter, one element, one row. */}
-      {pillSegments.length > 0 && (
+  const pillRow = pillSegments.length > 0 && (
         <Box className="centralized-search-active-chips">
           {pillSegments.map((segment) => {
             const fieldName = segment.name || segment.field;
@@ -1052,9 +1107,9 @@ const CentralizedSearch = ({
             />
           )}
         </Box>
-      )}
+      );
 
-      {pillSegments.length === 0 && activeFilters.length > 0 && (
+  const chipRow = activeFilters.length > 0 && (
         <Box className="centralized-search-active-chips">
           {activeFilters.map((filter) => {
             const label = filter.isMeta
@@ -1101,7 +1156,59 @@ const CentralizedSearch = ({
             }}
           />
         </Box>
-      )}
+      );
+
+  if (docked) {
+    return (
+      <>
+        <Box className="centralized-search" ref={rootRef}>
+          {chipRow}
+        </Box>
+        {createPortal(
+          <ClickAwayListener onClickAway={() => setShowFilterPanel(false)}>
+            <Box className="topbar-search" ref={dockRef} data-testid="topbar-search">
+              {searchInput}
+              {actions}
+              <Popper
+                open={showFilterPanel}
+                anchorEl={dockRef.current}
+                placement="bottom-start"
+                sx={{ zIndex: (t) => t.zIndex.modal }}
+              >
+                <Paper className="topbar-search-popup" elevation={6} data-testid="topbar-search-popup">
+                  {datePicker}
+                  {pillRow}
+                  {filterPanel}
+                </Paper>
+              </Popper>
+            </Box>
+          </ClickAwayListener>,
+          slot
+        )}
+      </>
+    );
+  }
+
+  return (
+    <Box className="centralized-search" ref={rootRef}>
+      <Box className="centralized-search-row">
+        {searchInput}
+
+        {datePicker}
+
+        {actions}
+      </Box>
+
+      {/* Inline Filter Panel */}
+      {showFilterPanel && filterPanel}
+
+      {/* Opt-in pill row. It REPLACES the active-chip row below rather than
+          joining it: the chip row and a screen's own counters were each
+          rendering the same filter, which is what made selecting "Answered"
+          appear twice. One filter, one element, one row. */}
+      {pillRow}
+
+      {!pillRow && chipRow}
     </Box>
   );
 };
