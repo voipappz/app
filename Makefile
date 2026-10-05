@@ -46,7 +46,7 @@ STOP  = kill "$$(cat /tmp/vite-$(PORT).pid 2>/dev/null)" 2>/dev/null || true; rm
 
 # The login gate: a valid token for the API in .env before anything that talks
 # to it. Reuses the cached token while it is valid, signs in again otherwise.
-LOGIN = TOKEN="$(TOKEN)" bin/onboard.sh
+LOGIN = TOKEN="$(TOKEN)" PORT="$(PORT)" bin/onboard.sh
 
 .PHONY: help setup onboard dev test check deploy
 .DEFAULT_GOAL := help
