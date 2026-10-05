@@ -99,7 +99,7 @@ const Messages = () => {
   const handleQuickSearch = (e) => {
     if (e.key === 'Enter') {
       if (quickSearchText.trim()) {
-        const searchParams = { 'search[text]': quickSearchText.trim() };
+        const searchParams = { 'search[inline]': quickSearchText.trim() };
         setCurrentSearchParams(searchParams);
         fetchMessages(dateRange, searchParams);
       } else {
@@ -354,7 +354,8 @@ const Messages = () => {
             onExport={handleExport}
             quickSearchText={quickSearchText}
             onQuickSearchChange={handleQuickSearchChange}
-            placeholder="Search by name, or use field:value (e.g. enabled:true)"
+            placeholder="Search messages: number, text or ID"
+            textParam="search[inline]"
             showExclude={true}
           />
         </Box>

@@ -112,3 +112,12 @@
 .topbar-search-popup .centralized-search-active-chips {
   padding: 0;
 }
+
+/* Popup head: the date range on the left, the screen's actions on the right. */
+.topbar-search-popup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}

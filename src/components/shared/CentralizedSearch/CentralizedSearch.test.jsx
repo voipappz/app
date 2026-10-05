@@ -45,6 +45,8 @@ describe('CentralizedSearch docked in the top bar', () => {
     const popup = screen.getByTestId('topbar-search-popup');
     expect(popup.contains(screen.getByTestId('date-picker'))).toBe(true);
     expect(popup.textContent).toContain('Caller');
+    // Refresh and the screen's other actions live in the popup, not in the bar.
+    expect(popup.contains(screen.getByRole('button', { name: 'Refresh' }))).toBe(true);
   });
 
   it("searches on Enter with the screen's text param and closes the popup", () => {
