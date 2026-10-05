@@ -23,7 +23,7 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1   # Node 22 via winget if m
 npm start                                              # checks the login, then http://localhost:3000
 ```
 
-`npm run onboard` checks or renews the login on its own. WSL 2 also works: in
+`npm run onboard` checks or renews the login on its own; `npm run tenant -- <name> <email>` creates a tenant (root login). WSL 2 also works: in
 Ubuntu, `sudo apt install -y make git curl`, clone inside `~/`, and use the
 make commands above.
 
@@ -246,6 +246,7 @@ module, and one spec named after the screen.
 | `make onboard` | Check the login token for the API (`TOKEN=1` prints it) |
 | `make dev` | Check the login, then the dev server on :3000 |
 | `make test` | Check the login, then the Playwright suite (`SPEC=users` for one spec, `HEADED=1` to watch) |
+| `make tenant CUSTOMER=x EMAIL=x` | Create a customer with its Account and User logins, through the API (needs a root login) |
 | `make check` | **The pre-push gate:** secrets, lint, unit, build |
 | `make deploy DEST=x` | Build, push and swap the container (an operator runs this) |
 

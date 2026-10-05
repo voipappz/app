@@ -30,12 +30,12 @@ const put = (key, value) => {
   fs.writeFileSync(ENV, [...kept, `${key}=${value}`].join('\n') + '\n');
 };
 
-// Where a login comes from: voipappz-api's `make tenant` creates a customer
-// with an Account login (admin console) and a User login (user portal).
+// Where a login comes from: `make tenant` (this repo, through the API with a
+// root login) or voipappz-api's `make tenant` on the API host. Both create a
+// customer with an Account login (admin console) and a User login (portal).
 const tenantHint = (lead) => {
-  const cmd = 'make tenant CUSTOMER=<name> EMAIL=<you@company.com>';
-  console.log(`${lead} Create a tenant where the API runs (voipappz-api):`);
-  console.log(fs.existsSync('../voipappz-api/Makefile') ? `    cd ../voipappz-api && ${cmd}` : `    ${cmd}`);
+  console.log(`${lead} Someone with a root login creates a tenant for you:`);
+  console.log('    make tenant CUSTOMER=<name> EMAIL=<you@company.com>     (Windows: npm run tenant -- <name> <email>)');
   console.log('  It prints an Account login (admin console) and a User login (user portal).');
 };
 
