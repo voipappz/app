@@ -26,10 +26,13 @@ function fmtDuration(seconds) {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
+// "incoming" / "inbound" — anchored, because "outgoing" contains "in" too.
+const isInbound = (call) => /^in/i.test(call.direction || '');
+
 // The number worth calling back is the OTHER party: for an inbound call
 // that's who called us, for an outbound one it's who we called.
 function counterparty(call) {
-  const inbound = /in/i.test(call.direction || '');
+  const inbound = isInbound(call);
   return (inbound ? call.from_number : call.to_number) || call.from_number || call.to_number || '';
 }
 
@@ -81,7 +84,7 @@ export default function PhoneCallsTab({ active, onDial, onOpenCall }) {
     <Box data-testid="phone-calls-list" sx={{ py: 0.5 }}>
       {calls.map((call) => {
         const number = counterparty(call);
-        const inbound = /in/i.test(call.direction || '');
+        const inbound = isInbound(call);
         return (
           <Stack
             key={call.id}

@@ -54,18 +54,31 @@ function buildCallsPerHour(chartPair) {
     .map(({ ts: _ts, ...point }) => ({ ...point, total: point.inbound + point.outbound }));
 }
 
-// callsApi.getCalls is a dynamic-field API (per its own header comment) — map
-// the handful of field-name variants seen across this codebase's Calls screen
-// rather than assume one fixed shape.
+// A duration as seconds, whether the API sent a number, a numeric string or
+// "HH:MM:SS" / "MM:SS".
+function toSeconds(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  const text = String(value);
+  if (!text.includes(':')) return Number(text) || 0;
+  return text.split(':').reduce((total, part) => total * 60 + (Number(part) || 0), 0);
+}
+
+// GET /api/calls rows carry the call's facts under `profile` (caller, callee,
+// direction, talk_duration, cause) for an account and a user token alike —
+// Serializers::Call :list / :portal_list. Reading them only from the top level
+// left every row of the phone's recent calls blank. The top-level names are
+// kept as fallbacks for the flat shapes other endpoints return.
 export function mapRecentCall(row, index) {
+  const profile = row.profile || {};
   return {
     id: row.uuid || row.id || row.call_uuid || String(index),
-    direction: row.direction || '',
-    from_number: row.caller || row.from_number || row.caller_id_number || null,
-    to_number: row.callee || row.to_number || row.destination_number || null,
-    status: row.disposition || row.status || row.hangup_disposition || '',
+    direction: profile.direction || row.direction || '',
+    from_number: profile.caller || row.caller || row.from_number || row.caller_id_number || null,
+    to_number: profile.callee || row.callee || row.to_number || row.destination_number || null,
+    status: profile.disposition || profile.cause || row.disposition || row.status || row.hangup_disposition || '',
     started_at: row.created_at || row.started_at || '',
-    duration_sec: Number(row.billsec_duration ?? row.duration_sec ?? row.duration ?? 0),
+    duration_sec: toSeconds(profile.talk_duration ?? profile.billsec_duration
+      ?? row.billsec_duration ?? row.duration_sec ?? row.duration),
     // Same fallback chain the admin grid uses (see
     // Calls/ColumnHandlers/useColumnHandlers.jsx) — the recording lands under
     // different keys depending on the row's shape.
