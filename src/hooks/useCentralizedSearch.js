@@ -6,9 +6,10 @@ const getTodayRange = () => [startOfDay(new Date()), endOfDay(new Date())];
 /**
  * Parse Gmail-style colon-syntax from free-text input.
  * Supports: field:value  field:"multi word value"
- * Bare text (not part of a token) defaults to search[name].
+ * Bare text (not part of a token) goes to `textParam` — search[name] unless the
+ * screen's API has its own free-text param (Calls: search[inline]).
  */
-export const parseSearchInput = (input, segments) => {
+export const parseSearchInput = (input, segments, textParam = 'search[name]') => {
   const params = {};
   const tokenRegex = /(\w+):("([^"]+)"|(\S+))/g;
   let remaining = input;
@@ -29,7 +30,7 @@ export const parseSearchInput = (input, segments) => {
 
   remaining = remaining.trim();
   if (remaining) {
-    params['search[name]'] = remaining;
+    params[textParam] = remaining;
   }
 
   return params;

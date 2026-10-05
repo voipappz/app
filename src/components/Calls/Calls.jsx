@@ -239,7 +239,7 @@ const Calls = () => {
   const handleQuickSearch = (e) => {
     if (e.key === 'Enter') {
       if (quickSearchText.trim()) {
-        const searchParams = { 'search[text]': quickSearchText.trim() };
+        const searchParams = { 'search[inline]': quickSearchText.trim() };
         handleSearch(searchParams, false);
       } else {
         // Clear search when text is empty
@@ -415,8 +415,9 @@ const Calls = () => {
 
   // Update quick search text when parameters are loaded (for text search restoration)
   React.useEffect(() => {
-    if (currentSearchParams['search[text]']) {
-      setQuickSearchText(currentSearchParams['search[text]']);
+    const text = currentSearchParams['search[inline]'] || currentSearchParams['search[text]'];
+    if (text) {
+      setQuickSearchText(text);
     } else if (Object.keys(currentSearchParams).length === 0) {
       // Clear quick search text when all filters are cleared
       setQuickSearchText('');
@@ -579,7 +580,8 @@ const Calls = () => {
           onColumnSelectorOpen={handleColumnSelectorOpen}
           quickSearchText={quickSearchText}
           onQuickSearchChange={handleQuickSearchChange}
-          placeholder="Search by name, or use field:value (e.g. enabled:true)"
+          placeholder="Search caller, callee, user, route or call ID"
+          textParam="search[inline]"
           showExclude={true}
         />
       )}
