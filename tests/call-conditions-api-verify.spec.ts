@@ -15,7 +15,7 @@ import { test, expect, request as playwrightRequest } from '@playwright/test';
  * dependency so it can run on CI nodes without chromium libs.
  */
 
-const apiBaseUrl = process.env.VITE_API_BASE_URL || 'https://cloud.voipappz.io:9443';
+const apiBaseUrl = process.env.VITE_API_BASE_URL!;
 const email = process.env.TEST_EMAIL || '';
 const password = process.env.TEST_PASSWORD || '';
 const testOtp = process.env.VA_TEST_OTP || '';

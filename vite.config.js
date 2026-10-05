@@ -42,8 +42,6 @@ export default defineConfig(({ mode }) => {
       allowedHosts: [
         'localhost',
         '127.0.0.1',
-        '35.157.19.1',
-        'cloud.voipappz.io',
         '.voipappz.io' // Allow all subdomains
       ],
       watch: {
