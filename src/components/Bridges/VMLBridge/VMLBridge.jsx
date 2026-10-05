@@ -143,6 +143,7 @@ export const VMLBridge = ({
   // opens it. Never over what someone wrote: only an empty editor, or one
   // still holding the previous type's template, is filled.
   const lastTemplateText = useRef('');
+  const offeredTags = useRef([]);
   const applyTypeTemplate = async (type) => {
     if (mode === 'edit' || !type || !formData.environment_uuid) return;
     if (vmlContent?.trim() && vmlContent !== lastTemplateText.current) return;
@@ -152,7 +153,18 @@ export const VMLBridge = ({
       if (!template?.uuid) return;
       lastTemplateText.current = template.text || '';
       setVMLContent(template.text || '');
-      setMetaFields((prev) => [...(prev || []).filter((f) => f.key !== 'template_uuid'), { key: 'template_uuid', value: template.uuid }]);
+      // The template's tags (template.vars) are offered empty, ready to fill:
+      // an empty tag is not saved. A type whose own tag is `template_uuid`
+      // (the SMS types: their message template) keeps that tag for it.
+      const tags = Object.keys(template.vars || {});
+      const previous = offeredTags.current;
+      offeredTags.current = tags;
+      setMetaFields((prev) => {
+        const kept = (prev || []).filter((f) => f.key !== 'template_uuid' && !(previous.includes(f.key) && !f.value));
+        const offered = tags.filter((key) => !kept.some((f) => f.key === key)).map((key) => ({ key, value: '' }));
+        const link = tags.includes('template_uuid') ? [] : [{ key: 'template_uuid', value: template.uuid }];
+        return [...kept, ...offered, ...link];
+      });
     } catch (err) {
       console.error('Failed to load the VML template:', err);
     }
