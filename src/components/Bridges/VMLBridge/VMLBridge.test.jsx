@@ -23,13 +23,13 @@ vi.mock('./CodeEditor.jsx', () => ({ CodeEditor: () => null }));
 vi.mock('../shared/MetaPropertiesEditor.jsx', () => ({ MetaPropertiesEditor: () => null }));
 vi.mock('../../Templates/Templates.jsx', () => ({ TemplateDialog: () => null }));
 vi.mock('../../Templates/Templates.js', () => ({ TEMPLATE_TYPES: [] }));
-const templatesApi = { getVmlTemplate: vi.fn() };
+const templatesApi = vi.hoisted(() => ({ getVmlTemplate: vi.fn() }));
 vi.mock('../../../services/api/templatesApi', () => ({ templatesApi }));
 vi.mock('../../../hooks/useIsUserSession', () => ({ useIsUserSession: () => false }));
 const scope = { selectedEnvironments: [{ uuid: 'env-1', name: 'Sales' }] };
 vi.mock('../../../context/CustomerEnvironmentContext', () => ({ useCustomerEnvironment: () => scope }));
 
-const vmlsApi = { getVML: vi.fn(), updateVML: vi.fn() };
+const vmlsApi = vi.hoisted(() => ({ getVML: vi.fn(), updateVML: vi.fn() }));
 vi.mock('../../../services/api/vmlsApi.js', () => vmlsApi);
 
 import { VMLBridge } from './VMLBridge.jsx';
