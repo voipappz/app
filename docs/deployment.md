@@ -167,12 +167,12 @@ command is and let a person run it.
    `make tenant CUSTOMER=<name> EMAIL=<admin@customer>`. It prints the email
    and password. Give the developers or agents those two values. OTP is off by
    default; only if it is enabled on the API do they also need its `VA_TEST_OTP` code.
-2. **Connect.** In this repo, `make setup` and then `make onboard`. The second
-   one points `.env` at `https://switch.voipappz.io`, signs in, and names any
-   missing value. `make onboard TOKEN=1` prints the access JWT for curl or an
-   agent. There is no separate auth URL: sign-in goes to `/auth/*` on the API.
-   `make dev`, `serve` and `test` run the same check first and stop if there is
-   no valid token. A cached token (`.env.token`) is reused while it is valid.
+2. **Connect.** In this repo, `make setup`. It asks for the API address
+   (Enter for `https://switch.voipappz.io`), email and password, saves them to
+   `.env` and signs in. There is no separate auth URL: sign-in goes to
+   `/auth/*` on the API. `make dev` and `make test` check the token first;
+   the cached token (`.env.token`) is reused while valid. `make onboard
+   TOKEN=1` prints it for curl or an agent.
 3. **Phone.** The customer's environment needs `domain` and `wss_server` set.
    The browser phone reads both from the user's environment.
 4. **Own hostname.** Add `config/deploy.<customer>.yml` with `proxy.hosts` and

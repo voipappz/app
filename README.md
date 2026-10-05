@@ -11,9 +11,7 @@ at your own API, and you have a working operations console to build on.
 
 ```bash
 git clone https://github.com/voipappz/app.git && cd app
-make setup          # .env, dependencies, browser
-$EDITOR .env        # VITE_API_BASE_URL, TEST_EMAIL, TEST_PASSWORD
-make onboard        # checks the login; says what is missing
+make setup          # dependencies, then asks for the API and your login, and signs in
 make dev            # http://localhost:3000
 ```
 
