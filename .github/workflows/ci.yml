@@ -37,11 +37,6 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      # A .PHONY target with no rule exits 0 and silently skips its step, so a
-      # deleted rule can make `make check` pass while doing less than it says.
-      - name: Makefile targets all have rules
-        run: make check-make
-
       # The login gate in front of make dev/serve/test, offline.
       - name: Login gate
         run: bin/onboard.test.sh
@@ -49,7 +44,7 @@ jobs:
       # A public repo makes a leaked credential permanent. Cheaper here than
       # after a scraper finds it.
       - name: No credentials in anything git would publish
-        run: make secrets
+        run: bin/check-secrets.sh
 
       - name: Lint
         run: npm run lint

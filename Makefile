@@ -40,183 +40,64 @@ DC ?= $(shell if docker compose version >/dev/null 2>&1; then echo 'docker compo
               elif command -v docker-compose >/dev/null 2>&1; then echo 'docker-compose'; \
               else echo 'docker compose'; fi)
 
-# Playwright needs the app running, and each test target needs the same
-# start-wait-stop dance. One implementation in bin/, called from each.
+# Playwright needs the app running: start it in the background, stop it after.
 SERVE = PORT=$(PORT) bin/dev-serve.sh
-STOP  = PORT=$(PORT) $(M) stop >/dev/null
+STOP  = kill "$$(cat /tmp/vite-$(PORT).pid 2>/dev/null)" 2>/dev/null || true; rm -f /tmp/vite-$(PORT).pid
 
 # The login gate: a valid token for the API in .env before anything that talks
 # to it. Reuses the cached token while it is valid, signs in again otherwise.
 LOGIN = TOKEN="$(TOKEN)" bin/onboard.sh
 
-# Every target in one place so `check-make` can prove each still has a rule.
-# Add a target: add it here.
-PHONY_TARGETS := help setup install browsers env dev build preview serve stop \
-                 lint fix unit check test test-list report doctor secrets \
-                 docker-build docker-run check-make clean \
-                 kamal-config kamal-push deploy destinations onboard
-
-.PHONY: $(PHONY_TARGETS)
+.PHONY: help setup onboard dev test check deploy
 .DEFAULT_GOAL := help
 
-# ONE list, generated from the `##` comments on the rules themselves, so it can
-# never drift from what the Makefile actually does. Every target appears --
-# nothing hidden -- grouped by the `##@` section it lives under.
 help: ## Show this help
-	@printf '\n\033[1mWorkflow:\033[0m  setup -> dev -> test -> check -> push\n'
+	@printf '\n\033[1mWorkflow:\033[0m  setup -> onboard -> dev -> test -> check -> push\n\n'
 	@awk 'BEGIN { FS = ":.*## "; pad = "                              " } \
-	     /^##@ / { printf "\n\033[1m%s\033[0m\n", substr($$0, 5); next } \
-	     /^[a-zA-Z0-9_%-]+:.*## / { \
+	     /^[a-zA-Z0-9_-]+:.*## / { \
 	       desc = $$2; label = $$1; \
 	       if (match(desc, /^\[[^]]*\] /)) { label = label " " substr(desc, 1, RLENGTH - 1); desc = substr(desc, RLENGTH + 1) } \
 	       printf "  \033[36m%s\033[0m%s %s\n", label, substr(pad, 1, 28 - length(label)), desc \
 	     }' $(firstword $(MAKEFILE_LIST))
-	@printf '\n\033[2many spec is its own target:  make test-users   make test-dids   (make test-list)\033[0m\n\n'
-
-##@ Setup
+	@echo
 
 # ONE command from a fresh clone to a machine that can run the app and the
 # suite. Idempotent, so it is also what to run when you do not know the state.
-setup: ## [DOCKER=1] Everything a fresh clone needs: node, .env, dependencies, browsers
-	@if [ -z "$(DOCKER)" ]; then bin/dev-host-tools.sh; else echo "DOCKER=1: skipping host node"; fi
-	@$(M) env
-	@$(M) install
-	@if [ -z "$(DOCKER)" ]; then $(M) browsers; else echo "browsers live in the test image"; fi
-	@echo
-	@echo "Ready. Put real values in .env, then:  make dev$(if $(DOCKER), DOCKER=1,)"
+# .env is never overwritten: it holds the only copy of your credentials.
+setup: ## [DOCKER=1] Everything a fresh clone needs: node, .env, dependencies, browser
+	@if [ -z "$(DOCKER)" ]; then bin/dev-host-tools.sh; fi
+	@[ -f .env ] || { cp .env.example .env; echo "created .env from .env.example"; }
+	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app npm ci; else $(NPM) ci; fi
+	@if [ -z "$(DOCKER)" ]; then $(NPM) exec -- playwright install $(BROWSER) --with-deps; fi
+	@echo; echo "Ready. Put TEST_EMAIL and TEST_PASSWORD in .env, then:  make onboard"
 
-# `npm ci` is the reproducible one and needs a lockfile in sync with
-# package.json; `npm install` is the forgiving fallback for a repo without one.
-install: ## [DOCKER=1] Install node dependencies (npm ci when a lockfile is present)
-	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm --no-deps -T app npm ci; \
-	 elif [ -f package-lock.json ]; then $(NPM) ci; else $(NPM) install; fi
-
-browsers: ## Install the Playwright browser the suite drives
-	$(NPM) exec -- playwright install $(BROWSER) --with-deps
-
-# Never overwrites an existing .env: that file holds the only copy of your
-# credentials, and a clobber is silent and unrecoverable.
 onboard: ## [TOKEN=1] Make sure there is a valid login token for the API
 	@$(LOGIN)
-
-env: ## Create .env from .env.example (never overwrites an existing one)
-	@if [ -f .env ]; then echo ".env exists, leaving it alone"; \
-	 else cp .env.example .env; echo "created .env from .env.example -- fill it in"; fi
-
-##@ Develop
 
 dev: ## [PORT=3000 DOCKER=1] Check the login token, then start the dev server
 	@$(LOGIN)
 	@if [ -n "$(DOCKER)" ]; then $(DC) up app; else $(NPM) run dev -- --port $(PORT); fi
 
-build: ## [DOCKER=1] Build the production bundle
-	@if [ -n "$(DOCKER)" ]; then $(DC) run --rm -T build; else $(NPM) run build; fi
-
-preview: ## Serve the production build locally
-	$(NPM) run preview
-
-# The background server the test targets use. It refuses a port held by another
-# app rather than testing against it -- see the comment in bin/dev-serve.sh.
-serve: ## [PORT=3000] Check the login token, start the dev server in the background and wait for it
-	@$(LOGIN)
-	@$(SERVE)
-
-# One line, one decision: `exit 0` would end only its own line, and make runs
-# each recipe line in a fresh shell.
-stop: ## [PORT=3000] Stop a server this Makefile started
-	@if [ -f /tmp/vite-$(PORT).pid ]; then \
-	   kill "$$(cat /tmp/vite-$(PORT).pid)" 2>/dev/null || true; \
-	   rm -f /tmp/vite-$(PORT).pid; echo "stopped :$(PORT)"; \
-	 else echo "nothing to stop on :$(PORT)"; fi
-
-##@ Quality
-
-lint: ## Run ESLint over the working tree
-	$(NPM) run lint
-
-fix: ## Run ESLint with --fix
-	$(NPM) exec -- eslint . --fix
-
-unit: ## Run the Vitest unit suite
-	$(NPM) run test:unit:run
-
-# The gate a PR has to pass, in CI's order, so a red CI is reproducible here.
-check: ## check-make, secrets, lint, unit and a build -- the pre-push gate
-	@$(M) check-make
-	@$(M) secrets
-	@$(M) lint
-	@$(M) unit
-	@$(M) build
-	@echo; echo "check: all green"
-
-##@ Test
-
-# ONE target for Playwright. SPEC= narrows it, HEADED=1 and DEBUG=1 are flags
-# rather than separate targets, because two names for one action is a question
-# every reader has to answer before they can use either.
-test: ## [SPEC=x HEADED=1 DEBUG=1 DOCKER=1] Check the login token, then run Playwright specs
+test: ## [SPEC=users HEADED=1 DOCKER=1] Check the login token, then run Playwright specs
 	@$(LOGIN)
 	@if [ -n "$(DOCKER)" ]; then \
 	   $(DC) run --rm -T test; \
 	 else \
 	   $(SERVE); \
-	   $(if $(DEBUG),PWDEBUG=1 ,)$(NPM) exec -- playwright test \
-	     $(if $(SPEC),tests/$(SPEC).spec.ts,) \
-	     --project=$(BROWSER) $(if $(HEADED),--headed,) $(if $(DEBUG),--debug,) \
-	     $(if $(or $(HEADED),$(DEBUG)),,--reporter=line); \
+	   $(NPM) exec -- playwright test $(if $(SPEC),tests/$(SPEC).spec.ts,) \
+	     --project=$(BROWSER) $(if $(HEADED),--headed,--reporter=line); \
 	   status=$$?; $(STOP); exit $$status; \
 	 fi
 
-# Any spec name is its own target -- `make test-users`, `make test-dids` --
-# without a hand-written rule per spec. The 60 copy-pasted targets this
-# replaced drifted: some passed --timeout, some did not, and three named a
-# spec file that had been renamed. An explicit rule always beats this pattern,
-# so test-list below still resolves to its own rule.
-test-%: ## Run one spec by name (make test-users, make test-dids, ...)
-	@$(M) test SPEC=$*
-
-test-list: ## List every spec name you can pass to SPEC= or test-<name>
-	@ls tests/*.spec.ts | sed 's|tests/||; s|\.spec\.ts||' | sort | \
-	   { column -c 100 2>/dev/null || cat; }
-
-report: ## Open the last Playwright HTML report
-	$(NPM) exec -- playwright show-report
-
-##@ Docker
-
-docker-build: ## [TAG=dev] Build the container image
-	docker build -t $(IMAGE):$(TAG) .
-
-docker-run: ## [TAG=dev PORT=3000] Run the built image against your .env
-	docker run --rm -p $(PORT):80 --env-file .env $(IMAGE):$(TAG)
-
-##@ Maintenance
-
-doctor: ## Tooling, configuration and whether the API answers -- read-only
-	@bin/doctor.sh
-
-secrets: ## Scan everything git would publish for live credentials
+# The gate a PR has to pass, in CI's order, so a red CI is reproducible here.
+check: ## Secrets scan, lint, unit tests and a build -- the pre-push gate
 	@bin/check-secrets.sh
+	@$(NPM) run lint
+	@$(NPM) run test:unit:run
+	@$(NPM) run build
+	@echo; echo "check: all green"
 
-# A .PHONY target with no rule is not an error: make prints "Nothing to be
-# done" and exits 0, so a deleted rule looks like a working `make check` that
-# silently skips a step. CI runs this.
-check-make: ## Fail if any .PHONY target has no rule (CI runs this)
-	@missing=""; \
-	 for t in $(PHONY_TARGETS); do \
-	   grep -qE "^$$t:" $(firstword $(MAKEFILE_LIST)) || missing="$$missing $$t"; \
-	 done; \
-	 if [ -n "$$missing" ]; then \
-	   echo "Makefile: .PHONY targets with no rule:$$missing"; exit 1; \
-	 fi; \
-	 echo "check-make: all $(words $(PHONY_TARGETS)) targets have a rule"
-
-clean: ## Remove build output, test artifacts and stray server logs
-	rm -rf dist test-results playwright-report coverage test-results.json
-	rm -f /tmp/vite-*.log /tmp/vite-*.pid
-	@echo "clean"
-
-##@ Deploy — kamal, from this repo
+# --- Deploy: kamal, from this repo ---
 
 # THE DEPLOY TOOL LIVES HERE. It came from the portal repo (voipappz/connectix),
 # which ran kamal against four live destinations and then moved to xamal. Every
@@ -289,18 +170,6 @@ define require_dest
 	  exit 1; }
 endef
 
-kamal-config: ## [DEST=x] Render the resolved kamal config and change nothing
-	$(require_dest)
-	$(KAMAL) config -d $(DEST)
-
-# Separate from deploy because the image push is the step this network fails:
-# Docker Hub answers `invalid content range` on an interrupted layer upload,
-# and retrying the whole deploy to get past it wastes the container swap too.
-# Build layers are cached, so a retry here costs minutes.
-kamal-push: ## [DEST=x] Build and push the image only, no container swap
-	$(require_dest)
-	$(KAMAL) build push -d $(DEST)
-
 # The address the post-deploy hook probes, derived from the destination's own
 # `proxy.hosts` rather than written down twice. In the portal the hook existed
 # for weeks and always SKIPPED: the variable was passed through and never set,
@@ -311,16 +180,3 @@ deploy: ## [DEST=x] Build, push and swap the container — make deploy DEST=conn
 	$(require_dest)
 	@echo "==> post-deploy smoke checks will run against $(dest_url)"
 	KAMAL_HEALTHCHECK_URL=$(dest_url) $(KAMAL) deploy -d $(DEST)
-
-# There is no single "production": one destination per host, each with its own
-# hostname and API. This lists them rather than pretending one URL speaks for
-# all. Host addresses are not shown — they are not in git.
-destinations: ## The kamal destinations this repo can deploy to
-	@echo "=== Destinations (config/) ==="
-	@for f in config/deploy.*.yml; do \
-	  d=$$(basename $$f .yml | sed 's/deploy\.//'); \
-	  site=$$(awk '/^proxy:/{p=1} p&&/^ *- /{gsub(/^ *- /,"");print;exit}' $$f); \
-	  api=$$(sed -n 's/^ *VITE_API_BASE_URL: *//p' $$f | head -1); \
-	  env=$$( test -f .kamal/env.$$d && echo "env ok" || echo "NO .kamal/env.$$d" ); \
-	  printf "  %-12s %-32s api %-36s %s\n" "$$d" "$$site" "$$api" "$$env"; \
-	done

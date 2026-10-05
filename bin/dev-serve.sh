@@ -30,7 +30,7 @@ rm -f "$PIDFILE"
 
 if curl -fsS --max-time 3 "http://localhost:${PORT}/" >/dev/null 2>&1; then
   echo "port ${PORT} is held by something that is not this app."
-  echo "stop it, or choose another port:  make serve PORT=3001"
+  echo "stop it, or choose another port:  make dev PORT=3001"
   exit 1
 fi
 

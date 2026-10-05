@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Start here
 
-`make` lists every target. `make setup` takes a fresh clone to a runnable state,
-`make doctor` reports what is missing, and `make check` is the gate to pass
-before pushing (check-make, secrets, lint, unit, build).
+`make` lists the six targets. `make setup` takes a fresh clone to a runnable
+state, `make onboard` checks the login token for the API (dev and test run it
+first), and `make check` is the gate to pass before pushing (secrets, lint,
+unit, build).
 
 Never hand-write a command this Makefile already has a target for.
 
@@ -142,21 +143,9 @@ Do NOT run tests locally - always push changes and let GitHub Actions run the te
 # Load .env and run all tests
 source .env && export VITE_API_BASE_URL TEST_EMAIL TEST_PASSWORD && make test
 
-# Run specific test suites
-source .env && export VITE_API_BASE_URL TEST_EMAIL TEST_PASSWORD && make test-users
-source .env && export VITE_API_BASE_URL TEST_EMAIL TEST_PASSWORD && make test-environments
-source .env && export VITE_API_BASE_URL TEST_EMAIL TEST_PASSWORD && make test-subscriptions
-
-# Available Makefile test commands:
-make test                  # Run all Playwright tests (starts/stops server automatically)
-make test-auth             # Authentication tests only
-make test-users            # All 7 user test suites
-make test-environments     # Environments CRUD tests
-make test-services         # Services CRUD tests
-make test-subscriptions    # Subscriptions CRUD tests
-make test-providers        # Providers CRUD tests
-make test-all-screens      # All consolidated screen tests
-make test-report           # Open HTML test report
+# Run one spec: SPEC is the file name in tests/ without .spec.ts
+make test SPEC=users
+make test SPEC=environments
 ```
 
 The `.env` file must contain:
@@ -1110,8 +1099,7 @@ is up.
 
 ## Deploy
 
-Kamal, from this repo — `make destinations`, `make kamal-config DEST=x`,
-`make deploy DEST=x`. The tool and every lesson learned running it came from
+Kamal, from this repo — `make deploy DEST=x`. The tool and every lesson learned running it came from
 the portal repo; [docs/deployment.md](docs/deployment.md) is the reference,
 read it before touching `config/deploy*.yml` or `.kamal/`.
 

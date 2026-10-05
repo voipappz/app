@@ -4,8 +4,8 @@
 #
 # Drive it through the Makefile rather than by hand:
 #   make dev DOCKER=1        dev server on :3000, hot reload
-#   make install DOCKER=1    dependencies, into the named volume
-#   make build DOCKER=1      production bundle into ./dist
+#   make setup DOCKER=1      dependencies, into the named volume
+#   docker compose run --rm build   production bundle into ./dist
 #   make test DOCKER=1       the Playwright suite
 #
 # `version:` is deliberately absent -- compose v2 ignores it and warns.

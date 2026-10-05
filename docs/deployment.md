@@ -7,10 +7,7 @@ destination, `.kamal/hooks/` runs before the build and after the swap, and the
 Makefile's `Deploy` section is the only way anyone should invoke it.
 
 ```
-make destinations                  # what can be deployed, and whether each is set up
-make kamal-config DEST=connectix   # render the resolved config, change nothing
-make kamal-push   DEST=connectix   # build + push the image only
-make deploy       DEST=connectix   # build, push, swap, smoke-check
+make deploy DEST=connectix   # build, push, swap, smoke-check
 ```
 
 Kamal came here from the portal repo (voipappz/connectix), which ran it
@@ -32,7 +29,7 @@ Nothing sensitive is tracked. The rule is stricter than "no passwords":
 A destination file names only what is public anyway: the site's hostname (it
 is in DNS) and the API the bundle talks to (it is in the bundle). The host is
 read from `.kamal/env.<dest>` through ERB, and a missing value stops
-`kamal config` with a message naming the file. `make secrets` scans the tree
+`kamal config` with a message naming the file. `make check` scans the tree
 before every push; keep it that way.
 
 ## Setting up a destination
@@ -49,9 +46,7 @@ before every push; keep it that way.
    on the first request. A name that does not resolve to the box fails the
    challenge; the deploy still reports success and the site answers a TLS
    error. Port 80 must be free on the host for the challenge.
-4. `make kamal-config DEST=<dest>`. Read-only. If it renders, the plumbing is
-   right.
-5. `make deploy DEST=<dest>`. A person runs this, never an agent or CI.
+4. `make deploy DEST=<dest>`. A person runs this, never an agent or CI.
 
 ## Vite bakes the API into the bundle
 
@@ -107,10 +102,9 @@ after a successful build. The same image pushed first try with `docker push`,
 which uploads from the daemon in the host's network namespace. MTU was 1500
 everywhere, so it was the container's egress, not fragmentation.
 
-`make kamal-push` exists because Docker Hub also answers
-`invalid content range` on an interrupted layer upload. Retrying the whole
-deploy to get past it wastes the container swap too; retrying the push alone
-costs minutes because build layers are cached.
+Docker Hub also answers `invalid content range` on an interrupted layer
+upload. Retrying the deploy gets past it; build layers are cached, so the
+retry costs minutes.
 
 `~/.docker` is mounted read-write into the Kamal container on purpose: buildx
 writes builder activity files there, and a read-only mount fails the build
