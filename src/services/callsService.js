@@ -87,8 +87,9 @@ export const saveFilterParameters = async (searchParams, token) => {
     const formData = new FormData();
     
     Object.entries(searchParams).forEach(([key, value]) => {
-      // Handle text search parameter
-      if (key === 'search[text]') {
+      // Handle text search parameter (search[inline] is the same free-text
+      // search on the API; both are saved in the one text slot)
+      if (key === 'search[text]' || key === 'search[inline]') {
         formData.append(`params[text][field]`, 'text');
         formData.append(`params[text][value]`, value);
         formData.append(`params[text][operator]`, 'IS');
@@ -165,7 +166,7 @@ export const convertApiParamsToSearchParams = (apiParams) => {
 
     // Handle text search parameter
     if (field === 'text') {
-      searchParams['search[text]'] = value;
+      searchParams['search[inline]'] = value;
       return;
     }
 

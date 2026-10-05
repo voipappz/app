@@ -194,6 +194,25 @@ test.describe('Calls Search', () => {
     console.log(`✅ Calls inline search status: ${status}`);
   });
 
+  test('Search box sends the text as search[inline]', async ({ authenticatedPage: page }) => {
+    await page.goto('/calls', { waitUntil: 'networkidle', timeout: 20000 });
+
+    const isListSearch = (url: string) => {
+      const u = new URL(url);
+      return u.pathname.endsWith('/api/calls') && u.searchParams.has('page') && u.searchParams.get('search[inline]') === 'test';
+    };
+    const listRequest = page.waitForRequest((req) => isListSearch(req.url()), { timeout: 15000 });
+
+    const box = page.getByPlaceholder('Search caller, callee, user, route or call ID');
+    await box.fill('test');
+    await box.press('Enter');
+
+    const request = await listRequest;
+    expect(new URL(request.url()).searchParams.has('search[name]')).toBe(false);
+    const response = await request.response();
+    expect(response?.status()).toBe(200);
+  });
+
   test('Export button exists', async ({ authenticatedPage: page }) => {
     await page.goto('/calls', { waitUntil: 'networkidle', timeout: 20000 });
     await page.waitForTimeout(2000);
