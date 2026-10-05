@@ -70,11 +70,10 @@ const getWebSocketUrl = (path) => {
     const baseUrl = explicitWsBase?.endsWith('/') ? explicitWsBase.slice(0, -1) : explicitWsBase;
 
     if (isDev && baseUrl) {
-      // A base that already names a path is used AS THE URL. In production the
-      // edge rewrites /ws to the node's /cable, but a dev browser talks to a
-      // node directly and that node serves /cable — appending /ws to it would
-      // 404. This keeps one variable (VITE_WS_URL) doing both jobs instead of
-      // adding a second one that could disagree with it.
+      // A base that already names a path is used AS THE URL: a dev browser
+      // talks to a node directly, and VITE_WS_URL may already end in /cable —
+      // appending the path again would 404. One variable (VITE_WS_URL) does
+      // both jobs instead of a second one that could disagree with it.
       const hasPath = /^[a-z]+:\/\/[^/]+\/.+/i.test(baseUrl);
       const resolved = hasPath ? baseUrl : `${baseUrl}${path}`;
       console.log('Using development WebSocket URL:', resolved);
@@ -113,11 +112,10 @@ export const config = {
 
   // WebSocket endpoints (relative to current host)
   ws: {
+    // The live socket: Kong routes /cable to the node the API names
+    // (voipappz/mothership#49); in dev VITE_WS_URL points at a node directly.
     get cable() {
-      return getWebSocketUrl('/ws');
-    },
-    get ws() {
-      return getWebSocketUrl('/ws');
+      return getWebSocketUrl('/cable');
     }
   }
 };

@@ -58,7 +58,7 @@ function token() {
 
 /**
  * Reuses config.ws.cable — no new environment variable. In production that
- * resolves to `/ws`, which Kong rewrites to `/cable` at the edge; in local dev
+ * resolves to `/cable`, which Kong routes to the node; in local dev
  * VITE_WS_URL points straight at a node, which serves `/cable` itself.
  */
 function cableUrl() {
