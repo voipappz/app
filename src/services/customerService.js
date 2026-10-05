@@ -4,6 +4,7 @@
  */
 
 import { config } from '../config.js';
+import { brandAccentVars, BRAND_ACCENT_VAR_NAMES } from '../utils/customerBrand.js';
 
 const CUSTOMER_DATA_KEY = 'customerData';
 
@@ -138,11 +139,24 @@ export function applyCustomerBranding(customerData) {
     document.title = `${title} | Admin`;
   }
 
+  const root = document.documentElement.style;
   if (customerData.logo_color) {
     const isValidColor = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/i.test(customerData.logo_color);
     if (isValidColor) {
-      document.documentElement.style.setProperty('--accent-color', customerData.logo_color);
+      root.setProperty('--accent-color', customerData.logo_color);
     }
+  }
+
+  // The console's accent (buttons, selected page, active chips) is the
+  // customer's brand colour. A customer with none of their own carries the
+  // default filled in above, and keeps the stylesheet's accent — cleared here
+  // so the previous customer's colour does not stay after a switch.
+  const ownColor = customerData.logo_color
+    && String(customerData.logo_color).toLowerCase() !== DEFAULT_CUSTOMER_DATA.logo_color.toLowerCase();
+  const accent = ownColor ? brandAccentVars(customerData.logo_color) : null;
+  BRAND_ACCENT_VAR_NAMES.forEach((name) => root.removeProperty(name));
+  if (accent) {
+    Object.entries(accent).forEach(([name, value]) => root.setProperty(name, value));
   }
 }
 
