@@ -12,8 +12,8 @@ print(e({"alg":"HS256"})+"."+e({"exp":int(time.time())+int(sys.argv[1])})+".sig"
 
 out=$("$gate" 2>&1) && fail "no credentials should stop"
 echo "$out" | grep -q "TEST_EMAIL and TEST_PASSWORD" || fail "no credentials: wrong message: $out"
-grep -q '^VITE_API_BASE_URL=https://switch.voipappz.io$' .env || fail "API not set to switch"
-echo "ok  no credentials stop, API defaults to switch"
+cmp -s .env .env.example || fail "a failed run changed .env"
+echo "ok  no credentials stop, .env left unchanged"
 
 printf 'TEST_EMAIL=gate@example.invalid\nTEST_PASSWORD=x\n' >> .env
 t=$(jwt 3600)
