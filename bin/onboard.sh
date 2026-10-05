@@ -22,17 +22,16 @@ case "$email" in you@example.com) email="" ;; esac
 
 # The wizard: ask for what is missing when a person is at the terminal.
 if { [ -z "$api" ] || [ -z "$email" ] || [ -z "$pass" ]; } && [ -t 0 ]; then
-  echo; echo "Sign in to the VoIPappz API (saved to .env, which git ignores)"
+  echo; echo "Sign in to the VoIPappz API (saved to .env once the login works; git ignores it)"
+  # Answers stay in memory; .env gets them only once the login works.
   if [ -z "$api" ]; then
     read -r -p "  API address [https://switch.voipappz.io]: " api
-    api=${api:-https://switch.voipappz.io}; put VITE_API_BASE_URL "$api"
+    api=${api:-https://switch.voipappz.io}; ask_api=1
   fi
-  [ -n "$email" ] || { read -r -p "  Email: " email; put TEST_EMAIL "$email"; }
-  [ -n "$pass" ]  || { read -r -s -p "  Password: " pass; echo; put TEST_PASSWORD "$pass"; }
+  [ -n "$email" ] || { read -r -p "  Email: " email; ask_email=1; }
+  [ -n "$pass" ]  || { read -r -s -p "  Password: " pass; echo; ask_pass=1; }
 fi
-if [ -z "$api" ]; then
-  api=https://switch.voipappz.io; [ -f .env ] && put VITE_API_BASE_URL "$api"
-fi
+[ -n "$api" ] || api=https://switch.voipappz.io
 if [ -z "$email" ] || [ -z "$pass" ]; then
   echo "Put TEST_EMAIL and TEST_PASSWORD in .env, or run make onboard in a terminal to be asked"
   echo "(the login comes from: make tenant CUSTOMER=<name> EMAIL=<email> in voipappz-api)"
@@ -68,5 +67,11 @@ if [ -z "$access" ] && [ -n "$temp" ]; then
 fi
 [ -n "$access" ] || { echo "login failed at $api for $email: ${resp:-no answer}"; exit 1; }
 
+# Signed in: now keep what the wizard asked for.
+if [ -f .env ]; then
+  [ -z "$ask_api" ]   || put VITE_API_BASE_URL "$api"
+  [ -z "$ask_email" ] || put TEST_EMAIL "$email"
+  [ -z "$ask_pass" ]  || put TEST_PASSWORD "$pass"
+fi
 ( umask 077; printf '%s %s\n%s\n' "$api" "$email" "$access" > "$CACHE" )
 ok
