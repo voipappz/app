@@ -4,13 +4,13 @@ import { test, expect } from './auth-fixture';
  * Real-login smoke test.
  *
  * Unlike login.spec.ts (mocked API, UI flow only), this performs the actual
- * 2-step OTP login against VITE_API_BASE_URL via the shared auth fixture and
+ * login (plus OTP only if the API asks) against VITE_API_BASE_URL via the shared auth fixture and
  * verifies the authenticated app shell loads. This is the "can we log in to
  * the app" canary for CI.
  */
 test.describe('Login smoke (real backend)', () => {
-  test('authenticates via OTP flow and loads the app shell', async ({ authenticatedPage: page }) => {
-    // The fixture already performed login + OTP verify and seeded tokens.
+  test('signs in and loads the app shell', async ({ authenticatedPage: page }) => {
+    // The fixture already signed in and seeded the tokens.
     expect(page.authTokens?.access).toBeTruthy();
 
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });

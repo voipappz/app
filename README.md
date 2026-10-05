@@ -11,12 +11,13 @@ at your own API, and you have a working operations console to build on.
 
 ```bash
 git clone https://github.com/voipappz/app.git && cd app
-make setup          # .env, dependencies, browsers
-$EDITOR .env        # point VITE_API_BASE_URL at your API
+make setup          # .env, dependencies, browser
+$EDITOR .env        # VITE_API_BASE_URL, TEST_EMAIL, TEST_PASSWORD
+make onboard        # checks the login; says what is missing
 make dev            # http://localhost:3000
 ```
 
-`make` on its own lists every target. `make doctor` says what is missing.
+`make` on its own lists the six commands: setup, onboard, dev, test, check, deploy.
 
 ---
 
@@ -77,7 +78,7 @@ older.
 That matters because the failure is otherwise unreadable: on Node 14, `npm ci`
 dies with `Cannot read property '@dnd-kit/core' of undefined` — npm 6 unable to
 parse a lockfileVersion 3 file — which names no version and looks like a broken
-repository. `make doctor` says `TOO OLD` instead.
+repository. `make setup` checks the version first and says so instead.
 
 Docker only if you want to build the container image — **or if you would rather
 not install Node at all**, in which case Docker is the only requirement:
@@ -98,9 +99,8 @@ path, so the address is the same either way.
 make setup
 ```
 
-That runs three things you can also run separately — `make env` (creates `.env`
-from `.env.example`, never overwriting an existing one), `make install`, and
-`make browsers` (the Playwright browser).
+It creates `.env` from `.env.example` (never overwriting an existing one),
+installs the dependencies and the Playwright browser.
 
 Then fill in `.env`:
 
@@ -108,37 +108,23 @@ Then fill in `.env`:
 VITE_API_BASE_URL=https://your-api-host.example.com   # the API to talk to
 TEST_EMAIL=you@example.com                            # an account in that API
 TEST_PASSWORD=...                                     # its password
-VA_TEST_OTP=...                                       # the API's test OTP code
+VA_TEST_OTP=...                                       # only if the API has OTP on
 ```
 
-Only `VITE_API_BASE_URL` is needed to run the app. The other three are for the
-Playwright suite, which signs in for real.
+`make dev` and `make test` check the login first (`make onboard` runs the same
+check alone) and stop with the reason if it fails.
 
 **`.env` is gitignored and must stay that way.** It is the only place real
-credentials belong. `make secrets` fails the build if anything credential-shaped
+credentials belong. `make check` fails if anything credential-shaped
 reaches a file git would publish, and CI runs the same check.
 
 ### Check your setup
 
 ```bash
-make doctor
+make onboard
 ```
 
-```
-Tooling
-  node                   v22.11.0
-  npm                    10.9.0
-Project
-  node_modules           present
-  playwright             Version 1.57.0
-  specs                  62 found
-Configuration
-  .env                   present
-    VITE_API_BASE_URL    https://your-api-host.example.com
-    TEST_EMAIL           set
-API
-  https://your-api-host.example.com   OpenAPI contract reachable (200)
-```
+prints `token valid for <api> as <email>`, or which value is missing.
 
 It never prints a credential value — only whether one is set.
 
@@ -239,29 +225,18 @@ module, and one spec named after the screen.
 
 ## Everyday commands
 
-`make` lists all of them. The ones you will actually use:
+`make` lists all six:
 
 | Command | What it does |
 |---|---|
 | `make setup` | Fresh clone → ready to run |
-| `make dev` | Dev server on :3000 |
-| `make doctor` | What is installed, configured, and reachable |
-| `make check` | **The pre-push gate:** check-make, secrets, lint, unit, build |
-| `make test` | The whole Playwright suite |
-| `make test-users` | One spec — any spec name works (`make test-list`) |
-| `make test SPEC=dids HEADED=1` | Watch it run in a real browser |
-| `make secrets` | Scan everything git would publish for credentials |
-| `make clean` | Remove build output and test artifacts |
-| `make dev DOCKER=1` | Any of the above, in a container, with no host Node |
+| `make onboard` | Check the login token for the API (`TOKEN=1` prints it) |
+| `make dev` | Check the login, then the dev server on :3000 |
+| `make test` | Check the login, then the Playwright suite (`SPEC=users` for one spec, `HEADED=1` to watch) |
+| `make check` | **The pre-push gate:** secrets, lint, unit, build |
+| `make deploy DEST=x` | Build, push and swap the container (an operator runs this) |
 
-Two details worth knowing:
-
-- **Every spec is already a target.** `make test-dids`, `make test-reports`,
-  `make test-portal-session` — a pattern rule turns any name from
-  `make test-list` into a target, so nothing has to be added when you add a spec.
-- **`make serve` refuses a port it cannot prove is ours.** If something else
-  holds :3000, it says so instead of running the suite against another app and
-  reporting green. Use `make dev PORT=3001` if that happens.
+`DOCKER=1` runs setup, dev and test in a container, with no host Node.
 
 ---
 
@@ -269,7 +244,7 @@ Two details worth knowing:
 
 Two suites, different jobs:
 
-**Vitest** (`make unit`) covers services and hooks in isolation — no network.
+**Vitest** (part of `make check`) covers services and hooks in isolation — no network.
 Fast enough to run constantly.
 
 **Playwright** (`make test`) drives a real browser against a **real API** with
@@ -278,14 +253,12 @@ the screen renders what came back.
 
 ```bash
 make test                        # everything
-make test-users                  # one spec
+make test SPEC=users             # one spec
 make test SPEC=dids HEADED=1     # watch it
-make test SPEC=dids DEBUG=1      # step through it
-make report                      # the HTML report from the last run
 ```
 
-Specs share one authenticated session via `tests/auth-fixture.ts`, so the OTP
-flow runs once rather than 62 times.
+Specs share one authenticated session via `tests/auth-fixture.ts`, so the login
+runs once rather than 62 times.
 
 Because the suite needs credentials, it is skipped on pull requests from forks —
 those cannot read repository secrets. `make check` is the gate a fork
@@ -316,8 +289,8 @@ The image is a static bundle served by nginx, built from a self-contained
 multi-stage `Dockerfile`:
 
 ```bash
-make docker-build
-make docker-run
+docker build -t voipappz-admin .
+docker run --rm -p 3000:80 voipappz-admin
 ```
 
 ```bash
