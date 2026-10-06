@@ -437,6 +437,11 @@ const AccountDialog = ({
       >
         <DialogTitle sx={{ pr: 6 }}>
           {readOnly ? 'Account Details' : isEditMode ? 'Edit Account' : 'Add New Account'}
+          {onSignOut && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} data-testid="account-dialog-identity">
+              Signed in as Admin{account?.email ? ` · ${account.email}` : ''}
+            </Typography>
+          )}
           <IconButton
             aria-label="close"
             onClick={handleClose}

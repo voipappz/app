@@ -128,6 +128,7 @@ import { CSS } from '@dnd-kit/utilities';
 import './TopBar.css';
 import TopBarPhoneButton from './TopBarPhoneButton.jsx';
 import { useIsUserSession } from '../../hooks/useIsUserSession';
+import SessionRoleBadge from '../common/SessionRoleBadge.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { ConfirmDialog } from '../ui';
@@ -866,6 +867,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         >
           <MenuIcon sx={{ fontSize: 22, transition: 'transform 220ms ease', transform: menuOpen ? 'rotate(90deg)' : 'rotate(0deg)' }} />
         </IconButton>
+        {/* Admin or User: which side is signed in, always in view. */}
+        <SessionRoleBadge />
         {/* Selected applications and their selector. The customer is the sidebar's. */}
         {userSession ? (
           <Typography data-testid="topbar-user-environment" sx={{ fontSize: '0.75rem', fontWeight: 600, px: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--theme-text-primary)' }}>
@@ -915,11 +918,12 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         <Box sx={{ width: 8 }} />
 
         {/* The open screen's search field docks here (CentralizedSearch portals
-            into it); its date range and filters open as a popup under it.
-            Empty on a screen with nothing to search. Phones keep it in-screen. */}
+            into it); its date range and filters open as a popup under it. It
+            takes all the room the bar has left. Empty on a screen with nothing
+            to search. Phones keep it in-screen. */}
         <Box
           id={TOPBAR_SEARCH_SLOT_ID}
-          sx={{ flex: '1 1 0', minWidth: 0, maxWidth: 640, display: { xs: 'none', sm: 'flex' }, alignItems: 'center' }}
+          sx={{ flex: '1 1 0', minWidth: 0, display: { xs: 'none', sm: 'flex' }, alignItems: 'center' }}
         />
 
         <Tooltip title="Assistant (Ctrl+K)">
@@ -944,8 +948,10 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </Button>
         </Tooltip>
 
-        {/* Global search moved to ⌘K only (no visible box). */}
-        <Box sx={{ flex: 1, minWidth: 0 }} />
+        {/* Phones have no search slot, so this pushes the tools to the right
+            there. Wider, the slot does it: a second spacer would take half
+            the room from the field. */}
+        <Box sx={{ flex: 1, minWidth: 0, display: { xs: 'block', sm: 'none' } }} />
 
         {/* Topbar utility icons (support tools live in the left Support menu) */}
         <Box className="topbar-actions">

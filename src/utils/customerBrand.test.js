@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCustomerBrand } from './customerBrand';
+import { parseCustomerBrand, brandAccentVars } from './customerBrand';
 
 describe('parseCustomerBrand', () => {
   it('reads logo_icon first, then logo_url', () => {
@@ -37,5 +37,30 @@ describe('parseCustomerBrand', () => {
     expect(parseCustomerBrand(null)).toEqual({ logo: null, color: null });
     expect(parseCustomerBrand(undefined)).toEqual({ logo: null, color: null });
     expect(parseCustomerBrand([1, 2])).toEqual({ logo: null, color: null });
+  });
+});
+
+describe('brandAccentVars', () => {
+  it('derives the console accent and the MUI primary from one colour', () => {
+    const vars = brandAccentVars('#336699');
+    expect(vars['--accent-primary']).toBe('#336699');
+    expect(vars['--mui-palette-primary-main']).toBe('#336699');
+    expect(vars['--mui-palette-primary-mainChannel']).toBe('51 102 153');
+    expect(vars['--accent-primary-alpha-8']).toBe('rgba(51, 102, 153, 0.08)');
+    expect(vars['--accent-primary-hover']).toBe(vars['--mui-palette-primary-dark']);
+    expect(vars['--mui-palette-primary-contrastText']).toBe('#ffffff');
+  });
+
+  it('expands short hex and puts dark text on a light colour', () => {
+    const vars = brandAccentVars(' #FE0 ');
+    expect(vars['--accent-primary']).toBe('#ffee00');
+    expect(vars['--mui-palette-primary-contrastText']).toBe('#1a202c');
+  });
+
+  it('returns null for anything that is not a hex colour', () => {
+    expect(brandAccentVars('rgb(1,2,3)')).toBeNull();
+    expect(brandAccentVars('red; background:url(x)')).toBeNull();
+    expect(brandAccentVars('')).toBeNull();
+    expect(brandAccentVars(undefined)).toBeNull();
   });
 });

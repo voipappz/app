@@ -180,6 +180,17 @@ jobs:
         # switch; run it with `make test` while specs are brought over.
         run: make test SPEC=login-smoke
 
+      - name: Run Playwright (top bar)
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          VA_TEST_OTP: ${{ secrets.VA_TEST_OTP }}
+        # The shell every screen sits in: the docked search and what is left
+        # of the top-right tools. Small, and written against switch.
+        run: make test SPEC=topbar
+
       - name: Upload the report
         if: always() && steps.creds.outputs.ready == 'true'
         uses: actions/upload-artifact@v7

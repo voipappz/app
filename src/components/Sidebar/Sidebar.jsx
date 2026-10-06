@@ -2,7 +2,9 @@ import { useNavigate, useLocation } from 'react-router';
 import { useState } from 'react';
 import {
   Avatar,
+  Badge,
   Box,
+  Divider,
   IconButton,
   List,
   Menu,
@@ -18,6 +20,7 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import CodeIcon from '@mui/icons-material/Code';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import ShieldIcon from '@mui/icons-material/Shield';
 import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { useThemeMode } from '../../context/ThemeContext';
@@ -61,6 +64,8 @@ const Sidebar = ({ collapsed, onNavigate }) => {
     ? setUserMenuAnchor(e.currentTarget)
     : window.dispatchEvent(new Event('openAccountDialog')));
   const isActive = (path) => location.pathname === path;
+  // An entry can stand for more than one route (Logs: Calls and Messages).
+  const isItemActive = (item) => isActive(item.path) || Boolean(item.alsoPaths?.includes(location.pathname));
 
   // Navigate, then let the host (e.g. mobile drawer) close itself. The event lets
   // a screen react to its own nav being clicked (e.g. close an open edit doc).
@@ -90,8 +95,8 @@ const Sidebar = ({ collapsed, onNavigate }) => {
           <ListItemButton
             onClick={() => handleNavigate(item.path)}
             aria-label={item.text}
-            aria-current={isActive(item.path) ? 'page' : undefined}
-            className={`sidebar-nav-button ${isActive(item.path) ? 'active' : ''}`}
+            aria-current={isItemActive(item) ? 'page' : undefined}
+            className={`sidebar-nav-button ${isItemActive(item) ? 'active' : ''}`}
           >
             <ListItemIcon className="sidebar-nav-icon" sx={{ minWidth: 'auto', justifyContent: 'center', position: 'relative' }}>
               <IconComp />
@@ -189,6 +194,9 @@ const Sidebar = ({ collapsed, onNavigate }) => {
           arrow
           title={
             <Box sx={{ textAlign: 'center', py: 0.25 }}>
+              <Typography variant="caption" sx={{ display: 'block', opacity: 0.85 }}>
+                Signed in as {userSession ? 'User' : 'Admin'}
+              </Typography>
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>{accountName}</Typography>
               {user?.email && (
                 <Typography variant="caption" sx={{ opacity: 0.85 }}>{user.email}</Typography>
@@ -201,9 +209,21 @@ const Sidebar = ({ collapsed, onNavigate }) => {
             onClick={openProfile}
             aria-label="Edit account"
           >
-            <Avatar className="sidebar-profile-avatar">
-              {user?.email?.[0]?.toUpperCase() || 'U'}
-            </Avatar>
+            {/* The avatar's colour, and the admin's shield, say which side is
+                signed in (an account or a user). */}
+            <Badge
+              overlap="circular"
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              invisible={userSession}
+              badgeContent={<ShieldIcon className="sidebar-profile-shield" />}
+            >
+              <Avatar
+                className={`sidebar-profile-avatar ${userSession ? 'sidebar-profile-avatar--user' : 'sidebar-profile-avatar--admin'}`}
+                data-testid="sidebar-profile-avatar"
+              >
+                {user?.email?.[0]?.toUpperCase() || 'U'}
+              </Avatar>
+            </Badge>
           </IconButton>
         </Tooltip>
       </Box>
@@ -214,6 +234,11 @@ const Sidebar = ({ collapsed, onNavigate }) => {
         anchorEl={userMenuAnchor} open={Boolean(userMenuAnchor)} onClose={() => setUserMenuAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }} transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       >
+        <Box sx={{ px: 2, py: 1 }} data-testid="user-menu-identity">
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Signed in as User</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>{user?.email || accountName}</Typography>
+        </Box>
+        <Divider />
         <MenuItem onClick={() => { toggleTheme(); setUserMenuAnchor(null); }} data-testid="user-menu-theme">
           {isDarkMode ? 'Light mode' : 'Dark mode'}
         </MenuItem>

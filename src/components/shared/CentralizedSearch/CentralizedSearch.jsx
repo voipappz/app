@@ -802,7 +802,8 @@ const CentralizedSearch = ({
 
   // Docked: the search field lives in the top bar (TopBar's
   // #topbar-search-slot), beside the application selector, and everything that
-  // refines it — date range, filters — opens as a popup under it. `showFilterPanel`
+  // goes with it — date range, filters, refresh / export / columns — opens as a
+  // popup under it, so the bar holds one field and nothing else. `showFilterPanel`
   // is that popup's open state. The screen itself keeps only the active-filter
   // chips. Inline (the layout below) is kept for phones, for a screen opened
   // inside a dialog, and wherever there is no top bar.
@@ -1168,7 +1169,6 @@ const CentralizedSearch = ({
           <ClickAwayListener onClickAway={() => setShowFilterPanel(false)}>
             <Box className="topbar-search" ref={dockRef} data-testid="topbar-search">
               {searchInput}
-              {actions}
               <Popper
                 open={showFilterPanel}
                 anchorEl={dockRef.current}
@@ -1176,7 +1176,10 @@ const CentralizedSearch = ({
                 sx={{ zIndex: (t) => t.zIndex.modal }}
               >
                 <Paper className="topbar-search-popup" elevation={6} data-testid="topbar-search-popup">
-                  {datePicker}
+                  <Box className="topbar-search-popup-head">
+                    {datePicker}
+                    {actions}
+                  </Box>
                   {pillRow}
                   {filterPanel}
                 </Paper>

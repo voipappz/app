@@ -66,3 +66,17 @@ describe('navConfig for a user session (strict)', () => {
     expect(getPermittedNavItems(null, { strict: true })).toEqual([]);
   });
 });
+// Calls and Messages are one menu entry, Logs; the screen's tabs switch kind.
+describe('navConfig Logs entry', () => {
+  const acl = { data: { calls: { main: ['read'] }, messages: { main: ['read'] } } };
+
+  it('lists one entry, at /calls, and no separate Messages', () => {
+    const items = getPermittedNavItems(acl);
+    expect(items.find((item) => item.path === '/calls')).toMatchObject({ text: 'Logs' });
+    expect(items.map((item) => item.path)).not.toContain('/messages');
+  });
+
+  it('still names the Messages route for breadcrumbs and recent pages', () => {
+    expect(findNavItemByPath('/messages')).toMatchObject({ text: 'Messages', aclKey: 'messages' });
+  });
+});
