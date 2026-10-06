@@ -4,16 +4,12 @@
   // is kept here too (redundant with the script's --moderate flag) so this
   // file stays a complete, self-contained policy on its own.
   "moderate": true,
-  //
-  // qs (transitive via body-parser -> express, a direct dependency used by
-  // server.js) has two moderate advisories with no non-breaking fix — the
-  // fix is Express 5, which changes server.js's SPA-fallback wildcard route
-  // (`app.get('*', ...)`) syntax (path-to-regexp v5 -> v6) and needs its own
-  // deliberate migration + testing, not a side effect of an unrelated change.
-  // Tracked, not silently ignored: remove this allowlist once that migration
-  // lands.
   "allowlist": [
-    "GHSA-x5fp-wj9c-mxmx", // qs: array-limit bypass via bracket-key comma parsing
-    "GHSA-4mjr-xmp4-gh2g"  // qs: Denial of Service via Attacker Controlled isBuffer
+    // sprintf-js (transitive: swagger-ui-react -> remarkable -> argparse ->
+    // sprintf-js), one moderate advisory. npm's only "fix" is a DOWNGRADE of
+    // swagger-ui-react from 5.x to 3.23.3, a different major; the current
+    // swagger-ui-react has no release without remarkable yet. Remove this line
+    // when a swagger-ui-react 5.x drops remarkable or pins a fixed sprintf-js.
+    "GHSA-hp3w-g68c-fv3c"  // sprintf-js: prototype pollution, via swagger-ui-react
   ]
 }
