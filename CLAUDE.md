@@ -1059,6 +1059,15 @@ The Vite dev server proxies API requests:
 - Local dev: `http://localhost:3000` → proxies to cloud API
 
 This ensures all tests run against the cloud.voipappz.io environment with proper security practices while maintaining full functionality with optimized Playwright testing.
+## Languages and phones
+
+The app speaks English and Hebrew (right to left) and works from 375px up.
+English is the default and must not change when a screen is converted. Before
+touching a screen's text, layout, dates or tables, read
+[docs/i18n-guide.md](docs/i18n-guide.md): the recipe (`useTranslation`,
+`Bdi`, `ResponsiveTable`, `ResponsiveDialog`, logical sides), the checks, and
+the backlog. Rule: touch it, convert it.
+
 ## Live dashboard (`/live`)
 
 The screen reads live agent, queue and environment state from the va-crystal

@@ -4,6 +4,46 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
+// MUI v7 Grid sizes with `size`; `item`/`xs`/`md` are silently ignored.
+const GRID_SIZE_PROPS = {
+  selector: "JSXOpeningElement[name.name='Grid'] > JSXAttribute[name.name=/^(item|xs|sm|md|lg|xl)$/]",
+  message: 'MUI v7 Grid ignores item/xs/sm/md/lg/xl — use size={{ xs, md }}.',
+}
+
+// Dates and numbers follow the active language only through the helpers.
+const HAND_FORMATTED_DATES_AND_NUMBERS = [
+  ...['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString'].map((property) => ({
+    property, message: 'Use formatDate/formatOnlyDate (utils/dateUtils) or formatNumber (utils/numberUtils).',
+  })),
+  ...['NumberFormat', 'DateTimeFormat'].map((property) => ({
+    object: 'Intl', property, message: 'Use formatNumber (utils/numberUtils) or the date helpers (utils/dateUtils).',
+  })),
+]
+
+// Physical sides in `sx` do not mirror in Hebrew: use ms/me/ps/pe,
+// marginInlineStart, insetInlineEnd, textAlign: 'start'...
+const PHYSICAL_SIDES_IN_SX = [
+  {
+    selector: "JSXAttribute[name.name='sx'] Property[key.name=/^(ml|mr|pl|pr|marginLeft|marginRight|paddingLeft|paddingRight|left|right|borderLeft|borderRight)$/]",
+    message: 'Use a logical side (ms/me/ps/pe, marginInlineStart, insetInlineEnd...) so it mirrors in Hebrew.',
+  },
+  {
+    selector: "JSXAttribute[name.name='sx'] Property[key.name='textAlign'][value.value=/^(left|right)$/]",
+    message: "Use textAlign: 'start' or 'end' so it mirrors in Hebrew.",
+  },
+]
+
+// Screens already converted to translations and logical sides: here the
+// rules are errors, so they stay converted. Add a folder when you convert it
+// (docs/i18n-guide.md).
+const CONVERTED = [
+  'src/i18n/**',
+  'src/components/Extensions/**',
+  'src/components/Login/**',
+  'src/components/shared/ResponsiveTable/**',
+  'src/components/ui/**',
+]
+
 export default [
   { ignores: ['dist', 'test-results/**', 'playwright-report/**', '.playwright/**', 'src/context/AuthContext.jsx', 'va-voipbox-admin/**', 'old-ionic-portal/**', 'test-api.cjs', 'docs/**'] },
   {
@@ -31,27 +71,27 @@ export default [
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
       'react-refresh/only-export-components': 'off',
       'react-hooks/exhaustive-deps': 'off',
-      // MUI v7 Grid sizes with `size`; `item`/`xs`/`md` are silently ignored.
-      'no-restricted-syntax': ['error', {
-        selector: "JSXOpeningElement[name.name='Grid'] > JSXAttribute[name.name=/^(item|xs|sm|md|lg|xl)$/]",
-        message: 'MUI v7 Grid ignores item/xs/sm/md/lg/xl — use size={{ xs, md }}.',
-      }],
-      // Dates and numbers follow the active language only through the helpers.
-      // A warning for now: existing code is converted screen by screen.
-      'no-restricted-properties': ['warn',
-        ...['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString'].map((property) => ({
-          property, message: 'Use formatDate/formatOnlyDate (utils/dateUtils) or formatNumber (utils/numberUtils).',
-        })),
-        ...['NumberFormat', 'DateTimeFormat'].map((property) => ({
-          object: 'Intl', property, message: 'Use formatNumber (utils/numberUtils) or the date helpers (utils/dateUtils).',
-        })),
-      ],
+      'no-restricted-syntax': ['error', GRID_SIZE_PROPS],
+      // A warning elsewhere: existing code is converted screen by screen.
+      'no-restricted-properties': ['warn', ...HAND_FORMATTED_DATES_AND_NUMBERS],
+    },
+  },
+  {
+    files: CONVERTED,
+    rules: {
+      'no-restricted-properties': ['error', ...HAND_FORMATTED_DATES_AND_NUMBERS],
+      'no-restricted-syntax': ['error', GRID_SIZE_PROPS, ...PHYSICAL_SIDES_IN_SX],
     },
   },
   // The helpers themselves, and tests, may call Intl directly.
   {
     files: ['src/utils/dateUtils.js', 'src/utils/numberUtils.js', '**/*.test.{js,jsx}'],
     rules: { 'no-restricted-properties': 'off' },
+  },
+  // Tests may use a physical side on purpose, e.g. to check that Hebrew mirrors it.
+  {
+    files: ['**/*.test.{js,jsx}'],
+    rules: { 'no-restricted-syntax': ['error', GRID_SIZE_PROPS] },
   },
   // TypeScript files configuration
   ...tseslint.configs.recommended,

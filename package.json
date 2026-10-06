@@ -10,6 +10,7 @@
     "dev": "vite --port 3000",
     "build": "vite build",
     "lint": "eslint .",
+    "i18n:check": "vitest run src/i18n/translations.test.js",
     "preview": "vite preview",
     "server": "node server.js",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",

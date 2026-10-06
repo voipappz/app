@@ -49,6 +49,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Every English text has a Hebrew one, none empty, same placeholders
+      # (src/i18n/translations.test.js). Its own step, so a missing text fails
+      # by name instead of inside the unit tests.
+      - name: Translations
+        run: npm run i18n:check
+
       - name: Unit tests
         run: npm run test:unit:run
 
