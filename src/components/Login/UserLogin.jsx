@@ -14,7 +14,10 @@ import {
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import { Trans, useTranslation } from 'react-i18next';
 import { useUserLogin } from './UserLogin';
+import LanguageLink from '../../i18n/LanguageLink';
+import useCustomerDefaultLanguage from '../../i18n/useCustomerDefaultLanguage';
 import { loadCustomerPortalData } from '../../services/customerPortalService';
 import './Login.css';
 
@@ -55,6 +58,7 @@ const UserLogin = ({ switcher = null }) => {
     handleForgotResetSubmit,
     qrSigningIn
   } = useUserLogin();
+  const { t } = useTranslation('auth');
   const [showPassword, setShowPassword] = useState(false);
 
   // Per-tenant branding (logo, brand colour) for this unauthenticated screen —
@@ -67,6 +71,10 @@ const UserLogin = ({ switcher = null }) => {
     loadCustomerPortalData().then((data) => { if (alive && data) setPortalData(data); });
     return () => { alive = false; };
   }, []);
+
+  // The customer is known from the site address, so its language can apply
+  // before anyone signs in (and stays after).
+  useCustomerDefaultLanguage(portalData?.language);
 
   const brandColor = portalData?.logo_color;
   // The logo is the customer's own, from customer_portal_data — never a
@@ -104,15 +112,15 @@ const UserLogin = ({ switcher = null }) => {
   const renderLoginForm = () => (
     <>
       <Typography component="h1" className="form-title">
-        Welcome back
+        {t('user.title')}
       </Typography>
       <Typography variant="body2" className="forgot-description">
-        Sign in to view your calls, use your phone, and ask the assistant.
+        {t('user.subtitle')}
       </Typography>
 
       {expectsOtp && (
         <Typography variant="body2" className="forgot-description" data-testid="user-otp-hint">
-          You'll be asked for a verification code after signing in.
+          {t('user.otpHint')}
         </Typography>
       )}
 
@@ -138,8 +146,8 @@ const UserLogin = ({ switcher = null }) => {
             fullWidth
             id="user-email"
             name="portal_email"
-            label="Email or extension"
-            placeholder="you@example.com or 2300"
+            label={t('user.identifier')}
+            placeholder={t('user.identifierPlaceholder')}
             value={email}
             onChange={handleEmailChange}
             onBlur={() => handleBlur('email')}
@@ -158,7 +166,7 @@ const UserLogin = ({ switcher = null }) => {
             autoComplete="section-portal username"
           />
           {touched.email && email === '' && (
-            <FormHelperText error className="help-block">Email or extension is required.</FormHelperText>
+            <FormHelperText error className="help-block">{t('user.identifierRequired')}</FormHelperText>
           )}
         </FormControl>
 
@@ -168,8 +176,8 @@ const UserLogin = ({ switcher = null }) => {
             fullWidth
             id="user-password"
             name="portal_password"
-            label="Password"
-            placeholder="Your password"
+            label={t('field.password')}
+            placeholder={t('field.passwordPlaceholder')}
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={handlePasswordChange}
@@ -184,7 +192,7 @@ const UserLogin = ({ switcher = null }) => {
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showPassword ? t('user.hidePassword') : t('user.showPassword')}
                     edge="end"
                     onClick={() => setShowPassword((visible) => !visible)}
                   >
@@ -195,7 +203,7 @@ const UserLogin = ({ switcher = null }) => {
             }}
           />
           {touched.password && password === '' && (
-            <FormHelperText error className="help-block">Password is required.</FormHelperText>
+            <FormHelperText error className="help-block">{t('field.passwordRequired')}</FormHelperText>
           )}
         </FormControl>
 
@@ -208,7 +216,7 @@ const UserLogin = ({ switcher = null }) => {
             disabled={loading || !email || !password}
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? t('user.signingIn') : t('user.signIn')}
           </Button>
 
           <Typography
@@ -219,7 +227,7 @@ const UserLogin = ({ switcher = null }) => {
             onClick={handleForgotPasswordClick}
             data-testid="user-forgot-password-link"
           >
-            Forgot password?
+            {t('forgot.linkUser')}
           </Typography>
 
         </Box>
@@ -230,11 +238,11 @@ const UserLogin = ({ switcher = null }) => {
   const renderOtpForm = () => (
     <>
       <Typography component="h3" className="form-title">
-        Verify Your Identity
+        {t('otp.title')}
       </Typography>
 
       <Typography component="p" className="forgot-description">
-        A 6-digit code has been sent to <strong>{email}</strong>. Enter it below to continue.
+        <Trans t={t} i18nKey="otp.codeSentContinue" components={{ email: <strong>{email}</strong> }} />
       </Typography>
 
       {error && (
@@ -250,8 +258,8 @@ const UserLogin = ({ switcher = null }) => {
             fullWidth
             id="user-otp-code"
             name="otp-code"
-            label="Verification code"
-            placeholder="6-digit code"
+            label={t('field.verificationCode')}
+            placeholder={t('field.codePlaceholder')}
             value={otpCode}
             onChange={handleOtpCodeChange}
             variant="outlined"
@@ -277,7 +285,7 @@ const UserLogin = ({ switcher = null }) => {
             onClick={handleBackToCredentials}
             data-testid="user-otp-back-button"
           >
-            Back
+            {t('action.back')}
           </Button>
 
           <Button
@@ -288,7 +296,7 @@ const UserLogin = ({ switcher = null }) => {
             disabled={loading || otpCode.length !== 6}
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
           >
-            {loading ? 'Verifying...' : 'Verify'}
+            {loading ? t('otp.verifying') : t('otp.verify')}
           </Button>
         </Box>
       </Box>
@@ -300,11 +308,11 @@ const UserLogin = ({ switcher = null }) => {
       return (
         <>
           <Typography component="h3" className="form-title">
-            Reset Password
+            {t('forgot.title')}
           </Typography>
 
           <Typography component="p" className="forgot-description">
-            Enter your e-mail address below to receive a reset code.
+            {t('forgot.enterEmail')}
           </Typography>
 
           {error && (
@@ -320,7 +328,7 @@ const UserLogin = ({ switcher = null }) => {
                 fullWidth
                 id="user-forgot-email"
                 name="forgot-email"
-                label="Email"
+                label={t('field.email')}
                 placeholder="you@example.com"
                 value={forgotEmail}
                 onChange={handleForgotEmailChange}
@@ -334,7 +342,7 @@ const UserLogin = ({ switcher = null }) => {
                 autoComplete="off"
               />
               {touched.forgotEmail && forgotEmail === '' && (
-                <FormHelperText error className="help-block">Email is required.</FormHelperText>
+                <FormHelperText error className="help-block">{t('field.emailRequired')}</FormHelperText>
               )}
             </FormControl>
 
@@ -346,7 +354,7 @@ const UserLogin = ({ switcher = null }) => {
                 onClick={handleBackToLogin}
                 data-testid="user-back-button"
               >
-                Back
+                {t('action.back')}
               </Button>
 
               <Button
@@ -357,7 +365,7 @@ const UserLogin = ({ switcher = null }) => {
                 disabled={loading || !forgotEmail}
                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
               >
-                {loading ? 'Sending...' : 'Submit'}
+                {loading ? t('forgot.sending') : t('forgot.submit')}
               </Button>
             </Box>
           </Box>
@@ -369,11 +377,11 @@ const UserLogin = ({ switcher = null }) => {
       return (
         <>
           <Typography component="h3" className="form-title">
-            Verify Your Email
+            {t('forgot.verifyEmailTitle')}
           </Typography>
 
           <Typography component="p" className="forgot-description">
-            A 6-digit code has been sent to <strong>{forgotEmail}</strong>. Enter it below.
+            <Trans t={t} i18nKey="forgot.codeSent" components={{ email: <strong>{forgotEmail}</strong> }} />
           </Typography>
 
           {error && (
@@ -389,8 +397,8 @@ const UserLogin = ({ switcher = null }) => {
                 fullWidth
                 id="user-forgot-otp-code"
                 name="forgot-otp-code"
-                label="Verification code"
-                placeholder="6-digit code"
+                label={t('field.verificationCode')}
+                placeholder={t('field.codePlaceholder')}
                 value={forgotOtpCode}
                 onChange={handleForgotOtpChange}
                 variant="outlined"
@@ -416,7 +424,7 @@ const UserLogin = ({ switcher = null }) => {
                 onClick={handleBackToLogin}
                 data-testid="user-forgot-otp-back-button"
               >
-                Back
+                {t('action.back')}
               </Button>
 
               <Button
@@ -427,7 +435,7 @@ const UserLogin = ({ switcher = null }) => {
                 disabled={loading || forgotOtpCode.length !== 6}
                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
               >
-                {loading ? 'Verifying...' : 'Verify'}
+                {loading ? t('otp.verifying') : t('otp.verify')}
               </Button>
             </Box>
           </Box>
@@ -438,11 +446,11 @@ const UserLogin = ({ switcher = null }) => {
     return (
       <>
         <Typography component="h3" className="form-title">
-          Set New Password
+          {t('forgot.newPasswordTitle')}
         </Typography>
 
         <Typography component="p" className="forgot-description">
-          Choose a new password (minimum 8 characters).
+          {t('forgot.newPasswordHint')}
         </Typography>
 
         {error && (
@@ -462,8 +470,8 @@ const UserLogin = ({ switcher = null }) => {
               fullWidth
               id="user-new-password"
               name="new-password"
-              label="New password"
-              placeholder="At least 8 characters"
+              label={t('field.newPassword')}
+              placeholder={t('field.newPasswordPlaceholder')}
               type="password"
               value={newPassword}
               onChange={handleNewPasswordChange}
@@ -482,8 +490,8 @@ const UserLogin = ({ switcher = null }) => {
               fullWidth
               id="user-confirm-password"
               name="confirm-password"
-              label="Confirm password"
-              placeholder="Repeat the new password"
+              label={t('field.confirmPassword')}
+              placeholder={t('field.confirmPasswordPlaceholder')}
               type="password"
               value={confirmPassword}
               onChange={handleConfirmPasswordChange}
@@ -495,7 +503,7 @@ const UserLogin = ({ switcher = null }) => {
               autoComplete="new-password"
             />
             {confirmPassword !== '' && newPassword !== confirmPassword && (
-              <FormHelperText error className="help-block">Passwords do not match.</FormHelperText>
+              <FormHelperText error className="help-block">{t('field.passwordsDoNotMatch')}</FormHelperText>
             )}
           </FormControl>
 
@@ -507,7 +515,7 @@ const UserLogin = ({ switcher = null }) => {
               onClick={handleBackToLogin}
               data-testid="user-forgot-reset-back-button"
             >
-              Back
+              {t('action.back')}
             </Button>
 
             <Button
@@ -518,7 +526,7 @@ const UserLogin = ({ switcher = null }) => {
               disabled={loading || forgotSent || !newPassword || newPassword.length < 8 || newPassword !== confirmPassword}
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
             >
-              {loading ? 'Resetting...' : 'Reset Password'}
+              {loading ? t('forgot.resetting') : t('forgot.reset')}
             </Button>
           </Box>
         </Box>
@@ -537,7 +545,7 @@ const UserLogin = ({ switcher = null }) => {
         {qrSigningIn ? (
           <Box data-testid="qr-signing-in" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 4 }}>
             <CircularProgress />
-            <Typography>Signing you in…</Typography>
+            <Typography>{t('user.signingYouIn')}</Typography>
           </Box>
         ) : (<>
         {!showForgetForm && !otpStep && switcher}
@@ -549,9 +557,11 @@ const UserLogin = ({ switcher = null }) => {
         }
         </>)}
         <Typography variant="caption" className="portal-login-footer">
-          Your workspace is protected with secure sign-in.
+          {t('user.secureFooter')}
         </Typography>
       </Paper>
+      {/* Below the card: available, but never in the way of signing in. */}
+      <LanguageLink sx={{ mt: 2 }} />
     </Box>
   );
 };

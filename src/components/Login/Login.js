@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { loginErrorText } from './loginErrors';
 import { useNavigate } from 'react-router';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -6,6 +8,8 @@ import { getAccountUuidFromToken, getAccountDataFromToken, getTokenExpiry } from
 import { logLoginDebug } from '../../utils/loginDebug';
 
 export const useLogin = () => {
+  // Client-side messages in the active language; server messages pass through as sent.
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showForgetForm, setShowForgetForm] = useState(false);
@@ -78,7 +82,7 @@ export const useLogin = () => {
     setTouched(prev => ({ ...prev, forgotEmail: true }));
 
     if (!forgotEmail) {
-      setError('Email is required');
+      setError(t('error.emailRequired'));
       return;
     }
 
@@ -95,7 +99,7 @@ export const useLogin = () => {
     } catch (error) {
       const errorMessage = error.response?.data?.message ||
                           error.response?.data?.error ||
-                          'Failed to send reset code. Please try again.';
+                          t('error.sendCodeFailed');
       setError(errorMessage);
     }
   };
@@ -105,7 +109,7 @@ export const useLogin = () => {
     e.preventDefault();
 
     if (!forgotOtpCode || forgotOtpCode.length !== 6) {
-      setError('Please enter the 6-digit code');
+      setError(t('error.enterCode'));
       return;
     }
 
@@ -125,7 +129,7 @@ export const useLogin = () => {
     } catch (error) {
       const errorMessage = error.response?.data?.message ||
                           error.response?.data?.error ||
-                          'Invalid or expired code. Please try again.';
+                          t('error.invalidCode');
       setError(errorMessage);
     }
   };
@@ -135,11 +139,11 @@ export const useLogin = () => {
     e.preventDefault();
 
     if (!newPassword || newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('error.passwordTooShort'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('error.passwordsDoNotMatch'));
       return;
     }
 
@@ -154,7 +158,7 @@ export const useLogin = () => {
       });
 
       setForgotSent(true);
-      setError('Password reset successfully!');
+      setError(t('error.passwordReset'));
 
       setTimeout(() => {
         handleBackToLogin();
@@ -162,7 +166,7 @@ export const useLogin = () => {
     } catch (error) {
       const errorMessage = error.response?.data?.message ||
                           error.response?.data?.error ||
-                          'Failed to reset password. Please try again.';
+                          t('error.resetFailed');
       setError(errorMessage);
     }
   };
@@ -176,7 +180,7 @@ export const useLogin = () => {
 
     // Validate required fields
     if (!email || !password) {
-      setError('Email and password are required');
+      setError(t('error.emailAndPasswordRequired'));
       return;
     }
 
@@ -211,10 +215,7 @@ export const useLogin = () => {
       }
 
     } catch (error) {
-      const errorMessage = error.response?.data?.message ||
-                          error.response?.data?.error ||
-                          'Login failed. Please try again.';
-      setError(errorMessage);
+      setError(loginErrorText(t, error));
     }
   };
 
@@ -223,7 +224,7 @@ export const useLogin = () => {
     event.preventDefault();
 
     if (!otpCode || otpCode.length !== 6) {
-      setError('Please enter the 6-digit code');
+      setError(t('error.enterCode'));
       return;
     }
 
@@ -246,7 +247,7 @@ export const useLogin = () => {
     } catch (error) {
       const errorMessage = error.response?.data?.message ||
                           error.response?.data?.error ||
-                          'Invalid or expired code. Please try again.';
+                          t('error.invalidCode');
       setError(errorMessage);
     }
   };

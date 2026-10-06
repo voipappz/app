@@ -22,28 +22,28 @@ import { canAccessScreen } from '../utils/jwt';
 // environment selector. Everything else stays reachable through the Studio and
 // ⌘K search (routes still exist), it's just off the rail.
 export const NAV_ITEMS = [
-  { text: 'Routes',          path: '/routes',          iconComponent: SchemaIcon,                aclKey: 'routes',          alwaysShow: true, group: 'MANAGE'   },
-  { text: 'Services',      path: '/services',       iconComponent: MiscellaneousServicesIcon, aclKey: 'services',                       group: 'MANAGE'   },
-  { text: 'Devices',       path: '/extensions',     iconComponent: DevicesIcon,               aclKey: 'extensions',                     group: 'MANAGE'   },
-  { text: 'Subscriptions', path: '/subscriptions',  iconComponent: LoyaltyIcon,               aclKey: 'subscriptions',                  group: 'MANAGE'   },
+  { text: 'Routes', labelKey: 'nav:routes',          path: '/routes',          iconComponent: SchemaIcon,                aclKey: 'routes',          alwaysShow: true, group: 'MANAGE'   },
+  { text: 'Services', labelKey: 'nav:services',      path: '/services',       iconComponent: MiscellaneousServicesIcon, aclKey: 'services',                       group: 'MANAGE'   },
+  { text: 'Devices', labelKey: 'nav:devices',       path: '/extensions',     iconComponent: DevicesIcon,               aclKey: 'extensions',                     group: 'MANAGE'   },
+  { text: 'Subscriptions', labelKey: 'nav:subscriptions', path: '/subscriptions',  iconComponent: LoyaltyIcon,               aclKey: 'subscriptions',                  group: 'MANAGE'   },
   // Tariffs sit next to Subscriptions: they're the rate books subscriptions
   // bill against, and were previously only reachable through the picker
   // embedded in other dialogs.
-  { text: 'Tariffs',       path: '/tariffs',        iconComponent: RequestQuoteIcon,          aclKey: 'tariffs',                        group: 'MANAGE'   },
+  { text: 'Tariffs', labelKey: 'nav:tariffs',       path: '/tariffs',        iconComponent: RequestQuoteIcon,          aclKey: 'tariffs',                        group: 'MANAGE'   },
   // The live-calls dashboard (pilot): the portal's landing screen, in the
   // console, scoped to the selected customer/environment. Gated on `calls`,
   // the data it shows.
-  { text: 'Dashboard',     path: '/admin/dashboard', iconComponent: HomeIcon,                 aclKey: 'calls',                          group: 'MONITOR'  },
+  { text: 'Dashboard', labelKey: 'nav:dashboard',     path: '/admin/dashboard', iconComponent: HomeIcon,                 aclKey: 'calls',                          group: 'MONITOR'  },
   // Live answers "what is happening right now"; Calls is the history of the
   // same thing, so Live sits above it. Reachable from both surfaces: LiveRoute
   // in App.jsx checks each session against its own ACL vocabulary.
-  { text: 'Live',          path: '/live',           iconComponent: SensorsIcon,               aclKey: 'reports',                        group: 'MONITOR'  },
-  { text: 'Calls',         path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
-  { text: 'Messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
-  { text: 'Reports',       path: '/reports',        iconComponent: AssessmentIcon,            aclKey: 'reports',                        group: 'MONITOR'  },
-  { text: 'Users',         path: '/users',          iconComponent: PeopleIcon,                aclKey: 'users',                          group: 'MANAGE'   },
-  { text: 'Accounts',      path: '/accounts',       iconComponent: BadgeIcon,                 aclKey: 'accounts',                       group: 'MANAGE'   },
-  { text: 'Templates',     path: '/templates',      iconComponent: ArticleIcon,               aclKey: 'templates',                      group: 'MANAGE'   },
+  { text: 'Live', labelKey: 'nav:live',          path: '/live',           iconComponent: SensorsIcon,               aclKey: 'reports',                        group: 'MONITOR'  },
+  { text: 'Calls', labelKey: 'nav:calls',         path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
+  { text: 'Messages', labelKey: 'nav:messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
+  { text: 'Reports', labelKey: 'nav:reports',       path: '/reports',        iconComponent: AssessmentIcon,            aclKey: 'reports',                        group: 'MONITOR'  },
+  { text: 'Users', labelKey: 'nav:users',         path: '/users',          iconComponent: PeopleIcon,                aclKey: 'users',                          group: 'MANAGE'   },
+  { text: 'Accounts', labelKey: 'nav:accounts',      path: '/accounts',       iconComponent: BadgeIcon,                 aclKey: 'accounts',                       group: 'MANAGE'   },
+  { text: 'Templates', labelKey: 'nav:templates',     path: '/templates',      iconComponent: ArticleIcon,               aclKey: 'templates',                      group: 'MANAGE'   },
 ];
 
 // Professional tools — top-right icons on desktop and overflow menu on phones.
@@ -52,9 +52,9 @@ export const TOPBAR_NAV_ITEMS = [
   // `noIcon`: no top bar icon; reached from elsewhere — Events from a list
   // row (RowEventsButton), Monitoring from the health dot, Syslog from the
   // Logs view of Monitoring.
-  { text: 'Events',        path: '/events',         iconComponent: BoltIcon,                  aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
-  { text: 'Syslog',        path: '/logs',           iconComponent: SubjectIcon,               aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
-  { text: 'Monitoring',    path: '/monitoring',     iconComponent: TimelineIcon,              aclKey: 'monitors',                       group: 'MONITOR',  noIcon: true },
+  { text: 'Events', labelKey: 'nav:events',        path: '/events',         iconComponent: BoltIcon,                  aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
+  { text: 'Syslog', labelKey: 'nav:syslog',        path: '/logs',           iconComponent: SubjectIcon,               aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
+  { text: 'Monitoring', labelKey: 'nav:monitoring',    path: '/monitoring',     iconComponent: TimelineIcon,              aclKey: 'monitors',                       group: 'MONITOR',  noIcon: true },
 ];
 
 // Screens with a route but no menu entry: they open from the screen they
@@ -62,8 +62,11 @@ export const TOPBAR_NAV_ITEMS = [
 // icon in breadcrumbs and recent pages. Nodes has no route at all: it is
 // managed from the customer dialog.
 export const OFF_MENU_NAV_ITEMS = [
-  { text: 'Providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'ADMIN'    },
+  { text: 'Providers', labelKey: 'nav:providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'ADMIN'    },
 ];
+
+// A menu item's name in the active language (nav.json), e.g. "Calls" / "שיחות".
+export const navLabel = (t, item) => t(item.labelKey, { defaultValue: item.text });
 
 // `strict` (a portal USER session — same ACL model as an account): an item is
 // shown only when the ACL grants its key. Items with no key, or alwaysShow,

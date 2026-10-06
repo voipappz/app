@@ -405,6 +405,39 @@
   filter: grayscale(0.2);
 }
 
+/* Phone drawer (Sidebar `wide`): each label sits beside its icon, at a
+   readable size, and the profile row names who is signed in. */
+.sidebar-container.sidebar-container--wide {
+  position: relative;
+  width: 100%;
+}
+
+.sidebar-container--wide .sidebar-nav-button {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 6px 16px;
+  min-height: 44px;
+}
+
+.sidebar-container--wide .sidebar-nav-text {
+  font-size: 14px;
+  text-align: start;
+  max-width: none;
+}
+
+.sidebar-container--wide .sidebar-profile-section {
+  justify-content: flex-start;
+  gap: 10px;
+  padding-inline: 12px;
+}
+
+.sidebar-profile-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 /* Responsive Design */
 @media (max-width: 899px) {
   .sidebar-container {

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { loginErrorText } from './loginErrors';
 import { useNavigate } from 'react-router';
 import axios from 'axios';
 import { useUserAuth } from '../../context/UserAuthContext';
@@ -13,6 +15,8 @@ import { logLoginDebug } from '../../utils/loginDebug';
 // authenticates a portal user; the two token shapes are unrelated (see
 // UserAuthContext), so this hook and its admin counterpart stay separate.
 export const useUserLogin = () => {
+  // Client-side messages in the active language; server messages pass through as sent.
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [touched, setTouched] = useState({ email: false, password: false });
@@ -73,7 +77,7 @@ export const useUserLogin = () => {
     e.preventDefault();
     setTouched((prev) => ({ ...prev, forgotEmail: true }));
     if (!forgotEmail) {
-      setError('Email is required');
+      setError(t('error.emailRequired'));
       return;
     }
     setLoading();
@@ -83,7 +87,7 @@ export const useUserLogin = () => {
       setForgotStep(2);
       setError('');
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Failed to send reset code. Please try again.');
+      setError(err.response?.data?.message || err.response?.data?.error || t('error.sendCodeFailed'));
     }
   };
 
@@ -91,7 +95,7 @@ export const useUserLogin = () => {
   const handleForgotOtpSubmit = async (e) => {
     e.preventDefault();
     if (!forgotOtpCode || forgotOtpCode.length !== 6) {
-      setError('Please enter the 6-digit code');
+      setError(t('error.enterCode'));
       return;
     }
     setLoading();
@@ -103,7 +107,7 @@ export const useUserLogin = () => {
       setForgotStep(3);
       setError('');
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Invalid or expired code. Please try again.');
+      setError(err.response?.data?.message || err.response?.data?.error || t('error.invalidCode'));
     }
   };
 
@@ -111,11 +115,11 @@ export const useUserLogin = () => {
   const handleForgotResetSubmit = async (e) => {
     e.preventDefault();
     if (!newPassword || newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('error.passwordTooShort'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('error.passwordsDoNotMatch'));
       return;
     }
     setLoading();
@@ -124,10 +128,10 @@ export const useUserLogin = () => {
         params: { reset_token: forgotResetToken, new_password: newPassword }
       });
       setForgotSent(true);
-      setError('Password reset successfully!');
+      setError(t('error.passwordReset'));
       setTimeout(() => handleBackToLogin(), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Failed to reset password. Please try again.');
+      setError(err.response?.data?.message || err.response?.data?.error || t('error.resetFailed'));
     }
   };
 
@@ -137,7 +141,7 @@ export const useUserLogin = () => {
     setTouched({ email: true, password: true });
 
     if (!email || !password) {
-      setError('Email and password are required');
+      setError(t('error.emailAndPasswordRequired'));
       return;
     }
 
@@ -159,7 +163,7 @@ export const useUserLogin = () => {
         completeLogin(response.data);
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Login failed. Please try again.');
+      setError(loginErrorText(t, err));
     }
   };
 
@@ -167,7 +171,7 @@ export const useUserLogin = () => {
   const handleOtpSubmit = async (event) => {
     event.preventDefault();
     if (!otpCode || otpCode.length !== 6) {
-      setError('Please enter the 6-digit code');
+      setError(t('error.enterCode'));
       return;
     }
     setLoading();
@@ -177,7 +181,7 @@ export const useUserLogin = () => {
       });
       completeLogin(response.data);
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Invalid or expired code. Please try again.');
+      setError(err.response?.data?.message || err.response?.data?.error || t('error.invalidCode'));
     }
   };
 
@@ -232,7 +236,7 @@ export const useUserLogin = () => {
     axios.post('/auth/user_qr_login', null, { params: { token: loginToken } })
       .then((response) => completeLogin(response.data))
       .catch((err) => {
-        setError(err.response?.data?.message || err.response?.data?.error || 'This sign-in code did not work. Ask for a new one, or sign in with your email.');
+        setError(err.response?.data?.message || err.response?.data?.error || t('error.qrCodeFailed'));
       })
       .finally(() => setQrSigningIn(false));
   // Once, on the first render: the code in the URL is single-use.

@@ -57,6 +57,12 @@ export function LocaleProvider({ children }) {
   );
 }
 
+// Same as useLocale, but null outside LocaleProvider instead of throwing: for
+// small optional controls on screens that tests render on their own.
+export function useOptionalLocale() {
+  return useContext(LocaleContext);
+}
+
 export function useLocale() {
   const context = useContext(LocaleContext);
   if (!context) throw new Error('useLocale must be used within LocaleProvider');

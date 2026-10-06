@@ -1,1 +1,47 @@
-{}
+{
+  "role": {
+    "admin": "מנהל",
+    "user": "משתמש",
+    "adminHint": "מחובר כחשבון (מנהל)",
+    "userHint": "מחובר כמשתמש"
+  },
+  "signedInAs": {
+    "admin": "מחובר כמנהל",
+    "user": "מחובר כמשתמש"
+  },
+  "appearance": {
+    "darkMode": "מצב כהה",
+    "lightMode": "מצב בהיר",
+    "switchLanguage": "החלפת שפה"
+  },
+  "languageName": {
+    "en": "English",
+    "he": "עברית"
+  },
+  "action": {
+    "signOut": "התנתקות",
+    "cancel": "ביטול",
+    "delete": "מחיקה"
+  },
+  "confirm": {
+    "title": "האם להמשיך?",
+    "description": "לא ניתן לבטל פעולה זו.",
+    "deleteEntity": "האם למחוק את <name/>?",
+    "continue": "האם להמשיך?"
+  },
+  "shell": {
+    "toggleMenu": "הצגת התפריט",
+    "assistant": "עוזר (Ctrl+K)",
+    "help": "עזרה",
+    "health": "תקינות",
+    "notifications": "התראות",
+    "moreTools": "כלים נוספים",
+    "editAccount": "עריכת החשבון",
+    "support": "תמיכה",
+    "documentation": "תיעוד",
+    "tickets": "פניות"
+  },
+  "accountDialog": {
+    "signOut": "התנתקות"
+  }
+}

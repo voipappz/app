@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   Button,
   CircularProgress,
@@ -38,12 +39,12 @@ const ConfirmDialog = ({
   open,
   onClose,
   onConfirm,
-  title = 'Are you sure?',
+  title,
   message,
   entityName,
-  description = 'This action cannot be undone.',
-  confirmLabel = 'Delete',
-  cancelLabel = 'Cancel',
+  description,
+  confirmLabel,
+  cancelLabel,
   destructive = true,
   loading = false,
   children,
@@ -51,6 +52,10 @@ const ConfirmDialog = ({
   confirmTestId = 'confirm-delete-button',
 }) => {
   const id = useId();
+  const { t } = useTranslation();
+  // Defaults in the active language; a screen's own wording always wins.
+  // `description={null}` (or '') still means "no description line".
+  const shownDescription = description === undefined ? t('confirm.description') : description;
   const titleId = `${id}-title`;
   const descId = `${id}-desc`;
 
@@ -85,25 +90,25 @@ const ConfirmDialog = ({
       aria-labelledby={titleId}
       aria-describedby={descId}
     >
-      <DialogTitle id={titleId}>{title}</DialogTitle>
+      <DialogTitle id={titleId}>{title ?? t('confirm.title')}</DialogTitle>
       <DialogContent id={descId}>
         {message ?? (
           <Typography>
             {entityName
-              ? <>Are you sure you want to delete <strong>{entityName}</strong>?</>
-              : 'Are you sure you want to continue?'}
+              ? <Trans i18nKey="confirm.deleteEntity" components={{ name: <strong>{entityName}</strong> }} />
+              : t('confirm.continue')}
           </Typography>
         )}
-        {description && (
+        {shownDescription && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {description}
+            {shownDescription}
           </Typography>
         )}
         {children}
       </DialogContent>
       <DialogActions>
         <Button onClick={close} disabled={loading}>
-          {cancelLabel}
+          {cancelLabel ?? t('action.cancel')}
         </Button>
         <Button
           data-testid={confirmTestId}
@@ -113,7 +118,7 @@ const ConfirmDialog = ({
           disabled={loading}
           startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
         >
-          {confirmLabel}
+          {confirmLabel ?? t('action.delete')}
         </Button>
       </DialogActions>
     </Dialog>

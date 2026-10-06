@@ -1,1 +1,47 @@
-{}
+{
+  "role": {
+    "admin": "Admin",
+    "user": "User",
+    "adminHint": "Signed in as an account (admin)",
+    "userHint": "Signed in as a user"
+  },
+  "signedInAs": {
+    "admin": "Signed in as Admin",
+    "user": "Signed in as User"
+  },
+  "appearance": {
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode",
+    "switchLanguage": "Switch language"
+  },
+  "languageName": {
+    "en": "English",
+    "he": "עברית"
+  },
+  "action": {
+    "signOut": "Sign out",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "confirm": {
+    "title": "Are you sure?",
+    "description": "This action cannot be undone.",
+    "deleteEntity": "Are you sure you want to delete <name/>?",
+    "continue": "Are you sure you want to continue?"
+  },
+  "shell": {
+    "toggleMenu": "Toggle menu",
+    "assistant": "Assistant (Ctrl+K)",
+    "help": "Help",
+    "health": "Health",
+    "notifications": "Notifications",
+    "moreTools": "More tools",
+    "editAccount": "Edit account",
+    "support": "Support",
+    "documentation": "Documentation",
+    "tickets": "Tickets"
+  },
+  "accountDialog": {
+    "signOut": "Sign Out"
+  }
+}

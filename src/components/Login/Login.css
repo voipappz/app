@@ -394,6 +394,7 @@
 /* ───── Portal (end-user) login: one centred card, no hero ───── */
 .login-page.login-page--portal {
   display: flex;
+  flex-direction: column; /* the card, then the language link under it */
   align-items: center;
   justify-content: center;
   min-height: 100vh;
