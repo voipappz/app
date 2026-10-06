@@ -17,10 +17,10 @@ import { usePermissions } from './hooks/usePermissions';
 import { getPermittedNavItems } from './config/navConfig';
 import { canUserEnterRoute } from './routing/routeAccess';
 import { CircularProgress, Box, Typography } from '@mui/material';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { ConfirmProvider } from './components/ui';
 // ONE theme, light + dark, driven by src/theme/tokens.js — see theme.js.
-import muiTheme from './theme/theme';
+import { LocaleProvider, useLocale } from './i18n/LocaleContext';
+import LocaleSync from './i18n/LocaleSync';
 
 // Eager: the sign-in page (user or account, toggled) is the entry point for
 // unauthenticated visitors.
@@ -553,18 +553,25 @@ function AppContent() {
   );
 }
 
+// Changing direction swaps the style cache, which regenerates every class name,
+// so the routed screens remount to measure their grids and canvases again.
+// Sign-in, the softphone and the other providers above keep their state.
+function DirectionKeyedContent() {
+  const { direction } = useLocale();
+  return <AppContent key={direction} />;
+}
+
 function App() {
   return (
     <ErrorBoundary>
-      {/* modeStorageKey/defaultMode match ThemeContext, so MUI's own mode
-          state boots in step with the app's `data-theme` (ThemeContext keeps
-          them in step afterwards through useColorScheme). */}
-      <MuiThemeProvider theme={muiTheme} modeStorageKey="theme-preference" defaultMode="light" disableTransitionOnChange>
+      {/* Language, direction and the MUI theme (see src/i18n/LocaleContext.jsx). */}
+      <LocaleProvider>
         <ThemeProvider>
           {/* One confirmation dialog for the whole app (useConfirm). */}
           <ConfirmProvider>
           <QueryProvider>
             <AuthProvider>
+              <LocaleSync />
               <UserAuthProvider>
               {/* Mounted above the Router so SIP registration and any active
                   call survive page navigation — see SoftphoneContext.jsx. */}
@@ -572,7 +579,7 @@ function App() {
                 <NotificationProvider>
                   <CustomerEnvironmentProvider>
                     <TourProvider>
-                      <AppContent />
+                      <DirectionKeyedContent />
                       <TourOverlay />
                     </TourProvider>
                   </CustomerEnvironmentProvider>
@@ -583,7 +590,7 @@ function App() {
           </QueryProvider>
           </ConfirmProvider>
         </ThemeProvider>
-      </MuiThemeProvider>
+      </LocaleProvider>
     </ErrorBoundary>
   );
 }

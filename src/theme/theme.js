@@ -41,7 +41,11 @@ const scheme = (t, sev) => ({
   },
 });
 
-const theme = createTheme({
+// One theme per text direction. Always build it fresh with createTheme: spreading
+// an already-built theme into createTheme drops cssVariables/colorSchemes, and
+// dark mode stops working.
+export const createAppTheme = (direction = 'ltr') => createTheme({
+  direction,
   cssVariables: { colorSchemeSelector: 'data-theme' },
   colorSchemes: {
     light: scheme(light, severity.light),
@@ -242,4 +246,4 @@ const theme = createTheme({
   },
 });
 
-export default theme;
+export default createAppTheme('ltr');

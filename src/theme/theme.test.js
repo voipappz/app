@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import theme from './theme';
+import theme, { createAppTheme } from './theme';
 import { breakpoints } from './tokens';
 
 describe('theme', () => {
@@ -12,5 +12,14 @@ describe('theme', () => {
   it('keeps light and dark schemes as CSS variables', () => {
     expect(Object.keys(theme.colorSchemes)).toEqual(['light', 'dark']);
     expect(theme.vars).toBeDefined();
+  });
+
+  // Built fresh per direction: spreading a built theme would lose dark mode.
+  it('builds a right-to-left theme that keeps both colour schemes', () => {
+    const rtl = createAppTheme('rtl');
+    expect(rtl.direction).toBe('rtl');
+    expect(Object.keys(rtl.colorSchemes)).toEqual(['light', 'dark']);
+    expect(rtl.vars).toBeDefined();
+    expect(theme.direction).toBe('ltr');
   });
 });
