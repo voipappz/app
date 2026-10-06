@@ -31,6 +31,7 @@ import LiveDrawer from '../Live/LiveDrawer.jsx';
 import LiveCallsPanel from '../Live/panels/LiveCallsPanel.jsx';
 import TimeHistogram from '../../views/syslogs/TimeHistogram';
 import { convertAggregateToHistogramFormat } from '../../utils/logFormatting';
+import LogTabs from '../shared/LogTabs/LogTabs.jsx';
 import ReportsPanel from '../Reports/ReportsPanel/ReportsPanel.jsx';
 import LiveChartStrip from '../Live/LiveChartStrip.jsx';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
@@ -562,6 +563,7 @@ const Calls = () => {
       display: 'flex',
       flexDirection: 'column'
     }}>
+      <LogTabs />
       {/* Search + the four filters worth keeping on screen. The other nine
           segments stay behind the ⚙ panel, which is where a 13-field grid
           belongs. */}
@@ -686,7 +688,7 @@ const Calls = () => {
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-            <BarChartIcon sx={{ fontSize: 16, color: '#0e9488', opacity: 0.9 }} />
+            <BarChartIcon sx={{ fontSize: 16, color: 'var(--theme-text-secondary)' }} />
             {/* The list's own chart — calls over time. Not tied to reports
                 (reports live in the full reports drawer); grouped by a field. */}
             <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--theme-text-primary)' }}>
@@ -746,10 +748,7 @@ const Calls = () => {
             {/* Date bucket — top-right of the chart bar, purple button group.
                 Timeline-only: live mode has no buckets to size. */}
             {chartMode !== 'live' && (
-            <ButtonGroup size="small" variant="outlined" sx={{
-              '& .MuiButton-root': { borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)', fontWeight: 600 },
-              '& .MuiButton-root:hover': { borderColor: 'var(--accent-primary-hover)', color: 'var(--accent-primary-hover)', backgroundColor: 'var(--accent-primary-alpha-8)' },
-            }}>
+            <ButtonGroup size="small" variant="outlined">
               {[
                 { key: 'auto', label: 'Auto' },
                 { key: 'hour', label: 'Hourly' },
@@ -757,17 +756,15 @@ const Calls = () => {
                 { key: 'week', label: 'Weekly' },
               ].map((b) => {
                 const active = (aggGrouping || 'auto') === b.key;
+                // Same button as the footer's page numbers. The colours set
+                // here before painted the active label in its own background
+                // colour, so the selected bucket read as a blank block.
                 return (
                   <Button
                     key={b.key}
                     onClick={() => handleGroupingChange(b.key === 'auto' ? null : b.key)}
                     variant={active ? 'contained' : 'outlined'}
-                    sx={{
-                      minWidth: 34, px: 0.75, fontSize: '11px', py: 0.1,
-                      ...(active
-                        ? { bgcolor: '#5c6bc0', borderColor: '#5c6bc0', '&:hover': { bgcolor: '#3f4fb5', borderColor: '#3f4fb5' } }
-                        : { color: '#5c6bc0', borderColor: '#5c6bc0', '&:hover': { borderColor: '#3f4fb5', bgcolor: 'rgba(92,107,192,0.08)' } }),
-                    }}
+                    sx={{ minWidth: 34, px: 0.75, fontSize: '11px', py: 0.1 }}
                   >
                     {b.label}
                   </Button>

@@ -64,6 +64,8 @@ const Sidebar = ({ collapsed, onNavigate }) => {
     ? setUserMenuAnchor(e.currentTarget)
     : window.dispatchEvent(new Event('openAccountDialog')));
   const isActive = (path) => location.pathname === path;
+  // An entry can stand for more than one route (Logs: Calls and Messages).
+  const isItemActive = (item) => isActive(item.path) || Boolean(item.alsoPaths?.includes(location.pathname));
 
   // Navigate, then let the host (e.g. mobile drawer) close itself. The event lets
   // a screen react to its own nav being clicked (e.g. close an open edit doc).
@@ -93,8 +95,8 @@ const Sidebar = ({ collapsed, onNavigate }) => {
           <ListItemButton
             onClick={() => handleNavigate(item.path)}
             aria-label={item.text}
-            aria-current={isActive(item.path) ? 'page' : undefined}
-            className={`sidebar-nav-button ${isActive(item.path) ? 'active' : ''}`}
+            aria-current={isItemActive(item) ? 'page' : undefined}
+            className={`sidebar-nav-button ${isItemActive(item) ? 'active' : ''}`}
           >
             <ListItemIcon className="sidebar-nav-icon" sx={{ minWidth: 'auto', justifyContent: 'center', position: 'relative' }}>
               <IconComp />

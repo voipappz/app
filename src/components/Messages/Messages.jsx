@@ -7,6 +7,7 @@ import { config } from '../../config.js';
 
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
+import LogTabs from '../shared/LogTabs/LogTabs.jsx';
 import { stripedDataGridSx, EmptyValue } from '../shared/tableTheme.jsx';
 import CustomFooter from '../Calls/CustomFooter/CustomFooter.jsx';
 import HelpButton from '../common/HelpButton';
@@ -99,7 +100,7 @@ const Messages = () => {
   const handleQuickSearch = (e) => {
     if (e.key === 'Enter') {
       if (quickSearchText.trim()) {
-        const searchParams = { 'search[text]': quickSearchText.trim() };
+        const searchParams = { 'search[inline]': quickSearchText.trim() };
         setCurrentSearchParams(searchParams);
         fetchMessages(dateRange, searchParams);
       } else {
@@ -339,6 +340,7 @@ const Messages = () => {
       display: 'flex',
       flexDirection: 'column'
     }}>
+      <LogTabs />
       {/* Header row: Title + Search */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -354,7 +356,8 @@ const Messages = () => {
             onExport={handleExport}
             quickSearchText={quickSearchText}
             onQuickSearchChange={handleQuickSearchChange}
-            placeholder="Search by name, or use field:value (e.g. enabled:true)"
+            placeholder="Search messages: number, text or ID"
+            textParam="search[inline]"
             showExclude={true}
           />
         </Box>

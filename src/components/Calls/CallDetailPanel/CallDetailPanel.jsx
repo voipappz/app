@@ -23,7 +23,7 @@ import SubjectIcon from '@mui/icons-material/Subject';
 import DetailRow from './DetailRow';
 import ConversationMessages from './ConversationMessages';
 import CallTimeline from './CallTimeline';
-import { useIsUserSession } from '../../../hooks/useIsUserSession';
+import { usePermissions } from '../../../hooks/usePermissions';
 import conversationService from '../../../services/conversationService';
 import { useAuth } from '../../../context/AuthContext';
 import { apiService } from '../../../services/apiService';
@@ -45,7 +45,9 @@ const CallDetailPanel = ({ call, onClose, onOpenRecording, onViewLogs, onViewEve
   const callUuid = call?.uuid;
   // The events timeline reads /api/events, an account surface; the portal
   // (a user session) reuses this panel without it.
-  const userSession = useIsUserSession();
+  // The call's events show to whichever session's ACL grants `logs`.
+  const { canAccess } = usePermissions();
+  const canSeeEvents = canAccess('logs');
 
   // Load the call's transcription inline (the transcribe service writes the
   // conversation messages linked to the call). Internal notes are filtered out.
@@ -238,7 +240,7 @@ const CallDetailPanel = ({ call, onClose, onOpenRecording, onViewLogs, onViewEve
       </Box>
 
       {/* What happened around the call (record, recording, services…) */}
-      {!userSession && <>
+      {canSeeEvents && <>
       <Divider sx={{ mt: 1 }} />
       <Box sx={{ px: 2, pt: 1.5, pb: 0.5, display: 'flex', alignItems: 'center', gap: 0.75 }}>
         <EventNoteIcon sx={{ fontSize: 18, color: 'var(--text-secondary)' }} />
