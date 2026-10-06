@@ -43,5 +43,51 @@
   },
   "accountDialog": {
     "signOut": "התנתקות"
+  },
+  "search": {
+    "defaultPlaceholder": "חיפוש לפי שם, או שדה:ערך (למשל enabled:true)",
+    "searchPlaceholder": "חיפוש...",
+    "showFilters": "הצגת המסננים",
+    "hideFilters": "הסתרת המסננים",
+    "refresh": "רענון",
+    "exportCsv": "ייצוא CSV",
+    "columns": "עמודות",
+    "exclude": "החרגה",
+    "excluding": "מוחרג",
+    "clearAll": "ניקוי הכול",
+    "any": "הכול",
+    "from": "מתאריך",
+    "to": "עד תאריך",
+    "key": "מפתח",
+    "value": "ערך",
+    "tag": "תגית",
+    "today": "היום",
+    "dateRange": "טווח תאריכים: {{range}}"
+  },
+  "datePicker": {
+    "quick": {
+      "day": "יום",
+      "yesterday": "אתמול",
+      "week": "שבוע",
+      "month": "חודש"
+    },
+    "preset": {
+      "today": "היום",
+      "yesterday": "אתמול",
+      "last7Days": "7 הימים האחרונים",
+      "last30Days": "30 הימים האחרונים",
+      "thisWeek": "השבוע",
+      "lastWeek": "שבוע שעבר",
+      "thisMonth": "החודש",
+      "lastMonth": "חודש שעבר"
+    },
+    "customRangeTitle": "טווח מותאם",
+    "customRange": "טווח מותאם",
+    "selectDates": "בחירת תאריכים",
+    "start": "התחלה",
+    "end": "סיום",
+    "to": "עד",
+    "cancel": "ביטול",
+    "apply": "החלה"
   }
 }

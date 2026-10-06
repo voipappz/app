@@ -1,4 +1,7 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '@mui/material/styles';
+import { currentDateFnsLocale } from '../../../i18n/formatLocale';
 import { Box, Button, ButtonGroup, IconButton, Popover, TextField, Tooltip, Typography } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
@@ -9,13 +12,16 @@ import './EnhancedDateRangePicker.css';
 
 // Inline quick ranges (the reports date-selector design).
 const QUICK_RANGES = [
-  { label: 'Day', range: () => [startOfDay(new Date()), endOfDay(new Date())] },
-  { label: 'Yesterday', range: () => [startOfDay(addDays(new Date(), -1)), endOfDay(addDays(new Date(), -1))] },
-  { label: 'Week', range: () => [startOfWeek(new Date()), endOfWeek(new Date())] },
-  { label: 'Month', range: () => [startOfMonth(new Date()), endOfMonth(new Date())] },
+  { key: 'day', range: () => [startOfDay(new Date()), endOfDay(new Date())] },
+  { key: 'yesterday', range: () => [startOfDay(addDays(new Date(), -1)), endOfDay(addDays(new Date(), -1))] },
+  { key: 'week', range: () => [startOfWeek(new Date()), endOfWeek(new Date())] },
+  { key: 'month', range: () => [startOfMonth(new Date()), endOfMonth(new Date())] },
 ];
 
 const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
+  const { t } = useTranslation();
+  // The popover opens under the calendar icon, toward the page's end side.
+  const endSide = useTheme().direction === 'rtl' ? 'left' : 'right';
   const isRangeActive = (qr) => {
     if (!dateRange?.[0] || !dateRange?.[1]) return false;
     const [s, e] = qr.range();
@@ -38,7 +44,11 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
     handleCancel,
   } = useEnhancedDateRangePicker(dateRange, setDateRange);
 
-  const displayText = formatDateRangeDisplay(dateRange);
+  const displayText = formatDateRangeDisplay(dateRange, {
+    presetName: (preset) => t(`datePicker.preset.${preset.key}`),
+    emptyText: t('datePicker.selectDates'),
+    locale: currentDateFnsLocale(),
+  });
 
   return (
     <>
@@ -49,7 +59,7 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
             const active = isRangeActive(qr);
             return (
               <Button
-                key={qr.label}
+                key={qr.key}
                 onClick={() => setDateRange(qr.range())}
                 sx={{
                   bgcolor: active ? '#3f4fb5' : '#5c6bc0',
@@ -62,14 +72,14 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
                   '&:not(:last-child)': { borderRight: '1px solid rgba(255,255,255,0.3)' },
                 }}
               >
-                {qr.label}
+                {t(`datePicker.quick.${qr.key}`)}
               </Button>
             );
           })}
         </ButtonGroup>
         {/* Custom range — a single calendar icon opens the popover (no duplicate
             date trigger). Tooltip shows the current range. */}
-        <Tooltip title={displayText || 'Custom range'}>
+        <Tooltip title={displayText || t('datePicker.customRange')}>
           <IconButton size="small" onClick={handleOpen} sx={{ color: 'var(--accent-primary)', p: 0.5 }}>
             <CalendarTodayIcon sx={{ fontSize: 18 }} />
           </IconButton>
@@ -80,8 +90,8 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
         open={open}
         anchorEl={anchorEl}
         onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: endSide }}
+        transformOrigin={{ vertical: 'top', horizontal: endSide }}
         PaperProps={{
           sx: {
             borderRadius: '12px',
@@ -100,7 +110,7 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
                 className={`enhanced-date-picker-preset-item ${selectedPreset === preset.label ? 'selected' : ''}`}
                 onClick={() => handlePresetSelect(preset)}
               >
-                {preset.label}
+                {t(`datePicker.preset.${preset.key}`)}
               </Box>
             ))}
           </Box>
@@ -111,13 +121,13 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
               variant="subtitle2"
               sx={{ fontFamily: 'var(--font-family)', fontWeight: 600, color: 'var(--theme-text-primary)' }}
             >
-              Custom Range
+              {t('datePicker.customRangeTitle')}
             </Typography>
 
             <Box className="enhanced-date-picker-inputs">
               <TextField
                 size="small"
-                label="Start"
+                label={t('datePicker.start')}
                 type="date"
                 value={tempStart}
                 onChange={(e) => setTempStart(e.target.value)}
@@ -139,10 +149,10 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
                   },
                 }}
               />
-              <Typography variant="body2" sx={{ color: 'var(--theme-text-secondary)' }}>to</Typography>
+              <Typography variant="body2" sx={{ color: 'var(--theme-text-secondary)' }}>{t('datePicker.to')}</Typography>
               <TextField
                 size="small"
-                label="End"
+                label={t('datePicker.end')}
                 type="date"
                 value={tempEnd}
                 onChange={(e) => setTempEnd(e.target.value)}
@@ -172,7 +182,7 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
                 onClick={handleCancel}
                 sx={{ ...secondaryButtonStyle, px: 2, py: 0.5 }}
               >
-                Cancel
+                {t('datePicker.cancel')}
               </Button>
               <Button
                 size="small"
@@ -181,7 +191,7 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
                 disabled={!tempStart || !tempEnd}
                 sx={{ ...primaryButtonStyle, px: 2, py: 0.5 }}
               >
-                Apply
+                {t('datePicker.apply')}
               </Button>
             </Box>
           </Box>

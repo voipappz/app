@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import Bdi from '../../../i18n/Bdi';
 import moment from 'moment';
 import { formatPhoneNumber, extractCountryFromPhone, formatDuration } from '../../../utils/phoneUtils';
 import { Tooltip, Chip, Box } from '@mui/material';
@@ -451,7 +452,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
               onCopy={handleCopy}
               onCall={callNumber}
             >
-              {value}
+              <Bdi>{value}</Bdi>
             </CellWithHover>
           );
         },
@@ -468,7 +469,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
               onCopy={handleCopy}
               onCall={callNumber}
             >
-              {formattedCallee}
+              <Bdi>{formattedCallee}</Bdi>
             </CellWithHover>
           );
         },
@@ -554,7 +555,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
               onSearch={cellSearchFor("cid")}
               onCopy={handleCopy}
             >
-              {cid}
+              <Bdi>{cid}</Bdi>
             </CellWithHover>
           );
         },
@@ -570,7 +571,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
               onSearch={cellSearchFor(fieldKey)}
               onCopy={handleCopy}
             >
-              {cid}
+              <Bdi>{cid}</Bdi>
             </CellWithHover>
           );
         },

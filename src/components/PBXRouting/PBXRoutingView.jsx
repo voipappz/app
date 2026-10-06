@@ -1021,7 +1021,7 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
         {activeDid && !loading && !error && nodes.length > 0 && (
           <>
             {/* ReactFlow Canvas — full width */}
-            <Box className="pbx-routing-canvas" sx={{ flex: 1, minHeight: 0 }}>
+            <Box className="pbx-routing-canvas" dir="ltr" sx={{ flex: 1, minHeight: 0 }}>
               <ReactFlow
                 nodes={nodes}
                 edges={edges}

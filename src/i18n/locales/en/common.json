@@ -43,5 +43,51 @@
   },
   "accountDialog": {
     "signOut": "Sign Out"
+  },
+  "search": {
+    "defaultPlaceholder": "Search by name, or use field:value (e.g. enabled:true)",
+    "searchPlaceholder": "Search...",
+    "showFilters": "Show filters",
+    "hideFilters": "Hide filters",
+    "refresh": "Refresh",
+    "exportCsv": "Export CSV",
+    "columns": "Columns",
+    "exclude": "Exclude",
+    "excluding": "Excluding",
+    "clearAll": "Clear all",
+    "any": "Any",
+    "from": "From",
+    "to": "To",
+    "key": "Key",
+    "value": "Value",
+    "tag": "Tag",
+    "today": "Today",
+    "dateRange": "Date range: {{range}}"
+  },
+  "datePicker": {
+    "quick": {
+      "day": "Day",
+      "yesterday": "Yesterday",
+      "week": "Week",
+      "month": "Month"
+    },
+    "preset": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days",
+      "thisWeek": "This Week",
+      "lastWeek": "Last Week",
+      "thisMonth": "This Month",
+      "lastMonth": "Last Month"
+    },
+    "customRangeTitle": "Custom Range",
+    "customRange": "Custom range",
+    "selectDates": "Select dates",
+    "start": "Start",
+    "end": "End",
+    "to": "to",
+    "cancel": "Cancel",
+    "apply": "Apply"
   }
 }

@@ -1290,7 +1290,7 @@ const WorkflowCanvas = () => {
           ) : (
             <>
               {/* Canvas */}
-              <Box className="wf-canvas" ref={reactFlowWrapper} sx={{ flex: 1, minHeight: 0 }}>
+              <Box className="wf-canvas" dir="ltr" ref={reactFlowWrapper} sx={{ flex: 1, minHeight: 0 }}>
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}

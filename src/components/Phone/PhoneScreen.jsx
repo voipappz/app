@@ -3,6 +3,7 @@
 // settings) is ported; the presence/agent-status picker and the "Calls"
 // history tab are not (they're admin-console-specific integrations, not part
 // of the core WebRTC migration) — follow-up if wanted.
+import Bdi from '../../i18n/Bdi';
 import { useEffect, useRef, useState } from 'react';
 import {
   Box, IconButton, Tabs, Tab, TextField, Button, Typography, Stack, Tooltip, Avatar, Paper
@@ -148,14 +149,13 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
           display: 'flex', flexDirection: 'column',
           ...(embedded ? { flex: 1, minHeight: 0, borderRadius: 0 } : { borderRadius: 3 })
         }}
-        dir="ltr"
       >
         {/* Header — avatar, name / ext, ready status */}
         <Box sx={{ bgcolor: PANEL_HEADER, px: 1.5, py: 1.25, display: 'flex', gap: 1.25, alignItems: 'flex-start' }}>
           <Avatar sx={{ width: 44, height: 44, bgcolor: '#5b6675', fontSize: '1.1rem' }}>{initial}</Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }} noWrap>
-              {name} <Box component="span" sx={{ color: MUTED, fontWeight: 400 }}>• {ext}</Box>
+              {name} <Box component="span" sx={{ color: MUTED, fontWeight: 400 }}>• <Bdi>{ext}</Bdi></Box>
             </Typography>
             <PhonePresence
               userUuid={device?.user_uuid || device?.userUuid}
@@ -273,7 +273,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                 </Tooltip>
               </Stack>
               <TransferControls open={transferOpen} onClose={() => setTransferOpen(false)} callActive={call.state === 'active'} />
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0.5, mt: 2, mb: 2 }}>
+              <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0.5, mt: 2, mb: 2 }}>
                 {KEYS.map((k) => <Button key={k} sx={{ color: '#cbd5e1', fontSize: '1.1rem' }} onClick={() => press(k)}>{k}</Button>)}
               </Box>
               <Button fullWidth variant="contained" color="error" startIcon={<CallEndIcon />} onClick={() => hangup()} sx={{ borderRadius: 2, py: 1.1 }}>
@@ -301,7 +301,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                   </IconButton>
                 )}
               </Box>
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', rowGap: 1.5, mb: 2 }}>
+              <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', rowGap: 1.5, mb: 2 }}>
                 {KEYS.map((k) => (
                   <Box
                     key={k} role="button" onClick={() => press(k)}

@@ -1,0 +1,63 @@
+{
+  "search": {
+    "placeholder": "חיפוש לפי מתקשר, נמען, משתמש, ניתוב או מזהה שיחה",
+    "quick": "חיפוש מהיר..."
+  },
+  "chart": {
+    "liveCalls": "שיחות בזמן אמת",
+    "overTime": "שיחות לאורך זמן",
+    "by": "לפי",
+    "liveToggleHint": "הצגת השיחות שמתקיימות עכשיו במקום ציר הזמן",
+    "liveNow": "עכשיו",
+    "liveNowCount": "עכשיו · {{count}}",
+    "openReports": "פתיחת כל הדוחות",
+    "show": "הצגת הגרף",
+    "hide": "הסתרת הגרף",
+    "openList": "פתיחת הרשימה",
+    "empty": "אין שיחות בתקופה שנבחרה."
+  },
+  "bucket": {
+    "auto": "אוטומטי",
+    "hour": "לפי שעה",
+    "day": "לפי יום",
+    "week": "לפי שבוע"
+  },
+  "groupBy": {
+    "cause": "סיבת ניתוק",
+    "direction": "כיוון",
+    "disposition": "תוצאה",
+    "hangup": "ניתוק",
+    "queue": "תור",
+    "route": "ניתוב",
+    "application": "אפליקציה",
+    "user": "משתמש"
+  },
+  "drawer": {
+    "liveCalls": "שיחות בזמן אמת",
+    "reports": "דוחות שיחות"
+  },
+  "mobile": {
+    "empty": "אין נתוני שיחות.",
+    "emptyHint": "נסו לשנות את המסננים או את טווח התאריכים.",
+    "end": "אין שיחות נוספות לטעינה",
+    "duration": "משך:",
+    "application": "אפליקציה:",
+    "client": "לקוח:",
+    "callId": "מזהה שיחה:",
+    "notAvailable": "לא זמין",
+    "status": "סטטוס:",
+    "unknown": "לא ידוע"
+  },
+  "stats": {
+    "total": "סה״כ",
+    "answered": "נענו",
+    "noAnswer": "לא נענו",
+    "outgoing": "יוצאות",
+    "incoming": "נכנסות",
+    "totalHint": "כל השיחות שתואמות את המסננים",
+    "answeredHint": "הצגת שיחות שנענו בלבד",
+    "noAnswerHint": "הצגת שיחות שלא נענו בלבד",
+    "outgoingHint": "הצגת שיחות יוצאות בלבד",
+    "incomingHint": "הצגת שיחות נכנסות בלבד"
+  }
+}

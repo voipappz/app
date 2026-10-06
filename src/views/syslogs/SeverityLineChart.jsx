@@ -138,7 +138,8 @@ const SeverityLineChart = ({ data, loading, height = 250, timeInterval = 'hour' 
       <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
         Log Severity Over Time
       </Typography>
-      <Box sx={{ width: '100%', height }}>
+      {/* Time runs left to right in every language. */}
+      <Box dir="ltr" sx={{ width: '100%', height }}>
         <ResponsiveContainer>
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#eee" />

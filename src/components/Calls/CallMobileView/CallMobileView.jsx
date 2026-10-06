@@ -1,9 +1,11 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { useInView } from 'react-intersection-observer';
 import CallMobileCard from '../CallMobileCard/CallMobileCard';
 
 const CallMobileView = ({ rows, onOpenRecording, onRowClick, hasNextPage, loadingMore, onLoadMore }) => {
+  const { t } = useTranslation('calls');
   // Intersection observer for lazy loading
   const { ref: loadMoreRef, inView } = useInView({
     threshold: 0,
@@ -21,10 +23,10 @@ const CallMobileView = ({ rows, onOpenRecording, onRowClick, hasNextPage, loadin
     return (
       <Box sx={{ textAlign: 'center', mt: 4, px: 2 }}>
         <Typography variant="h6" color="text.secondary">
-          No call data available.
+          {t('mobile.empty')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Try adjusting your filters or date range.
+          {t('mobile.emptyHint')}
         </Typography>
       </Box>
     );
@@ -70,7 +72,7 @@ const CallMobileView = ({ rows, onOpenRecording, onRowClick, hasNextPage, loadin
       {!hasNextPage && rows.length > 0 && (
         <Box sx={{ textAlign: 'center', py: 3 }}>
           <Typography variant="body2" color="text.secondary">
-            No more calls to load
+            {t('mobile.end')}
           </Typography>
         </Box>
       )}
