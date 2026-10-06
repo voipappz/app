@@ -12,6 +12,7 @@ import { useTariffs } from './Tariffs.js';
 import { TariffBridge } from '../Bridges/TariffBridge/TariffBridge.jsx';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import { formatDate } from '../../utils/dateUtils';
 import { getEnabledChipProps } from '../../utils/chipStyles';
@@ -221,6 +222,7 @@ const Tariffs = () => {
                               </IconButton>
                             </Tooltip>
                           )}
+                          <RowEventsButton subject="tariff" uuid={t.uuid} />
                           {canWrite && (
                             <Tooltip title="Delete">
                               <IconButton size="small" color="error" onClick={() => handleOpenDeleteDialog(t)} disabled={loading}>

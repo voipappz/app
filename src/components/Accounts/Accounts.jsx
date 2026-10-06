@@ -32,6 +32,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ConfirmDialog } from '../ui';
 import { useAccounts } from './useAccounts';
 import { usePermissions } from '../../hooks/usePermissions';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import AccountDialog from './AccountDialog/AccountDialog';
 import { formatDate } from '../../utils/dateUtils';
@@ -366,6 +367,7 @@ const Accounts = () => {
                                 </IconButton>
                               </Tooltip>
                             )}
+                            <RowEventsButton actor={account.email || account.uuid} />
                             {canWrite && (
                               <Tooltip title="Delete account">
                                 <IconButton

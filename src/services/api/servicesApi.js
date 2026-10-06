@@ -104,7 +104,9 @@ export const servicesApi = {
   /**
    * Simulate a test event through the service pipeline
    * @param {string} uuid - Service UUID
-   * @param {Object} data - { event_name, event_data }
+   * @param {Object} data - { event_name, event_data, call_uuid, deliver }
+   *   call_uuid builds the event from a real call; deliver=true really sends it
+   *   (without it the API routes the event and stops before the HTTP request).
    * @returns {Promise<Object>} Simulation results
    */
   simulate: (uuid, data = {}) => {
@@ -112,6 +114,8 @@ export const servicesApi = {
     const formData = new URLSearchParams();
     if (data.event_name) formData.append('event_name', data.event_name);
     if (data.event_data) formData.append('event_data', JSON.stringify(data.event_data));
+    if (data.call_uuid) formData.append('call_uuid', data.call_uuid);
+    if (data.deliver) formData.append('deliver', 'true');
     return apiService.post(`/api/services/${uuid}/simulate`, formData, headers, `simulating service ${uuid}`, true);
   },
 

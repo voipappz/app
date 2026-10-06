@@ -3,7 +3,6 @@
 // voipappz-api's `make tenant` does on the API host -- but from anywhere.
 //
 //   make tenant CUSTOMER=acme EMAIL=admin@acme.com [PASSWORD=...]
-//   npm run tenant -- acme admin@acme.com [password]        (Windows)
 //
 // POST /api/customers with account_email/account_password runs the API's
 // Customer::Init: the customer, its Account login, an environment, a user, a
@@ -24,7 +23,7 @@ if (!name || !email) {
 let cache;
 try { cache = fs.readFileSync('.env.token', 'utf8').split(/\r?\n/); } catch { cache = []; }
 const [who, token] = cache;
-if (!token) { console.log('No login token: run make onboard (Windows: npm run onboard) first.'); process.exit(1); }
+if (!token) { console.log('No login token: run make onboard first.'); process.exit(1); }
 const [api, me] = who.split(' ');
 
 const call = async (method, path, { form, bearer = token } = {}) => {

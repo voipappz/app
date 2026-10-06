@@ -12,6 +12,7 @@ import CallIcon from '@mui/icons-material/Call';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import { callsApi } from '../../services/api/callsApi';
+import { usePermissions } from '../../hooks/usePermissions';
 import { mapRecentCall } from '../Dashboard/useDashboardSnapshot.js';
 import { MUTED, GREEN } from './panelTheme.js';
 
@@ -25,19 +26,25 @@ function fmtDuration(seconds) {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
+// "incoming" / "inbound" — anchored, because "outgoing" contains "in" too.
+const isInbound = (call) => /^in/i.test(call.direction || '');
+
 // The number worth calling back is the OTHER party: for an inbound call
 // that's who called us, for an outbound one it's who we called.
 function counterparty(call) {
-  const inbound = /in/i.test(call.direction || '');
+  const inbound = isInbound(call);
   return (inbound ? call.from_number : call.to_number) || call.from_number || call.to_number || '';
 }
 
 export default function PhoneCallsTab({ active, onDial, onOpenCall }) {
   const [calls, setCalls] = useState(null); // null = not loaded yet
   const [error, setError] = useState(null);
+  // Without the Calls read permission the API answers 403: do not ask.
+  const { can } = usePermissions();
+  const allowed = can('calls', 'read');
 
   useEffect(() => {
-    if (!active || calls !== null) return;
+    if (!active || !allowed || calls !== null) return;
     let alive = true;
     callsApi.getCalls({ page: 1, per_page: 20 })
       .then((response) => {
@@ -49,7 +56,15 @@ export default function PhoneCallsTab({ active, onDial, onOpenCall }) {
       })
       .catch((err) => { if (alive) { setError(err?.message || 'Could not load calls'); setCalls([]); } });
     return () => { alive = false; };
-  }, [active, calls]);
+  }, [active, allowed, calls]);
+
+  if (!allowed) {
+    return (
+      <Box sx={{ py: 6, textAlign: 'center' }}>
+        <Typography variant="body2" sx={{ color: MUTED }}>Your role does not include Calls.</Typography>
+      </Box>
+    );
+  }
 
   if (calls === null) {
     return (
@@ -69,7 +84,7 @@ export default function PhoneCallsTab({ active, onDial, onOpenCall }) {
     <Box data-testid="phone-calls-list" sx={{ py: 0.5 }}>
       {calls.map((call) => {
         const number = counterparty(call);
-        const inbound = /in/i.test(call.direction || '');
+        const inbound = isInbound(call);
         return (
           <Stack
             key={call.id}

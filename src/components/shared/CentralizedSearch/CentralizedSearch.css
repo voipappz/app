@@ -74,3 +74,41 @@
   align-items: center;
   padding: 6px 0;
 }
+
+/* Docked in the top bar: the field and the screen's actions on one line. */
+.topbar-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* What refines the search — date range, filters — as a popup under the field. */
+.topbar-search-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(760px, 95vw);
+  max-height: 70vh;
+  overflow: auto;
+  margin-top: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--theme-border, #e5e7eb);
+  border-radius: 12px;
+  background-color: var(--theme-bg-secondary, #fff);
+}
+
+.topbar-search-popup .centralized-search-filter-panel {
+  border: none;
+  border-radius: 0;
+  margin-top: 0;
+  padding: 0;
+  box-shadow: none;
+  animation: none;
+  background-color: transparent;
+}
+
+.topbar-search-popup .centralized-search-active-chips {
+  padding: 0;
+}
