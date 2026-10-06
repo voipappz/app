@@ -30,7 +30,14 @@ test.describe('Top bar', () => {
     expect(new URL(request.url()).searchParams.has('search[name]')).toBe(false);
     const response = await request.response();
     // On a refusal, say who refused: the API answers JSON, a proxy plain text.
-    const said = `${await response?.text()} ${JSON.stringify(await response?.allHeaders())}`;
+    // and what the account's token grants for Calls (only that entry: the log is public).
+    const callsAcl = await page.evaluate(() => {
+      const token = JSON.parse(localStorage.getItem('auth') || '{}').access || '';
+      const claims = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      const data = claims.acl?.data || claims.acl || {};
+      return { calls: data.calls ?? null, call: data.call ?? null };
+    });
+    const said = `${await response?.text()} acl=${JSON.stringify(callsAcl)} ${JSON.stringify(await response?.allHeaders())}`;
     expect(response?.status(), said).toBe(200);
     await expect(popup).toBeHidden();
   });
