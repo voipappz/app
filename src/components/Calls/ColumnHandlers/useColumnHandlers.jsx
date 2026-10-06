@@ -2,55 +2,25 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import Bdi from '../../../i18n/Bdi';
 import moment from 'moment';
 import { formatPhoneNumber, extractCountryFromPhone, formatDuration } from '../../../utils/phoneUtils';
-import { Tooltip, Chip, Box } from '@mui/material';
-import PersonIcon from '@mui/icons-material/Person';
-import PhoneIcon from '@mui/icons-material/Phone';
-
-
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { Tooltip, Box } from '@mui/material';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import TimerIcon from '@mui/icons-material/Timer';
-import FingerprintIcon from '@mui/icons-material/Fingerprint';
-import MicIcon from '@mui/icons-material/Mic';
-import BuildIcon from '@mui/icons-material/Build';
-import PublicIcon from '@mui/icons-material/Public';
 import ReactCountryFlag from 'react-country-flag';
 import CellWithHover from '../CellWithHover/CellWithHover.jsx';
 import { useCallNumber } from '../../../hooks/useCallNumber';
-
-// Column header icon mapping (matched by logical name)
-const COLUMN_ICONS = {
-  created_at: AccessTimeIcon,
-  caller: PersonIcon,
-  callee: PhoneIcon,
-  country: PublicIcon,
-  direction: CallMadeIcon,
-  talk_duration: TimerIcon,
-  duration: TimerIcon,
-  bill_duration: TimerIcon,
-  cause: CheckCircleIcon,
-  cid: FingerprintIcon,
-  caller_id_number: FingerprintIcon,
-  recording: MicIcon,
-  actions: BuildIcon,
-  fullname: PersonIcon,
-  environment: PublicIcon,
-};
 
 // Per-column width hints (matched by logical name) so columns size to their
 // content instead of every column stretching to flex:1 (which made them too wide).
 // Name/contact-style columns flex to absorb leftover space; everything else is fixed.
 const COLUMN_WIDTHS = {
   created_at: 175,
-  direction: 100,
+  direction: 115,
   state: 110,
-  cause: 110,
-  disposition: 120,
-  hangup_disposition: 130,
+  cause: 115,
+  disposition: 150,
+  hangup_disposition: 150,
   duration: 100,
-  talk_duration: 110,
+  talk_duration: 120,
   bill_duration: 110,
   country: 90,
   cid: 130,
@@ -71,18 +41,22 @@ const FLEX_MAX_WIDTH = 220;
 // Columns that can never be hidden — the ones that make a row actionable.
 const MANDATORY_COLUMNS = new Set(['recording', 'actions']);
 
-// Status background colors for Chip rendering (matching Dashboard GridColumns pattern)
-const STATUS_BG_COLORS = {
-  available: '#22c55e', busy: '#ef4444', incall: '#ef4444',
-  break: '#f59e0b', on_break: '#f59e0b', offline: '#6b7280',
-  paused: '#f59e0b', waiting: '#3b82f6',
-  answer: '#22c55e', completed: '#22c55e', complete: '#22c55e',
-  no_answer: '#f59e0b', noanswer: '#f59e0b',
-  failed: '#ef4444', cancel: '#6b7280',
-  contact_hangup: '#3b82f6', caller_hangup: '#f59e0b',
-  contact_answer: '#22c55e',
-  incoming: '#3b82f6', outgoing: '#6366f1',
-  registered: '#22c55e',
+// A status value's tone, drawn as a small dot beside plain text. The colours
+// are the counters' own tokens, so "answered" is the same green in the counter
+// row, the chart and the table. A value with no tone (complete, cancel,
+// timeout, …) gets a grey dot: it is on almost every row and says nothing new.
+const TONE_COLORS = {
+  good: 'var(--counter-answered)',
+  bad: 'var(--counter-no-answer)',
+  warn: 'var(--accent-warning)',
+  info: 'var(--accent-info)',
+  neutral: 'var(--theme-text-tertiary)',
+};
+const STATUS_TONES = {
+  available: 'good', registered: 'good', answer: 'good', contact_answer: 'good',
+  busy: 'bad', incall: 'bad', failed: 'bad', no_answer: 'bad', noanswer: 'bad',
+  break: 'warn', on_break: 'warn', paused: 'warn', caller_hangup: 'warn',
+  waiting: 'info', contact_hangup: 'info',
 };
 const STATUS_LABELS = {
   available: 'Available', busy: 'Busy', incall: 'In Call',
@@ -103,6 +77,24 @@ const EMPTY_DASH = (
 );
 const isEmptyValue = (v) =>
   v === null || v === undefined || v === '' || v === 'N/A' || String(v).toLowerCase() === 'none';
+
+const statusKey = (value) => String(value).toLowerCase().replace(/-/g, '_');
+const statusLabel = (value) =>
+  STATUS_LABELS[statusKey(value)] || String(value).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+// Every status-like cell (cause, state, disposition, hangup) in one look.
+const StatusText = ({ value }) => (
+  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+    <Box
+      component="span"
+      sx={{
+        width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+        bgcolor: TONE_COLORS[STATUS_TONES[statusKey(value)] || 'neutral'],
+      }}
+    />
+    <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{statusLabel(value)}</Box>
+  </Box>
+);
 
 /**
  * Generate a unique key for a column based on its type (matching nimbus-admin pattern).
@@ -398,27 +390,19 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
       const columnDef = availableColumns[fieldKey];
       if (!columnDef) return null;
 
-      // Get logical name for matching special renderers & icons
+      // Get logical name for matching special renderers
       const logicalName = getLogicalName(fieldKey, columnDef);
-      const IconComp = COLUMN_ICONS[fieldKey] || COLUMN_ICONS[logicalName];
 
       const sizing = FLEX_COLUMNS.has(logicalName)
         ? { flex: 1, minWidth: 120, maxWidth: FLEX_MAX_WIDTH }
         : { width: COLUMN_WIDTHS[logicalName] || columnDef.minWidth || 120 };
 
+      // Every header is the grid's own title: same type, no icon on some.
       const baseColumn = {
         field: fieldKey,
         headerName: columnDef.name,
         ...sizing,
         sortable: !!columnDef.sort_by,
-        ...(IconComp && {
-          renderHeader: () => (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <IconComp sx={{ fontSize: 16, opacity: 0.6 }} />
-              <span style={{ fontSize: '0.8rem', fontFamily: 'Rubik, sans-serif' }}>{columnDef.name}</span>
-            </Box>
-          ),
-        }),
       };
 
       // Special columns with custom rendering (matched by logical name)
@@ -477,13 +461,10 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
         direction: (params) => {
           const value = getValueFromRow(params.row, columnDef, fieldKey);
           if (isEmptyValue(value)) return EMPTY_DASH;
-          const rawValue = String(value).toLowerCase().replace(/-/g, '_');
-          // Direction is a category, not an outcome — render as a light outlined
-          // chip with a directional arrow so solid green stays reserved for
-          // "answered/complete" and never reads as a status.
-          const isOutgoing = rawValue.includes('out');
-          const arrowColor = isOutgoing ? '#6366f1' : '#3b82f6';
-          const chipLabel = STATUS_LABELS[rawValue] || String(value).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          // Direction is a category, not an outcome: an arrow and the word,
+          // no box and no status colour.
+          const isOutgoing = statusKey(value).includes('out');
+          const Arrow = isOutgoing ? CallMadeIcon : CallReceivedIcon;
           return (
             <CellWithHover
               value={value}
@@ -491,25 +472,10 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
               onSearch={cellSearchFor("direction")}
               onCopy={handleCopy}
             >
-              <Chip
-                icon={isOutgoing
-                  ? <CallMadeIcon sx={{ fontSize: 14 }} />
-                  : <CallReceivedIcon sx={{ fontSize: 14 }} />}
-                label={chipLabel}
-                size="small"
-                variant="outlined"
-                sx={{
-                  backgroundColor: 'transparent',
-                  color: 'var(--theme-text-secondary)',
-                  borderColor: 'var(--theme-border)',
-                  fontWeight: 500,
-                  height: '24px',
-                  borderRadius: '6px',
-                  fontFamily: 'var(--font-family)',
-                  fontSize: '0.75rem',
-                  '& .MuiChip-icon': { color: arrowColor, ml: '4px' },
-                }}
-              />
+              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                <Arrow sx={{ fontSize: 14, color: 'var(--theme-text-secondary)' }} />
+                {statusLabel(value)}
+              </Box>
             </CellWithHover>
           );
         },
@@ -517,9 +483,6 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
         cause: (params) => {
           const value = getValueFromRow(params.row, columnDef, fieldKey);
           if (isEmptyValue(value)) return EMPTY_DASH;
-          const rawValue = String(value).toLowerCase().replace(/-/g, '_');
-          const chipBgColor = STATUS_BG_COLORS[rawValue] || '#6b7280';
-          const chipLabel = STATUS_LABELS[rawValue] || String(value || '-').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
           return (
             <CellWithHover
               value={value}
@@ -527,19 +490,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
               onSearch={cellSearchFor("cause")}
               onCopy={handleCopy}
             >
-              <Chip
-                label={chipLabel}
-                size="small"
-                sx={{
-                  backgroundColor: chipBgColor,
-                  color: '#fff',
-                  fontWeight: 500,
-                  height: '24px',
-                  borderRadius: '6px',
-                  fontFamily: 'var(--font-family)',
-                  fontSize: '0.75rem',
-                }}
-              />
+              <StatusText value={value} />
             </CellWithHover>
           );
         },
@@ -665,12 +616,10 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
             );
           }
 
-          // Status/state/disposition fields get colored chip rendering (Dashboard pattern)
+          // Status/state/disposition fields: a tone dot and the word
           const isStatusField = logicalName.includes('status') || logicalName.includes('state') || logicalName.includes('disposition');
-          if (isStatusField && value && value !== 'N/A') {
-            const rawValue = String(value).toLowerCase().replace(/-/g, '_');
-            const chipBgColor = STATUS_BG_COLORS[rawValue] || '#6b7280';
-            const chipLabel = STATUS_LABELS[rawValue] || String(value).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          if (isStatusField) {
+            if (isEmptyValue(value)) return EMPTY_DASH;
             return (
               <CellWithHover
                 value={value}
@@ -678,19 +627,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
                 onSearch={cellSearchFor(fieldKey)}
                 onCopy={handleCopy}
               >
-                <Chip
-                  label={chipLabel}
-                  size="small"
-                  sx={{
-                    backgroundColor: chipBgColor,
-                    color: '#fff',
-                    fontWeight: 500,
-                    height: '24px',
-                    borderRadius: '6px',
-                    fontFamily: 'var(--font-family)',
-                    fontSize: '0.75rem',
-                  }}
-                />
+                <StatusText value={value} />
               </CellWithHover>
             );
           }

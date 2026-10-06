@@ -38,8 +38,9 @@ export const NAV_ITEMS = [
   // same thing, so Live sits above it. Reachable from both surfaces: LiveRoute
   // in App.jsx checks each session against its own ACL vocabulary.
   { text: 'Live', labelKey: 'nav:live',          path: '/live',           iconComponent: SensorsIcon,               aclKey: 'reports',                        group: 'MONITOR'  },
-  { text: 'Calls', labelKey: 'nav:calls',         path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
-  { text: 'Messages', labelKey: 'nav:messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
+  // Logs is Calls and Messages as one screen: it opens on Calls, and the
+  // tabs at the top of the screen (LogTabs) switch between the two.
+  { text: 'Logs', labelKey: 'nav:logs',          path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR',  alsoPaths: ['/messages'] },
   { text: 'Reports', labelKey: 'nav:reports',       path: '/reports',        iconComponent: AssessmentIcon,            aclKey: 'reports',                        group: 'MONITOR'  },
   { text: 'Users', labelKey: 'nav:users',         path: '/users',          iconComponent: PeopleIcon,                aclKey: 'users',                          group: 'MANAGE'   },
   { text: 'Accounts', labelKey: 'nav:accounts',      path: '/accounts',       iconComponent: BadgeIcon,                 aclKey: 'accounts',                       group: 'MANAGE'   },
@@ -58,11 +59,12 @@ export const TOPBAR_NAV_ITEMS = [
 ];
 
 // Screens with a route but no menu entry: they open from the screen they
-// belong to (Providers from Routes). Listed so a visit still has a name and
+// belong to (Providers from Routes, Messages from the Logs tabs). Listed so a visit still has a name and
 // icon in breadcrumbs and recent pages. Nodes has no route at all: it is
 // managed from the customer dialog.
 export const OFF_MENU_NAV_ITEMS = [
   { text: 'Providers', labelKey: 'nav:providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'ADMIN'    },
+  { text: 'Messages', labelKey: 'nav:messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'messages',                       group: 'MONITOR'  },
 ];
 
 // A menu item's name in the active language (nav.json), e.g. "Calls" / "שיחות".
