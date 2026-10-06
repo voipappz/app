@@ -330,6 +330,23 @@
   flex-shrink: 0;
 }
 
+/* Which side is signed in: an account (admin) or a user. */
+.sidebar-container .sidebar-profile-avatar--admin {
+  background-color: var(--mui-palette-primary-main, #1976d2);
+}
+
+.sidebar-container .sidebar-profile-avatar--user {
+  background-color: var(--mui-palette-success-main, #2e7d32);
+}
+
+.sidebar-container .sidebar-profile-shield {
+  font-size: 14px;
+  color: var(--mui-palette-primary-main, #1976d2);
+  background-color: var(--mui-palette-background-paper, #fff);
+  border-radius: 50%;
+  padding: 1px;
+}
+
 /* Dark Mode Toggle Section (legacy — kept until cleanup) */
 .sidebar-theme-toggle {
   display: flex;

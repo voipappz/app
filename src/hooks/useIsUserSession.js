@@ -12,3 +12,15 @@ export function useIsUserSession() {
   const { isAuthenticated: user } = useUserAuth();
   return Boolean(user && !account);
 }
+
+/**
+ * Which side is signed in: 'admin' (an account), 'user', or null. Same
+ * precedence as useIsUserSession: the account wins when both are present.
+ */
+export function useSessionRole() {
+  const { isAuthenticated: account } = useAuth();
+  const { isAuthenticated: user } = useUserAuth();
+  if (account) return 'admin';
+  if (user) return 'user';
+  return null;
+}

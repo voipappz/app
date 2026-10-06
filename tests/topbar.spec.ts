@@ -29,7 +29,9 @@ test.describe('Top bar', () => {
     const request = await listRequest;
     expect(new URL(request.url()).searchParams.has('search[name]')).toBe(false);
     const response = await request.response();
-    expect(response?.status(), await response?.text()).toBe(200);
+    // On a refusal, say who refused: the API answers JSON, a proxy plain text.
+    const said = `${await response?.text()} ${JSON.stringify(await response?.allHeaders())}`;
+    expect(response?.status(), said).toBe(200);
     await expect(popup).toBeHidden();
   });
 

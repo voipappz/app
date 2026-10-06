@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Start here
 
-`make` lists the six targets. `make setup` takes a fresh clone to a runnable
+`make` lists the targets. `make setup` takes a fresh clone to a runnable
 state, `make onboard` checks the login token for the API (dev and test run it
-first), and `make check` is the gate to pass before pushing (secrets, lint,
-unit, build).
+first), `make gate` runs lint and the unit suite (`DOCKER=1` in a node:22
+container, for a host that cannot run the pinned node), and `make check` is the
+gate to pass before pushing (secrets, lint, unit, build).
 
 Never hand-write a command this Makefile already has a target for.
 
