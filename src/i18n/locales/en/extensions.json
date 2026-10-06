@@ -1,0 +1,91 @@
+{
+  "search": {
+    "placeholder": "Search by name, or use field:value (e.g. enabled:true)",
+    "name": "Name",
+    "device": "Device",
+    "status": "Status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "application": "Application",
+    "tag": "Tag"
+  },
+  "toolbar": {
+    "importCsv": "Import CSV",
+    "addDevice": "Add Device",
+    "registered": "Registered"
+  },
+  "table": {
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "registrationStatus": "SIP Registration Status",
+    "registration": "Registration",
+    "enabled": "Enabled",
+    "device": "Device",
+    "name": "Name",
+    "application": "Application",
+    "tags": "Tags",
+    "actions": "Actions",
+    "empty": "No devices found",
+    "editApplication": "Edit application {{name}}"
+  },
+  "registration": {
+    "offline": "Not Registered (Offline)",
+    "online": "Registered (Online)",
+    "userAgent": "User agent",
+    "contact": "Contact",
+    "ip": "IP",
+    "proto": "Proto",
+    "host": "Host",
+    "expires": "Expires"
+  },
+  "action": {
+    "openPhone": "Open phone as this device",
+    "clickToCall": "Click to Call",
+    "showQrCode": "Show QR Code",
+    "edit": "Edit device",
+    "delete": "Delete device"
+  },
+  "delete": {
+    "title": "Delete Device",
+    "message": "Are you sure you want to delete device <name/>?",
+    "description": "This action cannot be undone and will remove the device data."
+  },
+  "import": {
+    "title": "Import Devices from CSV",
+    "entityName": "Devices",
+    "formatHint": "Username,Name,Password,CallerID — Username and Name are required; a missing password is generated",
+    "result": "Devices: {{message}}",
+    "done": "Devices imported"
+  },
+  "clickToCall": {
+    "title": "Click to Call — <device/>",
+    "numberToDial": "Number to dial",
+    "hint": "Rings extension <device/>, then bridges the call to the number.",
+    "url": "Click2Call URL",
+    "copyUrl": "Copy URL",
+    "urlCopied": "URL copied to clipboard",
+    "response": "Response",
+    "callUuid": "Call UUID",
+    "recording": "Recording",
+    "copy": "Copy",
+    "copied": "Copied",
+    "cancel": "Cancel",
+    "call": "Call",
+    "calling": "Calling {{number}} from {{device}}…",
+    "failed": "Click-to-call failed: {{error}}"
+  },
+  "qr": {
+    "title": "QR Code - <device/>",
+    "imageAlt": "QR Code for {{name}}",
+    "authorizeFailed": "Could not authorize the QR code. Please try again.",
+    "loadFailed": "Failed to load QR code",
+    "extensionLine": "Extension: <device/> | {{application}}",
+    "noEnvironment": "No environment",
+    "copyUrl": "Copy URL",
+    "copied": "Copied!",
+    "download": "Download"
+  },
+  "live": {
+    "title": "SIP Registrations"
+  }
+}

@@ -1,5 +1,4 @@
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -21,6 +20,7 @@ import {
   createFilterOptions,
   Tooltip
 } from '@mui/material';
+import { ResponsiveDialog as Dialog } from '../../ui'; // full screen on a phone
 import {
   Close as CloseIcon,
   Visibility,
@@ -778,9 +778,40 @@ const AccountDialog = ({
               />
             </Grid>
           </Grid>
+
+          {/* Your own account also holds this browser's appearance. Kept out of
+              the button row below, which must fit on a phone. */}
+          {onSignOut && (
+            <Box
+              data-testid="account-dialog-appearance"
+              sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, pt: 2, borderTop: '1px solid var(--mui-palette-divider)' }}
+            >
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setLanguage(otherLanguage)}
+                startIcon={<TranslateIcon />}
+                aria-label={t('appearance.switchLanguage')}
+                data-testid="account-dialog-language"
+                sx={{ textTransform: 'none' }}
+              >
+                {t(`languageName.${otherLanguage}`)}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={toggleTheme}
+                startIcon={isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+                data-testid="account-dialog-theme"
+                sx={{ textTransform: 'none' }}
+              >
+                {t(isDarkMode ? 'appearance.lightMode' : 'appearance.darkMode')}
+              </Button>
+            </Box>
+          )}
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ flexWrap: 'wrap', rowGap: 1 }}>
           {onSignOut && (
             <>
               <Button
@@ -792,23 +823,6 @@ const AccountDialog = ({
                 sx={{ textTransform: 'none' }}
               >
                 {t('accountDialog.signOut')}
-              </Button>
-              <Button
-                onClick={() => setLanguage(otherLanguage)}
-                startIcon={<TranslateIcon />}
-                aria-label={t('appearance.switchLanguage')}
-                data-testid="account-dialog-language"
-                sx={{ textTransform: 'none' }}
-              >
-                {t(`languageName.${otherLanguage}`)}
-              </Button>
-              <Button
-                onClick={toggleTheme}
-                startIcon={isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
-                data-testid="account-dialog-theme"
-                sx={{ textTransform: 'none' }}
-              >
-                {t(isDarkMode ? 'appearance.lightMode' : 'appearance.darkMode')}
               </Button>
               <Box sx={{ flex: 1 }} />
             </>

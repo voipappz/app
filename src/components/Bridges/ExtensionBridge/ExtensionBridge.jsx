@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -21,6 +20,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
+import { ResponsiveDialog as Dialog } from '../../ui'; // full screen on a phone
 import {
   Phone as PhoneIcon,
   Close as CloseIcon,
