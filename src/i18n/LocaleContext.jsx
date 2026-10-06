@@ -5,6 +5,7 @@ import i18n from './index';
 import { directionFor, normalizeLanguage } from './languages';
 import { LANGUAGE_KEY, readLanguage, saveLanguage } from './languageStorage';
 import { ltrCache, rtlCache } from './emotionCaches';
+import { muiLocalesFor } from './muiLocales';
 import { createAppTheme } from '../theme/theme';
 
 const LocaleContext = createContext(null);
@@ -14,7 +15,7 @@ const LocaleContext = createContext(null);
 export function LocaleProvider({ children }) {
   const [language, setLanguageState] = useState(readLanguage);
   const direction = directionFor(language);
-  const theme = useMemo(() => createAppTheme(direction), [direction]);
+  const theme = useMemo(() => createAppTheme(direction, ...muiLocalesFor(language)), [direction, language]);
 
   useEffect(() => {
     document.documentElement.lang = language;

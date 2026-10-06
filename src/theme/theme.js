@@ -43,8 +43,8 @@ const scheme = (t, sev) => ({
 
 // One theme per text direction. Always build it fresh with createTheme: spreading
 // an already-built theme into createTheme drops cssVariables/colorSchemes, and
-// dark mode stops working.
-export const createAppTheme = (direction = 'ltr') => createTheme({
+// dark mode stops working. `locales` are MUI's translations (src/i18n/muiLocales.js).
+export const createAppTheme = (direction = 'ltr', ...locales) => createTheme({
   direction,
   cssVariables: { colorSchemeSelector: 'data-theme' },
   colorSchemes: {
@@ -244,6 +244,6 @@ export const createAppTheme = (direction = 'ltr') => createTheme({
       },
     },
   },
-});
+}, ...locales);
 
 export default createAppTheme('ltr');

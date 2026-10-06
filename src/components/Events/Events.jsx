@@ -34,8 +34,7 @@ import {
 } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import DateLocalizationProvider from '../../i18n/DateLocalizationProvider';
 import { useEvents } from './Events';
 import { stripedDataGridSx } from '../shared/tableTheme.jsx';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
@@ -538,7 +537,7 @@ const Events = ({ initialParams, leftSlot } = {}) => {
           </ButtonGroup>
 
           {/* Custom Date/Time Pickers */}
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DateLocalizationProvider>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <DateTimePicker
                 value={dateRange?.start || new Date()}
@@ -564,7 +563,7 @@ const Events = ({ initialParams, leftSlot } = {}) => {
                 }}
               />
             </Box>
-          </LocalizationProvider>
+          </DateLocalizationProvider>
 
           <Divider orientation="vertical" flexItem />
 

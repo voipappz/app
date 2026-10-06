@@ -36,7 +36,22 @@ export default [
         selector: "JSXOpeningElement[name.name='Grid'] > JSXAttribute[name.name=/^(item|xs|sm|md|lg|xl)$/]",
         message: 'MUI v7 Grid ignores item/xs/sm/md/lg/xl — use size={{ xs, md }}.',
       }],
+      // Dates and numbers follow the active language only through the helpers.
+      // A warning for now: existing code is converted screen by screen.
+      'no-restricted-properties': ['warn',
+        ...['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString'].map((property) => ({
+          property, message: 'Use formatDate/formatOnlyDate (utils/dateUtils) or formatNumber (utils/numberUtils).',
+        })),
+        ...['NumberFormat', 'DateTimeFormat'].map((property) => ({
+          object: 'Intl', property, message: 'Use formatNumber (utils/numberUtils) or the date helpers (utils/dateUtils).',
+        })),
+      ],
     },
+  },
+  // The helpers themselves, and tests, may call Intl directly.
+  {
+    files: ['src/utils/dateUtils.js', 'src/utils/numberUtils.js', '**/*.test.{js,jsx}'],
+    rules: { 'no-restricted-properties': 'off' },
   },
   // TypeScript files configuration
   ...tseslint.configs.recommended,

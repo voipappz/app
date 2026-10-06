@@ -35,8 +35,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import DateLocalizationProvider from '../../i18n/DateLocalizationProvider';
 import { useSystemLogs } from './SystemLogs';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
 import {
@@ -335,7 +334,7 @@ const SystemLogs = ({ initialParams }) => {
           </ButtonGroup>
 
           {/* Custom Date/Time Pickers */}
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <DateLocalizationProvider>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <DateTimePicker
                 value={dateRange?.start || new Date()}
@@ -365,7 +364,7 @@ const SystemLogs = ({ initialParams }) => {
                 }}
               />
             </Box>
-          </LocalizationProvider>
+          </DateLocalizationProvider>
 
           <Divider orientation="vertical" flexItem />
 

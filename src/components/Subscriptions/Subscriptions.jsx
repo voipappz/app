@@ -56,6 +56,7 @@ import useCentralizedSearch from '../../hooks/useCentralizedSearch';
 import { orEmpty, stripedTableRowSx } from '../shared/tableTheme.jsx';
 import MetaTagChips from '../common/MetaTagChips/MetaTagChips';
 import { getEnabledChipProps, getStatusChipProps } from '../../utils/chipStyles';
+import { formatNumber } from '../../utils/numberUtils';
 import HelpButton from '../common/HelpButton';
 import { GUIDE_URLS } from '../../utils/guides';
 import './Subscriptions.css';
@@ -384,7 +385,7 @@ const Subscriptions = () => {
   };
 
   // Balance is integer units (prepaid: remaining credit; postpaid: period usage).
-  const formatBalance = (amount) => new Intl.NumberFormat('en-US').format(amount || 0);
+  const formatBalance = (amount) => formatNumber(amount || 0);
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
