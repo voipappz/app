@@ -3,14 +3,14 @@
    content. */
 .sidebar-container {
   position: fixed;
-  left: 0;
+  inset-inline-start: 0;
   top: 0;
   height: 100vh;
   width: var(--sidebar-width);
   box-sizing: border-box;
   /* Same tint as the top bar: the two read as one frame around the page. */
   background: var(--topbar-bg);
-  border-right: 1px solid var(--border-light);
+  border-inline-end: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   z-index: 1200;
@@ -22,7 +22,7 @@
 
 .sidebar-container.collapsed {
   width: 0;
-  border-right: none;
+  border-inline-end: none;
   box-shadow: none;
 }
 

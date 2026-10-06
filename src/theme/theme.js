@@ -12,7 +12,7 @@
  * styleOverrides/defaultProps, so a screen can still override it with `sx`.
  */
 import { createTheme } from '@mui/material/styles';
-import { light, dark, severity, radius, type } from './tokens';
+import { light, dark, severity, radius, type, breakpoints } from './tokens';
 
 const rem = (px) => `${px / 16}rem`;
 
@@ -47,6 +47,7 @@ const theme = createTheme({
     light: scheme(light, severity.light),
     dark: scheme(dark, severity.dark),
   },
+  breakpoints: { values: breakpoints },
   shape: { borderRadius: radius.md },
   typography: {
     fontFamily: type.family,
