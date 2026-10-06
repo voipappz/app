@@ -50,7 +50,7 @@ LOGIN = $(if $(DOCKER),docker run --rm $$([ -t 0 ] && echo -it) -u "$$(id -u):$$
           -e TOKEN="$(TOKEN)" -e PORT="$(PORT)" node:22-alpine node bin/onboard.mjs,\
           TOKEN="$(TOKEN)" PORT="$(PORT)" $(NPM) exec -- node bin/onboard.mjs)
 
-.PHONY: help setup onboard tenant dev test check deploy
+.PHONY: help setup onboard tenant dev test gate check deploy
 .DEFAULT_GOAL := help
 
 help: ## Show this help
@@ -98,6 +98,28 @@ test: ## [SPEC=users HEADED=1 DOCKER=1] Check the login token, then run Playwrig
 	     --project=$(BROWSER) $(if $(HEADED),--headed,--reporter=line); \
 	   status=$$?; $(STOP); exit $$status; \
 	 fi
+
+# Lint and the unit suite, the two checks a change must pass before it is
+# pushed, with the whole transcript kept in tmp/gate.log (gitignored). No build:
+# builds run in CI only. DOCKER=1 runs both in the node:22 container, which is
+# the only way on a host whose glibc the pinned node will not start on.
+#  - The container's node_modules is a named volume that starts empty, so the
+#    first run installs into it; after a package-lock change, `make setup
+#    DOCKER=1` refreshes it.
+#  - `sh -c` because compose v1 (1.29) runs a directly-passed command but never
+#    shows its output, so a failing check would look like it passed.
+#  - The exit status is the checks', not tee's (pipefail: SHELL is bash).
+gate: ## [DOCKER=1] Lint and unit tests, transcript in tmp/gate.log
+	@mkdir -p tmp
+	@set -o pipefail; \
+	 if [ -n "$(DOCKER)" ]; then \
+	   $(DC) run --rm --no-deps -T app sh -c '[ -x node_modules/.bin/eslint ] || npm ci --no-audit --no-fund; npm run lint && npm run test:unit:run'; \
+	 else \
+	   $(NPM) run lint && $(NPM) run test:unit:run; \
+	 fi 2>&1 | tee tmp/gate.log; \
+	 status=$$?; \
+	 echo; echo "gate: transcript in tmp/gate.log"; \
+	 exit $$status
 
 # The gate a PR has to pass, in CI's order, so a red CI is reproducible here.
 check: ## Secrets scan, lint, unit tests and a build -- the pre-push gate
