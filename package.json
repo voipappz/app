@@ -102,7 +102,7 @@
   "overrides": {
     "path-to-regexp": "0.1.13",
     "lodash": "4.18.1",
-    "shell-quote": "^1.9.0",
+    "shell-quote": "^1.11.0",
     "joi": "^18.2.1",
     "esbuild": "^0.28.1",
     "js-yaml": "4.3.2"
