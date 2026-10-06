@@ -28,7 +28,8 @@ test.describe('Top bar', () => {
 
     const request = await listRequest;
     expect(new URL(request.url()).searchParams.has('search[name]')).toBe(false);
-    expect((await request.response())?.status()).toBe(200);
+    const response = await request.response();
+    expect(response?.status(), await response?.text()).toBe(200);
     await expect(popup).toBeHidden();
   });
 
