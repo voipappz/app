@@ -887,6 +887,9 @@ const Calls = () => {
             sx={{
               flex: 1,
               minHeight: 0,
+              // Lets the grid shrink (it scrolls inside) so a wide column set
+              // never pushes the call panel off screen.
+              minWidth: 0,
               transition: 'flex 0.25s ease',
             }}
           >
