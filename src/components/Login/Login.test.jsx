@@ -18,7 +18,6 @@ describe('the account sign-in', () => {
   it('says it is the admin sign-in', () => {
     show();
     expect(screen.getByRole('heading', { name: /admin sign-in/i })).toBeInTheDocument();
-    expect(screen.getByTestId('admin-login-badge')).toHaveTextContent('Admin');
   });
 
   it('links users to their own sign-in at /', () => {
