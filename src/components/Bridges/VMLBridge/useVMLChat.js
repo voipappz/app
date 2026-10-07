@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useAuth } from '../../../context/AuthContext';
+import { apiService } from '../../../services/apiService';
 import { getVMLSessions, loadVMLSession, deleteVMLSession, sendVMLMessage } from '../../../services/api/vmlsApi';
 
 /**
@@ -17,7 +17,8 @@ const RunEvent = {
  * with EventStore-backed sessions and streaming.
  */
 export const useVMLChat = () => {
-  const { access } = useAuth();
+  // Either session's token (an account's, else a portal user's).
+  const access = apiService.getToken();
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
