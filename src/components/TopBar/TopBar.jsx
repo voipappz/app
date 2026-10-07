@@ -130,7 +130,6 @@ import { CSS } from '@dnd-kit/utilities';
 import './TopBar.css';
 import TopBarPhoneButton from './TopBarPhoneButton.jsx';
 import { useIsUserSession } from '../../hooks/useIsUserSession';
-import SessionRoleBadge from '../common/SessionRoleBadge.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { ConfirmDialog } from '../ui';
@@ -874,8 +873,6 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         >
           <MenuIcon sx={{ fontSize: 22, transition: 'transform 220ms ease', transform: menuOpen ? 'rotate(90deg)' : 'rotate(0deg)' }} />
         </IconButton>
-        {/* Admin or User: which side is signed in, always in view. */}
-        <SessionRoleBadge />
         {/* Selected applications and their selector. The customer is the sidebar's. */}
         {userSession ? (
           <Typography data-testid="topbar-user-environment" sx={{ fontSize: '0.75rem', fontWeight: 600, px: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--theme-text-primary)' }}>
