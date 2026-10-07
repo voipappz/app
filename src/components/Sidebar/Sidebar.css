@@ -323,7 +323,7 @@
 .sidebar-container .sidebar-profile-avatar {
   width: 32px;
   height: 32px;
-  background-color: #65758E;
+  background-color: var(--accent-color, #65758E);
   font-size: 0.82rem;
   font-weight: 600;
   border: none;
@@ -471,6 +471,6 @@
   height: 26px;
   font-size: 0.8rem;
   font-weight: 600;
-  background-color: #65758E;
+  background-color: var(--accent-color, #65758E);
   flex-shrink: 0;
 }

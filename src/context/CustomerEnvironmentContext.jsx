@@ -391,7 +391,8 @@ export const CustomerEnvironmentProvider = ({ children }) => {
     // Notify other contexts (RecentPages, GlobalSearch) to clear their data
     window.dispatchEvent(new CustomEvent('nimbus:customerSwitched'));
 
-    // Best-effort: pre-apply the only environment so the new customer lands ready.
+    // A customer is never entered without an application: keep the one(s) it
+    // had selected, otherwise select its first enabled one.
     // BOUNDED with a timeout — an unbounded await on a slow/stuck environments API
     // is what previously left the reload from firing, so the switch silently
     // required a manual page refresh. The reload must always happen.
@@ -400,9 +401,19 @@ export const CustomerEnvironmentProvider = ({ children }) => {
       new Promise((resolve) => setTimeout(() => resolve(undefined), ms)),
     ]);
     try {
-      const envs = (await withTimeout(fetchSelectedEnvironments(customer.uuid), 4000)) || [];
-      if (envs.length === 1 && envs[0]?.server) {
-        setDynamicApiBaseUrl(envs[0].server);
+      let envs = (await withTimeout(fetchSelectedEnvironments(customer.uuid), 4000)) || [];
+      if (envs.length === 0) {
+        const all = (await withTimeout(fetchAllEnvironments(customer.uuid, true), 4000)) || [];
+        const first = all.find((e) => e.enabled !== false) || all[0];
+        if (first) {
+          envs = [{ ...first, selected: true }];
+          setSelectedEnvironments(envs);
+          setUncommittedEnvironments(envs);
+          try { localStorage.setItem(`selectedEnvironments:${customer.uuid}`, JSON.stringify(envs)); } catch { /* storage unavailable */ }
+        }
+      }
+      if (envs.length === 1) {
+        if (envs[0]?.server) setDynamicApiBaseUrl(envs[0].server);
         // Pass customer directly to avoid stale closure (selectedCustomer may not be updated yet)
         await withTimeout(applyEnvironmentSelectionsAPI([envs[0]], customer), 4000);
       }
@@ -422,7 +433,7 @@ export const CustomerEnvironmentProvider = ({ children }) => {
     window.dispatchEvent(new CustomEvent('customerChanged', {
       detail: { customer }
     }));
-  }, [fetchSelectedEnvironments, showError]);
+  }, [fetchSelectedEnvironments, fetchAllEnvironments, showError]);
 
   // Toggle environment in uncommitted selection (for multi-select)
   const toggleEnvironment = useCallback((environment) => {

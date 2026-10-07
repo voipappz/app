@@ -162,10 +162,31 @@ export function applyCustomerBranding(customerData) {
   }
 }
 
+// A customer's profile was just saved in Edit Customer: the console is branded
+// from the cached portal data and fetches it only when nothing is cached, so
+// without this the old colour and logo stayed until the cache was cleared.
+// Takes the saved profile's branding keys over the cached copy and applies it.
+const BRANDING_KEYS = ['logo_color', 'logo_url', 'logo_icon', 'logo_title'];
+
+export function applySavedCustomerBranding(profile) {
+  if (!profile || typeof profile !== 'object') return null;
+  const saved = Object.fromEntries(
+    BRANDING_KEYS.filter((k) => typeof profile[k] === 'string' && profile[k].trim())
+      .map((k) => [k, profile[k].trim()])
+  );
+  const customerData = { ...DEFAULT_CUSTOMER_DATA, ...(getCustomerData() || {}), ...saved };
+  if (saved.logo_url) customerData.url = saved.logo_url;
+  if (saved.logo_icon) customerData.favicon = saved.logo_icon;
+  localStorage.setItem(CUSTOMER_DATA_KEY, JSON.stringify(customerData));
+  applyCustomerBranding(customerData);
+  return customerData;
+}
+
 export default {
   fetchCustomerPortalData,
   getCustomerData,
   loadCustomerData,
   clearCustomerData,
-  applyCustomerBranding
+  applyCustomerBranding,
+  applySavedCustomerBranding
 };
