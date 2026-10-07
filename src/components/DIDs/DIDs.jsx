@@ -78,14 +78,13 @@ import './DIDs.css';
  */
 const DIDs = ({ portalMode = false }) => {
   const navigate = useNavigate();
-  const { can, canAccess } = usePermissions();
+  const { can, canAccess, canRouteType } = usePermissions();
   const [providersOpen, setProvidersOpen] = useState(false);
-  // Portal users' ACLs carry no dids entry, so can('dids','write') is false for
-  // all of them — the screen would render as a read-only table with no Add,
-  // Edit, Duplicate or Delete. Portal access is granted at the route instead
-  // (DualProtectedRoute in App.jsx); the API still enforces its own rules on
-  // every request. The console keeps the real ACL check.
-  const canWrite = portalMode ? true : can('dids', 'write');
+  // Both sessions follow their ACL's `routes` grant (`dids` in older
+  // documents). A user's ACL may also limit the route types: a route of any
+  // other type is shown read-only. The API enforces the same on every request.
+  const canWrite = can('routes', 'write');
+  const canWriteRoute = (did) => canRouteType(did.type, 'write');
   const callNumber = useCallNumber();
 
   // Import dialog state
@@ -545,7 +544,7 @@ const DIDs = ({ portalMode = false }) => {
                           <EntityLink
                             name={did.environment?.name || did.environment_name}
                             ariaLabel={`Edit application ${did.environment?.name || did.environment_name || ''}`}
-                            onEdit={(did.environment?.uuid || did.environment_uuid) && canWrite ? () => handleEnvEdit({
+                            onEdit={(did.environment?.uuid || did.environment_uuid) && canWriteRoute(did) ? () => handleEnvEdit({
                               uuid: did.environment?.uuid || did.environment_uuid,
                               name: did.environment?.name || did.environment_name,
                             }) : undefined}
@@ -577,7 +576,7 @@ const DIDs = ({ portalMode = false }) => {
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           {did.bridge && did.bridge_type && did.bridge_type !== 'number' ? (
                             // All bridge types except number support edit mode (write only)
-                            canWrite && ['ivr', 'queue', 'announcement', 'vml', 'call_condition', 'bot', 'workflow'].includes(did.bridge_type) ? (
+                            canWriteRoute(did) && ['ivr', 'queue', 'announcement', 'vml', 'call_condition', 'bot', 'workflow'].includes(did.bridge_type) ? (
                               <Typography
                                 variant="body2"
                                 sx={{
@@ -629,7 +628,7 @@ const DIDs = ({ portalMode = false }) => {
                         </TableCell>
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                            {canWrite && (
+                            {canWriteRoute(did) && (
                               // Admin edits a Route on the routing canvas. The
                               // portal opens the wizard instead — a customer
                               // editing their own number wants the fields, and
@@ -648,7 +647,7 @@ const DIDs = ({ portalMode = false }) => {
                                 </IconButton>
                               </Tooltip>
                             )}
-                            {canWrite && portalMode && (
+                            {canWriteRoute(did) && portalMode && (
                               <Tooltip title="Call routing — visual flow">
                                 <IconButton
                                   data-testid="routing-did-button"
@@ -660,7 +659,7 @@ const DIDs = ({ portalMode = false }) => {
                                 </IconButton>
                               </Tooltip>
                             )}
-                            {canWrite && (
+                            {canWriteRoute(did) && (
                               <Tooltip title="Duplicate Route">
                                 <IconButton
                                   data-testid="duplicate-did-button"
@@ -673,7 +672,7 @@ const DIDs = ({ portalMode = false }) => {
                               </Tooltip>
                             )}
                             <RowEventsButton subject="did" uuid={did.uuid} />
-                            {canWrite && (
+                            {canWriteRoute(did) && (
                               <Tooltip title="Delete">
                                 <IconButton
                                   size="small"
