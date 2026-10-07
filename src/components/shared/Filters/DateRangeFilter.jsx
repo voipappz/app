@@ -1,8 +1,7 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import DateLocalizationProvider from '../../../i18n/DateLocalizationProvider';
 
 /**
  * Date Range Filter Component
@@ -40,7 +39,7 @@ const DateRangeFilter = ({
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <DateLocalizationProvider>
       <Box
         sx={{
           display: 'flex',
@@ -79,7 +78,7 @@ const DateRangeFilter = ({
           }}
         />
       </Box>
-    </LocalizationProvider>
+    </DateLocalizationProvider>
   );
 };
 

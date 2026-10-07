@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../i18n';
 import {
   Box,
   TextField,
@@ -58,15 +60,17 @@ export const TOPBAR_SEARCH_SLOT_ID = 'topbar-search-slot';
 
 // The date range in a few characters, for the docked field: "Today", "Oct 3",
 // "Oct 1 – Oct 5".
-const rangeLabel = (range) => {
+const rangeLabel = (range, t) => {
   const [from, to] = range || [];
   if (!from || !to) return null;
   const a = new Date(from);
   const b = new Date(to);
   if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null;
-  const day = (d) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  // English keeps the browser's own short format, as before; Hebrew uses he-IL.
+  const locale = i18n.language === 'he' ? 'he-IL' : undefined;
+  const day = (d) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   if (a.toDateString() === b.toDateString()) {
-    return a.toDateString() === new Date().toDateString() ? 'Today' : day(a);
+    return a.toDateString() === new Date().toDateString() ? t('search.today') : day(a);
   }
   return `${day(a)} – ${day(b)}`;
 };
@@ -96,6 +100,7 @@ const isNumericSegment = (segment) => {
 };
 
 const FilterInput = ({ segment, value, onChange, access }) => {
+  const { t } = useTranslation();
   const fieldName = segment.name || segment.field;
   const options = segment.data || [];
   const getOptionValue = (opt) => opt.uuid || opt.value || opt.id;
@@ -130,7 +135,7 @@ const FilterInput = ({ segment, value, onChange, access }) => {
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent-primary)' },
           }}
         >
-          <MenuItem value=""><em style={{ color: 'var(--text-tertiary)' }}>Any</em></MenuItem>
+          <MenuItem value=""><em style={{ color: 'var(--text-tertiary)' }}>{t('search.any')}</em></MenuItem>
           {options.map((opt, i) => (
             <MenuItem key={getOptionValue(opt) || i} value={getOptionValue(opt)}>
               {getOptionLabel(opt)}
@@ -151,7 +156,7 @@ const FilterInput = ({ segment, value, onChange, access }) => {
           onChange={(e) => onChange(fieldName, 'IN', e.target.value)}
           displayEmpty
           renderValue={(sel) => {
-            if (sel.length === 0) return <em style={{ color: 'var(--text-tertiary)' }}>Any</em>;
+            if (sel.length === 0) return <em style={{ color: 'var(--text-tertiary)' }}>{t('search.any')}</em>;
             return sel.map(v => {
               const opt = options.find(o => getOptionValue(o) === v);
               return opt ? getOptionLabel(opt) : v;
@@ -188,7 +193,7 @@ const FilterInput = ({ segment, value, onChange, access }) => {
         size="small"
         fullWidth
         type="number"
-        placeholder={segment.placeholder || segment.label || 'Value'}
+        placeholder={segment.placeholder || segment.label || t('search.value')}
         value={value || ''}
         onChange={(e) => onChange(fieldName, 'IS', e.target.value)}
         sx={inputSx}
@@ -200,13 +205,13 @@ const FilterInput = ({ segment, value, onChange, access }) => {
   // `<from_epoch>-<to_epoch>` string (ParseSearchDate splits on '-' into two
   // unix timestamps). One-sided input is bounded (from=epoch 0, to=now).
   if (segment.type === 'date' || segment.type === 'daterange') {
-    const [f, t] = String(value || '').split('-');
+    const [fromPart, toPart] = String(value || '').split('-');
     const toInput = (epoch) => {
       const n = parseInt(epoch, 10);
       return (!n || n <= 0) ? '' : new Date(n * 1000).toISOString().slice(0, 10);
     };
-    const fromVal = toInput(f);
-    const toVal = toInput(t);
+    const fromVal = toInput(fromPart);
+    const toVal = toInput(toPart);
     const emit = (fromStr, toStr) => {
       if (!fromStr && !toStr) { onChange(fieldName, 'IS', ''); return; }
       const fromEpoch = fromStr ? Math.floor(new Date(`${fromStr}T00:00:00`).getTime() / 1000) : 0;
@@ -216,11 +221,11 @@ const FilterInput = ({ segment, value, onChange, access }) => {
     return (
       <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
         <TextField
-          size="small" type="date" label="From" InputLabelProps={{ shrink: true }}
+          size="small" type="date" label={t('search.from')} InputLabelProps={{ shrink: true }}
           value={fromVal} onChange={(e) => emit(e.target.value, toVal)} sx={inputSx}
         />
         <TextField
-          size="small" type="date" label="To" InputLabelProps={{ shrink: true }}
+          size="small" type="date" label={t('search.to')} InputLabelProps={{ shrink: true }}
           value={toVal} onChange={(e) => emit(fromVal, e.target.value)} sx={inputSx}
         />
       </Box>
@@ -231,7 +236,7 @@ const FilterInput = ({ segment, value, onChange, access }) => {
     <TextField
       size="small"
       fullWidth
-      placeholder={segment.placeholder || segment.label || 'Value'}
+      placeholder={segment.placeholder || segment.label || t('search.value')}
       value={value || ''}
       onChange={(e) => onChange(fieldName, 'IS', e.target.value)}
       sx={inputSx}
@@ -240,6 +245,7 @@ const FilterInput = ({ segment, value, onChange, access }) => {
 };
 
 const AjaxInput = ({ segment, value, onChange, access }) => {
+  const { t } = useTranslation();
   const fieldName = segment.name || segment.field;
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState([]);
@@ -315,7 +321,7 @@ const AjaxInput = ({ segment, value, onChange, access }) => {
       renderInput={(params) => (
         <TextField
           {...params}
-          placeholder={segment.placeholder || 'Search...'}
+          placeholder={segment.placeholder || t('search.searchPlaceholder')}
           sx={{
             '& .MuiOutlinedInput-root': {
               fontFamily: 'Rubik, sans-serif',
@@ -343,6 +349,7 @@ const AjaxInput = ({ segment, value, onChange, access }) => {
 };
 
 const TagFilterInput = ({ segment, value, onChange, access }) => {
+  const { t } = useTranslation();
   const fieldName = segment.name || segment.field;
   const tagValue = (typeof value === 'object' && value !== null) ? value : { key: '', value: '' };
   const [keyOptions, setKeyOptions] = useState([]);
@@ -401,7 +408,7 @@ const TagFilterInput = ({ segment, value, onChange, access }) => {
         size="small"
         sx={{ flex: 1, minWidth: 0 }}
         renderInput={(params) => (
-          <TextField {...params} placeholder="Key" sx={inputSx}
+          <TextField {...params} placeholder={t('search.key')} sx={inputSx}
             InputProps={{ ...params.InputProps,
               endAdornment: (<>{keyLoading ? <CircularProgress size={14} /> : null}{params.InputProps.endAdornment}</>),
             }}
@@ -411,7 +418,7 @@ const TagFilterInput = ({ segment, value, onChange, access }) => {
       <TextField
         size="small"
         sx={{ flex: 1, minWidth: 0, ...inputSx }}
-        placeholder="Value"
+        placeholder={t('search.value')}
         value={tagValue.value || ''}
         onChange={(e) => onChange(fieldName, 'IS', { ...tagValue, value: e.target.value })}
       />
@@ -438,7 +445,7 @@ const getActiveFilters = (segments, currentSearchParams) => {
     metaEntries.forEach((entry) => {
       const displayValue = entry.metaValue ? `${entry.metaKey}=${entry.metaValue}` : entry.metaKey;
       active.push({
-        segment: tagSegment || { label: 'Tag', type: 'tag', name: 'meta' },
+        segment: tagSegment || { label: i18n.t('search.tag'), type: 'tag', name: 'meta' },
         fieldName: `meta__${entry.metaKey}`,
         paramKey: entry.paramKey,
         value: entry.metaValue,
@@ -629,12 +636,13 @@ const CentralizedSearch = ({
   onColumnSelectorOpen,
   quickSearchText,
   onQuickSearchChange,
-  placeholder = 'Search by name, or use field:value (e.g. enabled:true)',
+  placeholder,
   showExclude = false,
   hideSearchInput = false,
   inlineFilters = null,
   textParam = 'search[name]',
 }) => {
+  const { t } = useTranslation();
   // The bearer for the raw fetches in AjaxInput/TagFilterInput (they bypass
   // apiService, which resolves this itself). Falls back to the portal token so
   // a screen shared with the portal — DIDs and its meta-key tag segment — can
@@ -808,11 +816,11 @@ const CentralizedSearch = ({
   // chips. Inline (the layout below) is kept for phones, for a screen opened
   // inside a dialog, and wherever there is no top bar.
   const openPopup = () => { if (!showFilterPanel) toggleFilterPanel(); };
-  const dateLabel = rangeLabel(dateRange);
+  const dateLabel = rangeLabel(dateRange, t);
 
   const searchInput = !hideSearchInput && (<Box className="centralized-search-input">
           <TextField
-            placeholder={placeholder}
+            placeholder={placeholder ?? t('search.defaultPlaceholder')}
             value={quickSearchText}
             onChange={(e) => onQuickSearchChange(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -864,14 +872,14 @@ const CentralizedSearch = ({
                     <Button
                       size="small"
                       onClick={openPopup}
-                      aria-label={`Date range: ${dateLabel}`}
+                      aria-label={t('search.dateRange', { range: dateLabel })}
                       sx={{ minWidth: 0, px: 0.75, py: 0, mr: 0.25, textTransform: 'none', fontSize: '0.7rem', whiteSpace: 'nowrap', color: 'var(--theme-text-secondary)' }}
                     >
                       {dateLabel}
                     </Button>
                   )}
                   {segments && segments.length > 0 && (
-                    <Tooltip title={showFilterPanel ? 'Hide filters' : 'Show filters'}>
+                    <Tooltip title={showFilterPanel ? t('search.hideFilters') : t('search.showFilters')}>
                       <IconButton
                         size="small"
                         onClick={toggleFilterPanel}
@@ -905,20 +913,20 @@ const CentralizedSearch = ({
 
   const actions = (
         <Box className="centralized-search-actions">
-          <Tooltip title="Refresh">
+          <Tooltip title={t('search.refresh')}>
             <IconButton onClick={onRefresh} size="small" sx={{ color: 'var(--theme-text-secondary)' }}>
               <RefreshIcon sx={{ fontSize: 20 }} />
             </IconButton>
           </Tooltip>
           {onExport && (
-            <Tooltip title="Export CSV">
+            <Tooltip title={t('search.exportCsv')}>
               <IconButton onClick={onExport} size="small" sx={{ color: 'var(--theme-text-secondary)' }}>
                 <FileDownloadIcon sx={{ fontSize: 20 }} />
               </IconButton>
             </Tooltip>
           )}
           {onColumnSelectorOpen && (
-            <Tooltip title="Columns">
+            <Tooltip title={t('search.columns')}>
               <IconButton onClick={onColumnSelectorOpen} size="small" sx={{ color: 'var(--theme-text-secondary)' }}>
                 <ViewColumnIcon sx={{ fontSize: 20 }} />
               </IconButton>
@@ -955,7 +963,7 @@ const CentralizedSearch = ({
 
                     {isString && showExclude && (
                       <Chip
-                        label={isNegated ? 'Excluding' : 'Exclude'}
+                        label={isNegated ? t('search.excluding') : t('search.exclude')}
                         size="small"
                         onClick={() => toggleNegate(fieldName)}
                         sx={{
@@ -1076,7 +1084,7 @@ const CentralizedSearch = ({
               key={filter.paramKey}
               icon={filter.isMeta ? <LabelIcon sx={{ fontSize: 16 }} /> : getSegmentIcon(filter.fieldName)}
               label={filter.isMeta
-                ? `Tag: ${filter.displayValue}`
+                ? `${t('search.tag')}: ${filter.displayValue}`
                 : `${filter.segment ? filter.segment.label : filter.fieldName}: ${filter.displayValue}`}
               size="small"
               onDelete={() => handleRemoveActiveFilter(filter)}
@@ -1095,7 +1103,7 @@ const CentralizedSearch = ({
           ))}
           {activeFilters.length > 0 && (
             <Chip
-              label="Clear all"
+              label={t('search.clearAll')}
               size="small"
               variant="outlined"
               onClick={onClearAllFilters}
@@ -1114,7 +1122,7 @@ const CentralizedSearch = ({
         <Box className="centralized-search-active-chips">
           {activeFilters.map((filter) => {
             const label = filter.isMeta
-              ? `Tag: ${filter.displayValue}`
+              ? `${t('search.tag')}: ${filter.displayValue}`
               : filter.segment
                 ? `${filter.segment.label}: ${filter.displayValue}`
                 : `${filter.fieldName}: ${filter.displayValue}`;
@@ -1143,7 +1151,7 @@ const CentralizedSearch = ({
             );
           })}
           <Chip
-            label="Clear all"
+            label={t('search.clearAll')}
             size="small"
             variant="outlined"
             onClick={onClearAllFilters}

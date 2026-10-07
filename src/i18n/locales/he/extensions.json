@@ -1,0 +1,91 @@
+{
+  "search": {
+    "placeholder": "חיפוש לפי שם, או שדה:ערך (למשל enabled:true)",
+    "name": "שם",
+    "device": "מכשיר",
+    "status": "סטטוס",
+    "enabled": "פעיל",
+    "disabled": "מושבת",
+    "application": "אפליקציה",
+    "tag": "תגית"
+  },
+  "toolbar": {
+    "importCsv": "ייבוא CSV",
+    "addDevice": "הוספת מכשיר",
+    "registered": "רשומים"
+  },
+  "table": {
+    "createdAt": "נוצר",
+    "updatedAt": "עודכן",
+    "registrationStatus": "סטטוס רישום SIP",
+    "registration": "רישום",
+    "enabled": "פעיל",
+    "device": "מכשיר",
+    "name": "שם",
+    "application": "אפליקציה",
+    "tags": "תגיות",
+    "actions": "פעולות",
+    "empty": "לא נמצאו מכשירים",
+    "editApplication": "עריכת האפליקציה {{name}}"
+  },
+  "registration": {
+    "offline": "לא רשום (מנותק)",
+    "online": "רשום (מחובר)",
+    "userAgent": "סוכן משתמש",
+    "contact": "כתובת קשר",
+    "ip": "IP",
+    "proto": "פרוטוקול",
+    "host": "שרת",
+    "expires": "תפוגה"
+  },
+  "action": {
+    "openPhone": "פתיחת הטלפון כמכשיר זה",
+    "clickToCall": "חיוג בלחיצה",
+    "showQrCode": "הצגת קוד QR",
+    "edit": "עריכת המכשיר",
+    "delete": "מחיקת המכשיר"
+  },
+  "delete": {
+    "title": "מחיקת מכשיר",
+    "message": "האם למחוק את המכשיר <name/>?",
+    "description": "לא ניתן לבטל פעולה זו, ונתוני המכשיר יימחקו."
+  },
+  "import": {
+    "title": "ייבוא מכשירים מקובץ CSV",
+    "entityName": "מכשירים",
+    "formatHint": "Username,Name,Password,CallerID — חובה למלא Username ו-Name; סיסמה חסרה תיווצר אוטומטית",
+    "result": "מכשירים: {{message}}",
+    "done": "המכשירים יובאו"
+  },
+  "clickToCall": {
+    "title": "חיוג בלחיצה — <device/>",
+    "numberToDial": "מספר לחיוג",
+    "hint": "מצלצל לשלוחה <device/>, ואז מחבר את השיחה למספר.",
+    "url": "כתובת Click2Call",
+    "copyUrl": "העתקת הכתובת",
+    "urlCopied": "הכתובת הועתקה",
+    "response": "תגובה",
+    "callUuid": "מזהה שיחה",
+    "recording": "הקלטה",
+    "copy": "העתקה",
+    "copied": "הועתק",
+    "cancel": "ביטול",
+    "call": "חיוג",
+    "calling": "מחייג אל {{number}} מ-{{device}}…",
+    "failed": "החיוג בלחיצה נכשל: {{error}}"
+  },
+  "qr": {
+    "title": "קוד QR - <device/>",
+    "imageAlt": "קוד QR עבור {{name}}",
+    "authorizeFailed": "לא ניתן היה לאשר את קוד ה-QR. נסו שוב.",
+    "loadFailed": "טעינת קוד ה-QR נכשלה",
+    "extensionLine": "שלוחה: <device/> | {{application}}",
+    "noEnvironment": "ללא אפליקציה",
+    "copyUrl": "העתקת הכתובת",
+    "copied": "הועתק!",
+    "download": "הורדה"
+  },
+  "live": {
+    "title": "רישומי SIP"
+  }
+}

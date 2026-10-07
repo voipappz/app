@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import Bdi from '../../../i18n/Bdi';
 import {
   Card, CardContent, CardHeader, Avatar, Chip, Typography, Box, Tooltip, IconButton
 } from '@mui/material';
@@ -15,15 +17,16 @@ import ReactCountryFlag from 'react-country-flag';
 import { formatPhoneNumber, extractCountryFromPhone, formatDuration } from '../../../utils/phoneUtils';
 
 const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
-  const caller = call.profile?.caller || 'N/A';
+  const { t } = useTranslation('calls');
+  const caller = call.profile?.caller || t('mobile.notAvailable');
   const callee = call.profile?.callee;
-  const formattedCallee = callee ? formatPhoneNumber(callee) : 'N/A';
+  const formattedCallee = callee ? formatPhoneNumber(callee) : t('mobile.notAvailable');
   const direction = call.profile?.direction;
   const duration = call.profile?.talk_duration;
   const formattedDuration = duration ? formatDuration(parseInt(duration)) : '00:00:00';
   const cause = call.profile?.cause;
-  const environment = call.environment?.name || 'N/A';
-  const cid = call.profile?.cid || 'N/A';
+  const environment = call.environment?.name || t('mobile.notAvailable');
+  const cid = call.profile?.cid || t('mobile.notAvailable');
   // Support both new and legacy recording URL paths
   const recordingUrl = call.recording?.url || call.profile?.recordingUrl;
   
@@ -105,7 +108,7 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Tooltip title={caller} placement="top">
               <Typography variant="h6" noWrap sx={{ maxWidth: '120px' }}>
-                {caller}
+                <Bdi>{caller}</Bdi>
               </Typography>
             </Tooltip>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -117,7 +120,7 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Chip
               icon={getDirectionIcon()}
-              label={direction || 'Unknown'}
+              label={direction || t('mobile.unknown')}
               size="small"
               sx={{ 
                 backgroundColor: getDirectionColor(), 
@@ -149,24 +152,24 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
         <Box className="agent-card-details">
           <Box className="detail-item">
             <PhoneIcon fontSize="small" className="detail-icon" />
-            <Typography variant="body2" className="detail-label">Client:</Typography>
+            <Typography variant="body2" className="detail-label">{t('mobile.client')}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Typography variant="body2" className="detail-value">{formattedCallee}</Typography>
+              <Typography variant="body2" className="detail-value"><Bdi>{formattedCallee}</Bdi></Typography>
               {getCountryFlag()}
             </Box>
           </Box>
 
           <Box className="detail-item">
             <AccessTimeIcon fontSize="small" className="detail-icon" />
-            <Typography variant="body2" className="detail-label">Duration:</Typography>
+            <Typography variant="body2" className="detail-label">{t('mobile.duration')}</Typography>
             <Typography variant="body2" className="detail-value">{formattedDuration}</Typography>
           </Box>
 
           <Box className="detail-item">
             {getCauseIcon()}
-            <Typography variant="body2" className="detail-label">Status:</Typography>
+            <Typography variant="body2" className="detail-label">{t('mobile.status')}</Typography>
             <Chip
-              label={cause || 'Unknown'}
+              label={cause || t('mobile.unknown')}
               size="small"
               color={getCauseColor()}
               variant="outlined"
@@ -176,7 +179,7 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
 
           <Box className="detail-item">
             <PersonIcon fontSize="small" className="detail-icon" />
-            <Typography variant="body2" className="detail-label">Application:</Typography>
+            <Typography variant="body2" className="detail-label">{t('mobile.application')}</Typography>
             <Typography variant="body2" className="detail-value" noWrap>
               {environment}
             </Typography>
@@ -184,7 +187,7 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
 
           <Box className="detail-item">
             <Typography variant="body2" className="detail-label" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-              Call ID: {cid}
+              {t('mobile.callId')} <Bdi>{cid}</Bdi>
             </Typography>
           </Box>
         </Box>

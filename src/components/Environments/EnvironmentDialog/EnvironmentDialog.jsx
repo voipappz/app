@@ -1,5 +1,4 @@
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -15,6 +14,7 @@ import {
   Box,
   Tooltip
 } from '@mui/material';
+import { ResponsiveDialog as Dialog } from '../../ui'; // full screen on a phone
 import { Close as CloseIcon, Add as AddIcon, Delete as DeleteIcon, ContentCopy as ContentCopyIcon } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import DynamicProfileEditor from '../../common/DynamicProfileEditor/DynamicProfileEditor';

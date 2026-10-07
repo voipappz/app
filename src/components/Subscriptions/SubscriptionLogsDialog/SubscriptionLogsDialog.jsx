@@ -31,8 +31,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import DateLocalizationProvider from '../../../i18n/DateLocalizationProvider';
 import TablePagination from '@mui/material/TablePagination';
 import TimeHistogram from '../../../views/syslogs/TimeHistogram';
 import RawLogViewer from '../../../views/syslogs/RawLogViewer';
@@ -349,7 +348,7 @@ const SubscriptionLogsDialog = ({ open, onClose, subscription }) => {
             </ButtonGroup>
 
             {/* Custom Date Range */}
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DateLocalizationProvider>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <DatePicker
                   value={dateRange?.start || new Date()}
@@ -373,7 +372,7 @@ const SubscriptionLogsDialog = ({ open, onClose, subscription }) => {
                   }}
                 />
               </Box>
-            </LocalizationProvider>
+            </DateLocalizationProvider>
 
             {/* Divider */}
             <Divider orientation="vertical" flexItem />

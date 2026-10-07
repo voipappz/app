@@ -66,6 +66,8 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
 import { useTour } from '../../context/TourContext';
 import { useThemeMode } from '../../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '@mui/material/styles';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
 import { useNotifications } from '../Notifications/useNotifications';
 
@@ -175,6 +177,11 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
 
   const { isAuthenticated, user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useThemeMode();
+  const { t } = useTranslation();
+  // Physical sides for menus and popovers, mirrored in Hebrew (right to left).
+  const isRtl = useTheme().direction === 'rtl';
+  const startSide = isRtl ? 'right' : 'left';
+  const endSide = isRtl ? 'left' : 'right';
   useTour();
   // A portal USER signs in to this same console, with the account's ACL model:
   // a tool shows for them only when their ACL grants its key; one without a
@@ -645,7 +652,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         <Typography sx={{ ...cell, width: 64 }}>{day(env.updated_at)}</Typography>
 
         {/* Edit application — opens the same EnvironmentDialog used for create */}
-        <Tooltip title="Edit application" placement="left">
+        <Tooltip title="Edit application" placement={startSide}>
           <IconButton
             className="env-edit"
             size="small"
@@ -865,7 +872,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           className="topbar-hamburger"
           onClick={onToggleSidebar}
           size="small"
-          aria-label="Toggle menu"
+          aria-label={t('shell.toggleMenu')}
           aria-expanded={menuOpen}
           sx={{ display: 'inline-flex' }}
         >
@@ -930,10 +937,10 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           sx={{ flex: '1 1 0', minWidth: 0, display: { xs: 'none', sm: 'flex' }, alignItems: 'center' }}
         />
 
-        <Tooltip title="Assistant (Ctrl+K)">
+        <Tooltip title={t('shell.assistant')}>
           <Button
             size="small"
-            aria-label="Assistant (Ctrl+K)"
+            aria-label={t('shell.assistant')}
             onClick={() => openResourceFinder()}
             startIcon={<SearchIcon sx={{ fontSize: 17 }} />}
             sx={{
@@ -976,10 +983,10 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               It has no floating launcher of its own any more. Settings moved
               to the customer menu in the sidebar. An account's. */}
           {!userSession && (
-            <Tooltip title="Help">
+            <Tooltip title={t('shell.help')}>
               <IconButton
                 size="small"
-                aria-label="Help"
+                aria-label={t('shell.help')}
                 onClick={openZendeskWidget}
                 sx={{ color: 'var(--theme-text-secondary)', '&:hover': { backgroundColor: 'var(--theme-hover)' } }}
               >
@@ -995,7 +1002,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               `monitors`. */}
           {allow('monitors') && (
           <Button
-            aria-label="Health"
+            aria-label={t('shell.health')}
             onClick={() => setActiveTool('/monitoring')}
             sx={{
               display: 'flex', alignItems: 'center', gap: 0.75, px: 1, py: 0.5,
@@ -1019,7 +1026,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           <TopBarPhoneButton />
 
           {allow('notifications') && (
-          <Tooltip title="Notifications">
+          <Tooltip title={t('shell.notifications')}>
             <IconButton
               size="small"
               onClick={handleNotificationClick}
@@ -1035,7 +1042,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           {/* Overflow ⋮ — phones only: holds the secondary tools that don't fit */}
           {isPhone && (
             <>
-              <Tooltip title="More tools">
+              <Tooltip title={t('shell.moreTools')}>
                 <IconButton size="small" onClick={(e) => setToolsMenuAnchor(e.currentTarget)} sx={{ color: 'var(--theme-text-secondary)' }}>
                   <MoreVertIcon fontSize="small" />
                 </IconButton>
@@ -1044,8 +1051,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
                 anchorEl={toolsMenuAnchor}
                 open={Boolean(toolsMenuAnchor)}
                 onClose={() => setToolsMenuAnchor(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                anchorOrigin={{ vertical: 'bottom', horizontal: endSide }}
+                transformOrigin={{ vertical: 'top', horizontal: endSide }}
               >
                 {overflowTools.map(tool => (
                   <MenuItem
@@ -1071,8 +1078,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         open={customerEnvDialogOpen}
         anchorEl={customerEnvAnchorEl}
         onClose={() => { setCustomerEnvDialogOpen(false); setCustomerEnvAnchorEl(null); setEnvironmentSearchValue(''); }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: startSide }}
+        transformOrigin={{ vertical: 'top', horizontal: startSide }}
         sx={{
           '& .MuiPaper-root': {
             width: 460,
@@ -1144,8 +1151,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
             anchorEl={addEnvMenuAnchor}
             open={Boolean(addEnvMenuAnchor)}
             onClose={() => setAddEnvMenuAnchor(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            anchorOrigin={{ vertical: 'bottom', horizontal: endSide }}
+            transformOrigin={{ vertical: 'top', horizontal: endSide }}
           >
             <MenuItem onClick={() => { setAddEnvMenuAnchor(null); setEnvDialogEnvironment(null); setEnvDialogOpen(true); }}>
               <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
@@ -1321,8 +1328,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         open={Boolean(nodesPopoverAnchor)}
         anchorEl={nodesPopoverAnchor}
         onClose={() => { setNodesPopoverAnchor(null); setExpandedNodeJson(null); }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: startSide }}
+        transformOrigin={{ vertical: 'top', horizontal: startSide }}
         sx={{
           '& .MuiPaper-root': {
             width: 220,

@@ -3,14 +3,14 @@
    content. */
 .sidebar-container {
   position: fixed;
-  left: 0;
+  inset-inline-start: 0;
   top: 0;
   height: 100vh;
   width: var(--sidebar-width);
   box-sizing: border-box;
   /* Same tint as the top bar: the two read as one frame around the page. */
   background: var(--topbar-bg);
-  border-right: 1px solid var(--border-light);
+  border-inline-end: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   z-index: 1200;
@@ -22,7 +22,7 @@
 
 .sidebar-container.collapsed {
   width: 0;
-  border-right: none;
+  border-inline-end: none;
   box-shadow: none;
 }
 
@@ -403,6 +403,39 @@
 
 [data-theme="dark"] .sidebar-footer-logo img {
   filter: grayscale(0.2);
+}
+
+/* Phone drawer (Sidebar `wide`): each label sits beside its icon, at a
+   readable size, and the profile row names who is signed in. */
+.sidebar-container.sidebar-container--wide {
+  position: relative;
+  width: 100%;
+}
+
+.sidebar-container--wide .sidebar-nav-button {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 6px 16px;
+  min-height: 44px;
+}
+
+.sidebar-container--wide .sidebar-nav-text {
+  font-size: 14px;
+  text-align: start;
+  max-width: none;
+}
+
+.sidebar-container--wide .sidebar-profile-section {
+  justify-content: flex-start;
+  gap: 10px;
+  padding-inline: 12px;
+}
+
+.sidebar-profile-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 /* Responsive Design */

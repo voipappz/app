@@ -2,49 +2,36 @@ import {
   Box,
   Button,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   IconButton,
-  Chip,
   Tooltip,
   Typography,
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   CircularProgress,
-  Skeleton,
-  TableSortLabel,
   TextField
 } from '@mui/material';
 import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   Upload as UploadIcon,
-  Phone as PhoneIcon,
   Call as CallIcon,
   QrCode2 as QrCodeIcon,
   ContentCopy as CopyIcon,
   Download as DownloadIcon,
   Close as CloseIcon,
-  Add as AddIcon,
-  RssFeed as RssFeedIcon,
-  EventNote as EventsIcon
+  Add as AddIcon
 } from '@mui/icons-material';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ConfirmDialog } from '../ui';
+import { Trans, useTranslation } from 'react-i18next';
+import { ConfirmDialog, ResponsiveDialog as Dialog } from '../ui';
+import ResponsiveTable from '../shared/ResponsiveTable/ResponsiveTable.jsx';
+import { buildExtensionColumns } from './extensionColumns.jsx';
+import Bdi from '../../i18n/Bdi';
 import { useExtensions } from './Extensions';
 import { extensionsApi } from '../../services/api/extensionsApi';
 import { environmentsApi } from '../../services/api/environmentsApi';
 import { useNotification } from '../../context/NotificationContext';
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import { usePermissions } from '../../hooks/usePermissions';
-import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import { ExtensionBridge as ExtensionDialog } from '../Bridges/ExtensionBridge/ExtensionBridge';
 import { DEVICE_CSV_HEADERS, deviceRowErrors, prepareDeviceRow, randomDeviceRows } from '../Bridges/ExtensionBridge/deviceRules';
 import ImportCSVDialog from '../common/ImportCSVDialog/ImportCSVDialog';
@@ -55,13 +42,8 @@ import LiveRegistrationsPanel from '../Live/panels/LiveRegistrationsPanel.jsx';
 import { useLiveRegistrations } from '../Live/useLiveRegistrations';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import useCentralizedSearch from '../../hooks/useCentralizedSearch';
-import { orEmpty, stripedTableRowSx } from '../shared/tableTheme.jsx';
-import MetaTagChips from '../common/MetaTagChips/MetaTagChips';
-import { formatDate } from '../../utils/dateUtils';
-import { getEnabledChipProps } from '../../utils/chipStyles';
 import { useOpenPhoneAs } from '../../hooks/useCallNumber';
 import useEnvironmentEdit from '../../hooks/useEnvironmentEdit';
-import EntityLink from '../common/EntityLink/EntityLink.jsx';
 import EnvironmentDialog from '../Environments/EnvironmentDialog/EnvironmentDialog';
 import EventsCountBadge from '../common/EventsCountBadge/EventsCountBadge.jsx';
 import HelpButton from '../common/HelpButton';
@@ -73,6 +55,7 @@ import './Extensions.css';
  * Main component for extensions management with sidebar list and wide table
  */
 const Extensions = () => {
+  const { t } = useTranslation('extensions');
   const { can } = usePermissions();
   const canWrite = can('extensions', 'write');
   const canEditEnv = can('environments', 'write');
@@ -200,9 +183,9 @@ const Extensions = () => {
       if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
       // Keep the dialog open and surface the response (call_uuid, recording_url…).
       setC2cResponse(data || {});
-      showSuccess(`Calling ${c2cNumber.trim()} from ${c2cExt.username}…`);
+      showSuccess(t('clickToCall.calling', { number: c2cNumber.trim(), device: c2cExt.username }));
     } catch (e) {
-      showError(`Click-to-call failed: ${e.message}`);
+      showError(t('clickToCall.failed', { error: e.message }));
     } finally {
       setC2cBusy(false);
     }
@@ -222,7 +205,7 @@ const Extensions = () => {
       if (!res?.token) throw new Error('no token');
       setQrImageUrl(`/tasks/qrcode_extension/${extension.uuid}.png?va_token=${encodeURIComponent(res.token)}`);
     } catch {
-      setQrError('Could not authorize the QR code. Please try again.');
+      setQrError(t('qr.authorizeFailed'));
     }
   };
 
@@ -263,12 +246,12 @@ const Extensions = () => {
 
   // Register search segments with GlobalSearchContext
   const extensionSegments = useMemo(() => [
-    { name: 'name', label: 'Name', type: 'string' },
-    { name: 'username', label: 'Device', type: 'string' },
-    { name: 'enabled', label: 'Status', type: 'select', data: [{ uuid: 'true', name: 'Enabled' }, { uuid: 'false', name: 'Disabled' }] },
-    { name: 'environment_uuid', label: 'Application', type: 'select', data: environments },
-    { name: 'meta', label: 'Tag', type: 'tag', url: '/api/devices?action=meta_keys' },
-  ], [environments]);
+    { name: 'name', label: t('search.name'), type: 'string' },
+    { name: 'username', label: t('search.device'), type: 'string' },
+    { name: 'enabled', label: t('search.status'), type: 'select', data: [{ uuid: 'true', name: t('search.enabled') }, { uuid: 'false', name: t('search.disabled') }] },
+    { name: 'environment_uuid', label: t('search.application'), type: 'select', data: environments },
+    { name: 'meta', label: t('search.tag'), type: 'tag', url: '/api/devices?action=meta_keys' },
+  ], [environments, t]);
 
   useEffect(() => {
     registerScreen('extensions', extensionSegments, {
@@ -309,6 +292,18 @@ const Extensions = () => {
     setSelectedExtensionId(extensionId);
   };
 
+  const columns = buildExtensionColumns({
+    t, registeredUsers, canWrite, canEditEnv, loading,
+    actions: {
+      onOpenPhone: handleOpenPhone,
+      onClickToCall: handleOpenClick2Call,
+      onShowQrCode: handleOpenQRCode,
+      onEdit: (extension) => handleOpenDialog(extension),
+      onDelete: handleOpenDeleteDialog,
+      onEditApplication: handleEnvEdit,
+    },
+  });
+
   // Import CSV handlers
   const handleOpenImportDialog = useCallback(() => {
     setImportDialogOpen(true);
@@ -329,9 +324,9 @@ const Extensions = () => {
   }, []);
 
   const handleImportSuccess = useCallback((result) => {
-    showSuccess(result?.message ? `Devices: ${result.message}` : 'Devices imported');
+    showSuccess(result?.message ? t('import.result', { message: result.message }) : t('import.done'));
     fetchExtensions();
-  }, [showSuccess, fetchExtensions]);
+  }, [showSuccess, fetchExtensions, t]);
 
   // Fresh example rows every time the import opens (deviceRules.js).
   const importExamples = useMemo(() => (importDialogOpen ? randomDeviceRows(3) : []), [importDialogOpen]);
@@ -362,11 +357,11 @@ const Extensions = () => {
             onRefresh={centralizedSearch.handleRefresh}
             quickSearchText={centralizedSearch.quickSearchText}
             onQuickSearchChange={centralizedSearch.handleQuickSearchChange}
-            placeholder="Search by name, or use field:value (e.g. enabled:true)"
+            placeholder={t('search.placeholder')}
           />
         </Box>
         {canWrite && (
-          <Tooltip title="Import CSV">
+          <Tooltip title={t('toolbar.importCsv')}>
             {/* Icon-only control: a Tooltip title is not an accessible name,
                 so without aria-label this button was unreachable by name for
                 screen readers and by role for tests. */}
@@ -374,7 +369,7 @@ const Extensions = () => {
               size="small"
               onClick={handleOpenImportDialog}
               disabled={loading}
-              aria-label="Import CSV"
+              aria-label={t('toolbar.importCsv')}
               data-testid="import-csv"
             >
               <UploadIcon fontSize="small" />
@@ -382,7 +377,7 @@ const Extensions = () => {
           </Tooltip>
         )}
         {canWrite && (
-          <Tooltip title="Add Device">
+          <Tooltip title={t('toolbar.addDevice')}>
             <IconButton
               size="small"
               color="primary"
@@ -399,7 +394,7 @@ const Extensions = () => {
       <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center', mt: 1 }}>
         <StatChips
           items={[
-            { key: 'registered', label: 'Registered', value: regsTotal || 0, live: true, color: '#06b6d4', icon: <PhoneAndroidIcon />, active: liveDrawerOpen, onClick: () => setLiveDrawerOpen(true) },
+            { key: 'registered', label: t('toolbar.registered'), value: regsTotal || 0, live: true, color: '#06b6d4', icon: <PhoneAndroidIcon />, active: liveDrawerOpen, onClick: () => setLiveDrawerOpen(true) },
           ]}
         />
       </Box>
@@ -421,259 +416,24 @@ const Extensions = () => {
         >
           {/* Extensions Table */}
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-            <TableContainer>
-              <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'created_at'}
-                      direction={sortBy === 'created_at' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('created_at')}
-                    >
-                      Created At
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'updated_at'}
-                      direction={sortBy === 'updated_at' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('updated_at')}
-                    >
-                      Updated At
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell align="center" sx={{ width: 50 }}>
-                    <Tooltip title="SIP Registration Status">
-                      <RssFeedIcon fontSize="small" />
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell align="center">
-                    <TableSortLabel
-                      active={sortBy === 'enabled'}
-                      direction={sortBy === 'enabled' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('enabled')}
-                    >
-                      Enabled
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'username'}
-                      direction={sortBy === 'username' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('username')}
-                    >
-                      Device
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'name'}
-                      direction={sortBy === 'name' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('name')}
-                    >
-                      Name
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>Application</TableCell>
-                  <TableCell>Tags</TableCell>
-                  <TableCell align="center">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading && extensions.length === 0 ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {Array.from({ length: 9 }).map((__, j) => (
-                        <TableCell key={j}><Skeleton height={20} /></TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : extensions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No devices found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  extensions.map((extension) => {
-                    const extensionId = extension.id || extension.uuid;
-                    const isSelected = selectedExtensionId === extensionId;
-
-                    return (
-                      <TableRow
-                        key={extensionId}
-                        hover
-                        selected={isSelected}
-                        sx={{
-                          ...stripedTableRowSx,
-                          cursor: 'pointer',
-                          '&.Mui-selected': {
-                            bgcolor: '#e3f2fd !important'
-                          }
-                        }}
-                        onClick={() => handleSelectExtension(extensionId)}
-                      >
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatDate(extension.created_at)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatDate(extension.updated_at)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          {(() => {
-                            const isRegistered = extension.switch === true || registeredUsers.has(extension.username);
-                            // The API attaches switch-side detail (user agent, contact,
-                            // IP, expiry) to each row specifically for this tooltip —
-                            // see registration_info() in endpoints/extensions.rb — and
-                            // it was being thrown away for a static string.
-                            const reg = extension.registration;
-                            const detail = reg && [
-                              ['User agent', reg.user_agent],
-                              ['Contact', reg.contact],
-                              ['IP', [reg.network_ip, reg.network_port].filter(Boolean).join(':')],
-                              ['Proto', reg.network_proto],
-                              ['Host', reg.hostname],
-                              ['Expires', reg.expires],
-                            ].filter(([, v]) => v);
-                            return (
-                              <Tooltip
-                                title={
-                                  !isRegistered ? 'Not Registered (Offline)'
-                                    : detail && detail.length ? (
-                                      <Box sx={{ py: 0.25 }}>
-                                        <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, mb: 0.25 }}>
-                                          Registered (Online)
-                                        </Typography>
-                                        {detail.map(([label, value]) => (
-                                          <Typography key={label} sx={{ fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
-                                            {label}: {value}
-                                          </Typography>
-                                        ))}
-                                      </Box>
-                                    ) : 'Registered (Online)'
-                                }
-                              >
-                                <RssFeedIcon
-                                  fontSize="small"
-                                  sx={{
-                                    color: isRegistered ? '#29AB87' : '#ccc',
-                                    cursor: 'default'
-                                  }}
-                                />
-                              </Tooltip>
-                            );
-                          })()}
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip {...getEnabledChipProps(extension.enabled)} />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={600}>
-                            {orEmpty(extension.username)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {orEmpty(extension.name)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <EntityLink
-                            name={extension.environment?.name}
-                            ariaLabel={`Edit application ${extension.environment?.name || ''}`}
-                            onEdit={extension.environment?.uuid && canEditEnv ? () => handleEnvEdit(extension.environment) : undefined}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <MetaTagChips meta={extension.meta} />
-                        </TableCell>
-                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                            <Tooltip title="Open phone as this device">
-                              <IconButton
-                                data-testid="phone-extension-button"
-                                size="small"
-                                onClick={() => handleOpenPhone(extension)}
-                                disabled={loading}
-                                color="primary"
-                              >
-                                <PhoneIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Click to Call">
-                              <IconButton
-                                data-testid="click2call-extension-button"
-                                size="small"
-                                onClick={() => handleOpenClick2Call(extension)}
-                                disabled={loading}
-                                color="success"
-                              >
-                                <CallIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Show QR Code">
-                              <IconButton
-                                data-testid="qrcode-extension-button"
-                                size="small"
-                                onClick={() => handleOpenQRCode(extension)}
-                                disabled={loading}
-                              >
-                                <QrCodeIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            {canWrite && (
-                              <Tooltip title="Edit device">
-                                <IconButton
-                                  data-testid="edit-extension-button"
-                                  size="small"
-                                  onClick={() => handleOpenDialog(extension)}
-                                  disabled={loading}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            <RowEventsButton subject="extension" uuid={extension.uuid} />
-                            {canWrite && (
-                              <Tooltip title="Delete device">
-                                <IconButton
-                                  data-testid="delete-extension-button"
-                                  size="small"
-                                  onClick={() => handleOpenDeleteDialog(extension)}
-                                  disabled={loading}
-                                  color="error"
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-            {/* Pagination */}
-            <TablePagination
-              component="div"
-              count={totalCount}
+            <ResponsiveTable
+              columns={columns}
+              rows={extensions}
+              getRowId={(extension) => extension.id || extension.uuid}
+              onRowClick={(extension) => handleSelectExtension(extension.id || extension.uuid)}
+              selectedRowId={selectedExtensionId}
+              rowSx={{ '&.Mui-selected': { bgcolor: '#e3f2fd !important' } }}
+              loading={loading}
+              emptyMessage={t('table.empty')}
+              sortBy={sortBy}
+              sortDirection={sortOrder}
+              onSort={handleSortChange}
               page={page}
-              onPageChange={handlePageChange}
               rowsPerPage={rowsPerPage}
+              count={totalCount}
+              onPageChange={handlePageChange}
               onRowsPerPageChange={handleRowsPerPageChange}
               rowsPerPageOptions={[10, 25, 50, 100]}
-              sx={{ borderTop: '1px solid var(--mui-palette-divider)' }}
             />
           </Box>
         </Paper>
@@ -708,10 +468,10 @@ const Extensions = () => {
         onClose={handleCloseDeleteDialog}
         onConfirm={handleDeleteExtension}
         loading={dialogLoading}
-        title="Delete Device"
-        message={<Typography>Are you sure you want to delete device{' '}
-          <strong>{(extensionToDelete)?.name || (extensionToDelete)?.username}</strong>?</Typography>}
-        description="This action cannot be undone and will remove the device data."
+        title={t('delete.title')}
+        message={<Typography><Trans t={t} i18nKey="delete.message"
+          components={{ name: <strong>{(extensionToDelete)?.name || (extensionToDelete)?.username}</strong> }} /></Typography>}
+        description={t('delete.description')}
       />
 
       {/* Import Extensions CSV Dialog */}
@@ -719,12 +479,12 @@ const Extensions = () => {
         open={importDialogOpen}
         onClose={handleCloseImportDialog}
         onImport={handleImportCSV}
-        title="Import Devices from CSV"
-        entityName="Devices"
+        title={t('import.title')}
+        entityName={t('import.entityName')}
         environments={environments}
         requireEnvironment={true}
         onSuccess={handleImportSuccess}
-        formatHint="Username,Name,Password,CallerID — Username and Name are required; a missing password is generated"
+        formatHint={t('import.formatHint')}
         showTemplateOption={true}
         templateHeaders={DEVICE_CSV_HEADERS}
         templateData={importExamples}
@@ -736,37 +496,37 @@ const Extensions = () => {
       <Dialog open={c2cOpen} onClose={() => setC2cOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CallIcon color="success" />
-          Click to Call — {c2cExt?.username}
+          <Trans t={t} i18nKey="clickToCall.title" components={{ device: <Bdi>{c2cExt?.username}</Bdi> }} />
         </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             fullWidth
             margin="dense"
-            label="Number to dial"
+            label={t('clickToCall.numberToDial')}
             value={c2cNumber}
             onChange={(e) => setC2cNumber(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && c2cNumber.trim() && !c2cBusy) handleClick2Call(); }}
             disabled={c2cBusy}
           />
           <Typography variant="caption" color="text.secondary">
-            Rings extension {c2cExt?.username}, then bridges the call to the number.
+            <Trans t={t} i18nKey="clickToCall.hint" components={{ device: <Bdi>{c2cExt?.username}</Bdi> }} />
           </Typography>
           {c2cNumber.trim() && (
             <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
               <TextField
                 fullWidth
                 size="small"
-                label="Click2Call URL"
+                label={t('clickToCall.url')}
                 value={c2cUrl}
                 multiline
                 maxRows={3}
                 InputProps={{ readOnly: true, sx: { fontFamily: 'monospace', fontSize: '0.7rem' } }}
               />
-              <Tooltip title="Copy URL">
+              <Tooltip title={t('clickToCall.copyUrl')}>
                 <IconButton
                   size="small"
-                  onClick={() => { navigator.clipboard?.writeText(c2cUrl); showSuccess('URL copied to clipboard'); }}
+                  onClick={() => { navigator.clipboard?.writeText(c2cUrl); showSuccess(t('clickToCall.urlCopied')); }}
                   sx={{ mt: 1 }}
                 >
                   <CopyIcon fontSize="small" />
@@ -776,7 +536,7 @@ const Extensions = () => {
           )}
           {c2cResponse && (
             <Box sx={{ mt: 2, p: 1.5, borderRadius: 1, bgcolor: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border)' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Response</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>{t('clickToCall.response')}</Typography>
               {(() => {
                 const callUuid = c2cResponse.call_uuid || c2cResponse.uuid || c2cResponse.callUuid;
                 const recUrl = c2cResponse.recording_url || c2cResponse.recordingUrl || c2cResponse.recording?.url;
@@ -784,10 +544,10 @@ const Extensions = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                     {callUuid && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="caption" sx={{ minWidth: 90, color: 'text.secondary', fontWeight: 600 }}>Call UUID</Typography>
+                        <Typography variant="caption" sx={{ minWidth: 90, color: 'text.secondary', fontWeight: 600 }}>{t('clickToCall.callUuid')}</Typography>
                         <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all', flex: 1 }}>{callUuid}</Typography>
-                        <Tooltip title="Copy">
-                          <IconButton size="small" onClick={() => { navigator.clipboard?.writeText(callUuid); showSuccess('Copied'); }} sx={{ p: 0.25 }}>
+                        <Tooltip title={t('clickToCall.copy')}>
+                          <IconButton size="small" onClick={() => { navigator.clipboard?.writeText(callUuid); showSuccess(t('clickToCall.copied')); }} sx={{ p: 0.25 }}>
                             <CopyIcon sx={{ fontSize: 14 }} />
                           </IconButton>
                         </Tooltip>
@@ -795,10 +555,10 @@ const Extensions = () => {
                     )}
                     {recUrl && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="caption" sx={{ minWidth: 90, color: 'text.secondary', fontWeight: 600 }}>Recording</Typography>
+                        <Typography variant="caption" sx={{ minWidth: 90, color: 'text.secondary', fontWeight: 600 }}>{t('clickToCall.recording')}</Typography>
                         <a href={recUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', fontFamily: 'monospace', wordBreak: 'break-all', flex: 1 }}>{recUrl}</a>
-                        <Tooltip title="Copy">
-                          <IconButton size="small" onClick={() => { navigator.clipboard?.writeText(recUrl); showSuccess('Copied'); }} sx={{ p: 0.25 }}>
+                        <Tooltip title={t('clickToCall.copy')}>
+                          <IconButton size="small" onClick={() => { navigator.clipboard?.writeText(recUrl); showSuccess(t('clickToCall.copied')); }} sx={{ p: 0.25 }}>
                             <CopyIcon sx={{ fontSize: 14 }} />
                           </IconButton>
                         </Tooltip>
@@ -814,7 +574,7 @@ const Extensions = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setC2cOpen(false)} disabled={c2cBusy}>Cancel</Button>
+          <Button onClick={() => setC2cOpen(false)} disabled={c2cBusy}>{t('clickToCall.cancel')}</Button>
           <Button
             variant="contained"
             color="success"
@@ -822,7 +582,7 @@ const Extensions = () => {
             disabled={c2cBusy || !c2cNumber.trim()}
             startIcon={c2cBusy ? <CircularProgress size={16} color="inherit" /> : <CallIcon />}
           >
-            Call
+            {t('clickToCall.call')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -837,7 +597,7 @@ const Extensions = () => {
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <QrCodeIcon color="primary" />
-            QR Code - {qrExtension?.name || qrExtension?.username}
+            <Trans t={t} i18nKey="qr.title" components={{ device: <Bdi>{qrExtension?.name || qrExtension?.username}</Bdi> }} />
           </Typography>
           <IconButton onClick={() => setQrDialogOpen(false)} size="small">
             <CloseIcon />
@@ -853,7 +613,7 @@ const Extensions = () => {
               <Box sx={{ p: 2, bgcolor: 'var(--mui-palette-background-paper)', borderRadius: 1, border: '1px solid var(--mui-palette-divider)' }}>
                 <img
                   src={qrImageUrl}
-                  alt={`QR Code for ${qrExtension?.name}`}
+                  alt={t('qr.imageAlt', { name: qrExtension?.name })}
                   style={{ width: 200, height: 200, display: 'block' }}
                   onError={(e) => {
                     e.target.style.display = 'none';
@@ -867,11 +627,12 @@ const Extensions = () => {
                   color="error"
                   sx={{ display: 'none', textAlign: 'center', p: 2 }}
                 >
-                  Failed to load QR code
+                  {t('qr.loadFailed')}
                 </Typography>
               </Box>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 2, textAlign: 'center', wordBreak: 'break-all', maxWidth: 280 }}>
-                Extension: {qrExtension?.username} | {qrExtension?.environment?.name || 'No environment'}
+                <Trans t={t} i18nKey="qr.extensionLine" values={{ application: qrExtension?.environment?.name || t('qr.noEnvironment') }}
+                  components={{ device: <Bdi>{qrExtension?.username}</Bdi> }} />
               </Typography>
             </>
           )}
@@ -884,7 +645,7 @@ const Extensions = () => {
             color={qrCopied ? 'success' : 'primary'}
             sx={{ textTransform: 'none' }}
           >
-            {qrCopied ? 'Copied!' : 'Copy URL'}
+            {qrCopied ? t('qr.copied') : t('qr.copyUrl')}
           </Button>
           <Button
             variant="contained"
@@ -892,14 +653,14 @@ const Extensions = () => {
             startIcon={<DownloadIcon />}
             sx={{ textTransform: 'none' }}
           >
-            Download
+            {t('qr.download')}
           </Button>
         </DialogActions>
       </Dialog>
       <LiveDrawer
         open={liveDrawerOpen}
         onClose={() => setLiveDrawerOpen(false)}
-        title="SIP Registrations"
+        title={t('live.title')}
         icon={<PhoneAndroidIcon sx={{ color: '#06b6d4' }} />}
         count={regsTotal}
         onRefresh={refreshLiveRegs}

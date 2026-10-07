@@ -1,21 +1,23 @@
 import { Chip, Tooltip } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useSessionRole } from '../../hooks/useIsUserSession';
 
 // Which side is signed in, always visible in the top bar: both sessions share
 // the same console, so without it an account and a user look alike.
 const ROLES = {
-  admin: { label: 'Admin', color: 'primary', hint: 'Signed in as an account (admin)' },
-  user: { label: 'User', color: 'success', hint: 'Signed in as a user' },
+  admin: { labelKey: 'role.admin', hintKey: 'role.adminHint', color: 'primary' },
+  user: { labelKey: 'role.user', hintKey: 'role.userHint', color: 'success' },
 };
 
 const SessionRoleBadge = () => {
+  const { t } = useTranslation();
   const role = ROLES[useSessionRole()];
   if (!role) return null;
   return (
-    <Tooltip title={role.hint}>
+    <Tooltip title={t(role.hintKey)}>
       <Chip
         data-testid="session-role-badge"
-        label={role.label}
+        label={t(role.labelKey)}
         color={role.color}
         size="small"
         sx={{

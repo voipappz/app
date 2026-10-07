@@ -1,4 +1,5 @@
 // src/utils/dateUtils.js
+import { currentLocaleTag } from '../i18n/formatLocale';
 
 // Server timestamps are UTC but often arrive tz-less ("2026-07-20 18:58:03"),
 // which JS parses as LOCAL (times off by the client offset) or, with the
@@ -30,7 +31,7 @@ export const formatDate = (dateInput) => {
   }
 
   // Use toLocaleString (not toLocaleDateString) for date + time
-  return date.toLocaleString('en-GB', {
+  return date.toLocaleString(currentLocaleTag(), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -60,7 +61,7 @@ export const formatOnlyDate = (dateInput) => {
     return '-'; // Handle invalid date
   }
 
-  return date.toLocaleDateString('en-GB', {
+  return date.toLocaleDateString(currentLocaleTag(), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

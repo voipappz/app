@@ -73,3 +73,22 @@ describe('CentralizedSearch without a top bar', () => {
     expect(screen.getByTestId('date-picker')).toBeTruthy();
   });
 });
+
+// A date-range segment's own inputs: they share a scope with the value's
+// "from-to" parts, which once shadowed the translation function.
+describe('CentralizedSearch date-range filter', () => {
+  let slot;
+  beforeEach(() => {
+    slot = document.createElement('div');
+    slot.id = TOPBAR_SEARCH_SLOT_ID;
+    document.body.appendChild(slot);
+  });
+  afterEach(() => slot.remove());
+
+  it('shows From and To inputs in the filter panel', () => {
+    render(<CentralizedSearch {...props({ segments: [{ name: 'created_at', label: 'Created', type: 'date' }] })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show filters' }));
+    expect(screen.getByLabelText('From')).toBeInTheDocument();
+    expect(screen.getByLabelText('To')).toBeInTheDocument();
+  });
+});

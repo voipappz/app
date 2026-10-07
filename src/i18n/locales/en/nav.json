@@ -1,0 +1,20 @@
+{
+  "routes": "Routes",
+  "services": "Services",
+  "devices": "Devices",
+  "subscriptions": "Subscriptions",
+  "tariffs": "Tariffs",
+  "dashboard": "Dashboard",
+  "live": "Live",
+  "calls": "Calls",
+  "logs": "Logs",
+  "messages": "Messages",
+  "reports": "Reports",
+  "users": "Users",
+  "accounts": "Accounts",
+  "templates": "Templates",
+  "events": "Events",
+  "syslog": "Syslog",
+  "monitoring": "Monitoring",
+  "providers": "Providers"
+}

@@ -12,7 +12,7 @@
  * styleOverrides/defaultProps, so a screen can still override it with `sx`.
  */
 import { createTheme } from '@mui/material/styles';
-import { light, dark, severity, radius, type } from './tokens';
+import { light, dark, severity, radius, type, breakpoints } from './tokens';
 
 const rem = (px) => `${px / 16}rem`;
 
@@ -41,12 +41,17 @@ const scheme = (t, sev) => ({
   },
 });
 
-const theme = createTheme({
+// One theme per text direction. Always build it fresh with createTheme: spreading
+// an already-built theme into createTheme drops cssVariables/colorSchemes, and
+// dark mode stops working. `locales` are MUI's translations (src/i18n/muiLocales.js).
+export const createAppTheme = (direction = 'ltr', ...locales) => createTheme({
+  direction,
   cssVariables: { colorSchemeSelector: 'data-theme' },
   colorSchemes: {
     light: scheme(light, severity.light),
     dark: scheme(dark, severity.dark),
   },
+  breakpoints: { values: breakpoints },
   shape: { borderRadius: radius.md },
   typography: {
     fontFamily: type.family,
@@ -239,6 +244,6 @@ const theme = createTheme({
       },
     },
   },
-});
+}, ...locales);
 
-export default theme;
+export default createAppTheme('ltr');

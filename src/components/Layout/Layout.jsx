@@ -122,10 +122,11 @@ const Layout = ({ children }) => {
               ModalProps={{ keepMounted: true }}
               sx={{
                 display: { xs: 'block', md: 'none' },
-                '& .MuiDrawer-paper': { width: 'var(--sidebar-width)', boxSizing: 'border-box' }
+                // Wide enough for labels beside the icons; never the whole screen.
+                '& .MuiDrawer-paper': { width: 'min(260px, 85vw)', boxSizing: 'border-box' }
               }}
             >
-              <Sidebar onNavigate={() => setMobileDrawerOpen(false)} />
+              <Sidebar wide onNavigate={() => setMobileDrawerOpen(false)} />
             </Drawer>}
 
             {/* TopBar — fixed at top, offset by the sidebar */}

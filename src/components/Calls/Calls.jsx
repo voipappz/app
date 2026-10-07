@@ -1,4 +1,6 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import LtrIsland from '../../i18n/LtrIsland';
 import './Calls.css'; // Styles
 import './CellWithHover/CellWithHover.css'; // Cell hover styles
 import useCalls from './Calls.js'; // Custom hook
@@ -50,15 +52,16 @@ import { useNotification } from '../../context/NotificationContext';
 
 // Server-side groupings for the calls-over-time chart (CallAggregate GROUP_KEYS).
 // Older APIs fall back to Cause for keys they don't know — safe to offer all.
+// Names come from calls.json; a label the API sends with a segment wins.
 const GROUP_BY_OPTIONS = [
-  { key: 'cause', label: 'Cause' },
-  { key: 'direction', label: 'Direction' },
-  { key: 'disposition', label: 'Disposition' },
-  { key: 'hangup_disposition', label: 'Hangup' },
-  { key: 'queue', label: 'Queue' },
-  { key: 'did', label: 'Route' },
-  { key: 'environment', label: 'Application' },
-  { key: 'user', label: 'User' },
+  { key: 'cause', labelKey: 'groupBy.cause' },
+  { key: 'direction', labelKey: 'groupBy.direction' },
+  { key: 'disposition', labelKey: 'groupBy.disposition' },
+  { key: 'hangup_disposition', labelKey: 'groupBy.hangup' },
+  { key: 'queue', labelKey: 'groupBy.queue' },
+  { key: 'did', labelKey: 'groupBy.route' },
+  { key: 'environment', labelKey: 'groupBy.application' },
+  { key: 'user', labelKey: 'groupBy.user' },
 ];
 
 // The group keys the aggregate endpoint actually supports (CallAggregate
@@ -94,6 +97,7 @@ import { saveExportResponse } from '../../utils/downloadExport';
 const INLINE_FILTER_FIELDS = ['call.cause', 'call.direction', 'call.caller', 'call.callee'];
 
 const Calls = () => {
+  const { t } = useTranslation('calls');
   const [quickSearchText, setQuickSearchText] = React.useState('');
   const [selectedCall, setSelectedCall] = React.useState(null);
   const [panelMode, setPanelMode] = useState('details'); // 'details' | 'conversation' | 'logs'
@@ -515,12 +519,13 @@ const Calls = () => {
       .filter((o) => SERVER_GROUP_KEYS.has(o.key));
     // De-dupe by key, then fill in any server-supported keys the segments didn't
     // cover from the static labels, so the list is always complete.
+    const staticOptions = GROUP_BY_OPTIONS.map((o) => ({ key: o.key, label: t(o.labelKey) }));
     const byKey = new Map();
     fromApi.forEach((o) => { if (!byKey.has(o.key)) byKey.set(o.key, o); });
-    GROUP_BY_OPTIONS.forEach((o) => { if (!byKey.has(o.key)) byKey.set(o.key, o); });
+    staticOptions.forEach((o) => { if (!byKey.has(o.key)) byKey.set(o.key, o); });
     const list = [...byKey.values()];
-    return list.length ? list : GROUP_BY_OPTIONS;
-  }, [segments]);
+    return list.length ? list : staticOptions;
+  }, [segments, t]);
   const [aggGrouping, setAggGrouping] = useState(null);   // null=auto | 'hour' | 'day' | 'week'
   const [stripCollapsed, setStripCollapsed] = useState(() => {
     try { return localStorage.getItem('reportsStrip:calls:collapsed') === '1'; } catch { return false; }
@@ -582,7 +587,7 @@ const Calls = () => {
           onColumnSelectorOpen={handleColumnSelectorOpen}
           quickSearchText={quickSearchText}
           onQuickSearchChange={handleQuickSearchChange}
-          placeholder="Search caller, callee, user, route or call ID"
+          placeholder={t('search.placeholder')}
           textParam="search[inline]"
           showExclude={true}
         />
@@ -597,7 +602,7 @@ const Calls = () => {
           mb: 0.5,
         }}>
           <TextField
-            placeholder="Quick search..."
+            placeholder={t('search.quick')}
             value={quickSearchText}
             onChange={(e) => handleQuickSearchChange(e.target.value)}
             onKeyPress={handleQuickSearch}
@@ -652,11 +657,11 @@ const Calls = () => {
       {!isMobile && (
         <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0.5, mb: 1, mt: 0.25, flexWrap: 'wrap' }}>
           {[
-            { label: 'Total', value: summaryCounts.total, color: 'var(--counter-total)', filterKey: null, tooltip: 'All calls matching the current filters' },
-            { label: 'Answered', value: summaryCounts.answered, color: 'var(--counter-answered)', filterKey: 'answered', tooltip: 'Show only answered calls' },
-            { label: 'No Answer', value: summaryCounts.noAnswer, color: 'var(--counter-no-answer)', filterKey: 'noAnswer', tooltip: 'Show only unanswered calls' },
-            { label: 'Outgoing', value: summaryCounts.outgoing, color: 'var(--counter-outgoing)', filterKey: 'outgoing', tooltip: 'Show only outgoing calls' },
-            { label: 'Incoming', value: summaryCounts.incoming, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: 'Show only incoming calls' },
+            { label: t('stats.total'), value: summaryCounts.total, color: 'var(--counter-total)', filterKey: null, tooltip: t('stats.totalHint') },
+            { label: t('stats.answered'), value: summaryCounts.answered, color: 'var(--counter-answered)', filterKey: 'answered', tooltip: t('stats.answeredHint') },
+            { label: t('stats.noAnswer'), value: summaryCounts.noAnswer, color: 'var(--counter-no-answer)', filterKey: 'noAnswer', tooltip: t('stats.noAnswerHint') },
+            { label: t('stats.outgoing'), value: summaryCounts.outgoing, color: 'var(--counter-outgoing)', filterKey: 'outgoing', tooltip: t('stats.outgoingHint') },
+            { label: t('stats.incoming'), value: summaryCounts.incoming, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: t('stats.incomingHint') },
           ].map((item) => (
             <StatCounter
               variant="minimal"
@@ -692,14 +697,14 @@ const Calls = () => {
             {/* The list's own chart — calls over time. Not tied to reports
                 (reports live in the full reports drawer); grouped by a field. */}
             <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--theme-text-primary)' }}>
-              {chartMode === 'live' ? 'Live calls' : 'Calls over time'}
+              {chartMode === 'live' ? t('chart.liveCalls') : t('chart.overTime')}
             </Typography>
 
             {/* Group-by belongs to the timeline only — in live mode it styled a
                 chart that isn't on screen. */}
             {chartMode !== 'live' && (
               <>
-                <Typography variant="caption" sx={{ color: 'var(--theme-text-secondary)', fontWeight: 600, ml: 0.5 }}>by</Typography>
+                <Typography variant="caption" sx={{ color: 'var(--theme-text-secondary)', fontWeight: 600, ml: 0.5 }}>{t('chart.by')}</Typography>
                 <Select
                   value={groupByOptions.some((o) => o.key === groupBy) ? groupBy : 'cause'}
                   onChange={(e) => handleGroupByChange(e.target.value)}
@@ -718,7 +723,7 @@ const Calls = () => {
             {/* Live is a view toggle, not a filter — it swaps what this chart
                 shows. It used to sit in the counter row, where it read as a
                 sixth statistic you could filter by. */}
-            {!userSession && <Tooltip title="Show calls happening right now instead of the timeline">
+            {!userSession && <Tooltip title={t('chart.liveToggleHint')}>
               <Chip
                 size="small"
                 onClick={() => setChartMode((mode) => (mode === 'live' ? 'timeline' : 'live'))}
@@ -734,7 +739,7 @@ const Calls = () => {
                     }}
                   />
                 )}
-                label={liveCallsTotal != null ? `Live now · ${liveCallsTotal}` : 'Live now'}
+                label={liveCallsTotal != null ? t('chart.liveNowCount', { count: liveCallsTotal }) : t('chart.liveNow')}
                 sx={{
                   height: 24, borderRadius: 1.5, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
                   color: chartMode === 'live' ? '#fff' : 'var(--accent-primary)',
@@ -750,10 +755,10 @@ const Calls = () => {
             {chartMode !== 'live' && (
             <ButtonGroup size="small" variant="outlined">
               {[
-                { key: 'auto', label: 'Auto' },
-                { key: 'hour', label: 'Hourly' },
-                { key: 'day', label: 'Daily' },
-                { key: 'week', label: 'Weekly' },
+                { key: 'auto', label: t('bucket.auto') },
+                { key: 'hour', label: t('bucket.hour') },
+                { key: 'day', label: t('bucket.day') },
+                { key: 'week', label: t('bucket.week') },
               ].map((b) => {
                 const active = (aggGrouping || 'auto') === b.key;
                 // Same button as the footer's page numbers. The colours set
@@ -776,12 +781,12 @@ const Calls = () => {
             {/* Single date selector for the screen lives in the search bar —
                 the duplicate quick-range buttons that used to sit here were
                 removed. */}
-            <Tooltip title="Open full reports">
+            <Tooltip title={t('chart.openReports')}>
               <IconButton size="small" onClick={() => setReportsDrawerOpen(true)} sx={{ color: 'var(--theme-text-primary)', p: 0.25 }}>
                 <OpenInFullIcon sx={{ fontSize: 15 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title={stripCollapsed ? 'Show chart' : 'Hide chart'}>
+            <Tooltip title={stripCollapsed ? t('chart.show') : t('chart.hide')}>
               <IconButton size="small" onClick={toggleStripCollapsed} sx={{ color: 'var(--theme-text-primary)', p: 0.25 }}>
                 {stripCollapsed ? <ExpandMoreIcon sx={{ fontSize: 17 }} /> : <ExpandLessIcon sx={{ fontSize: 17 }} />}
               </IconButton>
@@ -793,7 +798,7 @@ const Calls = () => {
             <Box sx={{ maxHeight: 260, overflow: 'auto', py: 0.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Chip
-                  label="Open list"
+                  label={t('chart.openList')}
                   size="small"
                   variant="outlined"
                   onClick={() => setLiveDrawerOpen(true)}
@@ -807,28 +812,33 @@ const Calls = () => {
                   pressing Live surfaced "Unknown chart type: environment_stats"
                   instead of a chart. Live statistics on a list screen come
                   from Influx; Postgres-backed reporting lives on Reports. */}
-              <LiveChartStrip chartType="live_calls" title="Live calls" autoSeries />
+              {/* Time runs left to right in every language. */}
+              <LtrIsland>
+                <LiveChartStrip chartType="live_calls" title={t('chart.liveCalls')} autoSeries />
+              </LtrIsland>
             </Box>
           ) : aggregateLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 100 }}>
               <CircularProgress size={22} />
             </Box>
           ) : histogramData.length > 0 ? (
-            <TimeHistogram
-              logs={[]}
-              aggregateData={histogramData}
-              height={100}
-              onBrushSelection={(start, end) => {
-                // Drag across a spike -> filter the table to exactly that window
-                const from = Math.floor(start.getTime() / 1000);
-                const to = Math.floor(end.getTime() / 1000);
-                handleSearch({ 'search[created_at]': `${from} - ${to}` }, false);
-              }}
-              onBarClick={handleChartBarClick}
-            />
+            <LtrIsland>
+              <TimeHistogram
+                logs={[]}
+                aggregateData={histogramData}
+                height={100}
+                onBrushSelection={(start, end) => {
+                  // Drag across a spike -> filter the table to exactly that window
+                  const from = Math.floor(start.getTime() / 1000);
+                  const to = Math.floor(end.getTime() / 1000);
+                  handleSearch({ 'search[created_at]': `${from} - ${to}` }, false);
+                }}
+                onBarClick={handleChartBarClick}
+              />
+            </LtrIsland>
           ) : (
             <Typography variant="body2" sx={{ color: 'var(--mui-palette-text-secondary)', textAlign: 'center', py: 3 }}>
-              No calls in the selected period.
+              {t('chart.empty')}
             </Typography>
           ))}
         </Paper>
@@ -1033,7 +1043,7 @@ const Calls = () => {
       <LiveDrawer
         open={liveDrawerOpen}
         onClose={() => setLiveDrawerOpen(false)}
-        title="Live Calls"
+        title={t('drawer.liveCalls')}
         icon={<PhoneInTalkIcon sx={{ color: '#5c6bc0' }} />}
         count={liveCallsTotal}
         onRefresh={refreshLiveCalls}
@@ -1046,7 +1056,7 @@ const Calls = () => {
       <LiveDrawer
         open={reportsDrawerOpen}
         onClose={() => setReportsDrawerOpen(false)}
-        title="Call Reports"
+        title={t('drawer.reports')}
         icon={<AssessmentIcon sx={{ color: '#0e9488' }} />}
       >
         {reportsDrawerOpen && <ReportsPanel category="calls" open={reportsDrawerOpen} />}

@@ -1,0 +1,63 @@
+{
+  "search": {
+    "placeholder": "Search caller, callee, user, route or call ID",
+    "quick": "Quick search..."
+  },
+  "chart": {
+    "liveCalls": "Live calls",
+    "overTime": "Calls over time",
+    "by": "by",
+    "liveToggleHint": "Show calls happening right now instead of the timeline",
+    "liveNow": "Live now",
+    "liveNowCount": "Live now · {{count}}",
+    "openReports": "Open full reports",
+    "show": "Show chart",
+    "hide": "Hide chart",
+    "openList": "Open list",
+    "empty": "No calls in the selected period."
+  },
+  "bucket": {
+    "auto": "Auto",
+    "hour": "Hourly",
+    "day": "Daily",
+    "week": "Weekly"
+  },
+  "groupBy": {
+    "cause": "Cause",
+    "direction": "Direction",
+    "disposition": "Disposition",
+    "hangup": "Hangup",
+    "queue": "Queue",
+    "route": "Route",
+    "application": "Application",
+    "user": "User"
+  },
+  "drawer": {
+    "liveCalls": "Live Calls",
+    "reports": "Call Reports"
+  },
+  "mobile": {
+    "empty": "No call data available.",
+    "emptyHint": "Try adjusting your filters or date range.",
+    "end": "No more calls to load",
+    "duration": "Duration:",
+    "application": "Application:",
+    "client": "Client:",
+    "callId": "Call ID:",
+    "notAvailable": "N/A",
+    "status": "Status:",
+    "unknown": "Unknown"
+  },
+  "stats": {
+    "total": "Total",
+    "answered": "Answered",
+    "noAnswer": "No Answer",
+    "outgoing": "Outgoing",
+    "incoming": "Incoming",
+    "totalHint": "All calls matching the current filters",
+    "answeredHint": "Show only answered calls",
+    "noAnswerHint": "Show only unanswered calls",
+    "outgoingHint": "Show only outgoing calls",
+    "incomingHint": "Show only incoming calls"
+  }
+}

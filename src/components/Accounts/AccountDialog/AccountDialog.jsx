@@ -1,5 +1,4 @@
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -21,6 +20,7 @@ import {
   createFilterOptions,
   Tooltip
 } from '@mui/material';
+import { ResponsiveDialog as Dialog } from '../../ui'; // full screen on a phone
 import {
   Close as CloseIcon,
   Visibility,
@@ -32,8 +32,14 @@ import {
   ContentCopy as CopyIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  Translate as TranslateIcon,
+  DarkModeOutlined as DarkModeIcon,
+  LightModeOutlined as LightModeIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '../../../i18n/LocaleContext';
+import { useThemeMode } from '../../../context/ThemeContext';
 import { useState, useEffect, forwardRef } from 'react';
 import { FixedSizeList } from 'react-window';
 import { ACLSelect } from '../../common/ACLSelect';
@@ -122,6 +128,11 @@ const AccountDialog = ({
 
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
+  // Your own account (onSignOut set) also holds your appearance: language and theme.
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLocale();
+  const { isDarkMode, toggleTheme } = useThemeMode();
+  const otherLanguage = language === 'he' ? 'en' : 'he';
   const [successMessage, setSuccessMessage] = useState('');
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -439,7 +450,7 @@ const AccountDialog = ({
           {readOnly ? 'Account Details' : isEditMode ? 'Edit Account' : 'Add New Account'}
           {onSignOut && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} data-testid="account-dialog-identity">
-              Signed in as Admin{account?.email ? ` · ${account.email}` : ''}
+              {t('signedInAs.admin')}{account?.email ? ` · ${account.email}` : ''}
             </Typography>
           )}
           <IconButton
@@ -767,9 +778,40 @@ const AccountDialog = ({
               />
             </Grid>
           </Grid>
+
+          {/* Your own account also holds this browser's appearance. Kept out of
+              the button row below, which must fit on a phone. */}
+          {onSignOut && (
+            <Box
+              data-testid="account-dialog-appearance"
+              sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, pt: 2, borderTop: '1px solid var(--mui-palette-divider)' }}
+            >
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setLanguage(otherLanguage)}
+                startIcon={<TranslateIcon />}
+                aria-label={t('appearance.switchLanguage')}
+                data-testid="account-dialog-language"
+                sx={{ textTransform: 'none' }}
+              >
+                {t(`languageName.${otherLanguage}`)}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={toggleTheme}
+                startIcon={isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+                data-testid="account-dialog-theme"
+                sx={{ textTransform: 'none' }}
+              >
+                {t(isDarkMode ? 'appearance.lightMode' : 'appearance.darkMode')}
+              </Button>
+            </Box>
+          )}
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ flexWrap: 'wrap', rowGap: 1 }}>
           {onSignOut && (
             <>
               <Button
@@ -780,7 +822,7 @@ const AccountDialog = ({
                 startIcon={<LogoutIcon />}
                 sx={{ textTransform: 'none' }}
               >
-                Sign Out
+                {t('accountDialog.signOut')}
               </Button>
               <Box sx={{ flex: 1 }} />
             </>

@@ -173,9 +173,10 @@ const Settings = () => {
   const ActiveView = active.component;
 
   return (
-    <Box sx={{ display: 'flex', gap: 2, p: { xs: 1, sm: 2, md: 3 }, height: '100%', overflow: 'hidden' }}>
+    // On a phone the list of views sits above the selected view, not beside it.
+    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, p: { xs: 1, sm: 2, md: 3 }, height: '100%', overflow: 'hidden' }}>
       {/* Option views */}
-      <Paper elevation={0} sx={{ width: 240, flexShrink: 0, border: '1px solid var(--mui-palette-divider)', borderRadius: 2, overflow: 'auto' }}>
+      <Paper elevation={0} sx={{ width: { xs: '100%', md: 240 }, maxHeight: { xs: '40vh', md: 'none' }, flexShrink: 0, border: '1px solid var(--mui-palette-divider)', borderRadius: 2, overflow: 'auto' }}>
         <Typography variant="subtitle2" sx={{ px: 2, pt: 2, pb: 1, fontWeight: 700, color: 'var(--mui-palette-text-primary)' }}>
           Settings
         </Typography>

@@ -88,5 +88,9 @@ export const type = {
   weight: { regular: 400, medium: 500, semibold: 600, bold: 700 },
 };
 
+/** Screen widths in px. Spelled out (they are MUI's defaults) because the shell
+    CSS hardcodes `max-width: 899px`, which must stay just under `md`. */
+export const breakpoints = { xs: 0, sm: 600, md: 900, lg: 1200, xl: 1536 };
+
 /** The one breakpoint the shell uses for "mobile"; use theme.breakpoints.down('md'). */
 export const MOBILE_BREAKPOINT = 'md';

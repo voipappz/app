@@ -1,4 +1,6 @@
 import '@testing-library/jest-dom';
+// Components translate with react-i18next; tests render the real English text.
+import '../i18n';
 
 // Add DOM environment globals
 Object.defineProperty(window, 'location', {

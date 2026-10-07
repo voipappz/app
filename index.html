@@ -5,14 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="https://voipappz.com/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>voipappz</title>
-    <!-- Set the theme before first paint: ThemeContext applies it in an
-         effect, which flashed a stored dark theme light on every reload. -->
+    <!-- Set the theme (and language) before first paint: the app applies them
+         in an effect, which flashed a stored dark theme light on every reload. -->
     <script>
       (function () {
         try {
           var t = localStorage.getItem('theme-preference');
           if (t !== 'light' && t !== 'dark') t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
           document.documentElement.setAttribute('data-theme', t);
+          // Language and direction too, so Hebrew never flashes left-to-right.
+          // Unlike the theme, never guessed from the browser: English unless chosen.
+          var l = localStorage.getItem('app-language') === 'he' ? 'he' : 'en';
+          document.documentElement.lang = l;
+          document.documentElement.dir = l === 'he' ? 'rtl' : 'ltr';
         } catch (e) { /* storage blocked: the app sets it on mount */ }
       })();
     </script>

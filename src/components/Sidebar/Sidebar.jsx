@@ -1,5 +1,7 @@
 import { useNavigate, useLocation } from 'react-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '@mui/material/styles';
 import {
   Avatar,
   Badge,
@@ -25,13 +27,15 @@ import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { useThemeMode } from '../../context/ThemeContext';
 import { useIsUserSession } from '../../hooks/useIsUserSession';
-import { getPermittedNavItems } from '../../config/navConfig';
+import { getPermittedNavItems, navLabel } from '../../config/navConfig';
+import { useLocale } from '../../i18n/LocaleContext';
 import useNavBadges from '../../hooks/useNavBadges';
 import './Sidebar.css';
 import SidebarCustomerSwitcher from './CustomerSwitcher/SidebarCustomerSwitcher.jsx';
 
 
-const Sidebar = ({ collapsed, onNavigate }) => {
+// `wide`: the phone drawer, with each label beside its icon instead of under it.
+const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const account = useAuth();
@@ -44,6 +48,14 @@ const Sidebar = ({ collapsed, onNavigate }) => {
     ? { email: userAuth.user?.email, fullName: userAuth.user?.fullname || userAuth.user?.name }
     : account.user;
   const { isDarkMode, toggleTheme } = useThemeMode();
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLocale();
+  const otherLanguage = language === 'he' ? 'en' : 'he';
+  // Menus open from the sidebar toward the page: rightwards in English,
+  // leftwards in Hebrew, where the sidebar sits on the right.
+  const isRtl = useTheme().direction === 'rtl';
+  const towardPage = isRtl ? 'left' : 'right';
+  const towardSidebar = isRtl ? 'right' : 'left';
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
   const [supportMenuAnchor, setSupportMenuAnchor] = useState(null);
 
@@ -94,7 +106,7 @@ const Sidebar = ({ collapsed, onNavigate }) => {
       <ListItem key={item.path || index} disablePadding className="sidebar-nav-item">
           <ListItemButton
             onClick={() => handleNavigate(item.path)}
-            aria-label={item.text}
+            aria-label={navLabel(t, item)}
             aria-current={isItemActive(item) ? 'page' : undefined}
             className={`sidebar-nav-button ${isItemActive(item) ? 'active' : ''}`}
           >
@@ -110,14 +122,14 @@ const Sidebar = ({ collapsed, onNavigate }) => {
                 </Box>
               )}
             </ListItemIcon>
-            <span className="sidebar-nav-text">{item.text}</span>
+            <span className="sidebar-nav-text">{navLabel(t, item)}</span>
           </ListItemButton>
       </ListItem>
     );
   };
 
   return (
-    <Box className={`sidebar-container ${collapsed ? 'collapsed' : ''}`}>
+    <Box className={`sidebar-container ${collapsed ? 'collapsed' : ''} ${wide ? 'sidebar-container--wide' : ''}`}>
 
       {/* The customer — an account's only. A user has one environment and no
           selectors. */}
@@ -138,14 +150,14 @@ const Sidebar = ({ collapsed, onNavigate }) => {
               <ListItemButton
                 id="sidebar-support-button"
                 className={`sidebar-nav-button ${['/mcp', '/devzone'].includes(location.pathname) ? 'active' : ''}`}
-                aria-label="Support"
+                aria-label={t('shell.support')}
                 aria-haspopup="menu"
                 aria-expanded={Boolean(supportMenuAnchor)}
                 aria-controls={supportMenuAnchor ? 'sidebar-support-menu' : undefined}
                 onClick={(event) => setSupportMenuAnchor(event.currentTarget)}
               >
                 <ListItemIcon className="sidebar-nav-icon"><SupportAgentIcon /></ListItemIcon>
-                <span className="sidebar-nav-text">Support</span>
+                <span className="sidebar-nav-text">{t('shell.support')}</span>
               </ListItemButton>
             </ListItem>
           <Menu
@@ -153,8 +165,8 @@ const Sidebar = ({ collapsed, onNavigate }) => {
             anchorEl={supportMenuAnchor}
             open={Boolean(supportMenuAnchor)}
             onClose={() => setSupportMenuAnchor(null)}
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            anchorOrigin={{ vertical: 'top', horizontal: towardPage }}
+            transformOrigin={{ vertical: 'top', horizontal: towardSidebar }}
             MenuListProps={{ 'aria-labelledby': 'sidebar-support-button' }}
           >
             <MenuItem selected={isActive('/mcp')} onClick={() => { setSupportMenuAnchor(null); handleNavigate('/mcp'); }}>
@@ -171,10 +183,10 @@ const Sidebar = ({ collapsed, onNavigate }) => {
               data-tour="help-button"
               onClick={() => { setSupportMenuAnchor(null); onNavigate?.(); }}
             >
-              <ListItemIcon><HelpOutlineIcon fontSize="small" /></ListItemIcon>Documentation
+              <ListItemIcon><HelpOutlineIcon fontSize="small" /></ListItemIcon>{t('shell.documentation')}
             </MenuItem>
             <MenuItem onClick={() => { setSupportMenuAnchor(null); dispatch('openTicketsModal'); onNavigate?.(); }}>
-              <ListItemIcon><ConfirmationNumberIcon fontSize="small" /></ListItemIcon>Tickets
+              <ListItemIcon><ConfirmationNumberIcon fontSize="small" /></ListItemIcon>{t('shell.tickets')}
             </MenuItem>
           </Menu>
         </List>
@@ -190,12 +202,12 @@ const Sidebar = ({ collapsed, onNavigate }) => {
       {/* Account — pinned at the bottom: the avatar, named in its tooltip. */}
       <Box className="sidebar-profile-section">
         <Tooltip
-          placement="right"
+          placement={towardPage}
           arrow
           title={
             <Box sx={{ textAlign: 'center', py: 0.25 }}>
               <Typography variant="caption" sx={{ display: 'block', opacity: 0.85 }}>
-                Signed in as {userSession ? 'User' : 'Admin'}
+                {t(userSession ? 'signedInAs.user' : 'signedInAs.admin')}
               </Typography>
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>{accountName}</Typography>
               {user?.email && (
@@ -207,13 +219,13 @@ const Sidebar = ({ collapsed, onNavigate }) => {
           <IconButton
             className="sidebar-profile-button"
             onClick={openProfile}
-            aria-label="Edit account"
+            aria-label={t('shell.editAccount')}
           >
             {/* The avatar's colour, and the admin's shield, say which side is
                 signed in (an account or a user). */}
             <Badge
               overlap="circular"
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              anchorOrigin={{ vertical: 'bottom', horizontal: towardPage }}
               invisible={userSession}
               badgeContent={<ShieldIcon className="sidebar-profile-shield" />}
             >
@@ -226,24 +238,40 @@ const Sidebar = ({ collapsed, onNavigate }) => {
             </Badge>
           </IconButton>
         </Tooltip>
+        {wide && (
+          <Box className="sidebar-profile-text">
+            <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>{accountName}</Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {t(userSession ? 'signedInAs.user' : 'signedInAs.admin')}
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       {/* A user's profile menu: appearance and sign out (the account dialog
           is an account's). */}
       <Menu
         anchorEl={userMenuAnchor} open={Boolean(userMenuAnchor)} onClose={() => setUserMenuAnchor(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }} transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        anchorOrigin={{ vertical: 'top', horizontal: towardPage }} transformOrigin={{ vertical: 'bottom', horizontal: towardSidebar }}
       >
         <Box sx={{ px: 2, py: 1 }} data-testid="user-menu-identity">
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Signed in as User</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{t('signedInAs.user')}</Typography>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>{user?.email || accountName}</Typography>
         </Box>
         <Divider />
         <MenuItem onClick={() => { toggleTheme(); setUserMenuAnchor(null); }} data-testid="user-menu-theme">
-          {isDarkMode ? 'Light mode' : 'Dark mode'}
+          {t(isDarkMode ? 'appearance.lightMode' : 'appearance.darkMode')}
+        </MenuItem>
+        {/* One click to the other language, named in that language. */}
+        <MenuItem
+          onClick={() => { setLanguage(otherLanguage); setUserMenuAnchor(null); }}
+          aria-label={t('appearance.switchLanguage')}
+          data-testid="user-menu-language"
+        >
+          {t(`languageName.${otherLanguage}`)}
         </MenuItem>
         <MenuItem onClick={() => { setUserMenuAnchor(null); userAuth.logout(); navigate('/'); }} data-testid="user-menu-sign-out">
-          Sign out
+          {t('action.signOut')}
         </MenuItem>
       </Menu>
     </Box>

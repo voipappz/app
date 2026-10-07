@@ -1,0 +1,93 @@
+{
+  "role": {
+    "admin": "מנהל",
+    "user": "משתמש",
+    "adminHint": "מחובר כחשבון (מנהל)",
+    "userHint": "מחובר כמשתמש"
+  },
+  "signedInAs": {
+    "admin": "מחובר כמנהל",
+    "user": "מחובר כמשתמש"
+  },
+  "appearance": {
+    "darkMode": "מצב כהה",
+    "lightMode": "מצב בהיר",
+    "switchLanguage": "החלפת שפה"
+  },
+  "languageName": {
+    "en": "English",
+    "he": "עברית"
+  },
+  "action": {
+    "signOut": "התנתקות",
+    "cancel": "ביטול",
+    "delete": "מחיקה"
+  },
+  "confirm": {
+    "title": "האם להמשיך?",
+    "description": "לא ניתן לבטל פעולה זו.",
+    "deleteEntity": "האם למחוק את <name/>?",
+    "continue": "האם להמשיך?"
+  },
+  "shell": {
+    "toggleMenu": "הצגת התפריט",
+    "assistant": "עוזר (Ctrl+K)",
+    "help": "עזרה",
+    "health": "תקינות",
+    "notifications": "התראות",
+    "moreTools": "כלים נוספים",
+    "editAccount": "עריכת החשבון",
+    "support": "תמיכה",
+    "documentation": "תיעוד",
+    "tickets": "פניות"
+  },
+  "accountDialog": {
+    "signOut": "התנתקות"
+  },
+  "search": {
+    "defaultPlaceholder": "חיפוש לפי שם, או שדה:ערך (למשל enabled:true)",
+    "searchPlaceholder": "חיפוש...",
+    "showFilters": "הצגת המסננים",
+    "hideFilters": "הסתרת המסננים",
+    "refresh": "רענון",
+    "exportCsv": "ייצוא CSV",
+    "columns": "עמודות",
+    "exclude": "החרגה",
+    "excluding": "מוחרג",
+    "clearAll": "ניקוי הכול",
+    "any": "הכול",
+    "from": "מתאריך",
+    "to": "עד תאריך",
+    "key": "מפתח",
+    "value": "ערך",
+    "tag": "תגית",
+    "today": "היום",
+    "dateRange": "טווח תאריכים: {{range}}"
+  },
+  "datePicker": {
+    "quick": {
+      "day": "יום",
+      "yesterday": "אתמול",
+      "week": "שבוע",
+      "month": "חודש"
+    },
+    "preset": {
+      "today": "היום",
+      "yesterday": "אתמול",
+      "last7Days": "7 הימים האחרונים",
+      "last30Days": "30 הימים האחרונים",
+      "thisWeek": "השבוע",
+      "lastWeek": "שבוע שעבר",
+      "thisMonth": "החודש",
+      "lastMonth": "חודש שעבר"
+    },
+    "customRangeTitle": "טווח מותאם",
+    "customRange": "טווח מותאם",
+    "selectDates": "בחירת תאריכים",
+    "start": "התחלה",
+    "end": "סיום",
+    "to": "עד",
+    "cancel": "ביטול",
+    "apply": "החלה"
+  }
+}

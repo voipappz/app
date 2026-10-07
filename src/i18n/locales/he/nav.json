@@ -1,0 +1,20 @@
+{
+  "routes": "ניתובים",
+  "services": "שירותים",
+  "devices": "מכשירים",
+  "subscriptions": "מנויים",
+  "tariffs": "תעריפים",
+  "dashboard": "לוח בקרה",
+  "live": "בזמן אמת",
+  "calls": "שיחות",
+  "logs": "יומנים",
+  "messages": "הודעות",
+  "reports": "דוחות",
+  "users": "משתמשים",
+  "accounts": "חשבונות",
+  "templates": "תבניות",
+  "events": "אירועים",
+  "syslog": "יומן מערכת",
+  "monitoring": "ניטור",
+  "providers": "ספקים"
+}

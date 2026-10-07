@@ -1,7 +1,7 @@
 .topbar-container {
   position: fixed;
   top: 0;
-  left: var(--sidebar-width);
+  inset-inline-start: var(--sidebar-width);
   width: calc(100% - var(--sidebar-width));
   height: 48px;
   background-color: var(--topbar-bg, #f6f7f9);
@@ -16,7 +16,7 @@
 }
 
 .topbar-container.sidebar-collapsed {
-  left: 0;
+  inset-inline-start: 0;
   width: 100%;
 }
 
@@ -99,8 +99,8 @@
 .topbar-filter-panel {
   position: absolute;
   top: 100%;
-  left: 0;
-  right: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   z-index: 1200;
   background-color: var(--theme-bg-primary, #fff);
   border: 1px solid var(--border-light);
@@ -167,7 +167,7 @@
   align-items: center;
   gap: 1px;
   flex-shrink: 0;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 /* Tech-nav icons get a tighter, toolbar feel */
@@ -227,7 +227,7 @@
 /* Responsive */
 @media (max-width: 899px) {
   .topbar-container {
-    left: 0;
+    inset-inline-start: 0;
     width: 100%;
   }
 
