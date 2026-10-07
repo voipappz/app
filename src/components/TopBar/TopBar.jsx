@@ -87,6 +87,7 @@ import { TOPBAR_SEARCH_SLOT_ID } from '../shared/CentralizedSearch/CentralizedSe
 const Schema = lazy(() => import('../Appz/Schema.jsx'));
 import AccountCreateDialog from '../Account/AccountCreateDialog/AccountCreateDialog.jsx';
 import CustomerEditDialog from '../Account/CustomerEditDialog/CustomerEditDialog.jsx';
+import { applySavedCustomerBranding } from '../../services/customerService';
 import { customersApi } from '../../services/api/customersApi';
 import DynamicProfileEditor from '../common/DynamicProfileEditor/DynamicProfileEditor';
 import { nodesApi } from '../../services/api/nodesApi';
@@ -809,7 +810,10 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
   };
 
   const handleCustomerSave = async (formData) => {
-    await updateCustomerData(formData, customerToEdit?.uuid || selectedCustomer?.uuid);
+    const uuid = customerToEdit?.uuid || selectedCustomer?.uuid;
+    await updateCustomerData(formData, uuid);
+    // The console wears the selected customer's colours: show the saved ones now.
+    if (uuid && uuid === selectedCustomer?.uuid) applySavedCustomerBranding(formData.profile);
     await fetchCustomers();
   };
 
