@@ -300,7 +300,7 @@ const ProviderDialog = ({ open, onClose, onSave, provider, loading, allTariffs, 
             <DynamicProfileEditor
               type="provider"
               profile={formData.profile}
-              onChange={(profile) => handleChange('profile', profile)}
+              onChange={(profile) => handleChange('profile', { ...formData.profile, ...profile })}
               disabled={loading}
               title="Profile Properties"
               // Secrets arrive masked (****last4). Reveal decrypts a single key
