@@ -795,7 +795,7 @@ const CentralizedSearch = ({
   // open below it. Phones retain the inline layout.
   const openPopup = () => { if (!showFilterPanel) toggleFilterPanel(); };
   const datePicker = (
-    <EnhancedDateRangePicker dateRange={dateRange} setDateRange={onDateRangeChange} />
+    <EnhancedDateRangePicker dateRange={dateRange} setDateRange={onDateRangeChange} compact={docked} />
   );
 
   const searchInput = !hideSearchInput && (<Box className="centralized-search-input">
@@ -847,9 +847,6 @@ const CentralizedSearch = ({
                     >
                       <ClearIcon sx={{ fontSize: '1rem' }} />
                     </IconButton>
-                  )}
-                  {docked && onDateRangeChange && (
-                    <Box sx={{ mx: 0.75, flexShrink: 0 }}>{datePicker}</Box>
                   )}
                   {segments && segments.length > 0 && (
                     <Tooltip title={showFilterPanel ? t('search.hideFilters') : t('search.showFilters')}>
@@ -1143,6 +1140,7 @@ const CentralizedSearch = ({
           <ClickAwayListener onClickAway={() => setShowFilterPanel(false)}>
             <Box className="topbar-search" ref={dockRef} data-testid="topbar-search">
               {searchInput}
+              {onDateRangeChange && <Box sx={{ flexShrink: 0 }}>{datePicker}</Box>}
               <Popper
                 open={showFilterPanel}
                 anchorEl={dockRef.current}

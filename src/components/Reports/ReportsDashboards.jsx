@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Paper, Tabs, Tab, Typography, CircularProgress, Alert } from '@mui/material';
+import { Box, Paper, Tab, Typography, CircularProgress, Alert } from '@mui/material';
+import SectionTabs from '../shared/SectionTabs.jsx';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import QueueIcon from '@mui/icons-material/Queue';
@@ -71,17 +72,9 @@ const ReportsDashboards = () => {
   return (
     <Paper sx={{ backgroundColor: 'var(--mui-palette-background-paper)', border: '1px solid var(--mui-palette-divider)', borderRadius: 2 }}>
       {/* Category tabs — same look as the old Home screen */}
-      <Tabs
+      <SectionTabs
         value={category || false}
         onChange={(e, v) => setCategory(v)}
-        variant="scrollable"
-        scrollButtons="auto"
-        textColor="inherit"
-        sx={{
-          borderBottom: '1px solid var(--mui-palette-divider)',
-          '& .MuiTab-root': { color: 'var(--mui-palette-text-secondary)', textTransform: 'capitalize', '&.Mui-selected': { color: '#10b981' } },
-          '& .MuiTabs-indicator': { backgroundColor: '#10b981' },
-        }}
       >
         {dashboards.map((d) => (
           <Tab
@@ -92,7 +85,7 @@ const ReportsDashboards = () => {
             label={`${d.category} (${d.count})`}
           />
         ))}
-      </Tabs>
+      </SectionTabs>
 
       <Box sx={{ p: 2 }}>
         {category && <ReportsPanel key={category} category={category} open homeStyle />}
