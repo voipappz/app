@@ -6,6 +6,7 @@ import { Box, Typography, Tooltip } from '@mui/material';
  *
  * `variant`:
  *  - 'card'    a bordered tile (dashboard): the number large, in its colour.
+ *  - 'emphasized' a tinted tile with a strong status border (Calls).
  *  - 'minimal' no box (Calls, above the list): a colour underline marks the
  *              active one, so the row reads as a line of numbers, not buttons.
  *
@@ -20,6 +21,7 @@ import { Box, Typography, Tooltip } from '@mui/material';
 const StatCounter = ({ label, value, color = 'var(--counter-total)', active = false, onClick, tooltip, variant = 'card' }) => {
   const known = value != null && value !== '';
   const minimal = variant === 'minimal';
+  const emphasized = variant === 'emphasized';
 
   const card = (
     <Box
@@ -30,7 +32,21 @@ const StatCounter = ({ label, value, color = 'var(--counter-total)', active = fa
       onKeyDown={onClick ? (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e); }
       } : undefined}
-      sx={minimal ? {
+      sx={emphasized ? {
+        px: 2, py: 1.25, minWidth: 112, borderRadius: 1.5,
+        cursor: onClick ? 'pointer' : 'default', userSelect: 'none',
+        bgcolor: `color-mix(in srgb, ${color} ${active ? 22 : 10}%, var(--theme-bg-primary))`,
+        border: '1px solid',
+        borderColor: active ? color : `color-mix(in srgb, ${color} 35%, var(--theme-border))`,
+        borderTop: `3px solid ${color}`,
+        boxShadow: active ? `inset 0 0 0 1px ${color}` : 'none',
+        transition: 'background-color .12s, border-color .12s',
+        '&:hover': onClick ? {
+          bgcolor: `color-mix(in srgb, ${color} 18%, var(--theme-bg-primary))`,
+          borderColor: color,
+        } : undefined,
+        '&:focus-visible': { outline: `2px solid ${color}`, outlineOffset: 2 },
+      } : minimal ? {
         px: 1, pt: 0.25, pb: 0.5, minWidth: 64,
         cursor: onClick ? 'pointer' : 'default', userSelect: 'none',
         borderBottom: '2px solid', borderColor: active ? color : 'transparent',
@@ -59,8 +75,8 @@ const StatCounter = ({ label, value, color = 'var(--counter-total)', active = fa
         {known ? value : '—'}
       </Typography>
       <Typography sx={{
-        fontSize: minimal ? '0.6rem' : '0.66rem', fontWeight: 600, letterSpacing: '0.05em',
-        textTransform: 'uppercase', color: 'var(--theme-text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap',
+        fontSize: emphasized ? '0.75rem' : minimal ? '0.6rem' : '0.66rem', fontWeight: emphasized ? 700 : 600, letterSpacing: '0.05em',
+        textTransform: 'uppercase', color: emphasized ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap',
       }}>
         {label}
       </Typography>

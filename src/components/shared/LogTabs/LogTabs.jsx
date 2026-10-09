@@ -1,4 +1,6 @@
 import { Tabs, Tab } from '@mui/material';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import MessageOutlinedIcon from '@mui/icons-material/MessageOutlined';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -28,24 +30,29 @@ const LogTabs = () => {
       value={current}
       onChange={(_, path) => navigate(path)}
       aria-label={t('nav:logs')}
+      variant="scrollable"
+      scrollButtons="auto"
       sx={{
         flexShrink: 0,
-        minHeight: 30,
+        minHeight: 48,
         mb: 0.5,
         borderBottom: '1px solid var(--theme-border)',
         '& .MuiTab-root': {
-          minHeight: 30,
-          minWidth: 0,
-          px: 1.5,
-          py: 0,
+          minHeight: 48,
+          px: 2,
+          py: 1.5,
           textTransform: 'none',
-          fontSize: '0.8rem',
-          fontWeight: 600,
         },
       }}
     >
       {tabs.map((tab) => (
-        <Tab key={tab.path} value={tab.path} label={t(tab.labelKey)} />
+        <Tab
+          key={tab.path}
+          value={tab.path}
+          label={t(tab.labelKey)}
+          icon={tab.aclKey === 'calls' ? <PhoneOutlinedIcon /> : <MessageOutlinedIcon />}
+          iconPosition="start"
+        />
       ))}
     </Tabs>
   );

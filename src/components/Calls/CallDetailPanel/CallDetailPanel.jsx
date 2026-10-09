@@ -16,7 +16,6 @@ import FingerprintIcon from '@mui/icons-material/Fingerprint';
 import BusinessIcon from '@mui/icons-material/Business';
 import DnsIcon from '@mui/icons-material/Dns';
 import CallEndIcon from '@mui/icons-material/CallEnd';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import SubjectIcon from '@mui/icons-material/Subject';
@@ -32,7 +31,7 @@ import { formatPhoneNumber } from '../../../utils/phoneUtils';
 import moment from 'moment';
 import './CallDetailPanel.css';
 
-const CallDetailPanel = ({ call, onClose, onOpenRecording, onViewLogs, onViewEvents, onCallBack, isMobile }) => {
+const CallDetailPanel = ({ call, onClose, onViewLogs, onViewEvents, onCallBack, isMobile }) => {
   // The portal reuses this panel with a user session, where AuthContext holds
   // no admin token; apiService.getToken() returns whichever session exists.
   const { access: adminAccess } = useAuth();
@@ -133,7 +132,7 @@ const CallDetailPanel = ({ call, onClose, onOpenRecording, onViewLogs, onViewEve
         borderBottom: '1px solid var(--border-light)',
         backgroundColor: 'var(--bg-secondary)'
       }}>
-        <IconButton onClick={onClose} size="small">
+        <IconButton onClick={onClose} size="small" aria-label="Close call details">
           {isMobile ? <ArrowBackIcon /> : <CloseIcon />}
         </IconButton>
         <Typography variant="subtitle1" sx={{
@@ -145,13 +144,14 @@ const CallDetailPanel = ({ call, onClose, onOpenRecording, onViewLogs, onViewEve
         </Typography>
       </Box>
 
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', '& > *': { flexShrink: 0 } }}>
       {/* Caller/Callee card */}
       <Paper elevation={0} sx={{
         m: 2,
         p: 2,
         borderRadius: '12px',
-        background: 'var(--gradient-purple-light)',
-        border: '1px solid var(--gradient-purple-border)'
+        background: 'var(--accent-primary-alpha-8)',
+        border: '1px solid var(--theme-border)'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Avatar sx={{
@@ -181,6 +181,66 @@ const CallDetailPanel = ({ call, onClose, onOpenRecording, onViewLogs, onViewEve
         </Box>
       </Paper>
 
+      {recordingUrl && (
+        <Box sx={{ px: 2, pb: 1, flexShrink: 0 }}>
+          <Box component="audio" key={recordingUrl} controls preload="metadata" src={recordingUrl}
+            aria-label="Call recording" sx={{ width: '100%', height: 40 }} />
+        </Box>
+      )}
+      {/* Actions */}
+      <Divider />
+      <Box sx={{ px: 2, py: 1, display: 'flex', gap: 1, flexWrap: 'wrap', flexShrink: 0 }}>
+        {onCallBack && (
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<PhoneIcon />}
+            onClick={onCallBack}
+            data-testid="call-detail-call-back"
+            sx={{ textTransform: 'none', fontFamily: 'Rubik, sans-serif', fontWeight: 500, borderRadius: '8px', flex: 1 }}
+          >
+            Call back
+          </Button>
+        )}
+        {onViewLogs && (
+          <Button
+            variant="outlined"
+            startIcon={<ReceiptLongIcon />}
+            onClick={onViewLogs}
+            sx={{
+              textTransform: 'none',
+              fontFamily: 'Rubik, sans-serif',
+              fontWeight: 500,
+              borderRadius: '8px',
+              borderColor: 'var(--accent-primary)',
+              color: 'var(--theme-text-primary)',
+              flex: 1,
+              '&:hover': { borderColor: 'var(--accent-primary-hover)', color: 'var(--accent-primary-hover)', backgroundColor: 'var(--accent-primary-alpha-8)' }
+            }}
+          >
+            Call logs
+          </Button>
+        )}
+        {canSeeEvents && onViewEvents && (
+          <Button
+            variant="outlined"
+            startIcon={<EventNoteIcon />}
+            onClick={onViewEvents}
+            sx={{
+              textTransform: 'none',
+              fontFamily: 'Rubik, sans-serif',
+              fontWeight: 500,
+              borderRadius: '8px',
+              borderColor: 'var(--accent-primary)',
+              color: 'var(--theme-text-primary)',
+              flex: 1,
+              '&:hover': { borderColor: 'var(--accent-primary-hover)', color: 'var(--accent-primary-hover)', backgroundColor: 'var(--accent-primary-alpha-8)' }
+            }}
+          >
+            Events
+          </Button>
+        )}
+      </Box>
       {/* Metadata (pinned) */}
       <Box sx={{ px: 2 }}>
         <DetailRow
@@ -267,7 +327,7 @@ const CallDetailPanel = ({ call, onClose, onOpenRecording, onViewLogs, onViewEve
           Transcription
         </Typography>
       </Box>
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: 1, minHeight: 200, display: 'flex', flexDirection: 'column' }}>
         <ConversationMessages
           messages={transcript}
           loading={transcriptLoading}
@@ -277,83 +337,7 @@ const CallDetailPanel = ({ call, onClose, onOpenRecording, onViewLogs, onViewEve
         />
       </Box>
 
-      {/* Actions */}
-      <Divider />
-      <Box sx={{ p: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {recordingUrl && (
-          <Button
-            variant="contained"
-            startIcon={<PlayArrowIcon />}
-            onClick={() => onOpenRecording?.(
-              recordingUrl,
-              call.uuid,
-              caller,
-              callee,
-              createdAt
-            )}
-            sx={{
-              backgroundColor: 'var(--accent-primary)',
-              textTransform: 'none',
-              fontFamily: 'Rubik, sans-serif',
-              fontWeight: 500,
-              borderRadius: '8px',
-              flex: 1,
-              '&:hover': { backgroundColor: 'var(--accent-primary-hover)' }
-            }}
-          >
-            Play Recording
-          </Button>
-        )}
-        {onCallBack && (
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<PhoneIcon />}
-            onClick={onCallBack}
-            data-testid="call-detail-call-back"
-            sx={{ textTransform: 'none', fontFamily: 'Rubik, sans-serif', fontWeight: 500, borderRadius: '8px', flex: 1 }}
-          >
-            Call back
-          </Button>
-        )}
-        {onViewLogs && (
-          <Button
-            variant="outlined"
-            startIcon={<ReceiptLongIcon />}
-            onClick={onViewLogs}
-            sx={{
-              textTransform: 'none',
-              fontFamily: 'Rubik, sans-serif',
-              fontWeight: 500,
-              borderRadius: '8px',
-              borderColor: 'var(--accent-primary)',
-              color: 'var(--theme-text-primary)',
-              flex: 1,
-              '&:hover': { borderColor: 'var(--accent-primary-hover)', color: 'var(--accent-primary-hover)', backgroundColor: 'var(--accent-primary-alpha-8)' }
-            }}
-          >
-            Call logs
-          </Button>
-        )}
-        {onViewEvents && (
-          <Button
-            variant="outlined"
-            startIcon={<EventNoteIcon />}
-            onClick={onViewEvents}
-            sx={{
-              textTransform: 'none',
-              fontFamily: 'Rubik, sans-serif',
-              fontWeight: 500,
-              borderRadius: '8px',
-              borderColor: 'var(--accent-primary)',
-              color: 'var(--theme-text-primary)',
-              flex: 1,
-              '&:hover': { borderColor: 'var(--accent-primary-hover)', color: 'var(--accent-primary-hover)', backgroundColor: 'var(--accent-primary-alpha-8)' }
-            }}
-          >
-            Events
-          </Button>
-        )}
+
       </Box>
     </Box>
   );

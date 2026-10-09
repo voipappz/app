@@ -14,6 +14,10 @@ import { useUserAuth } from '../../context/UserAuthContext';
 import { useIsUserSession } from '../../hooks/useIsUserSession';
 import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import { useNavigateToEvents } from '../../hooks/useNavigateToLogs';
+import { usePermissions } from '../../hooks/usePermissions';
+import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { SIDEBAR_WIDTH } from '../Portal/PortalSidebar.jsx';
 import { formatDuration } from '../../utils/phoneUtils';
 
 // Components
@@ -46,7 +50,7 @@ import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 // MUI Components
 import {
   Box, Typography, IconButton, TextField, InputAdornment, Paper, useTheme, useMediaQuery,
-  Chip, CircularProgress, Select, MenuItem, Tooltip, Button, ButtonGroup,
+  Chip, CircularProgress, Select, MenuItem, Tooltip, Button, ButtonGroup, Drawer,
 } from '@mui/material';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -120,6 +124,8 @@ const Calls = () => {
   // call. It used to be wired to the per-record logs modal, which is gone --
   // logs are read on the Logs screen (/logs) only.
   const goToEvents = useNavigateToEvents();
+  const { canAccess } = usePermissions();
+  const canViewEvents = canAccess('logs');
 
   // Get authentication context. `access` is the ACCOUNT token: saved searches
   // (action=params/save_params) are an account's, so they stay off for a user.
@@ -448,10 +454,40 @@ const Calls = () => {
   };
 
   // Create grid columns with icons and actions
-  const gridColumns = useMemo(() =>
-    createGridColumns(visibleColumns, DirectionIcon, CauseIcon, RecordingControls, CallActions, handleAddNote),
-    [visibleColumns, createGridColumns]
-  );
+  const gridColumns = useMemo(() => {
+    const columns = createGridColumns(visibleColumns, DirectionIcon, CauseIcon, RecordingControls, CallActions, handleAddNote);
+    return [{
+      field: 'callRowActions',
+      headerName: '',
+      width: canViewEvents ? 88 : 52,
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      resizable: false,
+      renderCell: ({ row }) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
+          <Tooltip title="Call info">
+            <IconButton size="small" aria-label="Call info" onClick={(event) => {
+              event.stopPropagation();
+              setPanelMode('details');
+              setSelectedCall(row);
+            }}>
+              <InfoOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        <RowEventsButton
+          subject="call"
+          uuid={row.uuid || row.id}
+          sx={{
+            bgcolor: 'var(--theme-bg-primary)',
+            boxShadow: 'var(--shadow-subtle)',
+            '&:hover': { bgcolor: 'var(--accent-primary-alpha-12)' },
+          }}
+        />
+        </Box>
+      ),
+    }, ...columns];
+  }, [visibleColumns, createGridColumns, canViewEvents]);
 
   // Answered/No-Answer/Outgoing/Incoming are REAL search filters now — each maps
   // to a search[call.*] param that becomes part of the query (server-side), not
@@ -664,7 +700,7 @@ const Calls = () => {
             { label: t('stats.incoming'), value: summaryCounts.incoming, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: t('stats.incomingHint') },
           ].map((item) => (
             <StatCounter
-              variant="minimal"
+              variant="emphasized"
               key={item.label}
               label={item.label}
               value={item.value}
@@ -844,32 +880,7 @@ const Calls = () => {
         </Paper>
       )}
       {isMobile ? (
-        selectedCall && panelMode === 'conversation' ? (
-          <CallConversationPanel
-            call={selectedCall}
-            onBack={() => setPanelMode('details')}
-            onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
-            isMobile
-          />
-        ) : selectedCall && panelMode === 'logs' ? (
-          <CallLogsPanel
-            call={selectedCall}
-            onBack={() => setPanelMode('details')}
-            onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
-            isMobile
-          />
-        ) : selectedCall ? (
-          <CallDetailPanel
-            call={selectedCall}
-            onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
-            onOpenRecording={handleOpenRecording}
-            onAddNote={handleAddNote}
-            onViewConversation={handleViewConversation}
-            onViewLogs={handleViewLogs}
-            onViewEvents={() => goToEvents('call', selectedCall.uuid || selectedCall.id)}
-            isMobile
-          />
-        ) : (
+        (
           <CallMobileView
             rows={displayRows}
             onOpenRecording={handleOpenRecording}
@@ -980,6 +991,20 @@ const Calls = () => {
               }}
             />
           </Box>
+
+        </Box>
+      )}
+      <Drawer
+        anchor="right"
+        open={Boolean(selectedCall)}
+        onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
+        PaperProps={{ sx: {
+          width: { xs: '100vw', sm: SIDEBAR_WIDTH },
+          maxWidth: '100vw',
+          border: 'none',
+          '& .call-detail-panel': { width: '100%', minHeight: 0, border: 'none', borderRadius: 0, animation: 'none' },
+        } }}
+      >
           {selectedCall && panelMode === 'details' && (
             <CallDetailPanel
               call={selectedCall}
@@ -1005,8 +1030,7 @@ const Calls = () => {
               onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
             />
           )}
-        </Box>
-      )}
+      </Drawer>
       <RecordingDialog
         open={recordingDialogOpen}
         selectedRecording={selectedRecording}
