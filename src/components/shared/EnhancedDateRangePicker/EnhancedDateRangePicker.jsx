@@ -53,26 +53,24 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
   return (
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-        {/* Inline purple quick ranges — the reports date-selector design. */}
-        <ButtonGroup variant="contained" disableElevation sx={{ borderRadius: '8px', overflow: 'hidden' }}>
+        {/* Quick ranges follow the customer theme, like the chart buckets. */}
+        <ButtonGroup variant="outlined" disableElevation sx={{ borderRadius: '8px', overflow: 'hidden' }}>
           {QUICK_RANGES.map((qr) => {
             const active = isRangeActive(qr);
             return (
               <Button
                 key={qr.key}
                 onClick={() => setDateRange(qr.range())}
+                variant={active ? 'contained' : 'outlined'}
+                aria-pressed={active}
                 sx={{
-                  bgcolor: active ? '#3f4fb5' : '#5c6bc0',
-                  color: '#fff',
                   fontWeight: active ? 700 : 500,
                   fontSize: '0.75rem',
                   textTransform: 'none',
                   px: 1.25, py: 0.35, minWidth: 0,
-                  '&:hover': { bgcolor: '#3f4fb5' },
-                  '&:not(:last-child)': { borderRight: '1px solid rgba(255,255,255,0.3)' },
                 }}
               >
-                {t(`datePicker.quick.${qr.key}`)}
+                {qr.key === 'day' ? t('datePicker.preset.today') : t(`datePicker.quick.${qr.key}`)}
               </Button>
             );
           })}

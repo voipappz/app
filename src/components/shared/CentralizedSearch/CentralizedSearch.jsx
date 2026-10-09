@@ -58,23 +58,6 @@ const ICON_MAP = {
 // The top bar's slot for the docked search field (rendered by TopBar).
 export const TOPBAR_SEARCH_SLOT_ID = 'topbar-search-slot';
 
-// The date range in a few characters, for the docked field: "Today", "Oct 3",
-// "Oct 1 – Oct 5".
-const rangeLabel = (range, t) => {
-  const [from, to] = range || [];
-  if (!from || !to) return null;
-  const a = new Date(from);
-  const b = new Date(to);
-  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null;
-  // English keeps the browser's own short format, as before; Hebrew uses he-IL.
-  const locale = i18n.language === 'he' ? 'he-IL' : undefined;
-  const day = (d) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-  if (a.toDateString() === b.toDateString()) {
-    return a.toDateString() === new Date().toDateString() ? t('search.today') : day(a);
-  }
-  return `${day(a)} – ${day(b)}`;
-};
-
 const getSegmentIcon = (segmentName) => {
   return ICON_MAP[segmentName] || <FilterListIcon sx={{ fontSize: 16 }} />;
 };
@@ -808,15 +791,12 @@ const CentralizedSearch = ({
   };
 
 
-  // Docked: the search field lives in the top bar (TopBar's
-  // #topbar-search-slot), beside the application selector, and everything that
-  // goes with it — date range, filters, refresh / export / columns — opens as a
-  // popup under it, so the bar holds one field and nothing else. `showFilterPanel`
-  // is that popup's open state. The screen itself keeps only the active-filter
-  // chips. Inline (the layout below) is kept for phones, for a screen opened
-  // inside a dialog, and wherever there is no top bar.
+  // Keep quick date ranges in the bar; advanced filters and table actions
+  // open below it. Phones retain the inline layout.
   const openPopup = () => { if (!showFilterPanel) toggleFilterPanel(); };
-  const dateLabel = rangeLabel(dateRange, t);
+  const datePicker = (
+    <EnhancedDateRangePicker dateRange={dateRange} setDateRange={onDateRangeChange} />
+  );
 
   const searchInput = !hideSearchInput && (<Box className="centralized-search-input">
           <TextField
@@ -824,7 +804,7 @@ const CentralizedSearch = ({
             value={quickSearchText}
             onChange={(e) => onQuickSearchChange(e.target.value)}
             onKeyPress={handleKeyPress}
-            onFocus={docked ? openPopup : undefined}
+            onFocus={docked ? (event) => { if (event.target.tagName === 'INPUT') openPopup(); } : undefined}
             inputProps={{ onClick: docked ? openPopup : undefined }}
             onKeyDown={docked ? (e) => { if (e.key === 'Escape') setShowFilterPanel(false); } : undefined}
             size="small"
@@ -868,15 +848,8 @@ const CentralizedSearch = ({
                       <ClearIcon sx={{ fontSize: '1rem' }} />
                     </IconButton>
                   )}
-                  {docked && dateLabel && (
-                    <Button
-                      size="small"
-                      onClick={openPopup}
-                      aria-label={t('search.dateRange', { range: dateLabel })}
-                      sx={{ minWidth: 0, px: 0.75, py: 0, mr: 0.25, textTransform: 'none', fontSize: '0.7rem', whiteSpace: 'nowrap', color: 'var(--theme-text-secondary)' }}
-                    >
-                      {dateLabel}
-                    </Button>
+                  {docked && onDateRangeChange && (
+                    <Box sx={{ mx: 0.75, flexShrink: 0 }}>{datePicker}</Box>
                   )}
                   {segments && segments.length > 0 && (
                     <Tooltip title={showFilterPanel ? t('search.hideFilters') : t('search.showFilters')}>
@@ -903,13 +876,6 @@ const CentralizedSearch = ({
             }}
           />
         </Box>);
-
-  const datePicker = (
-        <EnhancedDateRangePicker
-          dateRange={dateRange}
-          setDateRange={onDateRangeChange}
-        />
-  );
 
   const actions = (
         <Box className="centralized-search-actions">
@@ -1185,7 +1151,6 @@ const CentralizedSearch = ({
               >
                 <Paper className="topbar-search-popup" elevation={6} data-testid="topbar-search-popup">
                   <Box className="topbar-search-popup-head">
-                    {datePicker}
                     {actions}
                   </Box>
                   {pillRow}

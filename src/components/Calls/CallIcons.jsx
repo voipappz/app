@@ -150,11 +150,12 @@ export const RecordingControls = ({ recordingUrl, onOpenCall }) => {
       <IconButton
         size="small"
         onClick={handlePlayPause}
+        aria-label={isPlaying ? "Pause recording" : "Play recording"}
         sx={{
           p: 0.25,
-          color: isPlaying ? 'var(--accent-primary)' : 'var(--color-success)',
+          color: 'var(--accent-primary)',
           '&:hover': {
-            backgroundColor: isPlaying ? 'var(--accent-primary-alpha-10)' : 'rgba(76, 175, 80, 0.1)',
+            backgroundColor: 'var(--accent-primary-alpha-10)',
           },
         }}
       >
