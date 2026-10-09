@@ -700,7 +700,7 @@ const Calls = () => {
             { label: t('stats.incoming'), value: summaryCounts.incoming, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: t('stats.incomingHint') },
           ].map((item) => (
             <StatCounter
-              variant="emphasized"
+              variant="compact"
               key={item.label}
               label={item.label}
               value={item.value}

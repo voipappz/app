@@ -6,7 +6,7 @@ import { Box, Typography, Tooltip } from '@mui/material';
  *
  * `variant`:
  *  - 'card'    a bordered tile (dashboard): the number large, in its colour.
- *  - 'emphasized' a tinted tile with a strong status border (Calls).
+ *  - 'compact' a single-line number and label with a selected outline (Calls).
  *  - 'minimal' no box (Calls, above the list): a colour underline marks the
  *              active one, so the row reads as a line of numbers, not buttons.
  *
@@ -21,7 +21,7 @@ import { Box, Typography, Tooltip } from '@mui/material';
 const StatCounter = ({ label, value, color = 'var(--counter-total)', active = false, onClick, tooltip, variant = 'card' }) => {
   const known = value != null && value !== '';
   const minimal = variant === 'minimal';
-  const emphasized = variant === 'emphasized';
+  const compact = variant === 'compact';
 
   const card = (
     <Box
@@ -32,20 +32,18 @@ const StatCounter = ({ label, value, color = 'var(--counter-total)', active = fa
       onKeyDown={onClick ? (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e); }
       } : undefined}
-      sx={emphasized ? {
-        px: 2, py: 1.25, minWidth: 112, borderRadius: 1.5,
+      sx={compact ? {
+        display: 'inline-flex', alignItems: 'center', gap: 0.75,
+        px: 1, py: 0.5, minHeight: 32, boxSizing: 'border-box', borderRadius: 1,
         cursor: onClick ? 'pointer' : 'default', userSelect: 'none',
-        bgcolor: `color-mix(in srgb, ${color} ${active ? 22 : 10}%, var(--theme-bg-primary))`,
+        bgcolor: active ? 'var(--accent-primary-alpha-8)' : 'transparent',
         border: '1px solid',
-        borderColor: active ? color : `color-mix(in srgb, ${color} 35%, var(--theme-border))`,
-        borderTop: `3px solid ${color}`,
-        boxShadow: active ? `inset 0 0 0 1px ${color}` : 'none',
+        borderColor: active ? 'var(--accent-primary)' : 'transparent',
         transition: 'background-color .12s, border-color .12s',
         '&:hover': onClick ? {
-          bgcolor: `color-mix(in srgb, ${color} 18%, var(--theme-bg-primary))`,
-          borderColor: color,
+          bgcolor: 'var(--theme-hover)',
         } : undefined,
-        '&:focus-visible': { outline: `2px solid ${color}`, outlineOffset: 2 },
+        '&:focus-visible': { outline: '2px solid var(--accent-primary)', outlineOffset: 2 },
       } : minimal ? {
         px: 1, pt: 0.25, pb: 0.5, minWidth: 64,
         cursor: onClick ? 'pointer' : 'default', userSelect: 'none',
@@ -68,15 +66,15 @@ const StatCounter = ({ label, value, color = 'var(--counter-total)', active = fa
       }}
     >
       <Typography sx={{
-        fontSize: minimal ? '1.1rem' : '1.75rem', fontWeight: 700, lineHeight: 1.1,
+        fontSize: compact ? '0.95rem' : minimal ? '1.1rem' : '1.75rem', fontWeight: 700, lineHeight: 1.1,
         fontVariantNumeric: 'tabular-nums',
-        color: known ? color : 'var(--theme-text-secondary)',
+        color: known ? (compact ? 'var(--theme-text-primary)' : color) : 'var(--theme-text-secondary)',
       }}>
         {known ? value : '—'}
       </Typography>
       <Typography sx={{
-        fontSize: emphasized ? '0.75rem' : minimal ? '0.6rem' : '0.66rem', fontWeight: emphasized ? 700 : 600, letterSpacing: '0.05em',
-        textTransform: 'uppercase', color: emphasized ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap',
+        fontSize: compact ? '0.75rem' : minimal ? '0.6rem' : '0.66rem', fontWeight: compact ? 500 : 600, letterSpacing: compact ? 0 : '0.05em',
+        textTransform: compact ? 'none' : 'uppercase', color: 'var(--theme-text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap',
       }}>
         {label}
       </Typography>

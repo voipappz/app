@@ -24,7 +24,8 @@ import {
   MenuItem,
   CircularProgress,
   Skeleton,
-  TableSortLabel
+  TableSortLabel,
+  Alert
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -43,7 +44,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { getTypeChipColor } from '../../utils/chipStyles';
 import TariffSelect from '../common/TariffSelect/TariffSelect';
 import DynamicProfileEditor from '../common/DynamicProfileEditor/DynamicProfileEditor';
-import ProviderWizard from './ProviderWizard/ProviderWizard.jsx';
+import CreateProviderDialog from './CreateProviderDialog.jsx';
 import { providersApi } from '../../services/api/providersApi';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 import useCentralizedSearch from '../../hooks/useCentralizedSearch';
@@ -68,9 +69,10 @@ const ProviderDialog = ({ open, onClose, onSave, provider, loading, allTariffs, 
     tariff_uuid: ''
   });
   const [metaFields, setMetaFields] = useState([]);
-  const [profileFields, setProfileFields] = useState([]);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
+    setSaveError('');
     if (provider) {
       // Handle profile - could be object or string
       let profileData = {};
@@ -111,11 +113,6 @@ const ProviderDialog = ({ open, onClose, onSave, provider, loading, allTariffs, 
         setMetaFields([]);
       }
 
-      if (provider.type !== 'llm' && profileData && Object.keys(profileData).length > 0) {
-        setProfileFields(Object.entries(profileData).map(([key, value]) => ({ key, value: String(value) })));
-      } else if (!provider || provider.type !== 'llm') {
-        setProfileFields([]);
-      }
     } else {
       setFormData({
         name: '',
@@ -125,7 +122,6 @@ const ProviderDialog = ({ open, onClose, onSave, provider, loading, allTariffs, 
         tariff_uuid: ''
       });
       setMetaFields([]);
-      setProfileFields([]);
     }
   }, [provider, open]);
 
@@ -152,20 +148,9 @@ const ProviderDialog = ({ open, onClose, onSave, provider, loading, allTariffs, 
     ));
   };
 
-  const addProfileField = () => setProfileFields(prev => [...prev, { key: '', value: '' }]);
-  const removeProfileField = (index) => setProfileFields(prev => prev.filter((_, i) => i !== index));
-  const updateProfileField = (index, field, value) => {
-    setProfileFields(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
-  };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const submitData = { ...formData };
-
-    if (formData.type !== 'llm' && profileFields.length > 0) {
-      const profile = {};
-      profileFields.forEach(f => { if (f.key.trim()) profile[f.key] = f.value; });
-      submitData.profile = profile;
-    }
+    setSaveError('');
 
     // Convert meta fields to object
     if (metaFields.length > 0) {
@@ -178,7 +163,11 @@ const ProviderDialog = ({ open, onClose, onSave, provider, loading, allTariffs, 
       submitData.meta = meta;
     }
 
-    onSave(submitData);
+    try {
+      await onSave(submitData);
+    } catch (error) {
+      setSaveError(error.response?.data?.message || error.message || 'Failed to save provider');
+    }
   };
 
   const isFormValid = formData.name && formData.type;
@@ -267,45 +256,6 @@ const ProviderDialog = ({ open, onClose, onSave, provider, loading, allTariffs, 
                 />
               </>
             )}
-            {formData.type !== 'llm' && (
-              <Box sx={{ mt: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" color="text.secondary">Profile Properties</Typography>
-                  <Button onClick={addProfileField} startIcon={<AddIcon />} variant="outlined" size="small">
-                    Add Property
-                  </Button>
-                </Box>
-                {profileFields.map((field, index) => (
-                  <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
-                    <TextField
-                      label="Key"
-                      value={field.key}
-                      onChange={(e) => updateProfileField(index, 'key', e.target.value)}
-                      size="small"
-                      disabled={loading}
-                      sx={{ flex: 1 }}
-                    />
-                    <TextField
-                      label="Value"
-                      value={field.value}
-                      onChange={(e) => updateProfileField(index, 'value', e.target.value)}
-                      size="small"
-                      disabled={loading}
-                      sx={{ flex: 2 }}
-                    />
-                    <IconButton onClick={() => removeProfileField(index)} color="error" size="small">
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                ))}
-                {profileFields.length === 0 && (
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No profile properties. Click "Add Property" to configure provider-specific settings.
-                  </Typography>
-                )}
-              </Box>
-            )}
-
             {/* Meta Properties - Key-Value pairs like DID screen */}
             <Box sx={{ mt: 1 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -346,6 +296,7 @@ const ProviderDialog = ({ open, onClose, onSave, provider, loading, allTariffs, 
 
             {/* Profile Editor - Dynamic fields from API (all provider fields
                 live under the profile.yml 'provider' key, sectioned per sub-type). */}
+            {saveError && <Alert severity="error">{saveError}</Alert>}
             <DynamicProfileEditor
               type="provider"
               profile={formData.profile}
@@ -462,8 +413,8 @@ const Providers = () => {
   } = useProviders();
 
   const navigate = useNavigate();
-  // Create goes through the wizard (same as Services); the quick dialog is for edit.
-  const [wizardOpen, setWizardOpen] = useState(false);
+  // Creation uses the selected type's server-provided fields.
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Register search segments with GlobalSearchContext
   const providerSegments = useMemo(() => [
@@ -580,7 +531,7 @@ const Providers = () => {
               <IconButton
                 size="small"
                 color="primary"
-                onClick={() => setWizardOpen(true)}
+                onClick={() => setCreateDialogOpen(true)}
                 disabled={loading}
               >
                 <AddIcon fontSize="small" />
@@ -759,13 +710,11 @@ const Providers = () => {
       </Box>
 
       {/* Create/Edit Dialog */}
-      {/* Step-by-step create wizard — the default create flow, same shape as
-          ServiceWizard. The quick dialog below stays for editing an existing
-          provider, where the type is fixed and reveal is available. */}
-      <ProviderWizard
-        open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
-        onSave={async (data) => { await handleSaveProvider(data); setWizardOpen(false); }}
+      {/* Creation shows only the selected type's server-provided fields. */}
+      <CreateProviderDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onSave={async (data) => { await handleSaveProvider(data); setCreateDialogOpen(false); }}
         loading={dialogLoading}
         providerTypes={providerTypes}
         allTariffs={allTariffs}

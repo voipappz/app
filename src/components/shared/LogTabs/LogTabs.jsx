@@ -1,6 +1,7 @@
-import { Tabs, Tab } from '@mui/material';
-import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import { Paper, Tab } from '@mui/material';
+import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import MessageOutlinedIcon from '@mui/icons-material/MessageOutlined';
+import SectionTabs from '../SectionTabs.jsx';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -26,35 +27,23 @@ const LogTabs = () => {
   const current = tabs.find((tab) => pathname.startsWith(tab.path))?.path || false;
 
   return (
-    <Tabs
+    <Paper sx={{ mb: 1, flexShrink: 0, backgroundColor: 'var(--mui-palette-background-paper)', border: '1px solid var(--mui-palette-divider)', borderRadius: 2 }}>
+    <SectionTabs
       value={current}
       onChange={(_, path) => navigate(path)}
       aria-label={t('nav:logs')}
-      variant="scrollable"
-      scrollButtons="auto"
-      sx={{
-        flexShrink: 0,
-        minHeight: 48,
-        mb: 0.5,
-        borderBottom: '1px solid var(--theme-border)',
-        '& .MuiTab-root': {
-          minHeight: 48,
-          px: 2,
-          py: 1.5,
-          textTransform: 'none',
-        },
-      }}
     >
       {tabs.map((tab) => (
         <Tab
           key={tab.path}
           value={tab.path}
           label={t(tab.labelKey)}
-          icon={tab.aclKey === 'calls' ? <PhoneOutlinedIcon /> : <MessageOutlinedIcon />}
+          icon={tab.aclKey === 'calls' ? <PhoneInTalkIcon /> : <MessageOutlinedIcon />}
           iconPosition="start"
         />
       ))}
-    </Tabs>
+    </SectionTabs>
+    </Paper>
   );
 };
 

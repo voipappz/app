@@ -19,10 +19,16 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const recentRef = useRef(new Map());
   const sequenceRef = useRef(0);
+  const timersRef = useRef(new Map());
+
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current.clear();
+  }, []);
 
   // One user action should produce one toast. Concurrent API reads can fail
-  // with the same response, so suppress an identical message briefly and cap
-  // the visible stack. Operational polling failures belong on Monitoring, not
+  // with the same response, so suppress an identical message briefly.
+  // Operational polling failures belong on Monitoring, not
   // in a wall of global notifications.
   const enqueue = useCallback((message, severity, duration) => {
     const level = ['success', 'error', 'warning', 'info'].includes(severity) ? severity : 'info';
@@ -43,10 +49,12 @@ export const NotificationProvider = ({ children }) => {
     const id = `${now}-${sequenceRef.current += 1}`;
     setNotifications(prev => [...prev, {
       id, type: level, message: text, timestamp: now,
-    }].slice(-3));
-    setTimeout(() => {
+    }]);
+    const timer = setTimeout(() => {
+      timersRef.current.delete(id);
       setNotifications(prev => prev.filter(notif => notif.id !== id));
     }, duration);
+    timersRef.current.set(id, timer);
   }, []);
 
   const showSuccess = useCallback((message) => {
@@ -58,6 +66,8 @@ export const NotificationProvider = ({ children }) => {
   }, [enqueue]);
 
   const removeNotification = useCallback((id) => {
+    clearTimeout(timersRef.current.get(id));
+    timersRef.current.delete(id);
     setNotifications(prev => prev.filter(notif => notif.id !== id));
   }, []);
 
@@ -94,9 +104,8 @@ export const NotificationProvider = ({ children }) => {
           products look like one product.
           Offset below the topbar: anchored flush to the top it sat over the
           screen's toolbar buttons and hid the controls underneath it.
-          The container ignores pointer events so the page stays clickable
-          between cards; only the cards themselves are interactive.
-          Identical messages are deduplicated and the stack is capped at three. */}
+          Identical messages are deduplicated; distinct messages keep their own
+          lifetime and can be scrolled instead of displacing older messages. */}
       {notifications.length > 0 && (
         <Box
           data-testid="toaster"
@@ -106,9 +115,10 @@ export const NotificationProvider = ({ children }) => {
             // both edges there and let the card fill the gap.
             position: 'fixed', top: { xs: 60, sm: 72 }, left: '50%',
             transform: 'translateX(-50%)', right: 'auto',
-            width: { xs: 'calc(100% - 16px)', sm: 320 }, zIndex: 1400,
+            width: { xs: 'calc(100% - 16px)', sm: 520 }, maxWidth: 'calc(100vw - 24px)', zIndex: 1400,
+            maxHeight: 'calc(100dvh - 96px)', overflowY: 'auto',
             display: 'flex', flexDirection: 'column', gap: 1,
-            pointerEvents: 'none',
+            pointerEvents: 'auto',
           }}
         >
           {notifications.map((notif) => (
@@ -118,9 +128,9 @@ export const NotificationProvider = ({ children }) => {
                 data-testid="notification-toast"
                 data-level={notif.type}
                 sx={{
-                  width: '100%', maxWidth: '100%', position: 'relative',
+                  width: '100%', maxWidth: '100%', position: 'relative', flexShrink: 0, boxSizing: 'border-box',
                   bgcolor: LEVEL_BG[notif.type] || LEVEL_BG.info, color: '#fff',
-                  borderRadius: '3px', p: 1.25,
+                  borderRadius: '6px', p: 1.5,
                   boxShadow: '0 6px 20px rgba(0,0,0,0.3)', pointerEvents: 'all',
                 }}
               >
@@ -133,7 +143,7 @@ export const NotificationProvider = ({ children }) => {
                 >
                   <CloseIcon fontSize="small" />
                 </IconButton>
-                <Typography sx={{ fontSize: '0.82rem', pr: '24px', wordBreak: 'break-word' }}>
+                <Typography sx={{ fontSize: '0.875rem', pr: '24px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
                   {notif.message}
                 </Typography>
               </Box>

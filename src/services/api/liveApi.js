@@ -21,11 +21,11 @@ export const liveApi = {
     };
     const queryString = new URLSearchParams(queryParams).toString();
     // skipCircuitBreaker: FreeSwitch 500s are expected when no switch node is configured
-    return apiService.get(`/api/calls?${queryString}`, {}, 'fetching live calls', true, true);
+    return apiService.get(`/api/calls?${queryString}`, {}, 'fetching live calls', false, true);
   },
 
   getLiveCallsFields: async () => {
-    return apiService.get('/api/calls?action=live_fields', {}, 'fetching live calls fields', true, true);
+    return apiService.get('/api/calls?action=live_fields', {}, 'fetching live calls fields', false, true);
   },
 
   /**

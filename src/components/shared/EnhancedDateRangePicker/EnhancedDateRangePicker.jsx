@@ -4,6 +4,7 @@ import { useTheme } from '@mui/material/styles';
 import { currentDateFnsLocale } from '../../../i18n/formatLocale';
 import { Box, Button, ButtonGroup, IconButton, Popover, TextField, Tooltip, Typography } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { addDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { primaryButtonStyle, secondaryButtonStyle } from '../../../theme/buttonStyles';
 import { formatDateRangeDisplay } from './datePresets';
@@ -18,7 +19,7 @@ const QUICK_RANGES = [
   { key: 'month', range: () => [startOfMonth(new Date()), endOfMonth(new Date())] },
 ];
 
-const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
+const EnhancedDateRangePicker = ({ dateRange, setDateRange, compact = false }) => {
   const { t } = useTranslation();
   // The popover opens under the calendar icon, toward the page's end side.
   const endSide = useTheme().direction === 'rtl' ? 'left' : 'right';
@@ -52,7 +53,15 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
 
   return (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+      {compact ? (
+        <Button size="small" onClick={handleOpen} aria-haspopup="dialog" aria-expanded={open}
+          startIcon={<CalendarTodayIcon sx={{ fontSize: '16px !important' }} />}
+          endIcon={<ExpandMoreIcon />} title={displayText}
+          sx={{ textTransform: 'none', color: 'var(--theme-text-secondary)', whiteSpace: 'nowrap',
+            minWidth: 0, maxWidth: 190, px: 1, fontSize: '0.75rem' }}>
+          <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayText}</Box>
+        </Button>
+      ) : <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
         {/* Quick ranges follow the customer theme, like the chart buckets. */}
         <ButtonGroup variant="outlined" disableElevation sx={{ borderRadius: '8px', overflow: 'hidden' }}>
           {QUICK_RANGES.map((qr) => {
@@ -82,7 +91,7 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
             <CalendarTodayIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
-      </Box>
+      </Box>}
 
       <Popover
         open={open}
@@ -103,9 +112,10 @@ const EnhancedDateRangePicker = ({ dateRange, setDateRange }) => {
           {/* Presets sidebar */}
           <Box className="enhanced-date-picker-presets">
             {presets.map((preset) => (
-              <Box
+              <Box component="button" type="button"
                 key={preset.label}
                 className={`enhanced-date-picker-preset-item ${selectedPreset === preset.label ? 'selected' : ''}`}
+                sx={{ border: 0, background: 'transparent', textAlign: 'start', font: 'inherit' }}
                 onClick={() => handlePresetSelect(preset)}
               >
                 {t(`datePicker.preset.${preset.key}`)}
