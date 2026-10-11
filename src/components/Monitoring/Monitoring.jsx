@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Box, Typography, Chip, IconButton, Tooltip, Switch, FormControlLabel,
@@ -21,8 +21,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import YabedaMetricViewer from './YabedaMetricViewer.jsx';
 import GatusHealthPanel from './GatusHealthPanel.jsx';
 import MonitoringNodes from './MonitoringNodes.jsx';
-import { nodesApi } from '../../services/api/nodesApi';
-import useNodeHealth from '../../hooks/useNodeHealth';
 import useGatusHealth from '../../hooks/useGatusHealth';
 import useApiHealth from '../../hooks/useApiHealth';
 import ApiHealthPanel from './ApiHealthPanel.jsx';
@@ -139,26 +137,15 @@ const Monitoring = () => {
   const [view, setView] = useState('status');
   const showLogs = view === 'logs' && canReadLogs;
 
-  const [monitorNodes, setMonitorNodes] = useState([]);
   // The service whose verbose health is open (null: closed).
   const [healthFocus, setHealthFocus] = useState(null);
 
-  // Syslog hosts are display names; the Gatus relay is addressed by node UUID.
-  // Resolve that mapping once so the monitoring panel calls the existing
-  // authenticated NATS-backed endpoint instead of a nonexistent system route.
-  useEffect(() => {
-    nodesApi.getNodes().then((nodes) => {
-      const list = Array.isArray(nodes) ? nodes : (nodes?.data || nodes?.items || []);
-      setMonitorNodes(list);
-    }).catch(() => setMonitorNodes([]));
-  }, []);
-
-  const selectedNode = selectedHost
-    ? monitorNodes.find((node) => [node.uuid, node.name, node.host, node.hostname].filter(Boolean).includes(selectedHost))
-    : null;
-  const nodeHealth = useNodeHealth(selectedNode?.uuid);
+  // The MOTHERSHIP's Gatus: what this box watches (data layer, API, gateway,
+  // SBC, and the voip node's own /health/node). It does not change with the
+  // host selector — a node's own checks are on the Nodes screen, asked over
+  // NATS. This panel used to switch to /custom/nodes/:uuid/health for a picked
+  // node, which answered with this same board under the node's name.
   const fleetHealth = useGatusHealth();
-  const visibleGatus = selectedNode ? nodeHealth : fleetHealth;
 
   const gridSx = useMemo(() => ({
     ...stripedDataGridSx,
@@ -227,21 +214,17 @@ const Monitoring = () => {
               backgroundColor: 'var(--theme-bg-primary)', overflow: 'hidden',
             }}>
               <Box sx={{ p: 2, borderBottom: '1px solid var(--theme-border)', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FavoriteIcon fontSize="small" sx={{ color: visibleGatus.summary.down === 0 && visibleGatus.summary.total > 0 ? '#10b981' : '#f59e0b' }} />
+                <FavoriteIcon fontSize="small" sx={{ color: fleetHealth.summary.down === 0 && fleetHealth.summary.total > 0 ? '#10b981' : '#f59e0b' }} />
                 <Typography sx={{ fontWeight: 600 }}>Live service health</Typography>
-                {selectedHost && <Chip size="small" variant="outlined" label={selectedHost} />}
-                <Typography variant="caption" sx={{ ml: 'auto', color: 'var(--theme-text-secondary)' }}>Gatus · node checks</Typography>
+                <Typography variant="caption" sx={{ ml: 'auto', color: 'var(--theme-text-secondary)' }}>Gatus · mothership checks</Typography>
               </Box>
               <Box sx={{ p: 2 }}>
                 <GatusHealthPanel
-                  endpoints={visibleGatus.endpoints}
-                  summary={visibleGatus.summary}
-                  loading={visibleGatus.loading}
-                  error={visibleGatus.error || visibleGatus.response?.error}
-                  title={selectedNode ? `${selectedNode.name || selectedHost} · Gatus` : 'Fleet · Gatus'}
-                  {...(selectedNode ? {
-                    detailApiBase: `/custom/nodes/${encodeURIComponent(selectedNode.uuid)}/endpoints`,
-                  } : {})}
+                  endpoints={fleetHealth.endpoints}
+                  summary={fleetHealth.summary}
+                  loading={fleetHealth.loading}
+                  error={fleetHealth.error || fleetHealth.response?.error}
+                  title="Mothership · Gatus"
                 />
               </Box>
             </Paper>

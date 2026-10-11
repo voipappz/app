@@ -197,25 +197,20 @@ export const nodesApi = {
   },
 
   /**
-   * Get a node's Gatus health.
+   * One node's OWN health: its row from the fleet-wide NATS ask
+   * (`getConnectedNodes`), i.e. what it answers on `node:<uuid>:node.health` —
+   * `{ uuid, name, connected, ok?, health?: { statuses, metrics }, reason? }`.
+   * Null when the API did not ask it (a node only in va.yaml has no row).
    *
-   * CONTRACT (backend TODO — may not exist yet): the mothership API relays a
-   * NATS `node:<uuid>:gatus.status` to the target node and returns
-   * `{ node_uuid, statuses }` where `statuses` is that node's Gatus
-   * `/api/v1/endpoints/statuses` array ({ key, name, group, results:[...] }).
-   * Served same-origin via Kong, so a relative fetch works everywhere.
+   * Not GET /custom/nodes/:uuid/health: that answers with the MOTHERSHIP's
+   * Gatus board whatever node is named, so every node showed the same tiles.
    *
-   * @param {string} nodeId - Node id/uuid
-   * @returns {Promise<Array>} - Gatus statuses array for that node
+   * @param {string} nodeId - Node uuid
+   * @returns {Promise<Object|null>}
    */
   getNodeHealth: async (nodeId) => {
-    // API replies { node_uuid, statuses:[...] }; unwrap to the array toHealth
-    // expects (fall back to the raw response if it's already an array).
-    const res = await apiService.get(
-      `/custom/nodes/${encodeURIComponent(nodeId)}/health`,
-      {}, 'fetching node health', false, true,
-    );
-    return res?.statuses ?? res;
+    const rows = await nodesApi.getConnectedNodes();
+    return (Array.isArray(rows) ? rows : []).find((r) => r?.uuid === nodeId) || null;
   },
 };
 
