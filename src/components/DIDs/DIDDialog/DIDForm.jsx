@@ -26,6 +26,8 @@ import { useIsUserSession } from '../../../hooks/useIsUserSession';
 import { NumberSelector } from '../../Bridges/NumberBridge/NumberSelector.jsx';
 import RoutingChain from './RoutingChain.jsx';
 import SipProviderQuickCreate from './SipProviderQuickCreate.jsx';
+import SipProviderEditDialog from './SipProviderEditDialog.jsx';
+import { usePermissions } from '../../../hooks/usePermissions';
 import { didsApi } from '../../../services/api/routesApi';
 import { providersApi } from '../../../services/api/providersApi';
 import { parseServerErrors, is406Error } from '../../../utils/formValidation';
@@ -114,6 +116,8 @@ const DIDForm = forwardRef(({
   const { selectedEnvironments } = useCustomerEnvironment();
   // A portal user has one environment, their own: it is set, never a field.
   const userSession = useIsUserSession();
+  const { can } = usePermissions();
+  const canEditProviders = can('providers', 'write');
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -123,6 +127,7 @@ const DIDForm = forwardRef(({
   const [providers, setProviders] = useState([]);
   const [sipProviders, setSipProviders] = useState([]);
   const [creatingSipProvider, setCreatingSipProvider] = useState(false);
+  const [editingSipProvider, setEditingSipProvider] = useState(null);
 
   const isTrunk = formData.type === TRUNK;
   // Every feature:* route matches a dial prefix (see TRUNK above).
@@ -557,6 +562,7 @@ const DIDForm = forwardRef(({
             <>
               {/* ── Send to: a provider, or the carrier the rate picks ── */}
               <FormSection label="Send To" />
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
               <FormControl fullWidth>
                 <InputLabel shrink>Send to</InputLabel>
                 <Select
@@ -581,6 +587,15 @@ const DIDForm = forwardRef(({
                   A SIP provider (another PBX, a carrier), or the carrier your tariff picks
                 </FormHelperText>
               </FormControl>
+              {formData.bridge_uuid && canEditProviders && (
+                <Tooltip title="Edit SIP provider">
+                  <IconButton aria-label="Edit SIP provider" color="primary" size="small" sx={{ mt: 1 }}
+                    onClick={() => setEditingSipProvider(formData.bridge_uuid)}>
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
+              </Box>
               <Alert severity="info" variant="outlined">
                 Billed as usual: the tariff needs a rate for the rewritten number.
               </Alert>
@@ -825,6 +840,14 @@ const DIDForm = forwardRef(({
             </Box>
           )}
         </>
+      )}
+      {editingSipProvider && (
+        <SipProviderEditDialog key={editingSipProvider} providerUuid={editingSipProvider}
+          canWrite={canEditProviders} onClose={() => setEditingSipProvider(null)}
+          onSaved={(provider) => {
+            setSipProviders(prev => [...prev.filter(p => p.uuid !== provider.uuid), provider]);
+            setEditingSipProvider(null);
+          }} />
       )}
     </Box>
   );
