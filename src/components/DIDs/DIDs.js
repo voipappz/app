@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { didsApi } from '../../services/api/routesApi';
 import { voipResourcesApi } from '../../services/api/voipResourcesApi';
 
@@ -8,6 +9,7 @@ import { voipResourcesApi } from '../../services/api/voipResourcesApi';
  * Provides state management and actions for DID operations
  */
 export const useDIDs = () => {
+  const { canRouteType } = usePermissions();
   const { selectedCustomer, selectedEnvironments } = useCustomerEnvironment();
   
   // State management
@@ -396,7 +398,8 @@ export const useDIDs = () => {
     bridgeTypes,
     bridgeResources,
     resourcesLoading,
-    didTypes,
+    // Only the types this session may create or edit (a user's ACL may limit them).
+    didTypes: didTypes.filter((type) => canRouteType(type, 'write')),
 
     // Actions
     handleOpenDialog,

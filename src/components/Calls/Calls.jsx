@@ -1,9 +1,9 @@
-import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import LtrIsland from '../../i18n/LtrIsland';
 import './Calls.css'; // Styles
 import './CellWithHover/CellWithHover.css'; // Cell hover styles
-import useCalls from './Calls.js'; // Custom hook
+import useCalls, { allTimeRange, todayRange } from './Calls.js'; // Custom hook
 import useRecordingHandlers from './RecordingHandlers/useRecordingHandlers.js';
 import useColumnHandlers from './ColumnHandlers/useColumnHandlers.jsx';
 import useFilterHandlers from './FilterHandlers/FilterHandlers.js';
@@ -164,7 +164,17 @@ const Calls = () => {
     aggregateLoading,
     fetchAggregate,
     summaryCounts,
-  } = useCalls();
+  } = useCalls({ allTime: isMobile });
+
+  // Crossing the phone breakpoint swaps the range: a phone reaches back to the
+  // first call (no period picker there), a desktop starts at today again.
+  // URL sync refetches whenever the range changes.
+  const wasMobile = useRef(isMobile);
+  useEffect(() => {
+    if (wasMobile.current === isMobile) return;
+    wasMobile.current = isMobile;
+    setDateRange(isMobile ? allTimeRange() : todayRange());
+  }, [isMobile, setDateRange]);
 
   // URL synchronization
   const { currentSearchParams, setCurrentSearchParams, syncUrl } = useUrlSync(fetchCalls, dateRange);
@@ -899,6 +909,9 @@ const Calls = () => {
             sx={{
               flex: 1,
               minHeight: 0,
+              // Lets the grid shrink (it scrolls inside) so a wide column set
+              // never pushes the call panel off screen.
+              minWidth: 0,
               transition: 'flex 0.25s ease',
             }}
           >

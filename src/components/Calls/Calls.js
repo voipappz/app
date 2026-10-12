@@ -6,7 +6,19 @@ import { USER_CALL_COLUMNS } from './userCallColumns';
 
 const API_BASE_URL = '/api';
 
-const useCalls = () => {
+// A phone has no period picker: its list reaches back to the first call, newest
+// first, and scrolling loads older ones (the API returns only today without a range).
+export const allTimeRange = () => [new Date(2000, 0, 1), new Date()];
+
+export const todayRange = () => {
+  const now = new Date();
+  return [
+    new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0),
+    new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999),
+  ];
+};
+
+const useCalls = ({ allTime = false } = {}) => {
   // The active session's token: an account's, or a portal user's (the same
   // screen serves both; the API scopes a user token to its own environment).
   const { access: accountToken } = useAuth();
@@ -24,14 +36,7 @@ const useCalls = () => {
   const [errorColumns, setErrorColumns] = useState(null);
   const [errorCalls, setErrorCalls] = useState(null);
   // Initialize with today's date range
-  const getTodayRange = () => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    return [startOfToday, endOfToday];
-  };
-  
-  const [dateRange, setDateRange] = useState(getTodayRange());
+  const [dateRange, setDateRange] = useState(() => (allTime ? allTimeRange() : todayRange()));
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage] = useState(100); // Page size — larger now the list font is compact
   const [lastSearchParams, setLastSearchParams] = useState(null);

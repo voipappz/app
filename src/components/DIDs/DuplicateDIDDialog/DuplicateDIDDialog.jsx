@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -13,7 +12,11 @@ import {
   Chip
 } from '@mui/material';
 import { ContentCopy as DuplicateIcon, Phone as PhoneIcon, CheckCircle as ValidIcon, Error as ErrorIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { ResponsiveDialog as Dialog } from '../../ui';
+import Bdi from '../../../i18n/Bdi';
 import { didsApi } from '../../../services/api/routesApi';
+import { isolated } from '../isolated';
 
 /**
  * DuplicateDIDDialog Component
@@ -27,6 +30,7 @@ const DuplicateDIDDialog = ({
   did,
   loading
 }) => {
+  const { t } = useTranslation('routes');
   const [number, setNumber] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
@@ -38,12 +42,12 @@ const DuplicateDIDDialog = ({
   useEffect(() => {
     if (open && did) {
       setNumber('');
-      setName(`Copy of ${did.name || did.number || ''}`);
+      setName(t('duplicate.copyOf', { name: did.name || did.number || '' }));
       setError('');
       setNumberExists(false);
       setNumberValidated(false);
     }
-  }, [open, did]);
+  }, [open, did, t]);
 
   // Debounced number validation
   useEffect(() => {
@@ -60,7 +64,7 @@ const DuplicateDIDDialog = ({
         setNumberExists(exists);
         setNumberValidated(true);
         if (exists) {
-          setError(`Number "${number}" already exists. Please use a different number.`);
+          setError(t('duplicate.numberExists', { number: isolated(number) }));
         } else {
           setError('');
         }
@@ -78,13 +82,13 @@ const DuplicateDIDDialog = ({
   const handleSubmit = async () => {
     // Validate number
     if (!number.trim()) {
-      setError('Number is required');
+      setError(t('duplicate.numberRequired'));
       return;
     }
 
     // Check if number exists (prevent submission if it does)
     if (numberExists) {
-      setError(`Number "${number}" already exists. Please use a different number.`);
+      setError(t('duplicate.numberExists', { number: isolated(number) }));
       return;
     }
 
@@ -94,7 +98,7 @@ const DuplicateDIDDialog = ({
       try {
         const exists = await didsApi.checkNumberExists(number.trim());
         if (exists) {
-          setError(`Number "${number}" already exists. Please use a different number.`);
+          setError(t('duplicate.numberExists', { number: isolated(number) }));
           setNumberExists(true);
           setNumberValidated(true);
           setValidating(false);
@@ -114,7 +118,7 @@ const DuplicateDIDDialog = ({
       onClose();
     } catch (err) {
       // Extract error message from various response formats (including 406)
-      let errorMessage = 'Failed to duplicate Route';
+      let errorMessage = t('duplicate.failed');
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.response?.data?.error) {
@@ -148,10 +152,10 @@ const DuplicateDIDDialog = ({
 
   // Get number field helper text and status
   const getNumberHelperText = () => {
-    if (validating) return 'Checking number availability...';
-    if (numberExists) return 'This number is already in use';
-    if (numberValidated && !numberExists) return 'Number is available';
-    return 'The new Route will be created with this number (must be unique)';
+    if (validating) return t('duplicate.checking');
+    if (numberExists) return t('duplicate.inUse');
+    if (numberValidated && !numberExists) return t('duplicate.available');
+    return t('duplicate.numberHelp');
   };
 
   const getNumberAdornment = () => {
@@ -173,33 +177,33 @@ const DuplicateDIDDialog = ({
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <DuplicateIcon color="primary" />
-        Duplicate DID
+        {t('duplicate.title')}
       </DialogTitle>
 
       <DialogContent>
         {did && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              Creating a copy of:
+              {t('duplicate.creatingCopyOf')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
               <PhoneIcon fontSize="small" color="primary" />
               <Typography variant="body1" fontWeight={600}>
-                {did.name || 'Unnamed'} - {did.number}
+                {did.name || t('duplicate.unnamed')} - <Bdi>{did.number}</Bdi>
               </Typography>
             </Box>
             {did.bridge_type && (
               <Box sx={{ mt: 1 }}>
                 <Typography variant="body2" color="text.secondary" component="span">
-                  Bridge:
+                  {t('duplicate.bridge')}
                 </Typography>
                 <Chip
                   label={did.bridge_type}
                   size="small"
-                  sx={{ ml: 1 }}
+                  sx={{ ms: 1 }}
                 />
                 {did.bridge?.name && (
-                  <Typography variant="body2" component="span" sx={{ ml: 1 }}>
+                  <Typography variant="body2" component="span" sx={{ ms: 1 }}>
                     ({did.bridge.name})
                   </Typography>
                 )}
@@ -218,10 +222,10 @@ const DuplicateDIDDialog = ({
           autoFocus
           required
           fullWidth
-          label="New Number"
+          label={t('duplicate.newNumber')}
           value={number}
           onChange={handleNumberChange}
-          placeholder="Enter unique number for the new Route"
+          placeholder={t('duplicate.newNumberPlaceholder')}
           helperText={getNumberHelperText()}
           margin="normal"
           disabled={loading}
@@ -237,11 +241,11 @@ const DuplicateDIDDialog = ({
 
         <TextField
           fullWidth
-          label="New Name (optional)"
+          label={t('duplicate.newName')}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Enter name for the new Route"
-          helperText="Leave empty to use default: Copy of {original name}"
+          placeholder={t('duplicate.newNamePlaceholder')}
+          helperText={t('duplicate.newNameHelp')}
           margin="normal"
           disabled={loading}
           inputProps={{
@@ -251,19 +255,19 @@ const DuplicateDIDDialog = ({
 
         <Box sx={{ mt: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Note: The duplicated DID will be created with:
+            {t('duplicate.noteTitle')}
           </Typography>
-          <Typography variant="body2" color="text.secondary" component="ul" sx={{ mt: 0.5, pl: 2 }}>
-            <li>Same application and type ({did?.type || 'sip'})</li>
-            <li>Same bridge configuration ({did?.bridge_type || 'none'})</li>
-            <li>Disabled by default (for safety)</li>
+          <Typography variant="body2" color="text.secondary" component="ul" sx={{ mt: 0.5, ps: 2 }}>
+            <li>{t('duplicate.sameTypeApplication', { type: did?.type || 'sip' })}</li>
+            <li>{t('duplicate.sameBridge', { bridge: did?.bridge_type || t('duplicate.none') })}</li>
+            <li>{t('duplicate.disabledByDefault')}</li>
           </Typography>
         </Box>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={handleClose} disabled={loading}>
-          Cancel
+          {t('duplicate.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -273,7 +277,7 @@ const DuplicateDIDDialog = ({
           startIcon={loading || validating ? <CircularProgress size={20} /> : <DuplicateIcon />}
           data-testid="duplicate-did-submit-button"
         >
-          {validating ? 'Validating...' : 'Duplicate'}
+          {validating ? t('duplicate.validating') : t('duplicate.submit')}
         </Button>
       </DialogActions>
     </Dialog>

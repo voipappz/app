@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -26,6 +25,8 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { ResponsiveDialog as Dialog } from '../../ui'; // full screen on a phone
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import { ivrApi } from '../../../services/api/ivrApi';
 import { bridgeApi } from '../../../services/api/bridgeApi';
@@ -68,6 +69,7 @@ export const IVRBridge = ({
   zLayer = null,           // Optional z-index layer override (e.g. Z.L3 when nested)
   onDrillDown = null        // optional drilldown handler for panel mode
 }) => {
+  const { t } = useTranslation('bridges');
   const userSession = useIsUserSession();
   const layer = zLayer || Z.L2;
   const { selectedEnvironments } = useCustomerEnvironment();
@@ -615,14 +617,7 @@ export const IVRBridge = ({
 
   // Get label for inline creation button based on bridge type
   const getCreateLabel = (bridgeType) => {
-    const labels = {
-      'queue': '+ Create New Queue',
-      'ivr': '+ Create New IVR (Sub-menu)',
-      'vml': '+ Create New VML',
-      'call_condition': '+ Create New Call Condition',
-      'bot': '+ Create New Bot'
-    };
-    return labels[bridgeType] || `+ Create New ${bridgeType}`;
+    return t(`ivr.createNew.${bridgeType}`, { defaultValue: t('ivr.createNew.other', { type: bridgeType }) });
   };
 
   // Handle edit bridge - fetch full bridge data and open edit dialog (or drilldown)
@@ -750,7 +745,7 @@ export const IVRBridge = ({
       }
     } catch (err) {
       console.error(`Error loading ${bridgeType} for edit:`, err);
-      const errorMessage = err?.response?.data?.message || err?.message || `Failed to load ${bridgeType} for editing`;
+      const errorMessage = err?.response?.data?.message || err?.message || t('ivr.errors.loadForEdit', { type: t(`typeNouns.${bridgeType}`, { defaultValue: bridgeType }) });
       setError(errorMessage);
 
       // Display error for 5 seconds then auto-clear
@@ -773,13 +768,13 @@ export const IVRBridge = ({
     // Validate entry number (should be 0-9, *, #)
     const validPattern = /^[0-9*#]{1}$/;
     if (!validPattern.test(newEntryNumber)) {
-      setError('Entry must be a single digit (0-9), *, or #');
+      setError(t('ivr.errors.entryFormat'));
       return;
     }
 
     // Check if entry already exists
     if (formData.entries[newEntryNumber]) {
-      setError(`Entry "${newEntryNumber}" already exists`);
+      setError(t('ivr.errors.entryExists', { key: newEntryNumber }));
       return;
     }
 
@@ -863,41 +858,41 @@ export const IVRBridge = ({
     const errors = {};
 
     if (!formData.name?.trim()) {
-      errors.name = 'Name is required';
+      errors.name = t('ivr.errors.name');
     }
 
     if (!formData.environment_uuid) {
-      errors.environment_uuid = 'Application is required';
+      errors.environment_uuid = t('ivr.errors.application');
     }
 
     if (!formData.announcement_uuid) {
-      errors.announcement_uuid = 'Announcement is required';
+      errors.announcement_uuid = t('ivr.errors.announcement');
     }
 
     if (!formData.timeout_bridge_type) {
-      errors.timeout_bridge_type = 'Timeout bridge type is required';
+      errors.timeout_bridge_type = t('ivr.errors.timeoutType');
     }
 
     if (formData.timeout_bridge_type && !formData.timeout_bridge_uuid) {
-      errors.timeout_bridge_uuid = 'Timeout bridge is required';
+      errors.timeout_bridge_uuid = t('ivr.errors.timeoutBridge');
     }
 
     if (!formData.invalid_bridge_type) {
-      errors.invalid_bridge_type = 'Invalid bridge type is required';
+      errors.invalid_bridge_type = t('ivr.errors.invalidType');
     }
 
     if (formData.invalid_bridge_type && !formData.invalid_bridge_uuid) {
-      errors.invalid_bridge_uuid = 'Invalid bridge is required';
+      errors.invalid_bridge_uuid = t('ivr.errors.invalidBridge');
     }
 
     // Validate entries - each entry must have bridge_type and bridge_uuid
     if (formData.entries && Object.keys(formData.entries).length > 0) {
       Object.entries(formData.entries).forEach(([key, entry]) => {
         if (!entry.bridge_type) {
-          errors[`entry_${key}_bridge_type`] = 'Bridge type is required';
+          errors[`entry_${key}_bridge_type`] = t('ivr.errors.entryType');
         }
         if (entry.bridge_type && entry.bridge_type !== 'number' && !entry.bridge_uuid) {
-          errors[`entry_${key}_bridge_uuid`] = 'Bridge is required';
+          errors[`entry_${key}_bridge_uuid`] = t('ivr.errors.entryBridge');
         }
       });
     }
@@ -929,7 +924,7 @@ export const IVRBridge = ({
       onClose();
     } catch (err) {
       console.error(`IVR ${mode} error:`, err);
-      setError(err.message || `Failed to ${mode} IVR`);
+      setError(err.message || (mode === 'edit' ? t('ivr.errors.updateFailed') : t('ivr.errors.createFailed')));
     } finally {
       setLoading(false);
     }
@@ -948,9 +943,10 @@ export const IVRBridge = ({
       {/* UUID - Read Only (edit mode only) */}
       {ivr?.uuid && (
         <TextField
-          label="UUID"
+          label={t('ivr.uuid')}
           fullWidth
           value={ivr.uuid}
+          slotProps={{ htmlInput: { dir: 'ltr' } }}
           disabled
           InputProps={{
             readOnly: true,
@@ -969,12 +965,12 @@ export const IVRBridge = ({
             disabled={loading}
           />
         }
-        label="Enabled"
+        label={t('ivr.enabled')}
       />
 
       {/* Name */}
       <TextField
-        label="Name"
+        label={t('ivr.name')}
         value={formData.name}
         onChange={(e) => handleChange('name', e.target.value)}
         required
@@ -982,7 +978,7 @@ export const IVRBridge = ({
         size="small"
         error={!!formErrors.name}
         helperText={formErrors.name}
-        placeholder="Please enter name"
+        placeholder={t('ivr.namePlaceholder')}
         disabled={loading}
       />
 
@@ -990,10 +986,10 @@ export const IVRBridge = ({
       {/* A portal user has one environment, their own: never a choice. */}
       {!hideEnvironment && !userSession && (
         <FormControl fullWidth required size="small" error={!!formErrors.environment_uuid} disabled={loading}>
-          <InputLabel>Application</InputLabel>
+          <InputLabel>{t('ivr.application')}</InputLabel>
           <Select
             value={formData.environment_uuid}
-            label="Application"
+            label={t('ivr.application')}
             onChange={(e) => handleEnvironmentChange(e.target.value)}
           >
             {selectedEnvironments?.map(env => (
@@ -1006,24 +1002,24 @@ export const IVRBridge = ({
       {/* Announcement - with inline creation and editing */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
         <FormControl fullWidth required size="small" error={!!formErrors.announcement_uuid} disabled={loading || announcementsLoading}>
-          <InputLabel>Announcement</InputLabel>
+          <InputLabel>{t('ivr.announcement')}</InputLabel>
           <Select
             value={formData.announcement_uuid}
-            label="Announcement"
+            label={t('ivr.announcement')}
             onChange={(e) => handleAnnouncementChange(e.target.value)}
           >
             {announcementsLoading ? (
-              <MenuItem disabled>Loading...</MenuItem>
+              <MenuItem disabled>{t('ivr.loading')}</MenuItem>
             ) : [
               <MenuItem
                 key="add_new"
                 onMouseDown={handleCreateNewAnnouncement}
                 sx={{ color: 'primary.main', fontWeight: 'bold' }}
               >
-                + Create New Announcement
+                {t('ivr.createNew.announcement')}
               </MenuItem>,
               ...(announcements.length === 0 ? [
-                <MenuItem key="no_items" disabled>No announcements available</MenuItem>
+                <MenuItem key="no_items" disabled>{t('ivr.noAnnouncements')}</MenuItem>
               ] : announcements.map(announcement => (
                 <MenuItem key={announcement.uuid} value={announcement.uuid}>
                   {announcement.name}
@@ -1049,7 +1045,7 @@ export const IVRBridge = ({
       {/* Timeout - Row with 3 fields + Edit button */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
         <TextField
-          label="Timeout (seconds)"
+          label={t('ivr.timeout')}
           type="number"
           value={formData.timeout}
           onChange={(e) => handleChange('timeout', parseInt(e.target.value) || 10)}
@@ -1059,26 +1055,26 @@ export const IVRBridge = ({
           sx={{ width: '160px' }}
         />
         <FormControl required size="small" error={!!formErrors.timeout_bridge_type} disabled={loading} sx={{ flex: 1 }}>
-          <InputLabel>Please Select...</InputLabel>
+          <InputLabel>{t('ivr.pleaseSelect')}</InputLabel>
           <Select
             value={formData.timeout_bridge_type}
-            label="Please Select..."
+            label={t('ivr.pleaseSelect')}
             onChange={(e) => handleTimeoutBridgeTypeChange(e.target.value)}
           >
             {bridgeTypes.map(bt => (
-              <MenuItem key={bt.value} value={bt.value}>{bt.label}</MenuItem>
+              <MenuItem key={bt.value} value={bt.value}>{t(`types.${bt.value}`, { defaultValue: bt.label })}</MenuItem>
             ))}
           </Select>
         </FormControl>
         <FormControl required size="small" error={!!formErrors.timeout_bridge_uuid} disabled={loading || timeoutBridgeLoading || !formData.timeout_bridge_type} sx={{ flex: 1 }}>
-          <InputLabel>Please Select...</InputLabel>
+          <InputLabel>{t('ivr.pleaseSelect')}</InputLabel>
           <Select
             value={formData.timeout_bridge_uuid}
-            label="Please Select..."
+            label={t('ivr.pleaseSelect')}
             onChange={(e) => handleChange('timeout_bridge_uuid', e.target.value)}
           >
             {timeoutBridgeLoading ? (
-              <MenuItem disabled>Loading...</MenuItem>
+              <MenuItem disabled>{t('ivr.loading')}</MenuItem>
             ) : [
               // "+ Create New" option for supported bridge types
               ...(supportsInlineCreate(formData.timeout_bridge_type) ? [
@@ -1096,7 +1092,7 @@ export const IVRBridge = ({
               ] : []),
               // Existing resources
               ...(timeoutBridgeResources.length === 0 ? [
-                <MenuItem key="no_resources" disabled>No resources available</MenuItem>
+                <MenuItem key="no_resources" disabled>{t('ivr.noResources')}</MenuItem>
               ] : timeoutBridgeResources.map(r => (
                 <MenuItem key={r.uuid} value={r.uuid}>{r.name}</MenuItem>
               )))
@@ -1120,7 +1116,7 @@ export const IVRBridge = ({
       {/* Invalid Attempts - Row with 3 fields + Edit button */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
         <TextField
-          label="Invalid Attempts"
+          label={t('ivr.invalidAttempts')}
           type="number"
           value={formData.invalid}
           onChange={(e) => handleChange('invalid', parseInt(e.target.value) || 3)}
@@ -1131,26 +1127,26 @@ export const IVRBridge = ({
           sx={{ width: '160px' }}
         />
         <FormControl required size="small" error={!!formErrors.invalid_bridge_type} disabled={loading} sx={{ flex: 1 }}>
-          <InputLabel>Please Select...</InputLabel>
+          <InputLabel>{t('ivr.pleaseSelect')}</InputLabel>
           <Select
             value={formData.invalid_bridge_type}
-            label="Please Select..."
+            label={t('ivr.pleaseSelect')}
             onChange={(e) => handleInvalidBridgeTypeChange(e.target.value)}
           >
             {bridgeTypes.map(bt => (
-              <MenuItem key={bt.value} value={bt.value}>{bt.label}</MenuItem>
+              <MenuItem key={bt.value} value={bt.value}>{t(`types.${bt.value}`, { defaultValue: bt.label })}</MenuItem>
             ))}
           </Select>
         </FormControl>
         <FormControl required size="small" error={!!formErrors.invalid_bridge_uuid} disabled={loading || invalidBridgeLoading || !formData.invalid_bridge_type} sx={{ flex: 1 }}>
-          <InputLabel>Please Select...</InputLabel>
+          <InputLabel>{t('ivr.pleaseSelect')}</InputLabel>
           <Select
             value={formData.invalid_bridge_uuid}
-            label="Please Select..."
+            label={t('ivr.pleaseSelect')}
             onChange={(e) => handleChange('invalid_bridge_uuid', e.target.value)}
           >
             {invalidBridgeLoading ? (
-              <MenuItem disabled>Loading...</MenuItem>
+              <MenuItem disabled>{t('ivr.loading')}</MenuItem>
             ) : [
               // "+ Create New" option for supported bridge types
               ...(supportsInlineCreate(formData.invalid_bridge_type) ? [
@@ -1168,7 +1164,7 @@ export const IVRBridge = ({
               ] : []),
               // Existing resources
               ...(invalidBridgeResources.length === 0 ? [
-                <MenuItem key="no_resources" disabled>No resources available</MenuItem>
+                <MenuItem key="no_resources" disabled>{t('ivr.noResources')}</MenuItem>
               ] : invalidBridgeResources.map(r => (
                 <MenuItem key={r.uuid} value={r.uuid}>{r.name}</MenuItem>
               )))
@@ -1191,14 +1187,14 @@ export const IVRBridge = ({
 
       {/* Add Entries Section */}
       <Box>
-        <Typography variant="subtitle2" sx={{ mb: 1 }}>Add Entries</Typography>
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('ivr.entries.add')}</Typography>
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
           <TextField
             label="#"
             value={newEntryNumber}
             onChange={(e) => setNewEntryNumber(e.target.value)}
             size="small"
-            placeholder="0-9, *, #"
+            placeholder={t('ivr.entries.keyPlaceholder')}
             sx={{ width: '100px' }}
             disabled={loading}
             inputProps={{ maxLength: 1 }}
@@ -1218,14 +1214,14 @@ export const IVRBridge = ({
         {Object.keys(formData.entries).length > 0 && (
           <Paper variant="outlined" sx={{ p: 1 }}>
             <Typography variant="caption" fontWeight="bold" sx={{ display: 'block', mb: 1 }}>
-              Profile
+              {t('ivr.entries.profile')}
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 80px', gap: 1, alignItems: 'center', mb: 1 }}>
-              <Typography variant="caption" fontWeight="bold">Key</Typography>
-              <Typography variant="caption" fontWeight="bold">Name</Typography>
-              <Typography variant="caption" fontWeight="bold">Bridge Type</Typography>
-              <Typography variant="caption" fontWeight="bold">Bridge</Typography>
-              <Typography variant="caption" fontWeight="bold">Actions</Typography>
+              <Typography variant="caption" fontWeight="bold">{t('ivr.entries.key')}</Typography>
+              <Typography variant="caption" fontWeight="bold">{t('ivr.entries.name')}</Typography>
+              <Typography variant="caption" fontWeight="bold">{t('ivr.entries.bridgeType')}</Typography>
+              <Typography variant="caption" fontWeight="bold">{t('ivr.entries.bridge')}</Typography>
+              <Typography variant="caption" fontWeight="bold">{t('ivr.entries.actions')}</Typography>
             </Box>
             {Object.entries(formData.entries).map(([key, entry]) => (
               <Box key={key} sx={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 80px', gap: 1, alignItems: 'center', mb: 1 }}>
@@ -1234,7 +1230,7 @@ export const IVRBridge = ({
                   size="small"
                   value={entry.name || ''}
                   onChange={(e) => handleUpdateEntry(key, 'name', e.target.value)}
-                  placeholder="Entry name"
+                  placeholder={t('ivr.entries.namePlaceholder')}
                 />
                 <FormControl size="small" fullWidth error={!!formErrors[`entry_${key}_bridge_type`]}>
                   <Select
@@ -1242,9 +1238,9 @@ export const IVRBridge = ({
                     onChange={(e) => handleUpdateEntry(key, 'bridge_type', e.target.value)}
                     displayEmpty
                   >
-                    <MenuItem value="">Select...</MenuItem>
+                    <MenuItem value="">{t('ivr.entries.select')}</MenuItem>
                     {bridgeTypes.map(bt => (
-                      <MenuItem key={bt.value} value={bt.value}>{bt.label}</MenuItem>
+                      <MenuItem key={bt.value} value={bt.value}>{t(`types.${bt.value}`, { defaultValue: bt.label })}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -1268,7 +1264,7 @@ export const IVRBridge = ({
                         {getCreateLabel(entry.bridge_type)}
                       </MenuItem>
                     )}
-                    <MenuItem value="">Select...</MenuItem>
+                    <MenuItem value="">{t('ivr.entries.select')}</MenuItem>
                     {entry.bridge_type && entryBridgeResourcesCache[entry.bridge_type]?.map(resource => (
                       <MenuItem key={resource.uuid} value={resource.uuid}>
                         {resource.name}
@@ -1313,7 +1309,7 @@ export const IVRBridge = ({
   const actionButtons = (
     <>
       <Button onClick={onClose} disabled={loading}>
-        Cancel
+        {t('ivr.cancel')}
       </Button>
       <Button
         onClick={handleSubmit}
@@ -1321,7 +1317,7 @@ export const IVRBridge = ({
         disabled={!isFormValid || loading}
         startIcon={loading ? <CircularProgress size={20} /> : <IVRIcon />}
       >
-        {loading ? `${mode === 'edit' ? 'Updating' : 'Creating'}...` : mode === 'edit' ? 'Update IVR' : 'Create IVR'}
+        {loading ? (mode === 'edit' ? t('ivr.updating') : t('ivr.creating')) : mode === 'edit' ? t('ivr.update') : t('ivr.create')}
       </Button>
     </>
   );
@@ -1431,7 +1427,7 @@ export const IVRBridge = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
             <IVRIcon fontSize="small" />
             <Typography variant="h6">
-              {mode === 'edit' ? 'Edit IVR' : 'Create IVR'}
+              {mode === 'edit' ? t('ivr.titleEdit') : t('ivr.titleCreate')}
             </Typography>
           </Box>
 
@@ -1467,7 +1463,7 @@ export const IVRBridge = ({
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <IVRIcon />
-            <Typography variant="h6">{mode === 'edit' ? 'Edit IVR' : 'Create IVR'}</Typography>
+            <Typography variant="h6">{mode === 'edit' ? t('ivr.titleEdit') : t('ivr.titleCreate')}</Typography>
           </Box>
           <Button onClick={onClose} size="small" sx={{ minWidth: 'auto' }}>
             <CloseIcon />

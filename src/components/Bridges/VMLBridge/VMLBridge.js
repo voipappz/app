@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { vmlsApi } from '../../../services/api/vmlsApi.js';
 
 /**
@@ -17,6 +18,7 @@ import { vmlsApi } from '../../../services/api/vmlsApi.js';
  */
 export const useVML = () => {
   // VML types
+  const { t } = useTranslation('bridges');
   const [vmlTypes, setVMLTypes] = useState([]);
   const [loadingTypes, setLoadingTypes] = useState(false);
 
@@ -65,7 +67,7 @@ export const useVML = () => {
       setVMLTypes(types);
     } catch (err) {
       console.error('Error fetching VML types:', err);
-      setError('Failed to load VML types');
+      setError(t('vml.errors.typesFailed'));
     } finally {
       setLoadingTypes(false);
     }
@@ -122,7 +124,7 @@ export const useVML = () => {
     try {
       // Validate meta fields
       if (!validateMetaFields()) {
-        throw new Error('Duplicate meta keys are not allowed');
+        throw new Error(t('meta.duplicateKeys'));
       }
 
       // Convert meta fields array to object
@@ -145,12 +147,12 @@ export const useVML = () => {
       return result;
     } catch (err) {
       console.error('Error saving VML:', err);
-      setError(err.message || 'Failed to save VML');
+      setError(err.message || t('vml.errors.saveFailedShort'));
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [vmlContent, metaFields, validateMetaFields]);
+  }, [vmlContent, metaFields, validateMetaFields, t]);
 
   /**
    * Reset state

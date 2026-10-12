@@ -23,6 +23,9 @@ import CodeIcon from '@mui/icons-material/Code';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import ShieldIcon from '@mui/icons-material/Shield';
+import LanguageIcon from '@mui/icons-material/Language';
+import DarkModeIcon from '@mui/icons-material/DarkModeOutlined';
+import LightModeIcon from '@mui/icons-material/LightModeOutlined';
 import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { useThemeMode } from '../../context/ThemeContext';
@@ -192,12 +195,31 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
         </List>
       )}
 
-      {/* Bottom tools, followed by the account row. */}
-      {/* None of these has an ACL key: account-console tools, not a user's. */}
-      {userSession ? <Box sx={{ mt: 'auto' }} /> : (
+      {/* Bottom tools, followed by the account row. Appearance is the
+          viewer's, not a permission: both sessions get it. */}
       <Box className="sidebar-bottom-tools" sx={{ mt: 'auto' }}>
+        {/* One click to the other language, named in that language. */}
+        <Tooltip title={t(`languageName.${otherLanguage}`)} placement={towardPage}>
+          <IconButton
+            className="sidebar-tool-button"
+            onClick={() => setLanguage(otherLanguage)}
+            aria-label={t('appearance.switchLanguage')}
+            data-testid="sidebar-language"
+          >
+            <LanguageIcon />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={t(isDarkMode ? 'appearance.lightMode' : 'appearance.darkMode')} placement={towardPage}>
+          <IconButton
+            className="sidebar-tool-button"
+            onClick={toggleTheme}
+            aria-label={t(isDarkMode ? 'appearance.lightMode' : 'appearance.darkMode')}
+            data-testid="sidebar-theme"
+          >
+            {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
+        </Tooltip>
       </Box>
-      )}
 
       {/* Account — pinned at the bottom: the avatar, named in its tooltip. */}
       <Box className="sidebar-profile-section">
@@ -248,8 +270,8 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
         )}
       </Box>
 
-      {/* A user's profile menu: appearance and sign out (the account dialog
-          is an account's). */}
+      {/* A user's profile menu: who is signed in, and sign out (the account
+          dialog is an account's). */}
       <Menu
         anchorEl={userMenuAnchor} open={Boolean(userMenuAnchor)} onClose={() => setUserMenuAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: towardPage }} transformOrigin={{ vertical: 'bottom', horizontal: towardSidebar }}
@@ -259,17 +281,6 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
           <Typography variant="body2" sx={{ fontWeight: 600 }}>{user?.email || accountName}</Typography>
         </Box>
         <Divider />
-        <MenuItem onClick={() => { toggleTheme(); setUserMenuAnchor(null); }} data-testid="user-menu-theme">
-          {t(isDarkMode ? 'appearance.lightMode' : 'appearance.darkMode')}
-        </MenuItem>
-        {/* One click to the other language, named in that language. */}
-        <MenuItem
-          onClick={() => { setLanguage(otherLanguage); setUserMenuAnchor(null); }}
-          aria-label={t('appearance.switchLanguage')}
-          data-testid="user-menu-language"
-        >
-          {t(`languageName.${otherLanguage}`)}
-        </MenuItem>
         <MenuItem onClick={() => { setUserMenuAnchor(null); userAuth.logout(); navigate('/'); }} data-testid="user-menu-sign-out">
           {t('action.signOut')}
         </MenuItem>

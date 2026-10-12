@@ -67,3 +67,34 @@ export const formatOnlyDate = (dateInput) => {
     year: 'numeric',
   });
 };
+
+/**
+ * The calendar day a timestamp falls on, in the viewer's time zone, as
+ * "YYYY-MM-DD". Two timestamps on the same day give the same key.
+ * @param {string | Date} dateInput
+ * @returns {string} The day key, or '' if the input is invalid.
+ */
+export const dayKey = (dateInput) => {
+  const date = toDate(dateInput);
+  if (isNaN(date.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+/**
+ * A day as a heading: weekday, day and month ("Mon, 6 Oct"), with the year
+ * only when it isn't this year.
+ * @param {string | Date} dateInput
+ * @returns {string} The heading, or '-' if the input is invalid.
+ */
+export const formatDayHeading = (dateInput) => {
+  const date = toDate(dateInput);
+  if (isNaN(date.getTime())) return '-';
+  const otherYear = date.getFullYear() !== new Date().getFullYear();
+  return date.toLocaleDateString(currentLocaleTag(), {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    ...(otherYear ? { year: 'numeric' } : {}),
+  });
+};
