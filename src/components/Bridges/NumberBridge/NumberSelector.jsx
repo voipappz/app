@@ -13,6 +13,8 @@ import {
   Add as AddIcon,
   Search as SearchIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import Bdi from '../../../i18n/Bdi';
 import { useNumberSelector } from './NumberSelector.js';
 
 /**
@@ -33,13 +35,14 @@ export const NumberSelector = ({
   value, // bridge_uuid
   onChange, // (uuid, displayNumber) => void
   environmentUuid,
-  label = "Phone Number",
-  placeholder = "Search or enter number...",
+  label,
+  placeholder,
   required = false,
   error = null,
   helperText = null,
   disabled = false
 }) => {
+  const { t } = useTranslation('routes');
   const {
     numbers,
     loading,
@@ -150,7 +153,7 @@ export const NumberSelector = ({
               }}
             >
               <Typography variant="body2" color="text.secondary">
-                Number not found.
+                {t('numberSelector.notFound')}
               </Typography>
               <Button
                 variant="contained"
@@ -160,7 +163,7 @@ export const NumberSelector = ({
                 disabled={isCreating || !inputValue}
                 sx={{ whiteSpace: 'nowrap' }}
               >
-                {isCreating ? 'Adding...' : '+ Add this number'}
+                {isCreating ? t('numberSelector.adding') : t('numberSelector.addThis')}
               </Button>
             </Box>
           )}
@@ -169,16 +172,16 @@ export const NumberSelector = ({
       renderInput={(params) => (
         <TextField
           {...params}
-          label={label}
-          placeholder={placeholder}
+          label={label ?? t('numberSelector.label')}
+          placeholder={placeholder ?? t('numberSelector.placeholder')}
           required={required}
           error={!!error || !!hookError}
-          helperText={helperText || error || hookError || (!environmentUuid ? 'Select a application first' : '')}
+          helperText={helperText || error || hookError || (!environmentUuid ? t('numberSelector.selectApplication') : '')}
           InputProps={{
             ...params.InputProps,
             startAdornment: (
               <>
-                <SearchIcon sx={{ mr: 1, color: 'action.active' }} />
+                <SearchIcon sx={{ me: 1, color: 'action.active' }} />
                 {params.InputProps.startAdornment}
               </>
             ),
@@ -196,7 +199,7 @@ export const NumberSelector = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PhoneIcon sx={{ color: 'action.active', fontSize: 20 }} />
             <Box>
-              <Typography variant="body2">{option.number}</Typography>
+              <Typography variant="body2"><Bdi>{option.number}</Bdi></Typography>
               {option.name && (
                 <Typography variant="caption" color="text.secondary">
                   {option.name}
@@ -208,9 +211,9 @@ export const NumberSelector = ({
       )}
       noOptionsText={
         loading
-          ? "Searching..."
+          ? t('numberSelector.searching')
           : inputValue.length < 1
-          ? "Type a number to search..."
+          ? t('numberSelector.typeToSearch')
           : null // We show our custom "Number not found" UI instead
       }
     />

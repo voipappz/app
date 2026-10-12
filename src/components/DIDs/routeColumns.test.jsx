@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import i18n from '../../i18n';
 import { buildRouteColumns } from './routeColumns.jsx';
 import ResponsiveTable from '../shared/ResponsiveTable/ResponsiveTable';
 import { pretendPhoneScreen } from '../../test/phoneScreen';
@@ -18,20 +19,21 @@ const actions = {
   onCall: vi.fn(), onEditApplication: vi.fn(), onEditBridge: vi.fn(), onOpenProvider: vi.fn(),
   onEdit: vi.fn(), onOpenFlow: vi.fn(), onDuplicate: vi.fn(), onDelete: vi.fn(),
 };
-const show = ({ isPhone = false, portalMode = false } = {}) => render(
+const english = i18n.getFixedT('en', 'routes');
+const show = ({ isPhone = false, portalMode = false, t = english } = {}) => render(
   <ResponsiveTable
-    columns={buildRouteColumns({ portalMode, isPhone, loading: false, canWriteRoute: () => true, actions })}
+    columns={buildRouteColumns({ t, portalMode, isPhone, loading: false, canWriteRoute: () => true, actions })}
     rows={[route]}
     getRowId={(row) => row.uuid}
   />,
 );
 
 let backToDesktop = () => {};
-afterEach(() => { backToDesktop(); backToDesktop = () => {}; });
+afterEach(async () => { backToDesktop(); backToDesktop = () => {}; await i18n.changeLanguage('en'); });
 
 describe('Routes columns', () => {
   it('keep the headers the table always had', () => {
-    const labels = buildRouteColumns({ portalMode: false, isPhone: false, canWriteRoute: () => true, actions })
+    const labels = buildRouteColumns({ t: english, portalMode: false, isPhone: false, canWriteRoute: () => true, actions })
       .map((column) => column.label);
     expect(labels).toEqual(
       ['Created At', 'Updated At', 'Enabled', 'Name', 'Application', 'Type', 'Number', 'Bridge', 'Provider', 'Tags', 'Actions'],
@@ -39,7 +41,7 @@ describe('Routes columns', () => {
   });
 
   it('have no Application column for a portal user', () => {
-    const labels = buildRouteColumns({ portalMode: true, isPhone: false, canWriteRoute: () => true, actions })
+    const labels = buildRouteColumns({ t: english, portalMode: true, isPhone: false, canWriteRoute: () => true, actions })
       .map((column) => column.label);
     expect(labels).not.toContain('Application');
   });
@@ -56,11 +58,29 @@ describe('Routes columns', () => {
     expect(screen.getByTestId('mobile-record-card')).toBeInTheDocument();
     expect(screen.getByText('+97235551234').tagName).toBe('BDI');
     expect(screen.getByText('Main line')).toBeInTheDocument();
-    expect(screen.getByText('DST')).toBeInTheDocument();
+    expect(screen.getByText('Incoming number')).toBeInTheDocument();
     expect(screen.getByText('Calls go to')).toBeInTheDocument();
     expect(screen.getByText('Main menu')).toBeInTheDocument();
     expect(screen.queryByTestId('edit-did-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('routing-did-button')).not.toBeInTheDocument();
     expect(screen.queryByText('Created At')).not.toBeInTheDocument();
+  });
+});
+
+describe('Routes columns in Hebrew', () => {
+  it('have Hebrew headers', async () => {
+    await i18n.changeLanguage('he');
+    const labels = buildRouteColumns({ t: i18n.getFixedT('he', 'routes'), portalMode: false, isPhone: false, canWriteRoute: () => true, actions })
+      .map((column) => column.label);
+    expect(labels).toEqual(['נוצר', 'עודכן', 'פעיל', 'שם', 'אפליקציה', 'סוג', 'מספר', 'יעד', 'ספק', 'תגיות', 'פעולות']);
+  });
+
+  it('show the type by its Hebrew name and the number left to right', async () => {
+    await i18n.changeLanguage('he');
+    backToDesktop = pretendPhoneScreen();
+    show({ isPhone: true, t: i18n.getFixedT('he', 'routes') });
+    expect(screen.getByText('מספר נכנס')).toBeInTheDocument();
+    expect(screen.getByText('השיחות עוברות אל')).toBeInTheDocument();
+    expect(screen.getByText('+97235551234').tagName).toBe('BDI');
   });
 });

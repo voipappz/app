@@ -12,6 +12,7 @@ import {
   Upload as UploadIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
+import { Trans, useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '../ui';
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router';
@@ -31,6 +32,7 @@ import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 import useCentralizedSearch from '../../hooks/useCentralizedSearch';
 import { useCallNumber } from '../../hooks/useCallNumber';
+import Bdi from '../../i18n/Bdi';
 import DIDWizard, { useWizard } from './DIDWizard/DIDWizard.jsx';
 import ImportCSVDialog from '../common/ImportCSVDialog/ImportCSVDialog';
 import DuplicateDIDDialog from './DuplicateDIDDialog/DuplicateDIDDialog';
@@ -54,6 +56,7 @@ import './DIDs.css';
  *   import). Everything a customer manages about their own numbers stays.
  */
 const DIDs = ({ portalMode = false }) => {
+  const { t } = useTranslation('routes');
   const navigate = useNavigate();
   const theme = useTheme();
   // On a phone the workflow diagram is never offered: a route opens as a
@@ -177,18 +180,18 @@ const DIDs = ({ portalMode = false }) => {
 
   // Register search segments with GlobalSearchContext
   const didSegments = useMemo(() => [
-    { name: 'name', label: 'Name', type: 'string' },
-    { name: 'number', label: 'Number', type: 'string' },
-    { name: 'type', label: 'Type', type: 'select', data: [{ uuid: 'sip', name: 'SIP' }, { uuid: 'pstn', name: 'PSTN' }, { uuid: 'toll_free', name: 'Toll Free' }] },
-    { name: 'bridge_type', label: 'Bridge Type', type: 'select', data: (bridgeTypes || []).map(bt => ({ uuid: bt, name: bt })) },
-    { name: 'enabled', label: 'Status', type: 'select', data: [{ uuid: 'true', name: 'Enabled' }, { uuid: 'false', name: 'Disabled' }] },
+    { name: 'name', label: t('search.name'), type: 'string' },
+    { name: 'number', label: t('search.number'), type: 'string' },
+    { name: 'type', label: t('search.type'), type: 'select', data: [{ uuid: 'sip', name: 'SIP' }, { uuid: 'pstn', name: 'PSTN' }, { uuid: 'toll_free', name: t('search.tollFree') }] },
+    { name: 'bridge_type', label: t('search.bridgeType'), type: 'select', data: (bridgeTypes || []).map(bt => ({ uuid: bt, name: bt })) },
+    { name: 'enabled', label: t('search.status'), type: 'select', data: [{ uuid: 'true', name: t('search.enabled') }, { uuid: 'false', name: t('search.disabled') }] },
     // A portal user has one environment, their own: nothing to filter by.
-    ...(portalMode ? [] : [{ name: 'environment_uuid', label: 'Application', type: 'select', data: (environments || []).map(e => ({ uuid: e.uuid, name: e.name })) }]),
+    ...(portalMode ? [] : [{ name: 'environment_uuid', label: t('search.application'), type: 'select', data: (environments || []).map(e => ({ uuid: e.uuid, name: e.name })) }]),
     // Provider options never load in the portal (no ACL), and a select with no
     // options degrades to a free-text box — a filter that can't be filled.
-    ...(portalMode ? [] : [{ name: 'provider_uuid', label: 'Provider', type: 'select', data: (providers || []).map(p => ({ uuid: p.uuid, name: p.name })) }]),
-    { name: 'meta', label: 'Tag', type: 'tag', url: '/api/routes?action=meta_keys' },
-  ], [bridgeTypes, environments, providers, portalMode]);
+    ...(portalMode ? [] : [{ name: 'provider_uuid', label: t('search.provider'), type: 'select', data: (providers || []).map(p => ({ uuid: p.uuid, name: p.name })) }]),
+    { name: 'meta', label: t('search.tag'), type: 'tag', url: '/api/routes?action=meta_keys' },
+  ], [t, bridgeTypes, environments, providers, portalMode]);
 
   useEffect(() => {
     // Each surface registers under its own name. It is the search box's
@@ -299,6 +302,7 @@ const DIDs = ({ portalMode = false }) => {
   }, [didToDelete, handleDeleteDID, routeDetails]);
 
   const columns = useMemo(() => buildRouteColumns({
+    t,
     portalMode,
     isPhone,
     loading,
@@ -314,7 +318,7 @@ const DIDs = ({ portalMode = false }) => {
       onDuplicate: handleOpenDuplicateDialog,
       onDelete: handleOpenDeleteDialog,
     },
-  }), [portalMode, isPhone, loading, canWriteRoute, callNumber, handleEnvEdit, handleEditBridge, navigate,
+  }), [t, portalMode, isPhone, loading, canWriteRoute, callNumber, handleEnvEdit, handleEditBridge, navigate,
     handleOpenDialog, handleOpenDuplicateDialog, handleOpenDeleteDialog]);
 
   // Import handlers
@@ -372,19 +376,19 @@ const DIDs = ({ portalMode = false }) => {
             onRefresh={centralizedSearch.handleRefresh}
             quickSearchText={centralizedSearch.quickSearchText}
             onQuickSearchChange={centralizedSearch.handleQuickSearchChange}
-            placeholder="Search by name, or use field:value (e.g. enabled:true)"
+            placeholder={t('search.placeholder')}
             hideDateRange={isPhone}
           />
         </Box>
         {!portalMode && canAccess('providers') && (
-          <Tooltip title="Providers">
-            <IconButton size="small" aria-label="Providers" onClick={() => setProvidersOpen(true)}>
+          <Tooltip title={t('toolbar.providers')}>
+            <IconButton size="small" aria-label={t('toolbar.providers')} onClick={() => setProvidersOpen(true)}>
               <HubIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
         {canWrite && !portalMode && (
-          <Tooltip title="Import CSV">
+          <Tooltip title={t('toolbar.importCsv')}>
             <IconButton
               size="small"
               onClick={handleOpenImportDialog}
@@ -394,7 +398,7 @@ const DIDs = ({ portalMode = false }) => {
           </Tooltip>
         )}
         {canWrite && (
-          <Tooltip title="Add Route">
+          <Tooltip title={t('toolbar.addRoute')}>
             <IconButton
               size="small"
               onClick={() => handleOpenDialog()}
@@ -430,7 +434,7 @@ const DIDs = ({ portalMode = false }) => {
               selectedRowId={selectedDIDId}
               rowSx={{ '&.Mui-selected': { bgcolor: '#e3f2fd !important' } }}
               loading={loading}
-              emptyMessage="No DIDs found"
+              emptyMessage={t('table.empty')}
               sortBy={sortBy}
               sortDirection={sortOrder}
               onSort={handleSortChange}
@@ -481,10 +485,10 @@ const DIDs = ({ portalMode = false }) => {
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
         loading={loading}
-        title="Delete Route"
-        message={<Typography>Are you sure you want to delete DID{' '}
-          <strong>{(didToDelete)?.number}</strong>?</Typography>}
-        description="This action cannot be undone and will affect call routing."
+        title={t('delete.title')}
+        message={<Typography><Trans t={t} i18nKey="delete.message"
+          components={{ number: <strong><Bdi>{(didToDelete)?.number}</Bdi></strong> }} /></Typography>}
+        description={t('delete.description')}
       />
 
       {/* Duplicate DID Dialog */}
@@ -509,7 +513,7 @@ const DIDs = ({ portalMode = false }) => {
       )}
 
       {!portalMode && (
-        <ToolDialog title="Providers" open={providersOpen} onClose={() => setProvidersOpen(false)} confirmClose>
+        <ToolDialog title={t('toolbar.providers')} open={providersOpen} onClose={() => setProvidersOpen(false)} confirmClose>
           <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
             <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'auto' }}>
               <Providers />
@@ -525,8 +529,8 @@ const DIDs = ({ portalMode = false }) => {
           open={importDialogOpen}
           onClose={handleCloseImportDialog}
           onImport={handleImportCSV}
-          title="Import Routes from CSV"
-          entityName="Routes"
+          title={t('import.title')}
+          entityName={t('import.entityName')}
           environments={environments}
           requireEnvironment={true}
           onSuccess={handleImportSuccess}

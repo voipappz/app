@@ -1,5 +1,6 @@
 import { Box, Button, Chip, Divider, Drawer, IconButton, Skeleton, Tooltip, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowBack as BackIcon,
   Call as CallIcon,
@@ -12,6 +13,7 @@ import RoutingChain from '../DIDDialog/RoutingChain.jsx';
 import RowEventsButton from '../../shared/RowEventsButton/RowEventsButton.jsx';
 import MetaTagChips from '../../common/MetaTagChips/MetaTagChips';
 import Bdi from '../../../i18n/Bdi';
+import { routeTypeLabel } from '../routeTypes';
 import { formatDate } from '../../../utils/dateUtils';
 import { getEnabledChipProps, getTypeChipColor } from '../../../utils/chipStyles';
 import './RouteDetails.css';
@@ -50,12 +52,13 @@ function Section({ title, children }) {
 // Where calls to this route go. The bridge preview shows the whole path (queue
 // agents, IVR keys and greeting, condition rules); a number is just a number.
 function Destination({ did, onEditBridge }) {
+  const { t } = useTranslation('routes');
   const bridgeUuid = did.bridge?.uuid || did.bridge_uuid;
   if (did.bridge_type === 'number') {
-    return <Field label="Number">{did.bridge?.number ? <Bdi>{did.bridge.number}</Bdi> : '-'}</Field>;
+    return <Field label={t('details.number')}>{did.bridge?.number ? <Bdi>{did.bridge.number}</Bdi> : '-'}</Field>;
   }
   if (!did.bridge_type || !bridgeUuid) {
-    return <Typography variant="body2" color="text.secondary">Not set</Typography>;
+    return <Typography variant="body2" color="text.secondary">{t('details.notSet')}</Typography>;
   }
   return (
     <RoutingChain
@@ -76,18 +79,19 @@ export default function RouteDetails({
   open, did, missing = false, portalMode = false, canWrite = false, loading = false,
   onClose, onEdit, onDuplicate, onDelete, onEditBridge, onOpenProvider, onCall,
 }) {
+  const { t } = useTranslation('routes');
   const theme = useTheme();
   const applicationName = did?.environment?.name || did?.environment_name;
 
   return (
     <Drawer
-      anchor="right"
+      anchor={theme.direction === 'rtl' ? 'left' : 'right'}
       open={open}
       onClose={onClose}
       PaperProps={{ className: 'route-details', 'data-testid': 'route-details', sx: { width: { xs: '100vw', sm: 440 } } }}
     >
       <Box className="route-details-header">
-        <IconButton onClick={onClose} aria-label="Back" edge="start">
+        <IconButton onClick={onClose} aria-label={t('details.back')} edge="start">
           <BackIcon sx={{ transform: theme.direction === 'rtl' ? 'scaleX(-1)' : undefined }} />
         </IconButton>
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -99,8 +103,8 @@ export default function RouteDetails({
           ) : !missing && <Skeleton width={160} height={32} />}
         </Box>
         {did?.number && onCall && (
-          <Tooltip title="Call">
-            <IconButton onClick={() => onCall(did.number)} aria-label={`Call ${did.number}`} color="primary">
+          <Tooltip title={t('details.call')}>
+            <IconButton onClick={() => onCall(did.number)} aria-label={t('row.call', { number: did.number })} color="primary">
               <CallIcon />
             </IconButton>
           </Tooltip>
@@ -110,7 +114,7 @@ export default function RouteDetails({
 
       <Box className="route-details-body">
         {!did && missing ? (
-          <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>This route no longer exists.</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>{t('details.missing')}</Typography>
         ) : !did ? (
           <Box sx={{ p: 2 }}>
             <Skeleton variant="rounded" height={120} sx={{ mb: 2 }} />
@@ -119,29 +123,29 @@ export default function RouteDetails({
         ) : (
           <>
             <Box sx={{ display: 'flex', gap: 1, px: 2, pt: 2 }}>
-              <Chip label={did.type?.toUpperCase() || 'SIP'} size="small" color={getTypeChipColor(did.type || 'sip')} />
+              <Chip label={did.type ? routeTypeLabel(t, did.type) : 'SIP'} size="small" color={getTypeChipColor(did.type || 'sip')} />
               <Chip {...getEnabledChipProps(did.enabled)} />
             </Box>
 
-            <Section title="Calls go to">
+            <Section title={t('details.callsGoTo')}>
               <Destination did={did} onEditBridge={canWrite ? onEditBridge : undefined} />
             </Section>
 
             <Divider />
-            <Section title="Details">
+            <Section title={t('details.title')}>
               <Field
-                label="Provider"
+                label={t('details.provider')}
                 testId="route-details-provider"
                 onOpen={did.provider && !portalMode ? () => onOpenProvider(did.provider) : undefined}
               >
                 {did.provider?.name || '-'}
               </Field>
-              {!portalMode && <Field label="Application">{applicationName || '-'}</Field>}
-              {did.notes && <Field label="Notes"><Box sx={{ whiteSpace: 'pre-wrap' }}>{did.notes}</Box></Field>}
-              {hasMeta(did.meta) && <Field label="Tags"><MetaTagChips meta={did.meta} /></Field>}
+              {!portalMode && <Field label={t('details.application')}>{applicationName || '-'}</Field>}
+              {did.notes && <Field label={t('details.notes')}><Box sx={{ whiteSpace: 'pre-wrap' }}>{did.notes}</Box></Field>}
+              {hasMeta(did.meta) && <Field label={t('details.tags')}><MetaTagChips meta={did.meta} /></Field>}
               <Box sx={{ display: 'flex', gap: 2 }}>
-                <Field label="Created">{formatDate(did.created_at)}</Field>
-                <Field label="Updated">{formatDate(did.updated_at)}</Field>
+                <Field label={t('details.created')}>{formatDate(did.created_at)}</Field>
+                <Field label={t('details.updated')}>{formatDate(did.updated_at)}</Field>
               </Box>
             </Section>
           </>
@@ -157,10 +161,10 @@ export default function RouteDetails({
             onClick={() => onDelete(did)}
             disabled={loading}
           >
-            Delete
+            {t('details.delete')}
           </Button>
-          <Tooltip title="Duplicate Route">
-            <IconButton onClick={() => onDuplicate(did)} disabled={loading} aria-label="Duplicate Route" className="route-details-duplicate">
+          <Tooltip title={t('details.duplicate')}>
+            <IconButton onClick={() => onDuplicate(did)} disabled={loading} aria-label={t('details.duplicate')} className="route-details-duplicate">
               <DuplicateIcon />
             </IconButton>
           </Tooltip>
@@ -171,7 +175,7 @@ export default function RouteDetails({
             disabled={loading}
             sx={{ flex: 1 }}
           >
-            Edit
+            {t('details.edit')}
           </Button>
         </Box>
       )}

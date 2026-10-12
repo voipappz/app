@@ -35,7 +35,7 @@ describe('Route details', () => {
     show();
     expect(screen.getByText('+97235551234').tagName).toBe('BDI');
     expect(screen.getByText('Main line')).toBeInTheDocument();
-    expect(screen.getByText('DST')).toBeInTheDocument();
+    expect(screen.getByText('Incoming number')).toBeInTheDocument();
     expect(screen.getByText('Calls go to')).toBeInTheDocument();
     expect(screen.getByTestId('routing-chain')).toHaveTextContent('ivr:i1');
     expect(screen.getByText('Carrier')).toBeInTheDocument();

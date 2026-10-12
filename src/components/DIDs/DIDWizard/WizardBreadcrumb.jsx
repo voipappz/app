@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Box, IconButton, Menu, MenuItem } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import {
   NavigateNext as ChevronIcon,
   MoreHoriz as MoreIcon,
@@ -48,6 +49,7 @@ const WizardBreadcrumb = ({ viewStack, onNavigateTo, compact = false }) => {
  * A single step needs no trail: the title already names it.
  */
 const CompactTrail = ({ viewStack, onNavigateTo }) => {
+  const { t } = useTranslation('routes');
   const [menuAnchor, setMenuAnchor] = useState(null);
   if (viewStack.length < 2) return null;
   const current = viewStack.length - 1;
@@ -60,10 +62,10 @@ const CompactTrail = ({ viewStack, onNavigateTo }) => {
   };
 
   return (
-    <Box component="nav" aria-label="Steps" className="wizard-breadcrumb-compact" data-testid="wizard-breadcrumb-compact">
+    <Box component="nav" aria-label={t('wizard.steps')} className="wizard-breadcrumb-compact" data-testid="wizard-breadcrumb-compact">
       {earlier.length > 0 && (
         <>
-          <IconButton size="small" aria-label="Earlier steps" className="wizard-crumb-more" onClick={(e) => setMenuAnchor(e.currentTarget)}>
+          <IconButton size="small" aria-label={t('wizard.earlierSteps')} className="wizard-crumb-more" onClick={(e) => setMenuAnchor(e.currentTarget)}>
             <MoreIcon fontSize="small" />
           </IconButton>
           <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)} {...menuProps(Z.L1)}>

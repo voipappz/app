@@ -1,0 +1,373 @@
+{
+  "search": {
+    "placeholder": "חיפוש לפי שם, או שדה:ערך (למשל enabled:true)",
+    "name": "שם",
+    "number": "מספר",
+    "type": "סוג",
+    "bridgeType": "סוג יעד",
+    "status": "סטטוס",
+    "enabled": "פעיל",
+    "disabled": "מושבת",
+    "application": "אפליקציה",
+    "provider": "ספק",
+    "tag": "תגית",
+    "tollFree": "חינם"
+  },
+  "toolbar": {
+    "providers": "ספקים",
+    "importCsv": "ייבוא CSV",
+    "addRoute": "הוספת ניתוב"
+  },
+  "table": {
+    "createdAt": "נוצר",
+    "updatedAt": "עודכן",
+    "enabled": "פעיל",
+    "name": "שם",
+    "application": "אפליקציה",
+    "type": "סוג",
+    "number": "מספר",
+    "bridge": "יעד",
+    "callsGoTo": "השיחות עוברות אל",
+    "provider": "ספק",
+    "tags": "תגיות",
+    "actions": "פעולות",
+    "empty": "לא נמצאו מספרים",
+    "editApplication": "עריכת האפליקציה {{name}}"
+  },
+  "row": {
+    "call": "חיוג אל {{number}}",
+    "editNumber": "עריכת מספר",
+    "editRoute": "עריכת ניתוב — פותח את תרשים הניתוב",
+    "routing": "ניתוב שיחות — תרשים",
+    "duplicate": "שכפול ניתוב",
+    "delete": "מחיקה"
+  },
+  "delete": {
+    "title": "מחיקת ניתוב",
+    "message": "למחוק את המספר <number/>?",
+    "description": "אי אפשר לבטל את הפעולה, והיא תשפיע על ניתוב השיחות."
+  },
+  "import": {
+    "title": "ייבוא ניתובים מקובץ CSV",
+    "entityName": "ניתובים"
+  },
+  "types": {
+    "trunk": "טראנק – שיחות יוצאות",
+    "dst": "מספר נכנס",
+    "src": "מספר המתקשר",
+    "feature": "תכונה (כללי)",
+    "userLogin": "תכונה – כניסת סוכן",
+    "userLogout": "תכונה – יציאת סוכן",
+    "userAvailable": "תכונה – סוכן זמין",
+    "userBreak": "תכונה – סוכן בהפסקה",
+    "userLoggedOut": "תכונה – סוכן מנותק",
+    "spy": "תכונה – האזנה (ריגול)",
+    "pickup": "תכונה – תפיסת שיחה (קבוצה)",
+    "pickupExtension": "תכונה – תפיסת שיחה במכשיר",
+    "followMe": "תכונה – הפעלת הפניית שיחות",
+    "followMeDisable": "תכונה – ביטול הפניית שיחות",
+    "callerIdReplace": "תכונה – החלפת זיהוי מתקשר",
+    "featureOther": "תכונה – {{name}}"
+  },
+  "typeHints": {
+    "trunk": "מספרים שמתחילים בקידומת נשלחים החוצה, כשהקידומת מוחלפת.",
+    "dst": "שיחות שמגיעות למספר הזה מנותבות ליעד.",
+    "src": "שיחות ממספר המתקשר הזה מנותבות ליעד.",
+    "userLogin": "קוד שהסוכן מחייג כדי להיכנס, למשל *40 ואחריו המשתמש.",
+    "userLogout": "קוד שהסוכן מחייג כדי לצאת.",
+    "userAvailable": "קוד שהסוכן מחייג כדי להיות זמין.",
+    "userBreak": "קוד שהסוכן מחייג כדי לצאת להפסקה.",
+    "userLoggedOut": "קוד שהסוכן מחייג כדי לסמן את עצמו כמנותק.",
+    "spy": "קוד ואחריו מכשיר, כדי להאזין לשיחה שלו.",
+    "pickup": "קוד שתופס שיחה שמצלצלת בקבוצה.",
+    "pickupExtension": "קוד ואחריו מכשיר, כדי לתפוס את השיחה המצלצלת שלו.",
+    "followMe": "קוד ואחריו מספר, כדי להפנות אליו את המכשיר הזה.",
+    "followMeDisable": "קוד שמבטל את הפניית השיחות.",
+    "callerIdReplace": "קוד ואחריו מספר, שמחויג עם זיהוי מתקשר מוחלף."
+  },
+  "details": {
+    "back": "חזרה",
+    "call": "חיוג",
+    "missing": "הניתוב הזה כבר לא קיים.",
+    "callsGoTo": "השיחות עוברות אל",
+    "notSet": "לא הוגדר",
+    "title": "פרטים",
+    "provider": "ספק",
+    "application": "אפליקציה",
+    "notes": "הערות",
+    "tags": "תגיות",
+    "created": "נוצר",
+    "updated": "עודכן",
+    "number": "מספר",
+    "delete": "מחיקה",
+    "duplicate": "שכפול ניתוב",
+    "edit": "עריכה"
+  },
+  "wizard": {
+    "close": "סגירה",
+    "steps": "שלבים",
+    "earlierSteps": "שלבים קודמים",
+    "help": {
+      "did": {
+        "create": {
+          "title": "יצירת ניתוב חדש",
+          "desc": "הגדרת מספר טלפון חדש (ניתוב) וקביעת הדרך שבה שיחות נכנסות מנותבות. ממלאים את הפרטים ואז בוחרים יעד שיטפל בשיחות."
+        },
+        "edit": {
+          "title": "עריכת ניתוב",
+          "desc": "עדכון ההגדרות של מספר הטלפון הזה. אפשר לשנות את השם, הניתוב והמטא-נתונים."
+        }
+      },
+      "ivr": {
+        "create": {
+          "title": "יצירת תפריט קולי",
+          "desc": "בניית תפריט קולי אינטראקטיבי. המתקשרים ישמעו הודעה וילחצו על מקשים כדי להגיע ליעדים שונים."
+        },
+        "edit": {
+          "title": "עריכת תפריט קולי",
+          "desc": "שינוי התפריט הקולי — עדכון ההודעה, זמן ההמתנה או ניתוב המקשים."
+        }
+      },
+      "queue": {
+        "create": {
+          "title": "יצירת תור",
+          "desc": "הגדרת תור שיחות. שיחות נכנסות יחולקו בין הסוכנים לפי האסטרטגיה שתבחרו."
+        },
+        "edit": {
+          "title": "עריכת תור",
+          "desc": "עדכון הסוכנים, האסטרטגיה או הודעות ההמתנה של התור."
+        }
+      },
+      "announcement": {
+        "create": {
+          "title": "יצירת הודעה מוקלטת",
+          "desc": "הקלטה או העלאה של הודעה קולית לשימוש בתפריטים קוליים, בתורים או כיעד עצמאי."
+        },
+        "edit": {
+          "title": "עריכת הודעה מוקלטת",
+          "desc": "עדכון קובץ השמע או ההגדרות של ההודעה."
+        }
+      },
+      "vml": {
+        "create": {
+          "title": "יצירת סקריפט VML",
+          "desc": "כתיבת סקריפט VoiceML ללוגיקה מתקדמת של זרימת שיחה."
+        },
+        "edit": {
+          "title": "עריכת סקריפט VML",
+          "desc": "שינוי סקריפט ה-VoiceML הזה."
+        }
+      },
+      "call_condition": {
+        "create": {
+          "title": "יצירת תנאי שיחה",
+          "desc": "הגדרת כללי ניתוב לפי זמן או תנאי. השיחות יינתבו אחרת בהתאם לתנאים שתקבעו."
+        },
+        "edit": {
+          "title": "עריכת תנאי שיחה",
+          "desc": "עדכון התנאים והניתוב של תנאי השיחה הזה."
+        }
+      },
+      "bot": {
+        "create": {
+          "title": "יצירת בוט",
+          "desc": "הגדרת בוט מבוסס בינה מלאכותית שיטפל בשיחות נכנסות בתשובות אוטומטיות."
+        },
+        "edit": {
+          "title": "עריכת בוט",
+          "desc": "עדכון ההגדרות וההתנהגות של הבוט."
+        }
+      },
+      "extension": {
+        "create": {
+          "title": "יצירת מכשיר",
+          "desc": "הוספת מכשיר SIP חדש למשתמש."
+        },
+        "edit": {
+          "title": "עריכת מכשיר",
+          "desc": "עדכון פרטי הכניסה וההגדרות של המכשיר."
+        }
+      }
+    }
+  },
+  "form": {
+    "enabled": "פעיל",
+    "section": {
+      "routeType": "סוג ניתוב",
+      "details": "פרטים",
+      "dialingRule": "כלל חיוג",
+      "sendTo": "שליחה אל",
+      "callRouting": "ניתוב שיחות",
+      "additional": "נוסף"
+    },
+    "routeType": "סוג ניתוב",
+    "typeHelp": "מה הניתוב הזה עושה",
+    "name": "שם",
+    "nameHelp": "שם ידידותי לזיהוי הניתוב",
+    "namePlaceholderTrunk": "למשל: ניידים בישראל",
+    "namePlaceholder": "למשל: קו המשרד הראשי",
+    "application": "אפליקציה",
+    "applicationHelp": "האפליקציה שהניתוב שייך אליה",
+    "applicationFallback": "אפליקציה ({{id}}...)",
+    "prefix": "קידומת",
+    "prefixHelp": "במה המספר המחויג מתחיל: ספרות, + * #",
+    "replaceWith": "החלפה ב-",
+    "replaceHelp": "תופסת את מקום הקידומת. אם משאירים ריק, הקידומת תוסר",
+    "rulePreview": "חיוג של <dialed/> שולח <sent/>",
+    "nothing": "(כלום)",
+    "phoneNumber": "מספר טלפון",
+    "numberHelp": "בפורמט E.164, למשל {{example}}",
+    "provider": "ספק",
+    "providerHelp": "ספק או טראנק SIP שמעביר שיחות למספר הזה",
+    "none": "ללא",
+    "sendToLabel": "שליחה אל",
+    "createSipProvider": "+ יצירת ספק SIP חדש",
+    "carrierByRate": "הספק נבחר לפי תעריף",
+    "sendToHelp": "ספק SIP (מרכזייה אחרת, ספק תקשורת), או הספק שהתעריף שלכם בוחר",
+    "editSipProvider": "עריכת ספק SIP",
+    "billingNote": "החיוב כרגיל: בתעריף צריך להיות מחיר למספר אחרי ההחלפה.",
+    "bridgeType": "סוג יעד",
+    "bridgeTypeHelp": "איך שיחות נכנסות מנותבות — תפריט קולי, תור, הודעה מוקלטת ועוד",
+    "destinationNumber": "מספר יעד",
+    "searchNumbers": "חיפוש מספרי טלפון...",
+    "destinationNumberHelp": "מחפשים מספר קיים או יוצרים חדש",
+    "destination": "יעד",
+    "destinationHelp": "בוחרים משאב קיים או יוצרים חדש",
+    "createNew": "+ יצירת {{type}} חדש",
+    "createNewTooltip": "יצירת {{type}} חדש",
+    "editType": "עריכת {{type}}",
+    "notes": "הערות",
+    "notesPlaceholder": "הערות אופציונליות על הניתוב",
+    "metaProperties": "מאפייני מטא",
+    "add": "הוספה",
+    "key": "מפתח",
+    "value": "ערך",
+    "keyPlaceholder": "למשל: department",
+    "valuePlaceholder": "למשל: sales",
+    "noMeta": "אין מאפייני מטא. לוחצים על \"הוספה\" כדי ליצור זוגות של מפתח וערך.",
+    "cancel": "ביטול",
+    "update": "עדכון ניתוב",
+    "create": "יצירת ניתוב",
+    "saveFailed": "שמירת הניתוב נכשלה",
+    "bridgeLabel": {
+      "queue": "תור",
+      "ivr": "תפריט קולי",
+      "vml": "סקריפט VML",
+      "call_condition": "תנאי שיחה",
+      "bot": "בוט",
+      "announcement": "הודעה מוקלטת",
+      "extension": "מכשיר"
+    },
+    "bridgeOption": {
+      "number": "מספר",
+      "announcement": "הודעה מוקלטת",
+      "vml": "VML",
+      "call_condition": "תנאי שיחה",
+      "que": "תור",
+      "queue": "תור",
+      "ivr": "תפריט קולי",
+      "bot": "בוט",
+      "extension": "מכשיר",
+      "conference": "ועידה"
+    },
+    "noResources": {
+      "queue": "אין תורים זמינים",
+      "ivr": "אין תפריטים קוליים זמינים",
+      "announcement": "אין הודעות מוקלטות זמינות",
+      "vml": "אין סקריפטי VML זמינים",
+      "call_condition": "אין תנאי שיחה זמינים",
+      "bot": "אין בוטים זמינים",
+      "other": "אין משאבים זמינים מסוג {{type}}"
+    },
+    "error": {
+      "nameRequired": "חובה למלא שם",
+      "prefixRequired": "חובה למלא קידומת",
+      "numberRequired": "חובה למלא מספר",
+      "prefixFormat": "ספרות, + * # בלבד (קידומת, לא תבנית)",
+      "replaceFormat": "ספרות, + * # בלבד",
+      "applicationRequired": "חובה לבחור אפליקציה",
+      "typeRequired": "חובה לבחור סוג",
+      "bridgeTypeRequired": "חובה לבחור סוג יעד",
+      "destinationNumberRequired": "חובה למלא מספר יעד",
+      "bridgeRequired": "חובה לבחור יעד",
+      "duplicateMeta": "אסור שיהיו מפתחות מטא כפולים",
+      "duplicateKey": "אסור שיהיו כפילויות"
+    }
+  },
+  "chain": {
+    "edit": "עריכה",
+    "editType": "עריכת {{type}}",
+    "editTypeNamed": "עריכת {{type}}: {{name}}",
+    "typeAndName": "{{type}}: {{name}}",
+    "arrow": "←",
+    "unknown": "לא ידוע",
+    "enabled": "פעיל",
+    "disabled": "מושבת",
+    "type": {
+      "queue": "תור",
+      "call_condition": "תנאי שיחה",
+      "ivr": "תפריט קולי",
+      "announcement": "הודעה מוקלטת",
+      "vml": "VML",
+      "bot": "בוט",
+      "extension": "מכשיר",
+      "number": "מספר"
+    },
+    "waitSeconds": "המתנה של {{n}} שנ׳",
+    "agentsOne": "סוכנים: {{n}}",
+    "agentsOther": "סוכנים: {{n}}",
+    "agents": "סוכנים",
+    "level": "רמה {{n}}",
+    "position": "מיקום {{n}}",
+    "showLess": "הצגת פחות",
+    "showAllAgents": "הצגת כל {{n}} הסוכנים",
+    "timeoutWait": "זמן המתנה ({{n}} שנ׳)",
+    "timeoutDestination": "יעד בתום זמן ההמתנה",
+    "greeting": "הודעת פתיחה",
+    "optionsOne": "אפשרויות: {{n}}",
+    "optionsOther": "אפשרויות: {{n}}",
+    "timeoutSeconds": "זמן המתנה: {{n}} שנ׳",
+    "menuOptions": "אפשרויות התפריט",
+    "more": "+{{n}} נוספים",
+    "fallback": "גיבוי",
+    "timeout": "זמן המתנה",
+    "invalidInput": "קלט לא תקין"
+  },
+  "duplicate": {
+    "title": "שכפול מספר",
+    "creatingCopyOf": "יוצרים עותק של:",
+    "unnamed": "ללא שם",
+    "bridge": "יעד:",
+    "newNumber": "מספר חדש",
+    "newNumberPlaceholder": "מספר ייחודי לניתוב החדש",
+    "newName": "שם חדש (אופציונלי)",
+    "newNamePlaceholder": "שם לניתוב החדש",
+    "newNameHelp": "אפשר להשאיר ריק לשם ברירת המחדל: עותק של {שם המקור}",
+    "copyOf": "עותק של {{name}}",
+    "numberExists": "המספר \"{{number}}\" כבר קיים. יש להשתמש במספר אחר.",
+    "numberRequired": "חובה למלא מספר",
+    "failed": "שכפול הניתוב נכשל",
+    "checking": "בודק אם המספר פנוי...",
+    "inUse": "המספר הזה כבר בשימוש",
+    "available": "המספר פנוי",
+    "numberHelp": "הניתוב החדש ייווצר עם המספר הזה (חייב להיות ייחודי)",
+    "noteTitle": "שימו לב: המספר המשוכפל ייווצר עם:",
+    "sameTypeApplication": "אותה אפליקציה ואותו סוג ({{type}})",
+    "sameBridge": "אותה הגדרת יעד ({{bridge}})",
+    "none": "ללא",
+    "disabledByDefault": "מושבת כברירת מחדל (לבטיחות)",
+    "cancel": "ביטול",
+    "validating": "בודק...",
+    "submit": "שכפול"
+  },
+  "numberSelector": {
+    "label": "מספר טלפון",
+    "placeholder": "חיפוש או הזנת מספר...",
+    "notFound": "המספר לא נמצא.",
+    "adding": "מוסיף...",
+    "addThis": "+ הוספת המספר הזה",
+    "selectApplication": "קודם בוחרים אפליקציה",
+    "searching": "מחפש...",
+    "typeToSearch": "מקלידים מספר כדי לחפש..."
+  }
+}

@@ -13,6 +13,7 @@ import Bdi from '../../i18n/Bdi';
 import { orEmpty } from '../shared/tableTheme.jsx';
 import { formatDate } from '../../utils/dateUtils';
 import { getEnabledChipProps, getTypeChipColor } from '../../utils/chipStyles';
+import { routeTypeLabel } from './routeTypes';
 
 // Bridge types whose name opens their editor from the list.
 const EDITABLE_BRIDGES = ['ivr', 'queue', 'announcement', 'vml', 'call_condition', 'bot', 'workflow'];
@@ -26,33 +27,33 @@ const bridgeName = (did) => orEmpty(did.bridge?.name || did.bridge?.number);
  * card carries no buttons: dates, application, tags and the row's actions are
  * desktop only. Values on a card are plain text, never a second tap target.
  */
-export function buildRouteColumns({ portalMode, isPhone, loading, canWriteRoute, actions }) {
+export function buildRouteColumns({ t, portalMode, isPhone, loading, canWriteRoute, actions }) {
   return [
     {
-      id: 'created_at', label: 'Created At', sortable: true, priority: 'desktopOnly',
+      id: 'created_at', label: t('table.createdAt'), sortable: true, priority: 'desktopOnly',
       render: (did) => <Typography variant="body2">{formatDate(did.created_at)}</Typography>,
     },
     {
-      id: 'updated_at', label: 'Updated At', sortable: true, priority: 'desktopOnly',
+      id: 'updated_at', label: t('table.updatedAt'), sortable: true, priority: 'desktopOnly',
       render: (did) => <Typography variant="body2">{formatDate(did.updated_at)}</Typography>,
     },
     {
-      id: 'enabled', label: 'Enabled', sortable: true, align: 'center', priority: 'meta',
+      id: 'enabled', label: t('table.enabled'), sortable: true, align: 'center', priority: 'meta',
       render: (did) => <Chip {...getEnabledChipProps(did.enabled)} />,
     },
     {
-      id: 'name', label: 'Name', sortable: true, priority: 'secondary',
+      id: 'name', label: t('table.name'), sortable: true, priority: 'secondary',
       render: (did) => (
         <Typography variant="body2" fontWeight={isPhone ? undefined : 600} component="span">{orEmpty(did.name)}</Typography>
       ),
     },
     // A portal user sees only their own environment: no column.
     ...(portalMode ? [] : [{
-      id: 'environment_name', label: 'Application', sortable: true, priority: 'desktopOnly',
+      id: 'environment_name', label: t('table.application'), sortable: true, priority: 'desktopOnly',
       render: (did) => (
         <EntityLink
           name={did.environment?.name || did.environment_name}
-          ariaLabel={`Edit application ${did.environment?.name || did.environment_name || ''}`}
+          ariaLabel={t('table.editApplication', { name: did.environment?.name || did.environment_name || '' })}
           onEdit={(did.environment?.uuid || did.environment_uuid) && canWriteRoute(did) ? () => actions.onEditApplication({
             uuid: did.environment?.uuid || did.environment_uuid,
             name: did.environment?.name || did.environment_name,
@@ -61,47 +62,47 @@ export function buildRouteColumns({ portalMode, isPhone, loading, canWriteRoute,
       ),
     }]),
     {
-      id: 'type', label: 'Type', sortable: true, priority: 'meta',
+      id: 'type', label: t('table.type'), sortable: true, priority: 'meta',
       render: (did) => (
-        <Chip label={did.type?.toUpperCase() || 'SIP'} size="small" color={getTypeChipColor(did.type || 'sip')} />
+        <Chip label={did.type ? routeTypeLabel(t, did.type) : 'SIP'} size="small" color={getTypeChipColor(did.type || 'sip')} />
       ),
     },
     {
-      id: 'number', label: 'Number', sortable: true, priority: 'primary',
+      id: 'number', label: t('table.number'), sortable: true, priority: 'primary',
       render: (did) => (isPhone
         ? <Bdi>{did.number}</Bdi>
-        : <CallableNumber number={did.number} onCall={actions.onCall} />),
+        : <CallableNumber t={t} number={did.number} onCall={actions.onCall} />),
     },
     // Bridge is polymorphic (queue/ivr/announcement/...) — no single
     // server-side column to order by, so no sort here.
     {
-      id: 'bridge', label: 'Bridge', cardLabel: 'Calls go to', priority: 'meta',
-      render: (did) => <BridgeCell did={did} isPhone={isPhone} canWrite={canWriteRoute(did)} onEditBridge={actions.onEditBridge} />,
+      id: 'bridge', label: t('table.bridge'), cardLabel: t('table.callsGoTo'), priority: 'meta',
+      render: (did) => <BridgeCell t={t} did={did} isPhone={isPhone} canWrite={canWriteRoute(did)} onEditBridge={actions.onEditBridge} />,
     },
     {
-      id: 'provider', label: 'Provider', priority: 'meta',
+      id: 'provider', label: t('table.provider'), priority: 'meta',
       render: (did) => <ProviderCell provider={did.provider} clickable={!portalMode && !isPhone} onOpen={actions.onOpenProvider} />,
     },
     {
-      id: 'tags', label: 'Tags', priority: 'desktopOnly',
+      id: 'tags', label: t('table.tags'), priority: 'desktopOnly',
       render: (did) => <MetaTagChips meta={did.meta} />,
     },
     {
-      id: 'actions', label: 'Actions', align: 'center', priority: 'desktopOnly',
+      id: 'actions', label: t('table.actions'), align: 'center', priority: 'desktopOnly',
       render: (did) => (
-        <RouteRowActions did={did} portalMode={portalMode} loading={loading} canWrite={canWriteRoute(did)} actions={actions} />
+        <RouteRowActions t={t} did={did} portalMode={portalMode} loading={loading} canWrite={canWriteRoute(did)} actions={actions} />
       ),
     },
   ];
 }
 
 // The number opens the phone with it (right-hand sidebar).
-function CallableNumber({ number, onCall }) {
+function CallableNumber({ t, number, onCall }) {
   return (
-    <Tooltip title={`Call ${number}`}>
+    <Tooltip title={t('row.call', { number })}>
       <ButtonBase
         onClick={(e) => { e.stopPropagation(); onCall(number); }}
-        aria-label={`Call ${number}`}
+        aria-label={t('row.call', { number })}
         sx={{ display: 'flex', alignItems: 'center', gap: 1, borderRadius: 1, px: 0.5, mx: -0.5, '&:hover': { bgcolor: 'action.hover' } }}
       >
         <PhoneIcon fontSize="small" color="primary" />
@@ -113,11 +114,11 @@ function CallableNumber({ number, onCall }) {
   );
 }
 
-function BridgeCell({ did, isPhone, canWrite, onEditBridge }) {
+function BridgeCell({ t, did, isPhone, canWrite, onEditBridge }) {
   if (!did.bridge || !did.bridge_type || did.bridge_type === 'number') {
     return (
       <Typography variant="body2" color="text.secondary" component="span">
-        {did.bridge_type === 'number' ? 'Number' : '-'}
+        {did.bridge_type === 'number' ? t('table.number') : '-'}
       </Typography>
     );
   }
@@ -166,7 +167,7 @@ function ProviderCell({ provider, clickable, onOpen }) {
 }
 
 // The row's buttons. Clicks stay here: they must not also select the row.
-function RouteRowActions({ did, portalMode, loading, canWrite, actions }) {
+function RouteRowActions({ t, did, portalMode, loading, canWrite, actions }) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
       {canWrite && (
@@ -174,21 +175,21 @@ function RouteRowActions({ did, portalMode, loading, canWrite, actions }) {
         // wizard instead — a customer editing their own number wants the
         // fields, and reaches the canvas through the Routing action beside
         // this one when they want the flow.
-        <Tooltip title={portalMode ? 'Edit Number' : 'Edit Route — opens its visual routing flow'}>
+        <Tooltip title={portalMode ? t('row.editNumber') : t('row.editRoute')}>
           <IconButton data-testid="edit-did-button" size="small" onClick={() => actions.onEdit(did)} disabled={loading}>
             <EditIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       )}
       {canWrite && portalMode && (
-        <Tooltip title="Call routing — visual flow">
+        <Tooltip title={t('row.routing')}>
           <IconButton data-testid="routing-did-button" size="small" onClick={() => actions.onOpenFlow(did)} disabled={loading}>
             <RoutingIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       )}
       {canWrite && (
-        <Tooltip title="Duplicate Route">
+        <Tooltip title={t('row.duplicate')}>
           <IconButton data-testid="duplicate-did-button" size="small" onClick={() => actions.onDuplicate(did)} disabled={loading}>
             <DuplicateIcon fontSize="small" />
           </IconButton>
@@ -196,7 +197,7 @@ function RouteRowActions({ did, portalMode, loading, canWrite, actions }) {
       )}
       <RowEventsButton subject="route" uuid={did.uuid} />
       {canWrite && (
-        <Tooltip title="Delete">
+        <Tooltip title={t('row.delete')}>
           <IconButton size="small" onClick={() => actions.onDelete(did)} disabled={loading} color="error">
             <DeleteIcon fontSize="small" />
           </IconButton>

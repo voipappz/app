@@ -31,6 +31,7 @@ import {
   Refresh as RefreshIcon,
   ContentCopy as CopyIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { extensionsApi } from '../../../services/api/extensionsApi';
 import DynamicProfileEditor from '../../common/DynamicProfileEditor/DynamicProfileEditor';
 import { Z } from '../../../utils/zIndex.js';
@@ -80,6 +81,7 @@ export const ExtensionBridge = ({
   zLayer = null,           // Optional z-index layer override (e.g. Z.L3 when nested)
   onDrillDown // eslint-disable-line @typescript-eslint/no-unused-vars
 }) => {
+  const { t } = useTranslation('bridges');
   const userSession = useIsUserSession();
   const layer = zLayer || Z.L2;
   const theme = useTheme();
@@ -174,11 +176,11 @@ export const ExtensionBridge = ({
   // Validate form
   const validateForm = () => {
     // Same rules as the CSV import (deviceRules.js); a password only for a new device.
-    const errors = deviceErrors(formData, { requirePassword: !isEditMode });
+    const errors = deviceErrors(formData, { requirePassword: !isEditMode, t });
 
     // Environment required if shown
     if (!hideEnvironment && !formData.environment_uuid) {
-      errors.environment_uuid = 'Application is required';
+      errors.environment_uuid = t('device.errors.application');
     }
 
     setFormErrors(errors);
@@ -253,7 +255,7 @@ export const ExtensionBridge = ({
         onClose();
       } catch (err) {
         console.error('Extension operation error:', err);
-        setError(err.message || (isEditMode ? 'Failed to update device' : 'Failed to create device'));
+        setError(err.message || (isEditMode ? t('device.errors.updateFailed') : t('device.errors.createFailed')));
       } finally {
         setInternalLoading(false);
       }
@@ -262,7 +264,7 @@ export const ExtensionBridge = ({
       try {
         await onSave(submitData);
       } catch (err) {
-        setError(err.message || (isEditMode ? 'Failed to update device' : 'Failed to create device'));
+        setError(err.message || (isEditMode ? t('device.errors.updateFailed') : t('device.errors.createFailed')));
       }
     }
   };
@@ -280,9 +282,10 @@ export const ExtensionBridge = ({
         {extension?.uuid && !isPhone && (
           <Grid size={12}>
             <TextField
-              label="UUID"
+              label={t('device.uuid')}
               fullWidth
               value={extension.uuid}
+              slotProps={{ htmlInput: { dir: 'ltr' } }}
               disabled
               InputProps={{
                 readOnly: true,
@@ -302,10 +305,10 @@ export const ExtensionBridge = ({
             {/* A portal user has one environment, their own: never a choice. */}
             {!userSession && (
             <FormControl fullWidth required error={!!formErrors.environment_uuid}>
-              <InputLabel>Application</InputLabel>
+              <InputLabel>{t('device.application')}</InputLabel>
               <Select
                 value={formData.environment_uuid}
-                label="Application"
+                label={t('device.application')}
                 onChange={(e) => handleChange('environment_uuid', e.target.value)}
                 disabled={loading || isEditMode}
                 MenuProps={{ style: { zIndex: layer.MENU }, PaperProps: { sx: { zIndex: layer.MENU } } }}
@@ -317,7 +320,7 @@ export const ExtensionBridge = ({
                 ))}
               </Select>
               {formErrors.environment_uuid && (
-                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ms: 1.5 }}>
                   {formErrors.environment_uuid}
                 </Typography>
               )}
@@ -329,14 +332,14 @@ export const ExtensionBridge = ({
         {/* Name */}
         <Grid size={12}>
           <TextField
-            label="Name"
+            label={t('device.name')}
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             required
             fullWidth
             error={!!formErrors.name}
-            helperText={formErrors.name || 'Display name for the device'}
-            placeholder="e.g., John Smith"
+            helperText={formErrors.name || t('device.nameHelp')}
+            placeholder={t('device.namePlaceholder')}
             disabled={loading}
           />
         </Grid>
@@ -344,14 +347,15 @@ export const ExtensionBridge = ({
         {/* Username (Device Number) */}
         <Grid size={12}>
           <TextField
-            label="Device Number"
+            label={t('device.number')}
             value={formData.username}
             onChange={(e) => handleChange('username', e.target.value)}
+            slotProps={{ htmlInput: { dir: 'ltr' } }}
             required
             fullWidth
             error={!!formErrors.username}
-            helperText={formErrors.username || 'Device number (e.g., 1001)'}
-            placeholder="e.g., 1001"
+            helperText={formErrors.username || t('device.numberHelp')}
+            placeholder={t('device.numberPlaceholder')}
             disabled={loading}
           />
         </Grid>
@@ -359,20 +363,20 @@ export const ExtensionBridge = ({
         {/* Password (SIP Password) */}
         <Grid size={12}>
           <SecretField
-            label="SIP Password"
+            label={t('device.password')}
             value={formData.password}
             onChange={(e) => handleChange('password', e.target.value)}
             fullWidth
             required={!isEditMode}
             revealed={showPassword}
             error={!!formErrors.password}
-            helperText={formErrors.password || (isEditMode ? 'Leave empty to keep current password' : 'Required for new devices')}
-            placeholder={isEditMode ? 'Leave empty to keep current' : 'Enter SIP password'}
+            helperText={formErrors.password || (isEditMode ? t('device.passwordKeepHelp') : t('device.passwordRequiredHelp'))}
+            placeholder={isEditMode ? t('device.passwordKeepPlaceholder') : t('device.passwordPlaceholder')}
             disabled={loading}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <Tooltip title={showPassword ? 'Hide password' : 'Show password'}>
+                  <Tooltip title={showPassword ? t('device.hidePassword') : t('device.showPassword')}>
                     <IconButton
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
@@ -381,7 +385,7 @@ export const ExtensionBridge = ({
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Copy password">
+                  <Tooltip title={t('device.copyPassword')}>
                     <IconButton
                       onClick={copyPassword}
                       edge="end"
@@ -391,7 +395,7 @@ export const ExtensionBridge = ({
                       <CopyIcon />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Generate password">
+                  <Tooltip title={t('device.generatePassword')}>
                     <IconButton
                       onClick={generatePassword}
                       edge="end"
@@ -417,20 +421,20 @@ export const ExtensionBridge = ({
                 disabled={loading}
               />
             }
-            label="Enabled"
+            label={t('device.enabled')}
           />
         </Grid>
 
         {/* Notes */}
         <Grid size={12}>
           <TextField
-            label="Notes"
+            label={t('device.notes')}
             value={formData.notes}
             onChange={(e) => handleChange('notes', e.target.value)}
             fullWidth
             multiline
             rows={2}
-            placeholder="Optional notes about this device"
+            placeholder={t('device.notesPlaceholder')}
             disabled={loading}
           />
         </Grid>
@@ -442,7 +446,7 @@ export const ExtensionBridge = ({
             profile={formData.profile}
             onChange={(profile) => handleChange('profile', profile)}
             disabled={loading}
-            title="Device Profile"
+            title={t('device.profile')}
             menuZIndex={layer.MENU}
           />
         </Grid>
@@ -461,7 +465,7 @@ export const ExtensionBridge = ({
   const actionButtons = (
     <>
       <Button onClick={onClose} disabled={loading}>
-        Cancel
+        {t('device.cancel')}
       </Button>
       <Button
         onClick={handleSubmit}
@@ -470,8 +474,8 @@ export const ExtensionBridge = ({
         startIcon={loading ? <CircularProgress size={20} /> : <PhoneIcon />}
       >
         {loading
-          ? (isEditMode ? 'Updating...' : 'Creating...')
-          : (isEditMode ? 'Update Device' : 'Create Device')
+          ? (isEditMode ? t('device.updating') : t('device.creating'))
+          : (isEditMode ? t('device.update') : t('device.create'))
         }
       </Button>
     </>
@@ -484,7 +488,7 @@ export const ExtensionBridge = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
           <PhoneIcon color="primary" />
           <Typography variant="h6">
-            {isEditMode ? 'Edit Device' : 'Create Device'}
+            {isEditMode ? t('device.titleEdit') : t('device.titleCreate')}
           </Typography>
         </Box>
 
@@ -510,7 +514,7 @@ export const ExtensionBridge = ({
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PhoneIcon color="primary" />
-            <Typography variant="h6">{isEditMode ? 'Edit Device' : 'Create Device'}</Typography>
+            <Typography variant="h6">{isEditMode ? t('device.titleEdit') : t('device.titleCreate')}</Typography>
           </Box>
           <IconButton onClick={onClose} size="small" disabled={loading}>
             <CloseIcon />

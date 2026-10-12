@@ -1,0 +1,373 @@
+{
+  "search": {
+    "placeholder": "Search by name, or use field:value (e.g. enabled:true)",
+    "name": "Name",
+    "number": "Number",
+    "type": "Type",
+    "bridgeType": "Bridge Type",
+    "status": "Status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "application": "Application",
+    "provider": "Provider",
+    "tag": "Tag",
+    "tollFree": "Toll Free"
+  },
+  "toolbar": {
+    "providers": "Providers",
+    "importCsv": "Import CSV",
+    "addRoute": "Add Route"
+  },
+  "table": {
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "enabled": "Enabled",
+    "name": "Name",
+    "application": "Application",
+    "type": "Type",
+    "number": "Number",
+    "bridge": "Bridge",
+    "callsGoTo": "Calls go to",
+    "provider": "Provider",
+    "tags": "Tags",
+    "actions": "Actions",
+    "empty": "No DIDs found",
+    "editApplication": "Edit application {{name}}"
+  },
+  "row": {
+    "call": "Call {{number}}",
+    "editNumber": "Edit Number",
+    "editRoute": "Edit Route — opens its visual routing flow",
+    "routing": "Call routing — visual flow",
+    "duplicate": "Duplicate Route",
+    "delete": "Delete"
+  },
+  "delete": {
+    "title": "Delete Route",
+    "message": "Are you sure you want to delete DID <number/>?",
+    "description": "This action cannot be undone and will affect call routing."
+  },
+  "import": {
+    "title": "Import Routes from CSV",
+    "entityName": "Routes"
+  },
+  "types": {
+    "trunk": "Trunk – outgoing calls",
+    "dst": "Incoming number",
+    "src": "Caller number",
+    "feature": "Feature (generic)",
+    "userLogin": "Feature – agent log in",
+    "userLogout": "Feature – agent log out",
+    "userAvailable": "Feature – agent available",
+    "userBreak": "Feature – agent on break",
+    "userLoggedOut": "Feature – agent logged out",
+    "spy": "Feature – listen in (spy)",
+    "pickup": "Feature – pick up (group)",
+    "pickupExtension": "Feature – pick up a device",
+    "followMe": "Feature – call forwarding on",
+    "followMeDisable": "Feature – call forwarding off",
+    "callerIdReplace": "Feature – caller ID replace",
+    "featureOther": "Feature – {{name}}"
+  },
+  "typeHints": {
+    "trunk": "Dialed numbers that start with a prefix are sent out, with the prefix rewritten.",
+    "dst": "Calls arriving on this number are routed to a destination.",
+    "src": "Calls from this caller number are routed to a destination.",
+    "userLogin": "A code the agent dials to log in, e.g. *40 followed by the user.",
+    "userLogout": "A code the agent dials to log out.",
+    "userAvailable": "A code the agent dials to become available.",
+    "userBreak": "A code the agent dials to go on break.",
+    "userLoggedOut": "A code the agent dials to set logged out.",
+    "spy": "A code followed by a device, to listen in on its call.",
+    "pickup": "A code that picks up a call ringing in the group.",
+    "pickupExtension": "A code followed by a device, to pick up its ringing call.",
+    "followMe": "A code followed by a number, to forward this device to it.",
+    "followMeDisable": "A code that turns call forwarding off.",
+    "callerIdReplace": "A code followed by a number, dialed with a replaced caller ID."
+  },
+  "details": {
+    "back": "Back",
+    "call": "Call",
+    "missing": "This route no longer exists.",
+    "callsGoTo": "Calls go to",
+    "notSet": "Not set",
+    "title": "Details",
+    "provider": "Provider",
+    "application": "Application",
+    "notes": "Notes",
+    "tags": "Tags",
+    "created": "Created",
+    "updated": "Updated",
+    "number": "Number",
+    "delete": "Delete",
+    "duplicate": "Duplicate Route",
+    "edit": "Edit"
+  },
+  "wizard": {
+    "close": "close",
+    "steps": "Steps",
+    "earlierSteps": "Earlier steps",
+    "help": {
+      "did": {
+        "create": {
+          "title": "Create a new Route",
+          "desc": "Set up a new phone number (Route) and configure how incoming calls are routed. Fill in the details below, then choose a bridge to handle calls."
+        },
+        "edit": {
+          "title": "Edit Route",
+          "desc": "Update the settings for this phone number. You can change the name, routing, and metadata."
+        }
+      },
+      "ivr": {
+        "create": {
+          "title": "Create IVR",
+          "desc": "Build an interactive voice menu. Callers will hear an announcement and press keys to reach different destinations."
+        },
+        "edit": {
+          "title": "Edit IVR",
+          "desc": "Modify this voice menu — update the announcement, timeout, or entry routing."
+        }
+      },
+      "queue": {
+        "create": {
+          "title": "Create Queue",
+          "desc": "Set up a call queue. Incoming calls will be distributed to agents based on the strategy you choose."
+        },
+        "edit": {
+          "title": "Edit Queue",
+          "desc": "Update this queue's agents, strategy, or hold announcements."
+        }
+      },
+      "announcement": {
+        "create": {
+          "title": "Create Announcement",
+          "desc": "Record or upload an audio announcement that can be used in IVRs, queues, or as a standalone destination."
+        },
+        "edit": {
+          "title": "Edit Announcement",
+          "desc": "Update this announcement's audio file or settings."
+        }
+      },
+      "vml": {
+        "create": {
+          "title": "Create VML Script",
+          "desc": "Write a VoiceML script for advanced call flow logic."
+        },
+        "edit": {
+          "title": "Edit VML Script",
+          "desc": "Modify this VoiceML script."
+        }
+      },
+      "call_condition": {
+        "create": {
+          "title": "Create Call Condition",
+          "desc": "Define time-based or conditional routing rules. Calls are routed differently based on the conditions you set."
+        },
+        "edit": {
+          "title": "Edit Call Condition",
+          "desc": "Update the conditions and routing for this call condition."
+        }
+      },
+      "bot": {
+        "create": {
+          "title": "Create Bot",
+          "desc": "Set up an AI bot to handle incoming calls with automated responses."
+        },
+        "edit": {
+          "title": "Edit Bot",
+          "desc": "Update this bot's configuration and behavior."
+        }
+      },
+      "extension": {
+        "create": {
+          "title": "Create Device",
+          "desc": "Add a new SIP device for a user."
+        },
+        "edit": {
+          "title": "Edit Device",
+          "desc": "Update this device's credentials and settings."
+        }
+      }
+    }
+  },
+  "form": {
+    "enabled": "Enabled",
+    "section": {
+      "routeType": "Route Type",
+      "details": "Details",
+      "dialingRule": "Dialing Rule",
+      "sendTo": "Send To",
+      "callRouting": "Call Routing",
+      "additional": "Additional"
+    },
+    "routeType": "Route Type",
+    "typeHelp": "What this Route does",
+    "name": "Name",
+    "nameHelp": "A friendly name to identify this Route",
+    "namePlaceholderTrunk": "e.g. Israel mobiles",
+    "namePlaceholder": "e.g. Main Office Line",
+    "application": "Application",
+    "applicationHelp": "The application this Route belongs to",
+    "applicationFallback": "Application ({{id}}...)",
+    "prefix": "Prefix",
+    "prefixHelp": "What the dialed number starts with: digits, + * #",
+    "replaceWith": "Replace with",
+    "replaceHelp": "Takes the prefix's place. Leave empty to remove it",
+    "rulePreview": "Dialing <dialed/> sends <sent/>",
+    "nothing": "(nothing)",
+    "phoneNumber": "Phone Number",
+    "numberHelp": "E.164 format, e.g. {{example}}",
+    "provider": "Provider",
+    "providerHelp": "SIP trunk / provider that delivers calls to this DID",
+    "none": "None",
+    "sendToLabel": "Send to",
+    "createSipProvider": "+ Create New SIP Provider",
+    "carrierByRate": "Carrier chosen by rate",
+    "sendToHelp": "A SIP provider (another PBX, a carrier), or the carrier your tariff picks",
+    "editSipProvider": "Edit SIP provider",
+    "billingNote": "Billed as usual: the tariff needs a rate for the rewritten number.",
+    "bridgeType": "Bridge Type",
+    "bridgeTypeHelp": "How incoming calls are routed — IVR, Queue, Announcement, etc.",
+    "destinationNumber": "Destination Number",
+    "searchNumbers": "Search phone numbers...",
+    "destinationNumberHelp": "Search for an existing number or create a new one",
+    "destination": "Destination",
+    "destinationHelp": "Select an existing resource or create a new one",
+    "createNew": "+ Create New {{type}}",
+    "createNewTooltip": "Create New {{type}}",
+    "editType": "Edit {{type}}",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes about this Route",
+    "metaProperties": "Meta Properties",
+    "add": "Add",
+    "key": "Key",
+    "value": "Value",
+    "keyPlaceholder": "e.g. department",
+    "valuePlaceholder": "e.g. sales",
+    "noMeta": "No meta properties. Click \"Add\" to create key-value pairs.",
+    "cancel": "Cancel",
+    "update": "Update Route",
+    "create": "Create Route",
+    "saveFailed": "Failed to save Route",
+    "bridgeLabel": {
+      "queue": "Queue",
+      "ivr": "IVR",
+      "vml": "VML Script",
+      "call_condition": "Call Condition",
+      "bot": "Bot",
+      "announcement": "Announcement",
+      "extension": "Device"
+    },
+    "bridgeOption": {
+      "number": "NUMBER",
+      "announcement": "ANNOUNCEMENT",
+      "vml": "VML",
+      "call_condition": "CALL CONDITION",
+      "que": "QUE",
+      "queue": "QUEUE",
+      "ivr": "IVR",
+      "bot": "BOT",
+      "extension": "EXTENSION",
+      "conference": "CONFERENCE"
+    },
+    "noResources": {
+      "queue": "No queues available",
+      "ivr": "No ivrs available",
+      "announcement": "No announcements available",
+      "vml": "No vmls available",
+      "call_condition": "No call_conditions available",
+      "bot": "No bots available",
+      "other": "No {{type}}s available"
+    },
+    "error": {
+      "nameRequired": "Name is required",
+      "prefixRequired": "Prefix is required",
+      "numberRequired": "Number is required",
+      "prefixFormat": "Only digits, + * # (a prefix, not a pattern)",
+      "replaceFormat": "Only digits, + * #",
+      "applicationRequired": "Application is required",
+      "typeRequired": "Type is required",
+      "bridgeTypeRequired": "Bridge type is required",
+      "destinationNumberRequired": "Destination number is required",
+      "bridgeRequired": "Bridge is required",
+      "duplicateMeta": "Duplicate meta keys are not allowed",
+      "duplicateKey": "Duplications are not allowed"
+    }
+  },
+  "chain": {
+    "edit": "Edit",
+    "editType": "Edit {{type}}",
+    "editTypeNamed": "Edit {{type}}: {{name}}",
+    "typeAndName": "{{type}}: {{name}}",
+    "arrow": "→",
+    "unknown": "Unknown",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "type": {
+      "queue": "Queue",
+      "call_condition": "Call Condition",
+      "ivr": "IVR Menu",
+      "announcement": "Announcement",
+      "vml": "VML",
+      "bot": "Bot",
+      "extension": "Device",
+      "number": "Number"
+    },
+    "waitSeconds": "{{n}}s wait",
+    "agentsOne": "{{n}} agent",
+    "agentsOther": "{{n}} agents",
+    "agents": "Agents",
+    "level": "Lvl {{n}}",
+    "position": "Pos {{n}}",
+    "showLess": "Show less",
+    "showAllAgents": "Show all {{n}} agents",
+    "timeoutWait": "Timeout ({{n}}s)",
+    "timeoutDestination": "Timeout Destination",
+    "greeting": "Greeting",
+    "optionsOne": "{{n}} option",
+    "optionsOther": "{{n}} options",
+    "timeoutSeconds": "Timeout: {{n}}s",
+    "menuOptions": "Menu Options",
+    "more": "+{{n}} more",
+    "fallback": "Fallback",
+    "timeout": "Timeout",
+    "invalidInput": "Invalid Input"
+  },
+  "duplicate": {
+    "title": "Duplicate DID",
+    "creatingCopyOf": "Creating a copy of:",
+    "unnamed": "Unnamed",
+    "bridge": "Bridge:",
+    "newNumber": "New Number",
+    "newNumberPlaceholder": "Enter unique number for the new Route",
+    "newName": "New Name (optional)",
+    "newNamePlaceholder": "Enter name for the new Route",
+    "newNameHelp": "Leave empty to use default: Copy of {original name}",
+    "copyOf": "Copy of {{name}}",
+    "numberExists": "Number \"{{number}}\" already exists. Please use a different number.",
+    "numberRequired": "Number is required",
+    "failed": "Failed to duplicate Route",
+    "checking": "Checking number availability...",
+    "inUse": "This number is already in use",
+    "available": "Number is available",
+    "numberHelp": "The new Route will be created with this number (must be unique)",
+    "noteTitle": "Note: The duplicated DID will be created with:",
+    "sameTypeApplication": "Same application and type ({{type}})",
+    "sameBridge": "Same bridge configuration ({{bridge}})",
+    "none": "none",
+    "disabledByDefault": "Disabled by default (for safety)",
+    "cancel": "Cancel",
+    "validating": "Validating...",
+    "submit": "Duplicate"
+  },
+  "numberSelector": {
+    "label": "Phone Number",
+    "placeholder": "Search or enter number...",
+    "notFound": "Number not found.",
+    "adding": "Adding...",
+    "addThis": "+ Add this number",
+    "selectApplication": "Select a application first",
+    "searching": "Searching...",
+    "typeToSearch": "Type a number to search..."
+  }
+}

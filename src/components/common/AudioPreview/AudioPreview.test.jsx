@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import i18n from '../../../i18n';
 import AudioPreview from './AudioPreview';
 import { getAnnouncement } from '../../../services/api/announcementsApi';
 
@@ -15,7 +16,7 @@ beforeEach(() => {
     this.dispatchEvent(new Event('pause'));
   });
 });
-afterEach(() => { vi.restoreAllMocks(); getAnnouncement.mockReset(); });
+afterEach(() => { vi.restoreAllMocks(); getAnnouncement.mockReset(); return i18n.changeLanguage('en'); });
 
 describe('AudioPreview', () => {
   it('downloads nothing until it is tapped', () => {
@@ -62,5 +63,13 @@ describe('AudioPreview', () => {
     render(<AudioPreview uuid="a1" />);
     fireEvent.click(screen.getByRole('button', { name: 'Play announcement' }));
     expect(await screen.findByText('Audio unavailable')).toBeInTheDocument();
+  });
+
+  it('speaks Hebrew', async () => {
+    await i18n.changeLanguage('he');
+    render(<AudioPreview src="https://files.example/a1.wav" />);
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('audio.play', { ns: 'bridges' }) }));
+    expect(await screen.findByRole('button', { name: i18n.t('audio.pause', { ns: 'bridges' }) })).toBeInTheDocument();
+    expect(i18n.t('audio.play', { ns: 'bridges' })).not.toBe('Play announcement');
   });
 });

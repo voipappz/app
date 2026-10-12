@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Box, CircularProgress, IconButton, LinearProgress, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { PlayArrow as PlayIcon, Pause as PauseIcon } from '@mui/icons-material';
 import { getAnnouncement } from '../../../services/api/announcementsApi';
 
@@ -29,6 +30,7 @@ const audioAddress = async (uuid) => {
  * @param {string} uuid - The announcement, to look the address up when `src` is missing.
  */
 export default function AudioPreview({ src, uuid }) {
+  const { t } = useTranslation('bridges');
   const audioRef = useRef(null);
   const [address, setAddress] = useState(src || null);
   const [status, setStatus] = useState('idle'); // idle | loading | playing | paused | error
@@ -77,7 +79,7 @@ export default function AudioPreview({ src, uuid }) {
   };
 
   if (status === 'error') {
-    return <Typography variant="caption" color="text.secondary" data-testid="audio-preview-error">Audio unavailable</Typography>;
+    return <Typography variant="caption" color="text.secondary" data-testid="audio-preview-error">{t('audio.unavailable')}</Typography>;
   }
 
   const progress = time.total ? (time.current / time.total) * 100 : 0;
@@ -86,7 +88,7 @@ export default function AudioPreview({ src, uuid }) {
     <Box data-testid="audio-preview" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }} onClick={(event) => event.stopPropagation()}>
       <IconButton
         onClick={toggle}
-        aria-label={status === 'playing' ? 'Pause' : 'Play announcement'}
+        aria-label={status === 'playing' ? t('audio.pause') : t('audio.play')}
         color="primary"
         sx={{ width: 44, height: 44, flexShrink: 0, bgcolor: 'action.hover' }}
       >
