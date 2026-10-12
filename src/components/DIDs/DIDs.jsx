@@ -1,44 +1,27 @@
 import {
   Box,
-  Button,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   IconButton,
-  Chip,
   Tooltip,
-  ButtonBase,
   Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   CircularProgress,
-  Skeleton,
-  TableSortLabel
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Phone as PhoneIcon,
   Upload as UploadIcon,
   Add as AddIcon,
-  ContentCopy as DuplicateIcon,
-  EventNote as EventsIcon,
-  AccountTree as RoutingIcon
 } from '@mui/icons-material';
+import { Trans, useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '../ui';
-import MetaTagChips from '../common/MetaTagChips/MetaTagChips';
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router';
 import { useDIDs } from './DIDs';
 import { usePermissions } from '../../hooks/usePermissions';
-import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
+import ResponsiveTable from '../shared/ResponsiveTable/ResponsiveTable.jsx';
+import { buildRouteColumns } from './routeColumns.jsx';
+import RouteDetails from './RouteDetails/RouteDetails.jsx';
+import { useRouteDetails } from './RouteDetails/useRouteDetails';
 import ToolDialog from '../TopBar/ToolDialog.jsx';
 import HubIcon from '@mui/icons-material/Hub';
 
@@ -49,7 +32,7 @@ import { useGlobalSearch } from '../../context/GlobalSearchContext';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 import useCentralizedSearch from '../../hooks/useCentralizedSearch';
 import { useCallNumber } from '../../hooks/useCallNumber';
-import { orEmpty, stripedTableRowSx } from '../shared/tableTheme.jsx';
+import Bdi from '../../i18n/Bdi';
 import DIDWizard, { useWizard } from './DIDWizard/DIDWizard.jsx';
 import ImportCSVDialog from '../common/ImportCSVDialog/ImportCSVDialog';
 import DuplicateDIDDialog from './DuplicateDIDDialog/DuplicateDIDDialog';
@@ -57,11 +40,7 @@ import { didsApi } from '../../services/api/routesApi';
 import { providersApi } from '../../services/api/providersApi';
 import { voipResourcesApi } from '../../services/api/voipResourcesApi';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
-import { formatDate } from '../../utils/dateUtils';
-import { getEnabledChipProps, getTypeChipColor } from '../../utils/chipStyles';
 import useEnvironmentEdit from '../../hooks/useEnvironmentEdit';
-import EntityLink from '../common/EntityLink/EntityLink.jsx';
-import EventsCountBadge from '../common/EventsCountBadge/EventsCountBadge.jsx';
 import EnvironmentDialog from '../Environments/EnvironmentDialog/EnvironmentDialog';
 import './DIDs.css';
 
@@ -77,15 +56,19 @@ import './DIDs.css';
  *   import). Everything a customer manages about their own numbers stays.
  */
 const DIDs = ({ portalMode = false }) => {
+  const { t } = useTranslation('routes');
   const navigate = useNavigate();
-  const { can, canAccess } = usePermissions();
+  const theme = useTheme();
+  // On a phone the workflow diagram is never offered: a route opens as a
+  // details page, and is edited in the full-screen form.
+  const isPhone = useMediaQuery(theme.breakpoints.down('md'));
+  const { can, canAccess, canRouteType } = usePermissions();
   const [providersOpen, setProvidersOpen] = useState(false);
-  // Portal users' ACLs carry no dids entry, so can('dids','write') is false for
-  // all of them — the screen would render as a read-only table with no Add,
-  // Edit, Duplicate or Delete. Portal access is granted at the route instead
-  // (DualProtectedRoute in App.jsx); the API still enforces its own rules on
-  // every request. The console keeps the real ACL check.
-  const canWrite = portalMode ? true : can('dids', 'write');
+  // Both sessions follow their ACL's `routes` grant (`dids` in older
+  // documents). A user's ACL may also limit the route types: a route of any
+  // other type is shown read-only. The API enforces the same on every request.
+  const canWrite = can('routes', 'write');
+  const canWriteRoute = useCallback((did) => canRouteType(did.type, 'write'), [canRouteType]);
   const callNumber = useCallNumber();
 
   // Import dialog state
@@ -134,6 +117,7 @@ const DIDs = ({ portalMode = false }) => {
 
   // Wizard state
   const wizardState = useWizard();
+  const routeDetails = useRouteDetails(dids);
 
   // Bridge from useDIDs dialog state → wizard
   // When handleOpenDialog finishes (sets dialogOpen=true, selectedDID),
@@ -196,18 +180,18 @@ const DIDs = ({ portalMode = false }) => {
 
   // Register search segments with GlobalSearchContext
   const didSegments = useMemo(() => [
-    { name: 'name', label: 'Name', type: 'string' },
-    { name: 'number', label: 'Number', type: 'string' },
-    { name: 'type', label: 'Type', type: 'select', data: [{ uuid: 'sip', name: 'SIP' }, { uuid: 'pstn', name: 'PSTN' }, { uuid: 'toll_free', name: 'Toll Free' }] },
-    { name: 'bridge_type', label: 'Bridge Type', type: 'select', data: (bridgeTypes || []).map(bt => ({ uuid: bt, name: bt })) },
-    { name: 'enabled', label: 'Status', type: 'select', data: [{ uuid: 'true', name: 'Enabled' }, { uuid: 'false', name: 'Disabled' }] },
+    { name: 'name', label: t('search.name'), type: 'string' },
+    { name: 'number', label: t('search.number'), type: 'string' },
+    { name: 'type', label: t('search.type'), type: 'select', data: [{ uuid: 'sip', name: 'SIP' }, { uuid: 'pstn', name: 'PSTN' }, { uuid: 'toll_free', name: t('search.tollFree') }] },
+    { name: 'bridge_type', label: t('search.bridgeType'), type: 'select', data: (bridgeTypes || []).map(bt => ({ uuid: bt, name: bt })) },
+    { name: 'enabled', label: t('search.status'), type: 'select', data: [{ uuid: 'true', name: t('search.enabled') }, { uuid: 'false', name: t('search.disabled') }] },
     // A portal user has one environment, their own: nothing to filter by.
-    ...(portalMode ? [] : [{ name: 'environment_uuid', label: 'Application', type: 'select', data: (environments || []).map(e => ({ uuid: e.uuid, name: e.name })) }]),
+    ...(portalMode ? [] : [{ name: 'environment_uuid', label: t('search.application'), type: 'select', data: (environments || []).map(e => ({ uuid: e.uuid, name: e.name })) }]),
     // Provider options never load in the portal (no ACL), and a select with no
     // options degrades to a free-text box — a filter that can't be filled.
-    ...(portalMode ? [] : [{ name: 'provider_uuid', label: 'Provider', type: 'select', data: (providers || []).map(p => ({ uuid: p.uuid, name: p.name })) }]),
-    { name: 'meta', label: 'Tag', type: 'tag', url: '/api/routes?action=meta_keys' },
-  ], [bridgeTypes, environments, providers, portalMode]);
+    ...(portalMode ? [] : [{ name: 'provider_uuid', label: t('search.provider'), type: 'select', data: (providers || []).map(p => ({ uuid: p.uuid, name: p.name })) }]),
+    { name: 'meta', label: t('search.tag'), type: 'tag', url: '/api/routes?action=meta_keys' },
+  ], [t, bridgeTypes, environments, providers, portalMode]);
 
   useEffect(() => {
     // Each surface registers under its own name. It is the search box's
@@ -251,8 +235,33 @@ const DIDs = ({ portalMode = false }) => {
   };
 
   /**
-   * Edit bridge inline via DIDWizard.
-   * Opens the wizard with the DID at level 1, then pushes the bridge as level 2.
+   * Edit one bridge on a route's path via DIDWizard: the DID at level 1, the
+   * bridge pushed as level 2. The details page passes any bridge it previews
+   * (an IVR key's queue, a fallback...), already fetched in full.
+   */
+  const openBridgeEditor = useCallback((did, bridgeType, bridgeData) => {
+    wizardState.open({
+      type: 'did',
+      mode: 'edit',
+      data: did,
+      label: `DID: ${did.name || did.number}`,
+      environmentUuid: did.environment_uuid || '',
+    });
+    const typeName = bridgeType === 'call_condition' ? 'Call Condition' : bridgeType.toUpperCase();
+    wizardState.pushView({
+      type: bridgeType,
+      mode: 'edit',
+      label: `${typeName}: ${bridgeData.name || bridgeData.uuid}`,
+      data: { ...bridgeData, environment_uuid: did.environment_uuid },
+      environmentUuid: did.environment_uuid || '',
+      onResult: async () => {
+        fetchDIDs();
+      },
+    });
+  }, [wizardState, fetchDIDs]);
+
+  /**
+   * Edit the route's own bridge (the list's Bridge link).
    */
   const handleEditBridge = useCallback(async (did) => {
     if (!did.bridge || !did.bridge_type) return;
@@ -282,28 +291,35 @@ const DIDs = ({ portalMode = false }) => {
       if (found) fullBridgeData = found;
     } catch { /* fall back to did.bridge */ }
 
-    // Open wizard with DID at level 1
-    wizardState.open({
-      type: 'did',
-      mode: 'edit',
-      data: did,
-      label: `DID: ${did.name || did.number}`,
-      environmentUuid: did.environment_uuid || '',
-    });
+    openBridgeEditor(did, did.bridge_type, { uuid: bridgeUuid, ...fullBridgeData });
+  }, [bridgeTypes, openBridgeEditor]);
 
-    // Push bridge view at level 2
-    const typeName = did.bridge_type === 'call_condition' ? 'Call Condition' : did.bridge_type.toUpperCase();
-    wizardState.pushView({
-      type: did.bridge_type,
-      mode: 'edit',
-      label: `${typeName}: ${fullBridgeData.name || bridgeUuid}`,
-      data: { ...fullBridgeData, environment_uuid: did.environment_uuid },
-      environmentUuid: did.environment_uuid || '',
-      onResult: async () => {
-        fetchDIDs();
-      },
-    });
-  }, [bridgeTypes, wizardState, fetchDIDs]);
+  // A deleted route has no details left to show.
+  const handleConfirmDelete = useCallback(async () => {
+    const deleting = didToDelete;
+    await handleDeleteDID();
+    if (deleting && routeDetails.uuid === (deleting.uuid || deleting.id)) routeDetails.close();
+  }, [didToDelete, handleDeleteDID, routeDetails]);
+
+  const columns = useMemo(() => buildRouteColumns({
+    t,
+    portalMode,
+    isPhone,
+    loading,
+    canWriteRoute,
+    actions: {
+      onCall: callNumber,
+      onEditApplication: handleEnvEdit,
+      onEditBridge: handleEditBridge,
+      onOpenProvider: (provider) => navigate(`/providers?id=${provider.uuid}`),
+      // Admin edits a Route on the routing canvas; the portal opens the wizard.
+      onEdit: (did) => (portalMode ? handleOpenDialog(did) : navigate(`/routes?did=${did.uuid || did.id}`)),
+      onOpenFlow: (did) => navigate(`/routes?did=${did.uuid || did.id}`),
+      onDuplicate: handleOpenDuplicateDialog,
+      onDelete: handleOpenDeleteDialog,
+    },
+  }), [t, portalMode, isPhone, loading, canWriteRoute, callNumber, handleEnvEdit, handleEditBridge, navigate,
+    handleOpenDialog, handleOpenDuplicateDialog, handleOpenDeleteDialog]);
 
   // Import handlers
   const handleOpenImportDialog = useCallback(() => {
@@ -348,6 +364,7 @@ const DIDs = ({ portalMode = false }) => {
       {/* Header: Search + Add Button on one line */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
+          {/* No room for the date presets on a phone; the cards carry no dates either. */}
           <CentralizedSearch
             segments={didSegments}
             currentSearchParams={centralizedSearch.currentSearchParams}
@@ -359,18 +376,19 @@ const DIDs = ({ portalMode = false }) => {
             onRefresh={centralizedSearch.handleRefresh}
             quickSearchText={centralizedSearch.quickSearchText}
             onQuickSearchChange={centralizedSearch.handleQuickSearchChange}
-            placeholder="Search by name, or use field:value (e.g. enabled:true)"
+            placeholder={t('search.placeholder')}
+            hideDateRange={isPhone}
           />
         </Box>
         {!portalMode && canAccess('providers') && (
-          <Tooltip title="Providers">
-            <IconButton size="small" aria-label="Providers" onClick={() => setProvidersOpen(true)}>
+          <Tooltip title={t('toolbar.providers')}>
+            <IconButton size="small" aria-label={t('toolbar.providers')} onClick={() => setProvidersOpen(true)}>
               <HubIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
         {canWrite && !portalMode && (
-          <Tooltip title="Import CSV">
+          <Tooltip title={t('toolbar.importCsv')}>
             <IconButton
               size="small"
               onClick={handleOpenImportDialog}
@@ -380,7 +398,7 @@ const DIDs = ({ portalMode = false }) => {
           </Tooltip>
         )}
         {canWrite && (
-          <Tooltip title="Add Route">
+          <Tooltip title={t('toolbar.addRoute')}>
             <IconButton
               size="small"
               onClick={() => handleOpenDialog()}
@@ -408,304 +426,26 @@ const DIDs = ({ portalMode = false }) => {
         >
           {/* DIDs Table */}
           <Box sx={{ flexGrow: 1, overflow: 'auto' }} data-tour="did-list">
-            <TableContainer>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'created_at'}
-                      direction={sortBy === 'created_at' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('created_at')}
-                    >
-                      Created At
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'updated_at'}
-                      direction={sortBy === 'updated_at' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('updated_at')}
-                    >
-                      Updated At
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell align="center">
-                    <TableSortLabel
-                      active={sortBy === 'enabled'}
-                      direction={sortBy === 'enabled' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('enabled')}
-                    >
-                      Enabled
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'name'}
-                      direction={sortBy === 'name' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('name')}
-                    >
-                      Name
-                    </TableSortLabel>
-                  </TableCell>
-                  {/* A portal user sees only their own environment: no column. */}
-                  {!portalMode && (
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'environment_name'}
-                      direction={sortBy === 'environment_name' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('environment_name')}
-                    >
-                      Application
-                    </TableSortLabel>
-                  </TableCell>
-                  )}
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'type'}
-                      direction={sortBy === 'type' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('type')}
-                    >
-                      Type
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>
-                    <TableSortLabel
-                      active={sortBy === 'number'}
-                      direction={sortBy === 'number' ? sortOrder : 'asc'}
-                      onClick={() => handleSortChange('number')}
-                    >
-                      Number
-                    </TableSortLabel>
-                  </TableCell>
-                  {/* Bridge is polymorphic (queue/ivr/announcement/...) — no
-                      single server-side column to order by, so no sort here. */}
-                  <TableCell>Bridge</TableCell>
-                  <TableCell>Provider</TableCell>
-                  <TableCell>Tags</TableCell>
-                  <TableCell align="center">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading && dids.length === 0 ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {Array.from({ length: portalMode ? 10 : 11 }).map((__, j) => (
-                        <TableCell key={j}><Skeleton height={20} /></TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : dids.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={portalMode ? 10 : 11} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No DIDs found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  dids.map((did) => {
-                    const didId = did.id || did.uuid;
-                    const isSelected = selectedDIDId === didId;
-
-                    return (
-                      <TableRow
-                        key={didId}
-                        hover
-                        selected={isSelected}
-                        sx={{
-                          ...stripedTableRowSx,
-                          cursor: 'pointer',
-                          '&.Mui-selected': {
-                            bgcolor: '#e3f2fd !important'
-                          }
-                        }}
-                        onClick={() => handleSelectDID(didId)}
-                      >
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatDate(did.created_at)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {formatDate(did.updated_at)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Chip {...getEnabledChipProps(did.enabled)} />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={600}>
-                            {orEmpty(did.name)}
-                          </Typography>
-                        </TableCell>
-                        {!portalMode && (
-                        <TableCell>
-                          <EntityLink
-                            name={did.environment?.name || did.environment_name}
-                            ariaLabel={`Edit application ${did.environment?.name || did.environment_name || ''}`}
-                            onEdit={(did.environment?.uuid || did.environment_uuid) && canWrite ? () => handleEnvEdit({
-                              uuid: did.environment?.uuid || did.environment_uuid,
-                              name: did.environment?.name || did.environment_name,
-                            }) : undefined}
-                          />
-                        </TableCell>
-                        )}
-                        <TableCell>
-                          <Chip
-                            label={did.type?.toUpperCase() || 'SIP'}
-                            size="small"
-                            color={getTypeChipColor(did.type || 'sip')}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {/* The number opens the phone with it (right-hand sidebar). */}
-                          <Tooltip title={`Call ${did.number}`}>
-                            <ButtonBase
-                              onClick={(e) => { e.stopPropagation(); callNumber(did.number); }}
-                              aria-label={`Call ${did.number}`}
-                              sx={{ display: 'flex', alignItems: 'center', gap: 1, borderRadius: 1, px: 0.5, mx: -0.5, '&:hover': { bgcolor: 'action.hover' } }}
-                            >
-                              <PhoneIcon fontSize="small" color="primary" />
-                              <Typography variant="body2" fontWeight={600}>
-                                {did.number}
-                              </Typography>
-                            </ButtonBase>
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          {did.bridge && did.bridge_type && did.bridge_type !== 'number' ? (
-                            // All bridge types except number support edit mode (write only)
-                            canWrite && ['ivr', 'queue', 'announcement', 'vml', 'call_condition', 'bot', 'workflow'].includes(did.bridge_type) ? (
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  borderBottom: '1px dotted grey',
-                                  cursor: 'pointer',
-                                  display: 'inline-block',
-                                  maxWidth: 200,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  '&:hover': {
-                                    color: 'primary.main'
-                                  }
-                                }}
-                                onClick={() => handleEditBridge(did)}
-                              >
-                                {orEmpty(did.bridge.name || did.bridge.number)}
-                              </Typography>
-                            ) : (
-                              <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
-                                {orEmpty(did.bridge.name || did.bridge.number)}
-                              </Typography>
-                            )
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              {did.bridge_type === 'number' ? 'Number' : '-'}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {did.provider ? (
-                            <Chip
-                              label={did.provider.name}
-                              size="small"
-                              variant="outlined"
-                              // The portal has no /providers screen to land on,
-                              // so the chip is just a label there.
-                              onClick={portalMode ? undefined : (e) => { e.stopPropagation(); navigate(`/providers?id=${did.provider.uuid}`); }}
-                              sx={portalMode
-                                ? { maxWidth: 120 }
-                                : { cursor: 'pointer', maxWidth: 120, '&:hover': { borderColor: 'primary.main' } }}
-                            />
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">-</Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <MetaTagChips meta={did.meta} />
-                        </TableCell>
-                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                            {canWrite && (
-                              // Admin edits a Route on the routing canvas. The
-                              // portal opens the wizard instead — a customer
-                              // editing their own number wants the fields, and
-                              // reaches the canvas through the Routing action
-                              // beside this one when they want the flow.
-                              <Tooltip title={portalMode ? 'Edit Number' : 'Edit Route — opens its visual routing flow'}>
-                                <IconButton
-                                  data-testid="edit-did-button"
-                                  size="small"
-                                  onClick={() => portalMode
-                                    ? handleOpenDialog(did)
-                                    : navigate(`/routes?did=${did.uuid || did.id}`)}
-                                  disabled={loading}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {canWrite && portalMode && (
-                              <Tooltip title="Call routing — visual flow">
-                                <IconButton
-                                  data-testid="routing-did-button"
-                                  size="small"
-                                  onClick={() => navigate(`/routes?did=${did.uuid || did.id}`)}
-                                  disabled={loading}
-                                >
-                                  <RoutingIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {canWrite && (
-                              <Tooltip title="Duplicate Route">
-                                <IconButton
-                                  data-testid="duplicate-did-button"
-                                  size="small"
-                                  onClick={() => handleOpenDuplicateDialog(did)}
-                                  disabled={loading}
-                                >
-                                  <DuplicateIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            <RowEventsButton subject="route" uuid={did.uuid} />
-                            {canWrite && (
-                              <Tooltip title="Delete">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleOpenDeleteDialog(did)}
-                                  disabled={loading}
-                                  color="error"
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Pagination */}
-          <TablePagination
-            component="div"
-            count={totalCount}
-            page={page}
-            onPageChange={handlePageChange}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleRowsPerPageChange}
-            rowsPerPageOptions={[10, 25, 50, 100]}
-            sx={{ borderTop: '1px solid var(--mui-palette-divider)' }}
-          />
+            <ResponsiveTable
+              columns={columns}
+              rows={dids}
+              getRowId={(did) => did.id || did.uuid}
+              onRowClick={(did) => (isPhone ? routeDetails.open(did) : handleSelectDID(did.id || did.uuid))}
+              selectedRowId={selectedDIDId}
+              rowSx={{ '&.Mui-selected': { bgcolor: '#e3f2fd !important' } }}
+              loading={loading}
+              emptyMessage={t('table.empty')}
+              sortBy={sortBy}
+              sortDirection={sortOrder}
+              onSort={handleSortChange}
+              page={page}
+              rowsPerPage={rowsPerPage}
+              count={totalCount}
+              onPageChange={handlePageChange}
+              onRowsPerPageChange={handleRowsPerPageChange}
+              rowsPerPageOptions={[10, 25, 50, 100]}
+              data-testid="routes-table"
+            />
         </Box>
       </Paper>
       </Box>
@@ -722,16 +462,33 @@ const DIDs = ({ portalMode = false }) => {
         wizardState={wizardState}
       />
 
+      {/* A route's details on a phone, in place of the workflow diagram. */}
+      <RouteDetails
+        open={Boolean(routeDetails.uuid)}
+        did={routeDetails.did}
+        missing={routeDetails.missing}
+        portalMode={portalMode}
+        canWrite={Boolean(routeDetails.did) && canWriteRoute(routeDetails.did)}
+        loading={loading}
+        onClose={routeDetails.close}
+        onEdit={handleOpenDialog}
+        onDuplicate={handleOpenDuplicateDialog}
+        onDelete={handleOpenDeleteDialog}
+        onEditBridge={(bridgeType, bridgeData) => openBridgeEditor(routeDetails.did, bridgeType, bridgeData)}
+        onOpenProvider={(provider) => navigate(`/providers?id=${provider.uuid}`)}
+        onCall={callNumber}
+      />
+
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
         onClose={handleCloseDeleteDialog}
-        onConfirm={handleDeleteDID}
+        onConfirm={handleConfirmDelete}
         loading={loading}
-        title="Delete Route"
-        message={<Typography>Are you sure you want to delete DID{' '}
-          <strong>{(didToDelete)?.number}</strong>?</Typography>}
-        description="This action cannot be undone and will affect call routing."
+        title={t('delete.title')}
+        message={<Typography><Trans t={t} i18nKey="delete.message"
+          components={{ number: <strong><Bdi>{(didToDelete)?.number}</Bdi></strong> }} /></Typography>}
+        description={t('delete.description')}
       />
 
       {/* Duplicate DID Dialog */}
@@ -756,7 +513,7 @@ const DIDs = ({ portalMode = false }) => {
       )}
 
       {!portalMode && (
-        <ToolDialog title="Providers" open={providersOpen} onClose={() => setProvidersOpen(false)} confirmClose>
+        <ToolDialog title={t('toolbar.providers')} open={providersOpen} onClose={() => setProvidersOpen(false)} confirmClose>
           <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
             <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflow: 'auto' }}>
               <Providers />
@@ -772,8 +529,8 @@ const DIDs = ({ portalMode = false }) => {
           open={importDialogOpen}
           onClose={handleCloseImportDialog}
           onImport={handleImportCSV}
-          title="Import Routes from CSV"
-          entityName="Routes"
+          title={t('import.title')}
+          entityName={t('import.entityName')}
           environments={environments}
           requireEnvironment={true}
           onSuccess={handleImportSuccess}

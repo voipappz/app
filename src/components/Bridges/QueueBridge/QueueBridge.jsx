@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -35,6 +34,9 @@ import {
   Edit as EditIcon,
   RssFeed as RssFeedIcon
 } from '@mui/icons-material';
+import { Trans, useTranslation } from 'react-i18next';
+import { ResponsiveDialog as Dialog } from '../../ui'; // full screen on a phone
+import Bdi from '../../../i18n/Bdi';
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import { queuesApi } from '../../../services/api/queuesApi';
 import { bridgeApi } from '../../../services/api/bridgeApi';
@@ -75,6 +77,7 @@ export const QueueBridge = ({
   zLayer = null,             // Optional z-index layer override (e.g. Z.L3 when nested)
   onDrillDown                // Optional drill-down handler for nested creation
 }) => {
+  const { t } = useTranslation('bridges');
   const userSession = useIsUserSession();
   const layer = zLayer || Z.L2;
   const { selectedEnvironments } = useCustomerEnvironment();
@@ -621,17 +624,17 @@ export const QueueBridge = ({
   // grey "Offline" otherwise; "No ext" when the user has no extension resource.
   const RegBadge = ({ extName }) => {
     if (!extName) {
-      return <Chip size="small" label="No ext" variant="outlined"
+      return <Chip size="small" label={t('queue.agents.noExt')} variant="outlined"
         sx={{ height: 19, fontSize: '0.62rem', color: 'text.disabled', '& .MuiChip-label': { px: 0.8 } }} />;
     }
     const reg = isExtRegistered(extName);
     return (
-      <Tooltip title={`Ext ${extName} — ${reg ? 'Registered (online)' : 'Not registered (offline)'}`}>
-        <Chip size="small" icon={<RssFeedIcon sx={{ fontSize: 12 }} />} label={reg ? 'Registered' : 'Offline'}
+      <Tooltip title={<Trans t={t} i18nKey="queue.agents.extStatus" values={{ status: reg ? t('queue.agents.registeredOnline') : t('queue.agents.offlineStatus') }} components={{ ext: <Bdi>{extName}</Bdi> }} />}>
+        <Chip size="small" icon={<RssFeedIcon sx={{ fontSize: 12 }} />} label={reg ? t('queue.agents.registered') : t('queue.agents.offline')}
           sx={{ height: 19, fontSize: '0.62rem', fontWeight: 600,
             bgcolor: reg ? 'rgba(41,171,135,.14)' : 'rgba(0,0,0,.06)',
             color: reg ? '#1f8a6d' : 'text.secondary',
-            '& .MuiChip-icon': { color: reg ? '#29AB87' : '#b0b0b0', ml: 0.6 },
+            '& .MuiChip-icon': { color: reg ? '#29AB87' : '#b0b0b0', ms: 0.6 },
             '& .MuiChip-label': { px: 0.7 } }} />
       </Tooltip>
     );
@@ -683,27 +686,27 @@ export const QueueBridge = ({
     const errors = {};
 
     if (!formData.name?.trim()) {
-      errors.name = 'Name is required';
+      errors.name = t('queue.errors.name');
     }
 
     if (!formData.environment_uuid) {
-      errors.environment_uuid = 'Application is required';
+      errors.environment_uuid = t('queue.errors.application');
     }
 
     if (!formData.strategy) {
-      errors.strategy = 'Strategy is required';
+      errors.strategy = t('queue.errors.strategy');
     }
 
     if (!formData.hold_announcement_uuid) {
-      errors.hold_announcement_uuid = 'Hold Announcement is required';
+      errors.hold_announcement_uuid = t('queue.errors.holdAnnouncement');
     }
 
     if (!formData.max_wait_time_bridge_type) {
-      errors.max_wait_time_bridge_type = 'Max Wait Time Bridge Type is required';
+      errors.max_wait_time_bridge_type = t('queue.errors.bridgeType');
     }
 
     if (formData.max_wait_time_bridge_type && !formData.max_wait_time_bridge_uuid) {
-      errors.max_wait_time_bridge_uuid = 'Max Wait Time Bridge is required';
+      errors.max_wait_time_bridge_uuid = t('queue.errors.bridge');
     }
 
     setFormErrors(errors);
@@ -749,7 +752,7 @@ export const QueueBridge = ({
       onClose();
     } catch (err) {
       console.error(`Queue ${mode} error:`, err);
-      setError(err.message || `Failed to ${mode} queue`);
+      setError(err.message || (mode === 'edit' ? t('queue.errors.updateFailed') : t('queue.errors.createFailed')));
     } finally {
       setLoading(false);
     }
@@ -767,9 +770,10 @@ export const QueueBridge = ({
         {queue?.uuid && (
           <Grid size={12}>
             <TextField
-              label="UUID"
+              label={t('queue.uuid')}
               fullWidth
               value={queue.uuid}
+              slotProps={{ htmlInput: { dir: 'ltr' } }}
               disabled
               InputProps={{
                 readOnly: true,
@@ -783,7 +787,7 @@ export const QueueBridge = ({
         {/* Enabled Toggle */}
         <Grid size={12}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body1">Enabled</Typography>
+            <Typography variant="body1">{t('queue.enabled')}</Typography>
             <Switch
               checked={formData.enabled}
               onChange={(e) => handleChange('enabled', e.target.checked)}
@@ -795,14 +799,14 @@ export const QueueBridge = ({
         {/* Name */}
         <Grid size={12}>
           <TextField
-            label="Name"
+            label={t('queue.name')}
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             required
             fullWidth
             error={!!formErrors.name}
             helperText={formErrors.name}
-            placeholder="Enter queue name"
+            placeholder={t('queue.namePlaceholder')}
             disabled={loading}
           />
         </Grid>
@@ -810,22 +814,22 @@ export const QueueBridge = ({
         {/* Strategy */}
         <Grid size={12}>
           <FormControl fullWidth disabled={loading || strategiesLoading} required error={!!formErrors.strategy}>
-            <InputLabel required>Strategy</InputLabel>
+            <InputLabel required>{t('queue.strategy')}</InputLabel>
             <Select
               value={formData.strategy}
               onChange={(e) => handleChange('strategy', e.target.value)}
-              label="Strategy"
+              label={t('queue.strategy')}
               MenuProps={menuProps(layer)}
             >
-              <MenuItem value="">Select Strategy...</MenuItem>
+              <MenuItem value="">{t('queue.selectStrategy')}</MenuItem>
               {strategiesLoading ? (
-                <MenuItem disabled>Loading...</MenuItem>
+                <MenuItem disabled>{t('queue.loading')}</MenuItem>
               ) : strategies.length === 0 ? (
-                <MenuItem disabled>No strategies available</MenuItem>
+                <MenuItem disabled>{t('queue.noStrategies')}</MenuItem>
               ) : (
                 strategies.map(strategy => (
                   <MenuItem key={strategy} value={strategy}>
-                    {strategy.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    {t(`queue.strategies.${strategy}`, { defaultValue: strategy.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) })}
                   </MenuItem>
                 ))
               )}
@@ -839,14 +843,14 @@ export const QueueBridge = ({
             {/* A portal user has one environment, their own: never a choice. */}
             {!userSession && (
             <FormControl fullWidth required error={!!formErrors.environment_uuid} disabled={loading}>
-              <InputLabel required>Application</InputLabel>
+              <InputLabel required>{t('queue.application')}</InputLabel>
               <Select
                 value={formData.environment_uuid}
                 onChange={(e) => handleEnvironmentChange(e.target.value)}
-                label="Application"
+                label={t('queue.application')}
                 MenuProps={menuProps(layer)}
               >
-                <MenuItem value="">Select Application...</MenuItem>
+                <MenuItem value="">{t('queue.selectApplication')}</MenuItem>
                 {selectedEnvironments?.map(env => (
                   <MenuItem key={env.uuid} value={env.uuid}>{env.name}</MenuItem>
                 ))}
@@ -860,16 +864,16 @@ export const QueueBridge = ({
         <Grid size={12}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <FormControl fullWidth disabled={loading || announcementsLoading}>
-              <InputLabel>Intro Announcement</InputLabel>
+              <InputLabel>{t('queue.introAnnouncement')}</InputLabel>
               <Select
                 value={formData.intro_announcement_uuid}
                 onChange={(e) => handleChange('intro_announcement_uuid', e.target.value)}
-                label="Intro Announcement"
+                label={t('queue.introAnnouncement')}
                 MenuProps={menuProps(layer)}
               >
-                <MenuItem value="">None</MenuItem>
+                <MenuItem value="">{t('queue.none')}</MenuItem>
                 <MenuItem onMouseDown={(e) => handleCreateNewAnnouncement(e, 'intro')} sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                  + Create New
+                  {t('queue.createNew')}
                 </MenuItem>
                 {announcements.map(a => (
                   <MenuItem key={a.uuid} value={a.uuid}>{a.name}</MenuItem>
@@ -877,7 +881,7 @@ export const QueueBridge = ({
               </Select>
             </FormControl>
             {formData.intro_announcement_uuid && (
-              <Tooltip title="Edit Announcement">
+              <Tooltip title={t('queue.editAnnouncement')}>
                 <IconButton onClick={() => handleEditAnnouncement('intro')} size="small" color="primary">
                   <EditIcon />
                 </IconButton>
@@ -890,22 +894,22 @@ export const QueueBridge = ({
         <Grid size={12}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <FormControl fullWidth required error={!!formErrors.hold_announcement_uuid} disabled={loading || announcementsLoading}>
-              <InputLabel required>Hold Announcement</InputLabel>
+              <InputLabel required>{t('queue.holdAnnouncement')}</InputLabel>
               <Select
                 value={formData.hold_announcement_uuid}
                 onChange={(e) => handleChange('hold_announcement_uuid', e.target.value)}
-                label="Hold Announcement"
+                label={t('queue.holdAnnouncement')}
                 MenuProps={menuProps(layer)}
               >
-                <MenuItem value="">Select Announcement...</MenuItem>
+                <MenuItem value="">{t('queue.selectAnnouncement')}</MenuItem>
                 {announcementsLoading ? (
-                  <MenuItem disabled>Loading...</MenuItem>
+                  <MenuItem disabled>{t('queue.loading')}</MenuItem>
                     ) : [
                       <MenuItem key="add_new" onMouseDown={(e) => handleCreateNewAnnouncement(e, 'hold')} sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                        + Create New Announcement
+                        {t('queue.createNewAnnouncement')}
                       </MenuItem>,
                       ...(announcements.length === 0 ? [
-                        <MenuItem key="no_items" disabled>No announcements</MenuItem>
+                        <MenuItem key="no_items" disabled>{t('queue.noAnnouncements')}</MenuItem>
                       ] : announcements.map(a => (
                         <MenuItem key={a.uuid} value={a.uuid}>{a.name}</MenuItem>
                       )))
@@ -913,7 +917,7 @@ export const QueueBridge = ({
                   </Select>
                 </FormControl>
                 {formData.hold_announcement_uuid && (
-                  <Tooltip title="Edit Announcement">
+                  <Tooltip title={t('queue.editAnnouncement')}>
                     <IconButton onClick={() => handleEditAnnouncement('hold')} size="small" color="primary">
                       <EditIcon />
                     </IconButton>
@@ -925,39 +929,39 @@ export const QueueBridge = ({
         {/* Max Wait Time Bridge Configuration */}
         <Grid size={12}>
           <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
-            Max Wait Time Bridge Configuration
+            {t('queue.maxWait.title')}
           </Typography>
         </Grid>
 
         {/* Max Wait Time (seconds) */}
         <Grid size={12}>
           <TextField
-            label="Max Wait Time (seconds)"
+            label={t('queue.maxWait.label')}
             type="number"
             value={formData.max_wait_time}
             onChange={(e) => handleChange('max_wait_time', parseInt(e.target.value) || 300)}
             fullWidth
             required
             disabled={loading}
-            placeholder="Enter max wait time in seconds"
+            placeholder={t('queue.maxWait.placeholder')}
             inputProps={{ min: 1, max: 99999 }}
-            helperText="Maximum time caller waits in queue before being bridged"
+            helperText={t('queue.maxWait.help')}
           />
         </Grid>
 
         {/* Bridge Type */}
         <Grid size={12}>
           <FormControl fullWidth required error={!!formErrors.max_wait_time_bridge_type} disabled={loading}>
-            <InputLabel required>Bridge Type</InputLabel>
+            <InputLabel required>{t('queue.maxWait.bridgeType')}</InputLabel>
             <Select
               value={formData.max_wait_time_bridge_type}
               onChange={(e) => handleBridgeTypeChange(e.target.value)}
-              label="Bridge Type"
+              label={t('queue.maxWait.bridgeType')}
               MenuProps={menuProps(layer)}
             >
-              <MenuItem value="">Select Bridge Type...</MenuItem>
+              <MenuItem value="">{t('queue.maxWait.selectBridgeType')}</MenuItem>
               {bridgeTypes.map(bt => (
-                <MenuItem key={bt.value} value={bt.value}>{bt.label}</MenuItem>
+                <MenuItem key={bt.value} value={bt.value}>{t(`types.${bt.value}`, { defaultValue: bt.label })}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -966,18 +970,22 @@ export const QueueBridge = ({
         {/* Bridge Destination */}
         <Grid size={12}>
           <FormControl fullWidth required error={!!formErrors.max_wait_time_bridge_uuid} disabled={loading || bridgeResourcesLoading || !formData.max_wait_time_bridge_type}>
-            <InputLabel required>Bridge Destination</InputLabel>
+            <InputLabel required>{t('queue.maxWait.destination')}</InputLabel>
             <Select
               value={formData.max_wait_time_bridge_uuid}
               onChange={(e) => handleChange('max_wait_time_bridge_uuid', e.target.value)}
-              label="Bridge Destination"
+              label={t('queue.maxWait.destination')}
               MenuProps={menuProps(layer)}
             >
-              <MenuItem value="">Select Destination...</MenuItem>
+              <MenuItem value="">{t('queue.maxWait.selectDestination')}</MenuItem>
               {bridgeResourcesLoading ? (
-                <MenuItem disabled>Loading...</MenuItem>
+                <MenuItem disabled>{t('queue.loading')}</MenuItem>
               ) : bridgeResources.length === 0 ? (
-                <MenuItem disabled>No {formData.max_wait_time_bridge_type || 'resources'} available</MenuItem>
+                <MenuItem disabled>
+                  {formData.max_wait_time_bridge_type
+                    ? t('queue.maxWait.noneOfType', { type: t(`typeNouns.${formData.max_wait_time_bridge_type}`, { defaultValue: formData.max_wait_time_bridge_type }) })
+                    : t('queue.maxWait.noneResources')}
+                </MenuItem>
               ) : (
                 bridgeResources.map(r => (
                   <MenuItem key={r.uuid} value={r.uuid}>{r.name}</MenuItem>
@@ -993,10 +1001,10 @@ export const QueueBridge = ({
       <Box sx={{ mt: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 1, mb: 1.5 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-            Queue Agents
+            {t('queue.agents.title')}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {allAgents.filter(a => isExtRegistered(agentExtName(a))).length} of {allAgents.length} registered
+            {t('queue.agents.registeredCount', { registered: allAgents.filter(a => isExtRegistered(agentExtName(a))).length, total: allAgents.length })}
           </Typography>
         </Box>
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
@@ -1005,7 +1013,7 @@ export const QueueBridge = ({
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <TextField
-                placeholder="Search agents…"
+                placeholder={t('queue.agents.search')}
                 value={agentSearch}
                 onChange={(e) => { setAgentSearch(e.target.value); setSelectedForAdd(new Set()); }}
                 size="small"
@@ -1022,7 +1030,7 @@ export const QueueBridge = ({
                 }}
                 sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
               >
-                Add {selectedForAdd.size > 0 ? `(${selectedForAdd.size})` : ''}
+                {selectedForAdd.size > 0 ? t('queue.agents.addCount', { selected: selectedForAdd.size }) : t('queue.agents.add')}
               </Button>
             </Box>
             <Paper variant="outlined" sx={{ height: 300, overflow: 'auto' }}>
@@ -1030,7 +1038,7 @@ export const QueueBridge = ({
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}><CircularProgress size={24} /></Box>
               ) : filteredAgents.length === 0 ? (
                 <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                  <Typography variant="body2">No agents available</Typography>
+                  <Typography variant="body2">{t('queue.agents.none')}</Typography>
                 </Box>
               ) : (
                 <>
@@ -1041,7 +1049,7 @@ export const QueueBridge = ({
                       checked={filteredAgents.length > 0 && selectedForAdd.size === filteredAgents.length}
                       onChange={(e) => setSelectedForAdd(e.target.checked ? new Set(filteredAgents.map(a => a.uuid)) : new Set())}
                     />
-                    <Typography variant="caption" color="text.secondary">Select all ({filteredAgents.length})</Typography>
+                    <Typography variant="caption" color="text.secondary">{t('queue.agents.selectAll', { total: filteredAgents.length })}</Typography>
                   </Box>
                   {filteredAgents.map(agent => {
                     const ext = agentExtName(agent);
@@ -1061,7 +1069,7 @@ export const QueueBridge = ({
                         <Checkbox size="small" checked={checked} tabIndex={-1} sx={{ p: 0 }} />
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Typography noWrap sx={{ fontSize: '0.82rem', fontWeight: 500 }}>{agent.name || agent.username || '—'}</Typography>
-                          <Typography noWrap sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>{ext ? `Ext ${ext}` : 'No extension'}</Typography>
+                          <Typography noWrap sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>{ext ? <Trans t={t} i18nKey="queue.agents.ext" components={{ ext: <Bdi>{ext}</Bdi> }} /> : t('queue.agents.noExtension')}</Typography>
                         </Box>
                         <RegBadge extName={ext} />
                       </Box>
@@ -1075,12 +1083,12 @@ export const QueueBridge = ({
           {/* Right: assigned agents — registration + tier priority + remove */}
           <Box>
             <Typography variant="caption" fontWeight="bold" sx={{ mb: 1, display: 'block' }}>
-              Assigned ({selectedAgents.length})
+              {t('queue.agents.assigned', { total: selectedAgents.length })}
             </Typography>
             <Paper variant="outlined" sx={{ height: 300, overflow: 'auto' }}>
               {selectedAgents.length === 0 ? (
                 <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-                  <Typography variant="body2">No agents assigned — pick from the left and click Add</Typography>
+                  <Typography variant="body2">{t('queue.agents.noneAssigned', { button: t('queue.agents.add') })}</Typography>
                 </Box>
               ) : (
                 selectedAgents.map(agent => {
@@ -1092,21 +1100,21 @@ export const QueueBridge = ({
                     >
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography noWrap sx={{ fontSize: '0.82rem', fontWeight: 500 }}>{agent.agent_name || getAgentDisplayName(agent.uuid)}</Typography>
-                        <Typography noWrap sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>{ext ? `Ext ${ext}` : 'No extension'}</Typography>
+                        <Typography noWrap sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>{ext ? <Trans t={t} i18nKey="queue.agents.ext" components={{ ext: <Bdi>{ext}</Bdi> }} /> : t('queue.agents.noExtension')}</Typography>
                       </Box>
                       <RegBadge extName={ext} />
-                      <Tooltip title="Priority level">
+                      <Tooltip title={t('queue.agents.level')}>
                         <Select value={agent.tier.level} size="small"
                           onChange={(e) => handleUpdateAgent(agent.uuid, 'tier_level', e.target.value)}
-                          sx={{ fontSize: '0.72rem', '& .MuiSelect-select': { py: 0.25, pl: 0.75, pr: '20px !important' } }}>
-                          {TIER_OPTIONS.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.78rem' }}>L{v}</MenuItem>)}
+                          sx={{ fontSize: '0.72rem', '& .MuiSelect-select': { py: 0.25, ps: 0.75, pe: '20px !important' } }}>
+                          {TIER_OPTIONS.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.78rem' }}>{t('queue.agents.levelOption', { n: v })}</MenuItem>)}
                         </Select>
                       </Tooltip>
-                      <Tooltip title="Position within level">
+                      <Tooltip title={t('queue.agents.position')}>
                         <Select value={agent.tier.position} size="small"
                           onChange={(e) => handleUpdateAgent(agent.uuid, 'tier_position', e.target.value)}
-                          sx={{ fontSize: '0.72rem', '& .MuiSelect-select': { py: 0.25, pl: 0.75, pr: '20px !important' } }}>
-                          {TIER_OPTIONS.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.78rem' }}>P{v}</MenuItem>)}
+                          sx={{ fontSize: '0.72rem', '& .MuiSelect-select': { py: 0.25, ps: 0.75, pe: '20px !important' } }}>
+                          {TIER_OPTIONS.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.78rem' }}>{t('queue.agents.positionOption', { n: v })}</MenuItem>)}
                         </Select>
                       </Tooltip>
                       <IconButton size="small" onClick={() => handleRemoveAgent(agent.uuid)} color="error" sx={{ p: 0.5 }}>
@@ -1118,7 +1126,7 @@ export const QueueBridge = ({
               )}
             </Paper>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              L = priority level, P = position within the level.
+              {t('queue.agents.legend')}
             </Typography>
           </Box>
         </Box>
@@ -1137,7 +1145,7 @@ export const QueueBridge = ({
   const actionButtons = (
     <>
       <Button onClick={onClose} disabled={loading}>
-        Cancel
+        {t('queue.cancel')}
       </Button>
       <Button
         onClick={handleSubmit}
@@ -1145,7 +1153,7 @@ export const QueueBridge = ({
         disabled={!isFormValid || loading}
         startIcon={loading ? <CircularProgress size={20} /> : <QueueIcon />}
       >
-        {loading ? `${mode === 'edit' ? 'Updating' : 'Creating'}...` : mode === 'edit' ? 'Update Queue' : 'Create Queue'}
+        {loading ? (mode === 'edit' ? t('queue.updating') : t('queue.creating')) : mode === 'edit' ? t('queue.update') : t('queue.create')}
       </Button>
     </>
   );
@@ -1161,7 +1169,7 @@ export const QueueBridge = ({
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
             <QueueIcon />
-            <Typography variant="h6">{mode === 'edit' ? 'Edit Queue' : 'Create Queue'}</Typography>
+            <Typography variant="h6">{mode === 'edit' ? t('queue.titleEdit') : t('queue.titleCreate')}</Typography>
           </Box>
 
           {formContent}
@@ -1203,7 +1211,7 @@ export const QueueBridge = ({
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <QueueIcon />
-            <Typography variant="h6">{mode === 'edit' ? 'Edit Queue' : 'Create Queue'}</Typography>
+            <Typography variant="h6">{mode === 'edit' ? t('queue.titleEdit') : t('queue.titleCreate')}</Typography>
           </Box>
           <Button onClick={onClose} size="small" sx={{ minWidth: 'auto' }}>
             <CloseIcon />

@@ -84,6 +84,26 @@
   padding-top: 8px;
 }
 
+/* On a phone the buttons stay pinned to the bottom of the screen, so Save is
+   always within reach of the thumb, however long the form. */
+@media (max-width: 899.95px) {
+  .did-form-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 0 -16px;
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    background-color: var(--theme-bg-primary, #fff);
+    border-top: 1px solid var(--mui-palette-divider);
+  }
+
+  .did-form-actions .MuiButton-root {
+    flex: 1;
+    min-height: 44px;
+  }
+}
+
 .did-form-save-btn {
   padding: 12px 32px !important;
   background-color: var(--accent-color, #EEA740) !important;

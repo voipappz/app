@@ -17,21 +17,11 @@ import { apiService, toFormData } from '../apiService.js';
  */
 
 /**
- * Get auth token from localStorage
+ * The active session's token: an account's, else a portal user's. Reading only
+ * `auth` sent a user's uploads with no token (401 "Missing Authorize token").
  * @returns {string|null} Auth token
  */
-const getToken = () => {
-  try {
-    const authData = localStorage.getItem('auth');
-    if (authData) {
-      const parsed = JSON.parse(authData);
-      return parsed.access;
-    }
-  } catch {
-    // Ignore parsing errors
-  }
-  return null;
-};
+const getToken = () => apiService.getToken();
 
 /**
  * Upload announcement file with progress tracking

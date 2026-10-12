@@ -16,7 +16,14 @@ describe('CallMobileCard', () => {
   it('labels the details in English, as before', () => {
     render(<CallMobileCard call={call} />);
     expect(screen.getByText('Client:')).toBeInTheDocument();
-    expect(screen.getByText('Call ID:', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('Duration:')).toBeInTheDocument();
+  });
+
+  it('leaves the application and the call id off a phone card', () => {
+    render(<CallMobileCard call={call} />);
+    expect(screen.queryByText('Application:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sales')).not.toBeInTheDocument();
+    expect(screen.queryByText('abc-123')).not.toBeInTheDocument();
   });
 
   it('labels the details in Hebrew and keeps phone numbers left to right', async () => {
@@ -24,6 +31,5 @@ describe('CallMobileCard', () => {
     render(<CallMobileCard call={call} />);
     expect(screen.getByText('לקוח:')).toBeInTheDocument();
     expect(screen.getByText('+972-3-555-1234').tagName).toBe('BDI');
-    expect(screen.getByText('abc-123').tagName).toBe('BDI');
   });
 });

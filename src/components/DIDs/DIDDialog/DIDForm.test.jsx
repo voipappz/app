@@ -227,7 +227,9 @@ describe('editing a SIP provider inside a route', () => {
     expect(field('Name')).toHaveValue('Unsaved route');
     expect(screen.getByText('Updated PBX')).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Update Route' }));
+    // The provider dialog hides the page from screen readers until it has
+    // fully closed; wait for the route's button to be reachable again.
+    fireEvent.click(await screen.findByRole('button', { name: 'Update Route' }));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Unsaved route', bridge_type: 'sip_provider', bridge_uuid: provider.uuid,
     })));

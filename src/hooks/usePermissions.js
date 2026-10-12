@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUserAuth } from '../context/UserAuthContext';
-import { hasPermission, canAccessScreen } from '../utils/jwt';
+import { hasPermission, canAccessScreen, allowedRouteTypes } from '../utils/jwt';
 
 /**
  * Encapsulated permission API for components.
@@ -23,8 +23,14 @@ import { hasPermission, canAccessScreen } from '../utils/jwt';
  *   {can('accounts', 'write') && <EditButton/>}
  *   if (!canAccess('routes')) return <Redirect/>;
  *
+ * Route types: a user's ACL may limit them (`routes.types`).
+ *   routeTypes                  -> the allowed list, or null for no limit
+ *   canRouteType('src','write') -> the `routes` grant AND the type allowed
+ *
  * @returns {{ can: (screen: string, action?: string) => boolean,
- *            canAccess: (screen: string) => boolean }}
+ *            canAccess: (screen: string) => boolean,
+ *            routeTypes: string[] | null,
+ *            canRouteType: (type: string, action?: string) => boolean }}
  */
 export function usePermissions() {
   const { acl: adminAcl, isAuthenticated: adminAuthenticated } = useAuth();
@@ -44,5 +50,12 @@ export function usePermissions() {
     [acl]
   );
 
-  return useMemo(() => ({ can, canAccess }), [can, canAccess]);
+  const routeTypes = useMemo(() => allowedRouteTypes(acl), [acl]);
+
+  const canRouteType = useCallback(
+    (type, action = 'read') => hasPermission(acl, 'routes', action) && (!routeTypes || routeTypes.includes(type)),
+    [acl, routeTypes]
+  );
+
+  return useMemo(() => ({ can, canAccess, routeTypes, canRouteType }), [can, canAccess, routeTypes, canRouteType]);
 }

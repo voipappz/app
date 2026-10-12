@@ -43,6 +43,7 @@ import {
   DeleteOutline as DeleteOutlineIcon,
   ErrorOutline as ErrorOutlineIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import { useVML } from './VMLBridge.js';
 import { useVMLChat } from './useVMLChat.js';
@@ -77,6 +78,7 @@ export const VMLBridge = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onDrillDown
 }) => {
+  const { t } = useTranslation('bridges');
   const userSession = useIsUserSession();
   const confirm = useConfirm();
   const layer = zLayer || Z.L2;
@@ -217,8 +219,8 @@ export const VMLBridge = ({
 
   const handleApplyTemplate = async (template) => {
     if (vmlContent && vmlContent.trim()) {
-      if (!(await confirm({ title: 'Replace editor content', confirmLabel: 'Replace',
-                             message: 'Replace current editor content with this template?' }))) {
+      if (!(await confirm({ title: t('vml.replace.title'), confirmLabel: t('vml.replace.confirm'),
+                             message: t('vml.replace.templateMessage') }))) {
         setTemplateAnchor(null);
         return;
       }
@@ -240,8 +242,8 @@ export const VMLBridge = ({
     const code = vmlChat.getLastAgentCode();
     if (!code) return;
     if (vmlContent && vmlContent.trim()) {
-      if (!(await confirm({ title: 'Replace editor content', confirmLabel: 'Replace',
-                             message: 'Replace current editor content with generated code?' }))) return;
+      if (!(await confirm({ title: t('vml.replace.title'), confirmLabel: t('vml.replace.confirm'),
+                             message: t('vml.replace.generatedMessage') }))) return;
     }
     setVMLContent(code);
     setAiDialogOpen(false);
@@ -263,7 +265,7 @@ export const VMLBridge = ({
     import('../../../services/api/vmlsApi.js')
       .then(({ getVML }) => getVML(vml.uuid))
       .then((full) => { if (live) setLoadedVml(full?.data && typeof full.data === 'object' && full.data.uuid ? full.data : full); })
-      .catch((err) => { if (live) setLoadError(err?.message || 'Could not load this VML'); });
+      .catch((err) => { if (live) setLoadError(err?.message || t('vml.errors.loadFailedShort')); });
     return () => { live = false; };
   }, [open, mode, vml?.uuid]);
 
@@ -347,13 +349,13 @@ export const VMLBridge = ({
 
   const validateForm = () => {
     const errors = {};
-    if (!formData.name?.trim()) errors.name = 'Name is required';
+    if (!formData.name?.trim()) errors.name = t('vml.errors.name');
     // The API's rule (Vml#validate): letters, digits, _ and - only.
-    else if (!/^[0-9a-zA-Z_-]+$/.test(formData.name.trim())) errors.name = 'Use letters, numbers, _ or - only (no spaces)';
-    if (!formData.type) errors.type = 'VML type is required';
-    if (!formData.environment_uuid) errors.environment_uuid = 'Application is required';
-    if (!vmlContent?.trim()) errors.vmlContent = 'VML content is required';
-    if (!validateMetaFields()) errors.meta = 'Duplicate meta keys are not allowed';
+    else if (!/^[0-9a-zA-Z_-]+$/.test(formData.name.trim())) errors.name = t('vml.errors.nameFormat');
+    if (!formData.type) errors.type = t('vml.errors.type');
+    if (!formData.environment_uuid) errors.environment_uuid = t('vml.errors.application');
+    if (!vmlContent?.trim()) errors.vmlContent = t('vml.errors.content');
+    if (!validateMetaFields()) errors.meta = t('meta.duplicateKeys');
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -385,7 +387,7 @@ export const VMLBridge = ({
       console.error('Submit error:', err);
       // Say why it was not saved (e.g. the API refusing the name), instead of
       // leaving the dialog open with nothing on screen.
-      setSubmitError(err?.message || 'Could not save this VML');
+      setSubmitError(err?.message || t('vml.errors.saveFailed'));
     }
   };
 
@@ -402,13 +404,13 @@ export const VMLBridge = ({
       {/* Compact form row: Name | Type | Environment | Enabled */}
       <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
         <TextField
-          label="Name"
+          label={t('vml.name')}
           value={formData.name}
           onChange={(e) => handleChange('name', e.target.value)}
           required
           error={!!formErrors.name}
           helperText={formErrors.name}
-          placeholder="Script name"
+          placeholder={t('vml.namePlaceholder')}
           disabled={loading}
           size="small"
           sx={{ flex: 2, minWidth: 160 }}
@@ -421,10 +423,10 @@ export const VMLBridge = ({
           size="small"
           sx={{ flex: 1, minWidth: 120 }}
         >
-          <InputLabel>Type</InputLabel>
+          <InputLabel>{t('vml.type')}</InputLabel>
           <Select
             value={formData.type}
-            label="Type"
+            label={t('vml.type')}
             onChange={(e) => { handleChange('type', e.target.value); applyTypeTemplate(e.target.value); }}
             MenuProps={menuProps(layer)}
           >
@@ -443,10 +445,10 @@ export const VMLBridge = ({
             size="small"
             sx={{ flex: 1, minWidth: 140 }}
           >
-            <InputLabel>Application</InputLabel>
+            <InputLabel>{t('vml.application')}</InputLabel>
             <Select
               value={formData.environment_uuid}
-              label="Application"
+              label={t('vml.application')}
               onChange={(e) => handleChange('environment_uuid', e.target.value)}
               MenuProps={menuProps(layer)}
             >
@@ -466,8 +468,8 @@ export const VMLBridge = ({
               size="small"
             />
           }
-          label="Enabled"
-          sx={{ mr: 0 }}
+          label={t('vml.enabled')}
+          sx={{ me: 0 }}
         />
       </Box>
 
@@ -495,7 +497,7 @@ export const VMLBridge = ({
           disabled={loading}
           sx={{ color: '#9CDCFE', textTransform: 'none', fontSize: 12 }}
         >
-          Templates
+          {t('vml.toolbar.templates')}
         </Button>
         <Menu
           anchorEl={templateAnchor}
@@ -503,11 +505,11 @@ export const VMLBridge = ({
           onClose={() => setTemplateAnchor(null)}
           style={{ zIndex: layer.MENU }}
         >
-          {scriptTemplates.map((t) => (
-            <MenuItem key={t.label} onClick={() => handleApplyTemplate(t)}>
+          {scriptTemplates.map((template) => (
+            <MenuItem key={template.label} onClick={() => handleApplyTemplate(template)}>
               <Box>
-                <Typography variant="body2">{t.label}</Typography>
-                <Typography variant="caption" color="text.secondary">{t.description}</Typography>
+                <Typography variant="body2">{template.label}</Typography>
+                <Typography variant="caption" color="text.secondary">{template.description}</Typography>
               </Box>
             </MenuItem>
           ))}
@@ -523,7 +525,7 @@ export const VMLBridge = ({
           disabled={loading}
           sx={{ color: '#9CDCFE', textTransform: 'none', fontSize: 12 }}
         >
-          Snippets
+          {t('vml.toolbar.snippets')}
         </Button>
         <Menu
           anchorEl={snippetAnchor}
@@ -543,7 +545,7 @@ export const VMLBridge = ({
                   insertSnippetAtCursor(s.snippet);
                   setSnippetAnchor(null);
                 }}
-                sx={{ pl: 3, py: 0.5 }}
+                sx={{ ps: 3, py: 0.5 }}
               >
                 <Box>
                   <Typography variant="body2">{s.label}</Typography>
@@ -570,14 +572,14 @@ export const VMLBridge = ({
           disabled={loading}
           sx={{ color: '#C586C0', textTransform: 'none', fontSize: 12 }}
         >
-          AI Generate
+          {t('vml.toolbar.aiGenerate')}
         </Button>
 
         {/* Fullscreen toggle */}
         <IconButton
           size="small"
           onClick={() => setEditorFullscreen(prev => !prev)}
-          title={editorFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen editor'}
+          title={editorFullscreen ? t('vml.toolbar.exitFullscreen') : t('vml.toolbar.fullscreen')}
           sx={{ color: '#9CDCFE', p: 0.5 }}
         >
           {editorFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
@@ -606,7 +608,7 @@ export const VMLBridge = ({
           renderInput={(params) => (
             <TextField
               {...params}
-              label="Variable"
+              label={t('vml.toolbar.variable')}
               placeholder="getVariable(...)"
               size="small"
             />
@@ -625,7 +627,7 @@ export const VMLBridge = ({
           startIcon={<AddIcon />}
           sx={{ color: '#9CDCFE', textTransform: 'none', fontSize: 12, minWidth: 'auto' }}
         >
-          Insert
+          {t('vml.toolbar.insert')}
         </Button>
       </Box>
 
@@ -659,21 +661,21 @@ export const VMLBridge = ({
           <ExpandMoreIcon fontSize="small" />
         </IconButton>
         <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer' }} onClick={() => setShowMeta(!showMeta)}>
-          {showMeta ? 'Hide' : 'Show'} Notes & Meta Properties
+          {showMeta ? t('vml.meta.hide') : t('vml.meta.show')}
         </Typography>
         <SettingsIcon fontSize="small" sx={{ color: 'text.disabled' }} />
       </Box>
 
       <Collapse in={showMeta}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pl: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, ps: 1 }}>
           <TextField
-            label="Notes"
+            label={t('vml.notes')}
             value={formData.notes}
             onChange={(e) => handleChange('notes', e.target.value)}
             fullWidth
             multiline
             rows={2}
-            placeholder="Optional notes or description"
+            placeholder={t('vml.notesPlaceholder')}
             disabled={loading}
             size="small"
           />
@@ -684,8 +686,8 @@ export const VMLBridge = ({
             onRemove={removeMetaField}
             onUpdate={updateMetaField}
             validateDuplicates={true}
-            title="Meta Properties"
-            addButtonText="Add Property"
+            title={t('meta.title')}
+            addButtonText={t('meta.add')}
           />
           {formErrors.meta && (
             <Alert severity="error">{formErrors.meta}</Alert>
@@ -701,7 +703,7 @@ export const VMLBridge = ({
               variant="outlined"
               sx={{ alignSelf: 'flex-start' }}
             >
-              Edit Template
+              {t('vml.meta.editTemplate')}
             </Button>
           )}
         </Box>
@@ -719,10 +721,10 @@ export const VMLBridge = ({
       />
 
       {loadError && (
-        <Alert severity="error">Could not load this VML: {loadError}</Alert>
+        <Alert severity="error">{t('vml.errors.loadFailed', { message: loadError })}</Alert>
       )}
       {mode === 'edit' && !loadedVml && !loadError && (
-        <Alert severity="info">Loading the VML…</Alert>
+        <Alert severity="info">{t('vml.loading')}</Alert>
       )}
       {submitError && (
         <Alert severity="error" onClose={() => setSubmitError(null)}>{submitError}</Alert>
@@ -748,7 +750,7 @@ export const VMLBridge = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <AIIcon sx={{ color: '#C586C0' }} />
               <Typography variant="h6" sx={{ color: '#fafafa', fontSize: '1rem' }}>
-                VML AI Assistant
+                {t('vml.chat.title')}
               </Typography>
               {vmlChat.isStreaming && <CircularProgress size={16} sx={{ color: '#C586C0' }} />}
             </Box>
@@ -761,7 +763,7 @@ export const VMLBridge = ({
                   onClick={handleAiInsertCode}
                   sx={{ textTransform: 'none', fontSize: 12 }}
                 >
-                  Insert Code
+                  {t('vml.chat.insertCode')}
                 </Button>
               )}
               <Button
@@ -770,7 +772,7 @@ export const VMLBridge = ({
                 disabled={vmlChat.messages.length === 0}
                 sx={{ color: '#a1a1aa', textTransform: 'none', fontSize: 12 }}
               >
-                New Chat
+                {t('vml.chat.newChat')}
               </Button>
               <IconButton size="small" onClick={() => setAiDialogOpen(false)} sx={{ color: '#a1a1aa' }}>
                 <CloseIcon fontSize="small" />
@@ -783,7 +785,7 @@ export const VMLBridge = ({
           {/* Sessions sidebar */}
           <Box sx={{
             width: 200,
-            borderRight: '1px solid #27272a',
+            borderInlineEnd: '1px solid #27272a',
             bgcolor: '#111113',
             display: 'flex',
             flexDirection: 'column',
@@ -791,7 +793,7 @@ export const VMLBridge = ({
             flexShrink: 0
           }}>
             <Typography sx={{ px: 1.5, py: 1, color: '#a1a1aa', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase' }}>
-              Sessions
+              {t('vml.chat.sessions')}
             </Typography>
             <Box sx={{ flex: 1, overflow: 'auto', px: 0.5 }}>
               {vmlChat.isLoadingSessions ? (
@@ -801,7 +803,7 @@ export const VMLBridge = ({
               ) : vmlChat.sessions.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <ChatBubbleOutlineIcon sx={{ fontSize: 28, color: '#27272a', mb: 0.5 }} />
-                  <Typography sx={{ fontSize: '0.7rem', color: 'var(--mui-palette-text-secondary)' }}>No sessions yet</Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: 'var(--mui-palette-text-secondary)' }}>{t('vml.chat.noSessions')}</Typography>
                 </Box>
               ) : (
                 vmlChat.sessions.map((session) => (
@@ -829,7 +831,7 @@ export const VMLBridge = ({
                       whiteSpace: 'nowrap',
                       flex: 1
                     }}>
-                      {session.session_name || 'Chat'}
+                      {session.session_name || t('vml.chat.defaultSession')}
                     </Typography>
                     <IconButton
                       size="small"
@@ -852,17 +854,17 @@ export const VMLBridge = ({
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                   <AIIcon sx={{ fontSize: 48, color: '#27272a', mb: 2 }} />
                   <Typography sx={{ color: '#fafafa', fontWeight: 600, mb: 0.5 }}>
-                    VML AI Assistant
+                    {t('vml.chat.title')}
                   </Typography>
                   <Typography sx={{ color: 'var(--mui-palette-text-secondary)', fontSize: '0.85rem', textAlign: 'center', maxWidth: 400 }}>
-                    Describe the Lua script you need. You can iterate — ask follow-up questions to refine the code.
+                    {t('vml.chat.intro')}
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, justifyContent: 'center', maxWidth: 500 }}>
                     {[
-                      'Create an IVR with language selection',
-                      'Route calls to queue based on time of day',
-                      'Play announcement then transfer',
-                      'HTTP lookup before routing'
+                      t('vml.chat.prompts.ivr'),
+                      t('vml.chat.prompts.queue'),
+                      t('vml.chat.prompts.announcement'),
+                      t('vml.chat.prompts.http')
                     ].map((prompt) => (
                       <Chip
                         key={prompt}
@@ -917,7 +919,7 @@ export const VMLBridge = ({
                                   size="small"
                                   onClick={() => navigator.clipboard.writeText(msg.content)}
                                   sx={{ color: '#9CDCFE', p: 0.25 }}
-                                  title="Copy"
+                                  title={t('vml.chat.copy')}
                                 >
                                   <CopyIcon sx={{ fontSize: 14 }} />
                                 </IconButton>
@@ -969,7 +971,7 @@ export const VMLBridge = ({
                   fullWidth
                   multiline
                   maxRows={3}
-                  placeholder="Describe the Lua script you need..."
+                  placeholder={t('vml.chat.placeholder')}
                   value={vmlChat.inputValue}
                   onChange={(e) => vmlChat.setInputValue(e.target.value)}
                   onKeyDown={(e) => {
@@ -1009,7 +1011,7 @@ export const VMLBridge = ({
                 )}
               </Box>
               <Typography sx={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--mui-palette-text-secondary)', mt: 0.5 }}>
-                Enter to send, Shift+Enter for new line
+                {t('vml.chat.sendHint')}
               </Typography>
             </Box>
           </Box>
@@ -1022,7 +1024,7 @@ export const VMLBridge = ({
   const actionButtons = (
     <>
       <Button onClick={onClose} disabled={loading}>
-        Cancel
+        {t('vml.cancel')}
       </Button>
       <Button
         onClick={handleSubmit}
@@ -1031,8 +1033,8 @@ export const VMLBridge = ({
         startIcon={loading ? <CircularProgress size={20} /> : <CodeIcon />}
       >
         {loading
-          ? (mode === 'edit' ? 'Updating...' : 'Creating...')
-          : (mode === 'edit' ? 'Update VML' : 'Create VML')}
+          ? (mode === 'edit' ? t('vml.updating') : t('vml.creating'))
+          : (mode === 'edit' ? t('vml.update') : t('vml.create'))}
       </Button>
     </>
   );
@@ -1046,7 +1048,7 @@ export const VMLBridge = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <CodeIcon />
           <Typography variant="h6">
-            {mode === 'edit' ? 'Edit VML Script' : 'Create VML Script'}
+            {mode === 'edit' ? t('vml.titleEdit') : t('vml.titleCreate')}
           </Typography>
         </Box>
 
@@ -1084,7 +1086,7 @@ export const VMLBridge = ({
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <CodeIcon />
-            <Typography variant="h6">{mode === 'edit' ? 'Edit VML Script' : 'Create VML Script'}</Typography>
+            <Typography variant="h6">{mode === 'edit' ? t('vml.titleEdit') : t('vml.titleCreate')}</Typography>
           </Box>
           <Button onClick={onClose} size="small" sx={{ minWidth: 'auto' }}>
             <CloseIcon />

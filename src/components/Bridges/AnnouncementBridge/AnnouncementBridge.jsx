@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -35,6 +34,8 @@ import {
   Refresh as RefreshIcon,
   ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { ResponsiveDialog as Dialog } from '../../ui'; // full screen on a phone
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import { useAnnouncement } from './AnnouncementBridge.js';
 import { FileUploadZone } from './FileUploadZone.jsx';
@@ -72,6 +73,7 @@ export const AnnouncementBridge = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onDrillDown                // Optional — reserved for wizard navigation (unused here, leaf component)
 }) => {
+  const { t } = useTranslation('bridges');
   const userSession = useIsUserSession();
   const layer = zLayer || Z.L2;
   const { selectedEnvironments } = useCustomerEnvironment();
@@ -251,26 +253,26 @@ export const AnnouncementBridge = ({
     const errors = {};
 
     if (!formData.name?.trim()) {
-      errors.name = 'Name is required';
+      errors.name = t('announcement.errors.name');
     }
 
     if (!formData.environment_uuid) {
-      errors.environment_uuid = 'Application is required';
+      errors.environment_uuid = t('announcement.errors.application');
     }
 
     // File/TTS validation only required for create mode
     if (editMode !== 'edit') {
       if (mode === 'file' && !file) {
-        errors.file = 'Please select a file to upload';
+        errors.file = t('announcement.errors.selectFile');
       }
 
       if (mode === 'tts' && !ttsPreviewUrl) {
-        errors.tts = 'Please generate audio preview before creating';
+        errors.tts = t('announcement.errors.generateFirst');
       }
 
       if (mode === 'builtin') {
         if (!builtin) {
-          errors.builtin = 'Please choose music on hold, ringing or silence';
+          errors.builtin = t('announcement.errors.chooseBuiltin');
         }
       }
     }
@@ -326,9 +328,10 @@ export const AnnouncementBridge = ({
       {/* UUID - Read Only (edit mode only) */}
       {editMode === 'edit' && announcement?.uuid && (
         <TextField
-          label="UUID"
+          label={t('announcement.uuid')}
           fullWidth
           value={announcement.uuid}
+          slotProps={{ htmlInput: { dir: 'ltr' } }}
           disabled
           InputProps={{
             readOnly: true,
@@ -350,27 +353,27 @@ export const AnnouncementBridge = ({
               }}
               variant="fullWidth"
             >
-              <Tab label="Upload File" value="file" />
-              <Tab label="Text-to-Speech" value="tts" />
-              <Tab label="Music on hold / Ringing / Silence" value="builtin" />
+              <Tab label={t('announcement.tabs.file')} value="file" />
+              <Tab label={t('announcement.tabs.tts')} value="tts" />
+              <Tab label={t('announcement.tabs.builtin')} value="builtin" />
             </Tabs>
           </Paper>
 
           {/* Built-in Tab: MOH / RINGING / SILENCE, played from the API's local files */}
           {mode === 'builtin' && (
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>Built-in audio</Typography>
+              <Typography variant="h6" sx={{ mb: 1 }}>{t('announcement.builtin.title')}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                No upload needed: the platform plays its own file for this announcement.
+                {t('announcement.builtin.hint')}
               </Typography>
               <ToggleButtonGroup
                 exclusive
                 value={builtin}
                 onChange={(e, value) => value && pickBuiltin(value)}
-                aria-label="Built-in audio"
+                aria-label={t('announcement.builtin.title')}
               >
                 {builtins.map(b => (
-                  <ToggleButton key={b.name} value={b.name}>{b.label}</ToggleButton>
+                  <ToggleButton key={b.name} value={b.name}>{t(`announcement.builtin.names.${b.name}`, { defaultValue: b.label })}</ToggleButton>
                 ))}
               </ToggleButtonGroup>
               {formErrors.builtin && (
@@ -382,7 +385,7 @@ export const AnnouncementBridge = ({
           {/* File Upload Tab */}
           {mode === 'file' && (
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>Upload Audio File</Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>{t('announcement.upload.title')}</Typography>
               <FileUploadZone
                 onFileSelect={handleFileSelect}
                 uploadProgress={uploadProgress}
@@ -399,7 +402,7 @@ export const AnnouncementBridge = ({
           {/* TTS Tab */}
           {mode === 'tts' && (
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>Text-to-Speech</Typography>
+              <Typography variant="h6" sx={{ mb: 2 }}>{t('announcement.tts.title')}</Typography>
               <TTSGenerator
                 onGenerate={handleTTSGenerate}
                 previewUrl={ttsPreviewUrl}
@@ -421,7 +424,7 @@ export const AnnouncementBridge = ({
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <VolumeIcon color="primary" />
-              <Typography variant="h6">Current Audio</Typography>
+              <Typography variant="h6">{t('announcement.current.title')}</Typography>
             </Box>
             <Button
               size="small"
@@ -429,7 +432,7 @@ export const AnnouncementBridge = ({
               onClick={() => setShowReplaceFile(!showReplaceFile)}
               disabled={loading}
             >
-              {showReplaceFile ? 'Cancel Replace' : 'Replace Audio'}
+              {showReplaceFile ? t('announcement.current.cancelReplace') : t('announcement.current.replace')}
             </Button>
           </Box>
 
@@ -437,7 +440,7 @@ export const AnnouncementBridge = ({
           {fetchingDetails && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}>
               <CircularProgress size={24} />
-              <Typography variant="body2" color="text.secondary">Loading audio...</Typography>
+              <Typography variant="body2" color="text.secondary">{t('announcement.current.loading')}</Typography>
             </Box>
           )}
 
@@ -456,7 +459,7 @@ export const AnnouncementBridge = ({
                   borderColor: 'divider'
                 }}
               >
-                <Tooltip title={isPlaying ? 'Pause' : 'Play'}>
+                <Tooltip title={isPlaying ? t('announcement.current.pause') : t('announcement.current.play')}>
                   <IconButton
                     onClick={handlePlayPause}
                     color="primary"
@@ -485,7 +488,7 @@ export const AnnouncementBridge = ({
               </Box>
 
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Play the current audio to verify. Click "Replace Audio" to upload a new file.
+                {t('announcement.current.hint', { button: t('announcement.current.replace') })}
               </Typography>
             </>
           )}
@@ -493,7 +496,7 @@ export const AnnouncementBridge = ({
           {/* No audio available */}
           {!fetchingDetails && !existingAudioUrl && (
             <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-              No audio file available. Upload a new file below.
+              {t('announcement.current.none')}
             </Typography>
           )}
 
@@ -503,7 +506,7 @@ export const AnnouncementBridge = ({
               {existingAudioUrl && (
                 <Typography variant="subtitle2" color="warning.main" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <RefreshIcon fontSize="small" />
-                  Upload new audio to replace the existing file
+                  {t('announcement.current.replaceHint')}
                 </Typography>
               )}
               <FileUploadZone
@@ -520,7 +523,7 @@ export const AnnouncementBridge = ({
 
       {/* Basic Information */}
       <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Basic Information</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>{t('announcement.basic')}</Typography>
 
         {/* Enabled Switch */}
         <FormControlLabel
@@ -531,21 +534,21 @@ export const AnnouncementBridge = ({
               disabled={loading}
             />
           }
-          label="Enabled"
+          label={t('announcement.enabled')}
           sx={{ mb: 2 }}
         />
 
         {/* Name and Environment */}
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
           <TextField
-            label="Name"
+            label={t('announcement.name')}
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             required
             fullWidth
             error={!!formErrors.name}
             helperText={formErrors.name}
-            placeholder="Enter announcement name"
+            placeholder={t('announcement.namePlaceholder')}
             disabled={loading}
           />
 
@@ -553,10 +556,10 @@ export const AnnouncementBridge = ({
           {/* A portal user has one environment, their own: never a choice. */}
           {!hideEnvironment && !userSession && (
             <FormControl fullWidth required error={!!formErrors.environment_uuid} disabled={loading}>
-              <InputLabel>Application</InputLabel>
+              <InputLabel>{t('announcement.application')}</InputLabel>
               <Select
                 value={formData.environment_uuid}
-                label="Application"
+                label={t('announcement.application')}
                 onChange={(e) => handleChange('environment_uuid', e.target.value)}
               >
                 {selectedEnvironments?.map(env => (
@@ -569,13 +572,13 @@ export const AnnouncementBridge = ({
 
         {/* Notes */}
         <TextField
-          label="Notes"
+          label={t('announcement.notes')}
           value={formData.notes}
           onChange={(e) => handleChange('notes', e.target.value)}
           fullWidth
           multiline
           rows={2}
-          placeholder="Optional notes or description"
+          placeholder={t('announcement.notesPlaceholder')}
           disabled={loading}
         />
       </Paper>
@@ -595,7 +598,7 @@ export const AnnouncementBridge = ({
   const actionButtons = (
     <>
       <Button onClick={onClose} disabled={loading}>
-        Cancel
+        {t('announcement.cancel')}
       </Button>
       <Button
         onClick={handleSubmit}
@@ -604,8 +607,8 @@ export const AnnouncementBridge = ({
         startIcon={loading ? <CircularProgress size={20} /> : <AnnouncementIcon />}
       >
         {loading
-          ? (editMode === 'edit' ? 'Updating...' : 'Creating...')
-          : (editMode === 'edit' ? 'Update Announcement' : 'Create Announcement')}
+          ? (editMode === 'edit' ? t('announcement.updating') : t('announcement.creating'))
+          : (editMode === 'edit' ? t('announcement.update') : t('announcement.create'))}
       </Button>
     </>
   );
@@ -620,7 +623,7 @@ export const AnnouncementBridge = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
           <AnnouncementIcon />
           <Typography variant="h6">
-            {editMode === 'edit' ? 'Edit Announcement' : 'Create Announcement'}
+            {editMode === 'edit' ? t('announcement.titleEdit') : t('announcement.titleCreate')}
           </Typography>
         </Box>
 
@@ -662,7 +665,7 @@ export const AnnouncementBridge = ({
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <AnnouncementIcon />
-            <Typography variant="h6">{editMode === 'edit' ? 'Edit Announcement' : 'Create Announcement'}</Typography>
+            <Typography variant="h6">{editMode === 'edit' ? t('announcement.titleEdit') : t('announcement.titleCreate')}</Typography>
           </Box>
           <Button onClick={onClose} size="small" sx={{ minWidth: 'auto' }}>
             <CloseIcon />

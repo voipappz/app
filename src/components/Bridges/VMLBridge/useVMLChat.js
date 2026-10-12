@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useAuth } from '../../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { apiService } from '../../../services/apiService';
 import { getVMLSessions, loadVMLSession, deleteVMLSession, sendVMLMessage } from '../../../services/api/vmlsApi';
 
 /**
@@ -17,7 +18,9 @@ const RunEvent = {
  * with EventStore-backed sessions and streaming.
  */
 export const useVMLChat = () => {
-  const { access } = useAuth();
+  const { t } = useTranslation('bridges');
+  // Either session's token (an account's, else a portal user's).
+  const access = apiService.getToken();
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -187,12 +190,12 @@ export const useVMLChat = () => {
               });
             }
           } else if (event === RunEvent.RunError) {
-            setError(chunk.content || 'Error during generation');
+            setError(chunk.content || t('vml.chat.generationError'));
             setMessages(prev => {
               const newMsgs = [...prev];
               const last = newMsgs[newMsgs.length - 1];
               if (last && last.role === 'agent') {
-                last.content = chunk.content || 'Something went wrong.';
+                last.content = chunk.content || t('vml.chat.wentWrong');
                 last.streamingError = true;
               }
               return newMsgs;
@@ -207,7 +210,7 @@ export const useVMLChat = () => {
           const newMsgs = [...prev];
           const last = newMsgs[newMsgs.length - 1];
           if (last && last.role === 'agent') {
-            last.content = `Error: ${err.message}`;
+            last.content = t('vml.chat.error', { message: err.message });
             last.streamingError = true;
           }
           return newMsgs;
@@ -218,7 +221,7 @@ export const useVMLChat = () => {
       abortControllerRef.current = null;
       fetchSessions();
     }
-  }, [isStreaming, sessionId, fetchSessions]);
+  }, [isStreaming, sessionId, fetchSessions, t]);
 
   // Cancel request
   const cancelRequest = useCallback(() => {
