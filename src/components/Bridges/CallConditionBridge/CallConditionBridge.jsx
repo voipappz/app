@@ -1,610 +1,260 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  FormControlLabel,
-  Switch,
-  Box,
-  Typography,
-  Paper,
-  CircularProgress,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Alert, Box, Button, CircularProgress, DialogActions, DialogContent, DialogTitle, Divider, FormControl,
+  IconButton, InputLabel, Link, MenuItem, Select, Skeleton, Snackbar, TextField, Typography,
 } from '@mui/material';
-import {
-  AccountTree as CallConditionIcon,
-  Close as CloseIcon,
-  Add as AddIcon
-} from '@mui/icons-material';
+import { AccountTree as CallConditionIcon, Close as CloseIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { ResponsiveDialog as Dialog } from '../../ui';
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
-import { useCallCondition } from './CallConditionBridge.js';
-import { updateCallCondition } from '../../../services/api/callConditionsApi.js';
-import { ResourceList } from './ResourceList.jsx';
-import { BridgeTypeSelector } from '../shared/BridgeTypeSelector.jsx';
-import { AnnouncementBridge } from '../AnnouncementBridge/AnnouncementBridge.jsx';
-import { Z, menuProps } from '../../../utils/zIndex.js';
 import { useIsUserSession } from '../../../hooks/useIsUserSession';
+import { Z, menuProps } from '../../../utils/zIndex.js';
+import WeekHoursEditor, { WeekSummary } from './WeekHoursEditor';
+import DestinationPicker from './DestinationPicker';
+import MoreRules from './MoreRules';
+import { saveCallCondition, useCallConditionForm, useDestinations } from './useCallConditionForm';
+import { tidyName, validateForm } from './callConditionSchedule';
 
 /**
- * CallConditionBridge Component
- * Dialog for creating time-based call routing conditions
+ * A call condition, edited as business hours: which days and hours you are
+ * open, where calls go while open and otherwise, and any rules checked before
+ * that. One page for creating and editing, for accounts and users; full
+ * screen on a phone.
  *
- * Based on legacy AngularJS patterns from:
- * - /opt/src/va-voipbox-admin/src/views/call_conditions/new.html
- * - /opt/src/va-voipbox-admin/src/scripts/controllers/call_conditions/new.js
- *
- * Features:
- * - Multiple routing resources with drag-drop reordering
- * - Time-based condition entries
- * - Fallback routing configuration
- * - Environment scoping
- * - containerMode prop: 'dialog' (default) renders in a Dialog wrapper;
- *   'panel' renders the form content directly in a Box (for use in wizard panels)
- * - onDrillDown prop: optional callback for nested bridge creation/editing
- *   instead of opening inline dialogs
+ * containerMode 'panel' renders inside the route wizard; 'dialog' in its own
+ * dialog. onDrillDown (the wizard) lets a destination be created on the way.
  */
 export const CallConditionBridge = ({
   open,
   onClose,
   onSave,
   environmentUuid = null,
-  callCondition = null,    // Existing call condition data for edit mode
-  mode = 'create',         // 'create' or 'edit'
-  hideEnvironment = false, // Hide environment field when inherited from parent (e.g., DID dialog)
-  containerMode = 'dialog', // 'dialog' (default) | 'panel'
-  zLayer = null,           // Optional z-index layer override (e.g. Z.L3 when nested inside another L2 bridge)
-  onDrillDown              // Optional — call instead of opening nested dialogs
+  callCondition = null,
+  mode = 'create',
+  hideEnvironment = false,
+  containerMode = 'dialog',
+  zLayer = null,
+  onDrillDown,
 }) => {
+  const { t } = useTranslation('callConditions');
   const userSession = useIsUserSession();
-  const layer = zLayer || Z.L2;
   const { selectedEnvironments } = useCustomerEnvironment();
+  const layer = zLayer || Z.L2;
+  const nestedLayer = Z.L3;
 
-  // Use call condition hook
-  const {
-    resources,
-    addResource,
-    removeResource,
-    updateResource,
-    handleReorder,
-    validateResources,
-    fallbackBridgeType,
-    setFallbackBridgeType,
-    fallbackBridgeUuid,
-    setFallbackBridgeUuid,
-    bridgeTypes,
-    bridgeResources,
-    fetchBridgeResources,
-    loading,
-    error,
-    clearError,
-    saveCallCondition,
-    reset,
-    loadFromApiFormat,
-    prepareResourcesForSave
-  } = useCallCondition();
+  const { form, setForm, saved, loading, loadFailed } = useCallConditionForm({ open, mode, callCondition });
+  const [environment, setEnvironment] = useState('');
+  const [showNotes, setShowNotes] = useState(false);
+  const [tried, setTried] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [copiedDay, setCopiedDay] = useState(null);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    environment_uuid: '',
-    enabled: true,
-    notes: ''
-  });
-
-  const [formErrors, setFormErrors] = useState({});
-  const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
-  const [announcementEditMode, setAnnouncementEditMode] = useState('create'); // 'create' or 'edit'
-  const [announcementToEdit, setAnnouncementToEdit] = useState(null);
-
-  // Initialize form data
+  // Reset when the page opens. Only the first application's uuid is watched:
+  // the list itself can be a new array on every render, and re-running this
+  // would wipe the errors a Save just showed.
+  const firstEnvironment = selectedEnvironments?.[0]?.uuid || '';
   useEffect(() => {
-    if (open) {
-      const envUuid = environmentUuid || selectedEnvironments?.[0]?.uuid || '';
+    if (!open) return;
+    setEnvironment(callCondition?.environment_uuid || callCondition?.environment?.uuid || environmentUuid || firstEnvironment);
+    setTried(false);
+    setSaveError('');
+    setShowNotes(false);
+  }, [open, callCondition, environmentUuid, firstEnvironment]);
 
-      if (mode === 'edit' && callCondition) {
-        // Edit mode - load existing call condition data
-        const ccEnvUuid = callCondition.environment_uuid
-          || callCondition.environment?.uuid
-          || envUuid;
-        setFormData({
-          name: callCondition.name || '',
-          environment_uuid: ccEnvUuid,
-          enabled: callCondition.enabled !== undefined ? callCondition.enabled : true,
-          notes: callCondition.notes || ''
-        });
-        // Set fallback bridge data if available
-        if (callCondition.fallback_bridge_type) {
-          setFallbackBridgeType(callCondition.fallback_bridge_type);
-        }
-        if (callCondition.fallback_bridge_uuid) {
-          setFallbackBridgeUuid(callCondition.fallback_bridge_uuid);
-        }
-        // Load resources from API format
-        if (callCondition.resources) {
-          loadFromApiFormat(callCondition.resources);
-        }
-
-        // Fetch bridge resource lists for all bridge types used in resources + fallback
-        // so the dropdowns show names (not just UUIDs)
-        if (ccEnvUuid) {
-          const typesToFetch = new Set();
-          if (callCondition.fallback_bridge_type && callCondition.fallback_bridge_type !== 'number') {
-            typesToFetch.add(callCondition.fallback_bridge_type);
-          }
-          if (callCondition.resources) {
-            for (const r of callCondition.resources) {
-              if (r.bridge_type && r.bridge_type !== 'number') {
-                typesToFetch.add(r.bridge_type);
-              }
-            }
-          }
-          for (const bt of typesToFetch) {
-            fetchBridgeResources(bt, ccEnvUuid);
-          }
-        }
-      } else {
-        // Create mode
-        setFormData(prev => ({ ...prev, environment_uuid: envUuid }));
-      }
-    }
-  }, [open, environmentUuid, selectedEnvironments, mode, callCondition, setFallbackBridgeType, setFallbackBridgeUuid, loadFromApiFormat, fetchBridgeResources]);
-
-  // Reset on close
   useEffect(() => {
-    if (!open) {
-      reset();
-      setFormData({
-        name: '',
-        environment_uuid: '',
-        enabled: true,
-        notes: ''
-      });
-      setFormErrors({});
-    }
-  }, [open, reset]);
+    if (saved?.environment?.uuid) setEnvironment(saved.environment.uuid);
+  }, [saved]);
 
-  // Handle create new resource from BridgeTypeSelector (fallback section)
-  const handleCreateFallbackResource = (type) => {
-    if (onDrillDown) {
-      onDrillDown({
-        type,
-        mode: 'create',
-        data: null,
-        environmentUuid: formData.environment_uuid,
-        onResult: async (savedData) => {
-          const uuid = savedData?.uuid || savedData?.id;
-          try {
-            if (type === fallbackBridgeType || type) {
-              fetchBridgeResources(type, formData.environment_uuid);
-            }
-            if (uuid) {
-              setFallbackBridgeUuid(uuid);
-            }
-          } catch (err) {
-            console.error('Error reloading resources after drilldown save:', err);
-          }
-        }
-      });
+  const destinations = useDestinations(environment);
+  const errors = tried ? validateForm(form) : {};
+  const set = (changes) => setForm((prev) => ({ ...prev, ...changes }));
+  const anyOpen = form.week.some((day) => day.open);
+
+  const handleSave = async () => {
+    setTried(true);
+    if (Object.keys(validateForm(form)).length > 0) return;
+    if (!environment) {
+      setSaveError(t('errors.noApplication'));
       return;
     }
-
-    // Legacy inline dialog behavior
-    if (type === 'announcement') {
-      setAnnouncementEditMode('create');
-      setAnnouncementToEdit(null);
-      setAnnouncementDialogOpen(true);
-    }
-  };
-
-  // Handle edit resource from BridgeTypeSelector (fallback section)
-  const handleEditFallbackResource = (type, uuid) => {
-    if (onDrillDown) {
-      const resourceList = bridgeResources[type] || [];
-      const existingData = resourceList.find(r => r.uuid === uuid) || null;
-      onDrillDown({
-        type,
-        mode: 'edit',
-        data: existingData,
-        environmentUuid: formData.environment_uuid,
-        onResult: async () => {
-          try {
-            fetchBridgeResources(type, formData.environment_uuid);
-          } catch (err) {
-            console.error('Error reloading resources after drilldown edit:', err);
-          }
-        }
-      });
-      return;
-    }
-
-    // Legacy inline dialog behavior
-    if (type === 'announcement') {
-      const resourceList = bridgeResources['announcement'] || [];
-      const ann = resourceList.find(a => a.uuid === uuid);
-      if (ann) {
-        setAnnouncementEditMode('edit');
-        setAnnouncementToEdit(ann);
-        setAnnouncementDialogOpen(true);
-      }
-    }
-  };
-
-  // Handle announcement save - reload bridge resources and auto-select
-  const handleAnnouncementSave = async (announcementData) => {
-    const uuid = announcementData.uuid || announcementData.id;
-    setAnnouncementDialogOpen(false);
-    setAnnouncementToEdit(null);
-
+    setSaving(true);
+    setSaveError('');
     try {
-      // Refresh bridge resources so BridgeTypeSelector sees updates
-      if (fallbackBridgeType === 'announcement') {
-        fetchBridgeResources('announcement', formData.environment_uuid);
-      }
-
-      if (uuid) {
-        setFallbackBridgeUuid(uuid);
-      }
-    } catch (err) {
-      console.error('Error reloading announcements after save:', err);
-    }
-  };
-
-  // Handle form field change
-  const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear field error
-    if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: null }));
-    }
-  };
-
-  // Validate form
-  const validateForm = () => {
-    const errors = {};
-
-    if (!formData.name?.trim()) {
-      errors.name = 'Name is required';
-    }
-
-    if (!formData.environment_uuid) {
-      errors.environment_uuid = 'Application is required';
-    }
-
-    // Validate resources (only if any exist)
-    if (resources.length > 0) {
-      const resourceValidation = validateResources();
-      if (!resourceValidation.valid) {
-        errors.resources = resourceValidation.error;
-      }
-    }
-
-    // Validate fallback
-    if (!fallbackBridgeType) {
-      errors.fallbackBridgeType = 'Fallback bridge type is required';
-    }
-
-    if (fallbackBridgeType && fallbackBridgeType !== 'number' && !fallbackBridgeUuid) {
-      errors.fallbackBridgeUuid = 'Fallback destination is required';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Local loading state for edit mode (create mode uses hook's loading)
-  const [editSaving, setEditSaving] = useState(false);
-
-  // Handle submit
-  const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      let result;
-      if (mode === 'edit' && callCondition) {
-        // Edit mode - update call condition
-        setEditSaving(true);
-        const preparedResources = await prepareResourcesForSave(resources);
-        result = await updateCallCondition(callCondition.uuid, {
-          ...formData,
-          fallback_bridge_type: fallbackBridgeType,
-          fallback_bridge_uuid: fallbackBridgeUuid,
-          resources: preparedResources
-        });
-      } else {
-        // Create mode
-        result = await saveCallCondition(formData);
-      }
-      onSave(result);
-      onClose();
-    } catch (err) {
-      // Error is handled by hook
-      console.error('Submit error:', err);
+      const result = await saveCallCondition({
+        form,
+        saved,
+        // Always sent: the API service needs it to create. For a user it is
+        // their own application, which the API enforces anyway.
+        environmentUuid: environment,
+      });
+      onSave?.(result);
+      onClose?.();
+    } catch (error) {
+      setSaveError(t('errors.save', { message: error?.message || '' }));
     } finally {
-      setEditSaving(false);
+      setSaving(false);
     }
   };
 
-  const isSaving = loading || editSaving;
+  const title = mode === 'edit' ? t('title.edit') : t('title.create');
 
-  // Check if form is valid
-  const isFormValid = formData.name && formData.environment_uuid && fallbackBridgeType;
+  const body = loading ? (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Skeleton variant="rounded" height={56} />
+      <Skeleton variant="rounded" height={280} />
+      <Skeleton variant="rounded" height={72} />
+    </Box>
+  ) : (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {loadFailed && <Alert severity="error">{t('errors.load')}</Alert>}
 
-  // ---------------------------------------------------------------------------
-  // Shared form content (rendered inside either Dialog or panel Box)
-  // ---------------------------------------------------------------------------
-  const formContent = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: containerMode === 'panel' ? 0 : 2 }}>
-      {/* UUID - Read Only (edit mode only) */}
-      {callCondition?.uuid && (
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField
-          label="UUID"
-          fullWidth
-          value={callCondition.uuid}
-          disabled
-          InputProps={{
-            readOnly: true,
-            sx: { fontFamily: 'monospace', backgroundColor: 'action.hover' }
-          }}
-          size="small"
-        />
-      )}
-
-      {/* Basic Information */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Basic Information</Typography>
-
-        {/* Enabled Switch */}
-        <FormControlLabel
-          control={
-            <Switch
-              checked={formData.enabled}
-              onChange={(e) => handleChange('enabled', e.target.checked)}
-              disabled={loading}
-            />
-          }
-          label="Enabled"
-          sx={{ mb: 2 }}
-        />
-
-        {/* Name and Environment */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField
-            label="Name"
-            value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            required
-            fullWidth
-            error={!!formErrors.name}
-            helperText={formErrors.name}
-            placeholder="e.g., Business Hours Routing"
-            disabled={loading}
-          />
-
-          {/* A portal user has one environment, their own: never a choice. */}
-          {!hideEnvironment && !userSession && (
-            <FormControl fullWidth required error={!!formErrors.environment_uuid} disabled={loading}>
-              <InputLabel>Application</InputLabel>
-              <Select
-                value={formData.environment_uuid}
-                label="Application"
-                onChange={(e) => handleChange('environment_uuid', e.target.value)}
-                MenuProps={menuProps(layer)}
-              >
-                {selectedEnvironments?.map(env => (
-                  <MenuItem key={env.uuid} value={env.uuid}>{env.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
-        </Box>
-
-      </Paper>
-
-      {/* Routing Resources */}
-      <Paper sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Box>
-            <Typography variant="h6">Routing Resources</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Define time-based routing rules. Resources are evaluated in order (priority #1 first).
-            </Typography>
-          </Box>
-          <Button
-            onClick={addResource}
-            startIcon={<AddIcon />}
-            variant="contained"
-            size="small"
-            disabled={loading}
-          >
-            Add Resource
-          </Button>
-        </Box>
-
-        <ResourceList
-          resources={resources}
-          onReorder={handleReorder}
-          onRemove={removeResource}
-          onUpdate={updateResource}
-          bridgeTypes={bridgeTypes}
-          bridgeResources={bridgeResources}
-          onFetchBridgeResources={fetchBridgeResources}
-          environmentUuid={formData.environment_uuid}
-          disabled={loading}
-          zLayer={layer}
-        />
-
-        {formErrors.resources && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {formErrors.resources}
-          </Alert>
-        )}
-      </Paper>
-
-      {/* Fallback Routing */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>Fallback Routing</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Route calls here when no time conditions match. This is required.
-        </Typography>
-
-        <BridgeTypeSelector
-          bridgeType={fallbackBridgeType}
-          bridgeUuid={fallbackBridgeUuid}
-          onBridgeTypeChange={(type) => { setFallbackBridgeType(type); setFallbackBridgeUuid(''); }}
-          onBridgeUuidChange={setFallbackBridgeUuid}
-          bridgeTypes={bridgeTypes}
-          bridgeResources={bridgeResources}
-          onFetchBridgeResources={fetchBridgeResources}
-          onCreateResource={handleCreateFallbackResource}
-          onEditResource={handleEditFallbackResource}
-          environmentUuid={formData.environment_uuid}
-          label="Fallback Destination"
+          label={t('name.label')}
+          value={form.name}
+          onChange={(event) => set({ name: tidyName(event.target.value) })}
+          placeholder={t('name.placeholder')}
           required
-          typeError={formErrors.fallbackBridgeType}
-          uuidError={formErrors.fallbackBridgeUuid}
-          disabled={loading}
-          zLayer={layer}
+          error={Boolean(errors.name)}
+          helperText={errors.name ? t(errors.name) : t('name.help')}
+          inputProps={{ dir: 'ltr', autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false }}
+          sx={{ flex: '1 1 240px' }}
         />
-      </Paper>
+        {/* A user has one application, their own: never a choice. */}
+        {!hideEnvironment && !userSession && (
+          <FormControl sx={{ flex: '1 1 200px' }}>
+            <InputLabel>{t('application')}</InputLabel>
+            <Select value={environment} label={t('application')} onChange={(event) => setEnvironment(event.target.value)} MenuProps={menuProps(layer)}>
+              {selectedEnvironments?.map((env) => <MenuItem key={env.uuid} value={env.uuid}>{env.name}</MenuItem>)}
+            </Select>
+          </FormControl>
+        )}
+      </Box>
 
-      {/* Notes - moved to bottom */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Notes</Typography>
-        <TextField
-          label="Notes"
-          value={formData.notes}
-          onChange={(e) => handleChange('notes', e.target.value)}
-          fullWidth
-          multiline
-          rows={3}
-          placeholder="Optional description of routing logic"
-          disabled={loading}
-        />
-      </Paper>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" onClose={clearError}>
-          {error}
-        </Alert>
+      {showNotes || form.notes ? (
+        <TextField label={t('notes.label')} value={form.notes} onChange={(event) => set({ notes: event.target.value })} multiline minRows={2} />
+      ) : (
+        <Link component="button" type="button" variant="body2" onClick={() => setShowNotes(true)} sx={{ alignSelf: 'flex-start' }}>
+          {t('notes.add')}
+        </Link>
       )}
+
+      <Box component="section">
+        <Typography variant="subtitle1" fontWeight={700}>{t('hours.title')}</Typography>
+        <WeekSummary week={form.week} />
+        <Typography variant="caption" color="text.secondary">{t('hours.timezone')}</Typography>
+        <WeekHoursEditor
+          week={form.week}
+          onChange={(week) => set({ week })}
+          errors={errors}
+          layer={layer}
+          onCopied={setCopiedDay}
+        />
+      </Box>
+
+      <Box component="section" sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {anyOpen && (
+          <DestinationPicker
+            testId="target-while-open"
+            label={t('targets.whileOpen')}
+            hint={t('targets.whileOpenHint')}
+            target={form.openTarget}
+            onChange={(openTarget) => set({ openTarget })}
+            types={destinations.ruleTypes}
+            destinations={destinations}
+            environmentUuid={environment}
+            nestedLayer={nestedLayer}
+            error={errors.openTarget}
+            onDrillDown={onDrillDown}
+          />
+        )}
+        <DestinationPicker
+          testId="target-otherwise"
+          label={t('targets.otherwise')}
+          hint={t('targets.otherwiseHint')}
+          target={form.otherwise}
+          onChange={(otherwise) => set({ otherwise })}
+          types={destinations.fallbackTypes}
+          destinations={destinations}
+          environmentUuid={environment}
+          nestedLayer={nestedLayer}
+          error={errors.otherwise}
+          onDrillDown={onDrillDown}
+        />
+      </Box>
+
+      <Divider />
+
+      <MoreRules
+        rules={form.rules}
+        onChange={(rules) => set({ rules })}
+        errors={errors}
+        types={destinations.ruleTypes}
+        destinations={destinations}
+        environmentUuid={environment}
+        layer={nestedLayer}
+      />
+
+      {tried && Object.keys(errors).length > 0 && <Alert severity="warning">{t('errors.fixFirst')}</Alert>}
+      {saveError && <Alert severity="error" onClose={() => setSaveError('')}>{saveError}</Alert>}
+
+      <Snackbar
+        open={copiedDay !== null}
+        autoHideDuration={2500}
+        onClose={() => setCopiedDay(null)}
+        message={copiedDay !== null ? t('hours.copied', { day: t(`days.short.${copiedDay}`) }) : ''}
+      />
     </Box>
   );
 
-  // ---------------------------------------------------------------------------
-  // Shared action buttons
-  // ---------------------------------------------------------------------------
-  const actionButtons = (
+  const actions = (
     <>
-      <Button onClick={onClose} disabled={isSaving}>
-        Cancel
-      </Button>
+      <Button onClick={onClose} disabled={saving}>{t('actions.cancel')}</Button>
       <Button
-        onClick={handleSubmit}
         variant="contained"
-        disabled={!isFormValid || isSaving}
-        startIcon={isSaving ? <CircularProgress size={20} /> : <CallConditionIcon />}
+        onClick={handleSave}
+        disabled={saving || loading}
+        startIcon={saving ? <CircularProgress size={18} color="inherit" /> : null}
+        data-testid="call-condition-save"
       >
-        {isSaving
-          ? (mode === 'edit' ? 'Updating...' : 'Creating...')
-          : (mode === 'edit' ? 'Update Call Condition' : 'Create Call Condition')}
+        {saving ? t('actions.saving') : mode === 'edit' ? t('actions.save') : t('actions.create')}
       </Button>
     </>
   );
 
-  // ---------------------------------------------------------------------------
-  // Panel mode — render form directly in a Box (no Dialog wrapper)
-  // ---------------------------------------------------------------------------
   if (containerMode === 'panel') {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* Panel title */}
+      <Box className="call-condition-page" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
           <CallConditionIcon />
-          <Typography variant="h6">
-            {mode === 'edit' ? 'Edit Call Condition' : 'Create Call Condition'}
-          </Typography>
+          <Typography variant="h6">{title}</Typography>
         </Box>
-
-        {/* Scrollable form body */}
-        <Box sx={{ flex: 1, overflowY: 'auto' }}>
-          {formContent}
-        </Box>
-
-        {/* Action buttons pinned at the bottom */}
+        <Box sx={{ flex: 1 }}>{body}</Box>
+        {/* Pinned to the bottom of the scroll, so Save is always in reach. */}
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 1,
-            pt: 2,
-            mt: 2,
-            borderTop: 1,
-            borderColor: 'divider'
+            position: 'sticky', bottom: 0, zIndex: 2, display: 'flex', justifyContent: 'flex-end', gap: 1,
+            mt: 2, py: 1.5, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider',
+            '& .MuiButton-root': { minHeight: 44, flex: { xs: 1, md: 'none' } },
           }}
         >
-          {actionButtons}
+          {actions}
         </Box>
       </Box>
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Dialog mode (default) — existing Dialog wrapper behavior unchanged
-  // ---------------------------------------------------------------------------
   return (
-    <>
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="lg"
-      fullWidth
-      sx={{ zIndex: layer.DIALOG }}
-    >
-      <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CallConditionIcon />
-            <Typography variant="h6">{mode === 'edit' ? 'Edit Call Condition' : 'Create Call Condition'}</Typography>
-          </Box>
-          <Button onClick={onClose} size="small" sx={{ minWidth: 'auto' }}>
-            <CloseIcon />
-          </Button>
-        </Box>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth fullScreenBelow="md" sx={{ zIndex: layer.DIALOG }}>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <CallConditionIcon />
+        <Box component="span" sx={{ flex: 1 }}>{title}</Box>
+        <IconButton onClick={onClose} aria-label={t('actions.cancel')} edge="end"><CloseIcon /></IconButton>
       </DialogTitle>
-
-      <DialogContent>
-        {formContent}
-      </DialogContent>
-
-      <DialogActions>
-        {actionButtons}
-      </DialogActions>
+      <DialogContent dividers>{body}</DialogContent>
+      <DialogActions sx={{ '& .MuiButton-root': { minHeight: 44 } }}>{actions}</DialogActions>
     </Dialog>
-
-    {/* Inline Announcement Create/Edit Dialog — only rendered when onDrillDown is not provided */}
-    {!onDrillDown && (
-      <AnnouncementBridge
-        open={announcementDialogOpen}
-        onClose={() => { setAnnouncementDialogOpen(false); setAnnouncementToEdit(null); }}
-        onSave={handleAnnouncementSave}
-        environmentUuid={formData.environment_uuid}
-        hideEnvironment={true}
-        announcement={announcementToEdit}
-        editMode={announcementEditMode}
-        zLayer={Z.L3}
-      />
-    )}
-    </>
   );
 };
 

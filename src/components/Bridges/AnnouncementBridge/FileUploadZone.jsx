@@ -7,6 +7,7 @@ import {
   Alert,
   IconButton
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import {
   CloudUpload as CloudUploadIcon,
   Close as CloseIcon,
@@ -38,6 +39,7 @@ export const FileUploadZone = ({
   errorMessage = null,
   disabled = false
 }) => {
+  const { t } = useTranslation('bridges');
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState('');
@@ -98,14 +100,14 @@ export const FileUploadZone = ({
     // Validate file type
     const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
     if (!acceptedFormats.includes(fileExtension)) {
-      onFileSelect(null, `Invalid file type. Accepted formats: ${acceptedFormats.join(', ')}`, null);
+      onFileSelect(null, t('announcement.file.invalidType', { formats: acceptedFormats.join(', ') }), null);
       return;
     }
 
     // Validate file size
     if (file.size > maxSizeBytes) {
       const maxSizeMB = (maxSizeBytes / (1024 * 1024)).toFixed(1);
-      onFileSelect(null, `File too large. Maximum size: ${maxSizeMB}MB`, null);
+      onFileSelect(null, t('announcement.file.tooLarge', { size: maxSizeMB }), null);
       return;
     }
 
@@ -204,16 +206,16 @@ export const FileUploadZone = ({
           {/* Status text */}
           <Typography variant="h6" textAlign="center">
             {uploadStatus === 'uploading'
-              ? 'Uploading...'
+              ? t('announcement.file.uploading')
               : uploadStatus === 'success'
-              ? 'Upload Complete!'
+              ? t('announcement.file.complete')
               : uploadStatus === 'error'
-              ? 'Upload Failed'
-              : 'Drag & drop audio file here'}
+              ? t('announcement.file.failed')
+              : t('announcement.file.drop')}
           </Typography>
 
           <Typography variant="body2" color="text.secondary" textAlign="center">
-            {uploadStatus === 'idle' && `or click to select (${acceptedFormats.join(', ')}, max ${(maxSizeBytes / (1024 * 1024)).toFixed(0)}MB)`}
+            {uploadStatus === 'idle' && t('announcement.file.orClick', { formats: acceptedFormats.join(', '), size: (maxSizeBytes / (1024 * 1024)).toFixed(0) })}
           </Typography>
 
           {/* Selected file name */}
@@ -247,7 +249,7 @@ export const FileUploadZone = ({
         <Box sx={{ mt: 2 }}>
           <LinearProgress variant="determinate" value={uploadProgress} />
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', textAlign: 'center' }}>
-            {uploadProgress}% uploaded
+            {t('announcement.file.progress', { percent: uploadProgress })}
           </Typography>
         </Box>
       )}
@@ -258,7 +260,7 @@ export const FileUploadZone = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
             <PlayIcon color="primary" />
             <Typography variant="subtitle2" fontWeight="medium">
-              Audio Preview
+              {t('announcement.file.preview')}
             </Typography>
           </Box>
 
@@ -267,11 +269,11 @@ export const FileUploadZone = ({
             src={audioPreviewUrl}
             style={{ width: '100%', marginTop: '8px' }}
           >
-            Your browser does not support the audio element.
+            {t('announcement.file.noAudioSupport')}
           </audio>
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            Listen to verify the audio before creating the announcement.
+            {t('announcement.file.previewHint')}
           </Typography>
         </Paper>
       )}

@@ -21,6 +21,7 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
+import { Trans, useTranslation } from 'react-i18next';
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import { useIsUserSession } from '../../../hooks/useIsUserSession';
 import { NumberSelector } from '../../Bridges/NumberBridge/NumberSelector.jsx';
@@ -32,7 +33,24 @@ import { didsApi } from '../../../services/api/routesApi';
 import { providersApi } from '../../../services/api/providersApi';
 import { parseServerErrors, is406Error } from '../../../utils/formValidation';
 import { Z, menuProps } from '../../../utils/zIndex.js';
+import Bdi from '../../../i18n/Bdi';
+import { routeTypeHint, routeTypeLabel } from '../routeTypes';
+import { isolated } from '../isolated';
 import './DIDForm.css';
+
+// Bridge types the form names in words; any other shows its own value.
+const BRIDGE_LABELS = ['queue', 'ivr', 'vml', 'call_condition', 'bot', 'announcement', 'extension'];
+const BRIDGE_OPTIONS = ['number', 'announcement', 'vml', 'call_condition', 'que', 'queue', 'ivr', 'bot', 'extension', 'conference'];
+const NO_RESOURCES = ['queue', 'ivr', 'announcement', 'vml', 'call_condition', 'bot'];
+
+// The bridge type select's options, in capitals as ever.
+const bridgeOptionLabel = (t, type) => (BRIDGE_OPTIONS.includes(type)
+  ? t(`form.bridgeOption.${type}`)
+  : type.replace('_', ' ').toUpperCase());
+
+const noResourcesText = (t, type) => (NO_RESOURCES.includes(type)
+  ? t(`form.noResources.${type}`)
+  : t('form.noResources.other', { type }));
 
 /** Dashed section divider with centered label */
 const FormSection = ({ label }) => (
@@ -56,44 +74,8 @@ const REPLACE_FORMAT = /^[0-9+*#]*$/;
 const EXAMPLE_REST = '501234567';
 
 // The type decides every field below it, so it is chosen first and named in
-// words, not as the raw API value.
-// Every type /api/routes?action=types answers (API Did::TYPES + FEATURES).
-const TYPE_LABELS = {
-  [TRUNK]: 'Trunk – outgoing calls',
-  dst: 'Incoming number',
-  src: 'Caller number',
-  feature: 'Feature (generic)',
-  'feature:user.login': 'Feature – agent log in',
-  'feature:user.logout': 'Feature – agent log out',
-  'feature:user.available': 'Feature – agent available',
-  'feature:user.break': 'Feature – agent on break',
-  'feature:user.logged_out': 'Feature – agent logged out',
-  'feature:spy': 'Feature – listen in (spy)',
-  'feature:pickup': 'Feature – pick up (group)',
-  'feature:pickup_extension': 'Feature – pick up a device',
-  'feature:follow_me': 'Feature – call forwarding on',
-  'feature:follow_me_disable': 'Feature – call forwarding off',
-  'feature:caller_id_replace': 'Feature – caller ID replace',
-};
-const TYPE_HINTS = {
-  [TRUNK]: 'Dialed numbers that start with a prefix are sent out, with the prefix rewritten.',
-  dst: 'Calls arriving on this number are routed to a destination.',
-  src: 'Calls from this caller number are routed to a destination.',
-  'feature:user.login': 'A code the agent dials to log in, e.g. *40 followed by the user.',
-  'feature:user.logout': 'A code the agent dials to log out.',
-  'feature:user.available': 'A code the agent dials to become available.',
-  'feature:user.break': 'A code the agent dials to go on break.',
-  'feature:user.logged_out': 'A code the agent dials to set logged out.',
-  'feature:spy': 'A code followed by a device, to listen in on its call.',
-  'feature:pickup': 'A code that picks up a call ringing in the group.',
-  'feature:pickup_extension': 'A code followed by a device, to pick up its ringing call.',
-  'feature:follow_me': 'A code followed by a number, to forward this device to it.',
-  'feature:follow_me_disable': 'A code that turns call forwarding off.',
-  'feature:caller_id_replace': 'A code followed by a number, dialed with a replaced caller ID.',
-};
-const typeLabel = (type) => TYPE_LABELS[type] || (type.startsWith('feature:')
-  ? `Feature – ${type.slice(8).replace(/[._]/g, ' ')}`
-  : type.replace(/_/g, ' '));
+// words, not as the raw API value (see routeTypes.js; the API's list is
+// /api/routes?action=types, Did::TYPES + FEATURES).
 
 /**
  * DIDForm Component
@@ -113,6 +95,7 @@ const DIDForm = forwardRef(({
   onDrillDown,
   showActions = true,
 }, ref) => {
+  const { t } = useTranslation('routes');
   const { selectedEnvironments } = useCustomerEnvironment();
   // A portal user has one environment, their own: it is set, never a field.
   const userSession = useIsUserSession();
@@ -201,13 +184,13 @@ const DIDForm = forwardRef(({
       if (didEnvUuid && !envList.find(e => e.uuid === didEnvUuid)) {
         envList.push({
           uuid: didEnvUuid,
-          name: didEnvName || `Application (${didEnvUuid.slice(0, 8)}...)`,
+          name: didEnvName || t('form.applicationFallback', { id: isolated(didEnvUuid.slice(0, 8)) }),
         });
       }
     }
 
     setEnvironments(envList);
-  }, [selectedEnvironments, did]);
+  }, [selectedEnvironments, did, t]);
 
   // Fetch available DID providers
   useEffect(() => {
@@ -314,28 +297,28 @@ const DIDForm = forwardRef(({
   // Validation
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name?.trim()) newErrors.name = 'Name is required';
-    if (!formData.number?.trim()) newErrors.number = isFeature ? 'Prefix is required' : 'Number is required';
+    if (!formData.name?.trim()) newErrors.name = t('form.error.nameRequired');
+    if (!formData.number?.trim()) newErrors.number = isFeature ? t('form.error.prefixRequired') : t('form.error.numberRequired');
     else if (isFeature && !PREFIX_FORMAT.test(formData.number.trim())) {
-      newErrors.number = 'Only digits, + * # (a prefix, not a pattern)';
+      newErrors.number = t('form.error.prefixFormat');
     }
     if (isFeature && !REPLACE_FORMAT.test(formData.replace || '')) {
-      newErrors.replace = 'Only digits, + * #';
+      newErrors.replace = t('form.error.replaceFormat');
     }
-    if (!formData.environment_uuid) newErrors.environment_uuid = 'Application is required';
-    if (!formData.type) newErrors.type = 'Type is required';
-    if (!isTrunk && !formData.bridge_type) newErrors.bridge_type = 'Bridge type is required';
+    if (!formData.environment_uuid) newErrors.environment_uuid = t('form.error.applicationRequired');
+    if (!formData.type) newErrors.type = t('form.error.typeRequired');
+    if (!isTrunk && !formData.bridge_type) newErrors.bridge_type = t('form.error.bridgeTypeRequired');
     if (!isTrunk && formData.bridge_type && !formData.bridge_uuid) {
       newErrors.bridge_uuid = formData.bridge_type === 'number'
-        ? 'Destination number is required'
-        : 'Bridge is required';
+        ? t('form.error.destinationNumberRequired')
+        : t('form.error.bridgeRequired');
     }
 
     const metaKeys = metaFields.map(f => f.key).filter(k => k.trim());
     const duplicateKeys = metaKeys.filter((k, i) => metaKeys.indexOf(k) !== i);
     if (duplicateKeys.length > 0) {
-      newErrors.meta = 'Duplicate meta keys are not allowed';
-      duplicateKeys.forEach(k => { newErrors[`meta_${k}`] = 'Duplications are not allowed'; });
+      newErrors.meta = t('form.error.duplicateMeta');
+      duplicateKeys.forEach(k => { newErrors[`meta_${k}`] = t('form.error.duplicateKey'); });
     }
 
     setErrors(newErrors);
@@ -378,7 +361,7 @@ const DIDForm = forwardRef(({
           setErrors(prev => ({ ...prev, ...serverErrors }));
         }
       }
-      setApiError(error?.response?.data?.message || error?.message || 'Failed to save Route');
+      setApiError(error?.response?.data?.message || error?.message || t('form.saveFailed'));
     }
   };
 
@@ -391,14 +374,9 @@ const DIDForm = forwardRef(({
     && (isTrunk || formData.bridge_type);
 
   // Helper: get human-readable bridge type label
-  const getBridgeTypeLabel = (type) => {
-    const labels = {
-      queue: 'Queue', ivr: 'IVR', vml: 'VML Script',
-      call_condition: 'Call Condition', bot: 'Bot',
-      announcement: 'Announcement', extension: 'Device'
-    };
-    return labels[type] || type?.charAt(0).toUpperCase() + type?.slice(1);
-  };
+  const getBridgeTypeLabel = (type) => (BRIDGE_LABELS.includes(type)
+    ? t(`form.bridgeLabel.${type}`)
+    : type?.charAt(0).toUpperCase() + type?.slice(1));
 
   return (
     <Box className="did-form" sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
@@ -422,53 +400,53 @@ const DIDForm = forwardRef(({
               <Switch
                 checked={!!formData.enabled}
                 onChange={(e) => handleChange('enabled', e.target.checked)}
-                inputProps={{ 'aria-label': 'Enabled' }}
+                inputProps={{ 'aria-label': t('form.enabled') }}
               />
             }
-            label="Enabled"
+            label={t('form.enabled')}
           />
 
           {/* ── Type first: it decides every field below ── */}
-          <FormSection label="Route Type" />
+          <FormSection label={t('form.section.routeType')} />
           <FormControl fullWidth required error={!!errors.type || (submitAttempted && !formData.type)}>
-            <InputLabel required>Route Type</InputLabel>
+            <InputLabel required>{t('form.routeType')}</InputLabel>
             <Select
               value={formData.type || ''}
-              label="Route Type"
+              label={t('form.routeType')}
               onChange={(e) => handleTypeChange(e.target.value)}
               MenuProps={menuProps(Z.L1)}
             >
               {didTypes.map(type => (
-                <MenuItem key={type} value={type}>{typeLabel(type)}</MenuItem>
+                <MenuItem key={type} value={type}>{routeTypeLabel(t, type)}</MenuItem>
               ))}
             </Select>
             <FormHelperText>
               {errors.type || (submitAttempted && !formData.type)
-                ? (errors.type || 'Type is required')
-                : (TYPE_HINTS[formData.type] || 'What this Route does')}
+                ? (errors.type || t('form.error.typeRequired'))
+                : (routeTypeHint(t, formData.type) || t('form.typeHelp'))}
             </FormHelperText>
           </FormControl>
 
           {/* ── Details ── */}
-          <FormSection label="Details" />
+          <FormSection label={t('form.section.details')} />
           <div className="did-form-row">
             <TextField
-              label="Name"
+              label={t('form.name')}
               value={formData.name || ''}
               onChange={(e) => handleChange('name', e.target.value)}
               required
               fullWidth
               error={!!errors.name || (submitAttempted && !formData.name?.trim())}
-              helperText={errors.name || (submitAttempted && !formData.name?.trim() ? 'Name is required' : 'A friendly name to identify this Route')}
-              placeholder={isTrunk ? 'e.g. Israel mobiles' : 'e.g. Main Office Line'}
+              helperText={errors.name || (submitAttempted && !formData.name?.trim() ? t('form.error.nameRequired') : t('form.nameHelp'))}
+              placeholder={isTrunk ? t('form.namePlaceholderTrunk') : t('form.namePlaceholder')}
             />
             {/* An account's choice; a portal user's is their own. */}
             {!userSession && (
             <FormControl fullWidth required error={!!errors.environment_uuid || (submitAttempted && !formData.environment_uuid)}>
-              <InputLabel required>Application</InputLabel>
+              <InputLabel required>{t('form.application')}</InputLabel>
               <Select
                 value={formData.environment_uuid || ''}
-                label="Application"
+                label={t('form.application')}
                 onChange={(e) => handleEnvironmentChange(e.target.value)}
                 MenuProps={menuProps(Z.L1)}
               >
@@ -478,8 +456,8 @@ const DIDForm = forwardRef(({
               </Select>
               <FormHelperText>
                 {errors.environment_uuid || (submitAttempted && !formData.environment_uuid)
-                  ? (errors.environment_uuid || 'Application is required')
-                  : 'The application this Route belongs to'}
+                  ? (errors.environment_uuid || t('form.error.applicationRequired'))
+                  : t('form.applicationHelp')}
               </FormHelperText>
             </FormControl>
             )}
@@ -488,63 +466,67 @@ const DIDForm = forwardRef(({
           {isFeature ? (
             <>
               {/* ── Dialing rule: prefix -> replacement, with what it does ── */}
-              <FormSection label="Dialing Rule" />
+              <FormSection label={t('form.section.dialingRule')} />
               <div className="did-form-row">
                 <TextField
-                  label="Prefix"
+                  label={t('form.prefix')}
                   value={formData.number || ''}
                   onChange={(e) => handleChange('number', e.target.value)}
                   required
                   fullWidth
                   error={!!errors.number || (submitAttempted && !formData.number?.trim())}
                   helperText={errors.number || (submitAttempted && !formData.number?.trim()
-                    ? 'Prefix is required' : 'What the dialed number starts with: digits, + * #')}
+                    ? t('form.error.prefixRequired') : t('form.prefixHelp'))}
                   placeholder={isTrunk ? '0' : '*50'}
                   inputProps={{ inputMode: 'tel' }}
                 />
                 <TextField
-                  label="Replace with"
+                  label={t('form.replaceWith')}
                   value={formData.replace || ''}
                   onChange={(e) => handleChange('replace', e.target.value)}
                   fullWidth
                   error={!!errors.replace}
-                  helperText={errors.replace || 'Takes the prefix\'s place. Leave empty to remove it'}
+                  helperText={errors.replace || t('form.replaceHelp')}
                   placeholder={isTrunk ? '972' : ''}
                   inputProps={{ inputMode: 'tel' }}
                 />
               </div>
               {preview && (
                 <Typography variant="body2" color="text.secondary" data-testid="did-rule-preview">
-                  Dialing <strong>{preview.dialed}</strong> sends <strong>{preview.sent || '(nothing)'}</strong>
+                  <Trans t={t} i18nKey="form.rulePreview" components={{
+                    dialed: <strong><Bdi>{preview.dialed}</Bdi></strong>,
+                    sent: <strong>{preview.sent ? <Bdi>{preview.sent}</Bdi> : t('form.nothing')}</strong>,
+                  }} />
                 </Typography>
               )}
             </>
           ) : (
             <TextField
-              label="Phone Number"
+              label={t('form.phoneNumber')}
               value={formData.number || ''}
               onChange={(e) => handleChange('number', e.target.value)}
               required
               fullWidth
               error={!!errors.number || (submitAttempted && !formData.number?.trim())}
               helperText={errors.number || (submitAttempted && !formData.number?.trim()
-                ? 'Number is required' : 'E.164 format, e.g. +14155551234')}
+                ? t('form.error.numberRequired') : t('form.numberHelp', { example: isolated('+14155551234') }))}
               placeholder="+14155551234"
+              inputProps={{ inputMode: 'tel' }}
             />
           )}
 
           {/* Provider that delivers an incoming number — not an outgoing route's */}
           {!isTrunk && providers.length > 0 && (
             <FormControl fullWidth>
-              <InputLabel>Provider</InputLabel>
+              <InputLabel>{t('form.provider')}</InputLabel>
               <Select
                 value={formData.provider_uuid || ''}
-                label="Provider"
+                label={t('form.provider')}
                 onChange={(e) => handleChange('provider_uuid', e.target.value)}
                 MenuProps={menuProps(Z.L1)}
               >
                 <MenuItem value="">
-                  <em>None</em>
+                  <em>{t('form.none')}</em>
                 </MenuItem>
                 {providers.map(p => (
                   <MenuItem key={p.uuid} value={p.uuid}>
@@ -553,7 +535,7 @@ const DIDForm = forwardRef(({
                 ))}
               </Select>
               <FormHelperText>
-                SIP trunk / provider that delivers calls to this DID
+                {t('form.providerHelp')}
               </FormHelperText>
             </FormControl>
           )}
@@ -561,13 +543,13 @@ const DIDForm = forwardRef(({
           {isTrunk ? (
             <>
               {/* ── Send to: a provider, or the carrier the rate picks ── */}
-              <FormSection label="Send To" />
+              <FormSection label={t('form.section.sendTo')} />
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
               <FormControl fullWidth>
-                <InputLabel shrink>Send to</InputLabel>
+                <InputLabel shrink>{t('form.sendToLabel')}</InputLabel>
                 <Select
                   value={formData.bridge_uuid || ''}
-                  label="Send to"
+                  label={t('form.sendToLabel')}
                   displayEmpty
                   notched
                   onChange={(e) => (e.target.value === 'add_new'
@@ -576,20 +558,20 @@ const DIDForm = forwardRef(({
                   MenuProps={menuProps(Z.L1)}
                 >
                   <MenuItem value="add_new" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                    + Create New SIP Provider
+                    {t('form.createSipProvider')}
                   </MenuItem>
-                  <MenuItem value="">Carrier chosen by rate</MenuItem>
+                  <MenuItem value="">{t('form.carrierByRate')}</MenuItem>
                   {sipProviders.map(p => (
                     <MenuItem key={p.uuid} value={p.uuid}>{p.name}</MenuItem>
                   ))}
                 </Select>
                 <FormHelperText>
-                  A SIP provider (another PBX, a carrier), or the carrier your tariff picks
+                  {t('form.sendToHelp')}
                 </FormHelperText>
               </FormControl>
               {formData.bridge_uuid && canEditProviders && (
-                <Tooltip title="Edit SIP provider">
-                  <IconButton aria-label="Edit SIP provider" color="primary" size="small" sx={{ mt: 1 }}
+                <Tooltip title={t('form.editSipProvider')}>
+                  <IconButton aria-label={t('form.editSipProvider')} color="primary" size="small" sx={{ mt: 1 }}
                     onClick={() => setEditingSipProvider(formData.bridge_uuid)}>
                     <EditIcon />
                   </IconButton>
@@ -597,7 +579,7 @@ const DIDForm = forwardRef(({
               )}
               </Box>
               <Alert severity="info" variant="outlined">
-                Billed as usual: the tariff needs a rate for the rewritten number.
+                {t('form.billingNote')}
               </Alert>
               <SipProviderQuickCreate
                 open={creatingSipProvider}
@@ -613,25 +595,25 @@ const DIDForm = forwardRef(({
           ) : (
             <>
           {/* ── Call Routing Section ── */}
-          <FormSection label="Call Routing" />
+          <FormSection label={t('form.section.callRouting')} />
 
           {/* Bridge Type */}
           <FormControl fullWidth required error={!!errors.bridge_type || (submitAttempted && !formData.bridge_type)} data-tour="did-bridge">
-            <InputLabel required>Bridge Type</InputLabel>
+            <InputLabel required>{t('form.bridgeType')}</InputLabel>
             <Select
               value={formData.bridge_type || ''}
-              label="Bridge Type"
+              label={t('form.bridgeType')}
               onChange={(e) => handleBridgeTypeChange(e.target.value)}
               MenuProps={menuProps(Z.L1)}
             >
               {bridgeTypes.map(type => (
-                <MenuItem key={type} value={type}>{type.replace('_', ' ').toUpperCase()}</MenuItem>
+                <MenuItem key={type} value={type}>{bridgeOptionLabel(t, type)}</MenuItem>
               ))}
             </Select>
             <FormHelperText>
               {(errors.bridge_type || (submitAttempted && !formData.bridge_type))
-                ? (errors.bridge_type || 'Bridge type is required')
-                : 'How incoming calls are routed — IVR, Queue, Announcement, etc.'}
+                ? (errors.bridge_type || t('form.error.bridgeTypeRequired'))
+                : t('form.bridgeTypeHelp')}
             </FormHelperText>
           </FormControl>
 
@@ -641,11 +623,11 @@ const DIDForm = forwardRef(({
               value={formData.bridge_uuid || ''}
               onChange={(uuid) => handleChange('bridge_uuid', uuid || '')}
               environmentUuid={formData.environment_uuid}
-              label="Destination Number"
-              placeholder="Search phone numbers..."
+              label={t('form.destinationNumber')}
+              placeholder={t('form.searchNumbers')}
               required
               error={errors.bridge_uuid}
-              helperText="Search for an existing number or create a new one"
+              helperText={t('form.destinationNumberHelp')}
             />
           ) : formData.bridge_type ? (
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
@@ -655,31 +637,31 @@ const DIDForm = forwardRef(({
                 error={!!errors.bridge_uuid}
                 disabled={!formData.bridge_type}
               >
-                <InputLabel>Destination</InputLabel>
+                <InputLabel>{t('form.destination')}</InputLabel>
                 <Select
                   value={formData.bridge_uuid || ''}
-                  label="Destination"
+                  label={t('form.destination')}
                   onChange={(e) => handleBridgeChange(e.target.value)}
                   MenuProps={menuProps(Z.L1)}
                 >
                   {['announcement', 'vml', 'call_condition', 'queue', 'ivr', 'bot'].includes(formData.bridge_type) && (
                     <MenuItem value="add_new" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                      + Create New {getBridgeTypeLabel(formData.bridge_type)}
+                      {t('form.createNew', { type: getBridgeTypeLabel(formData.bridge_type) })}
                     </MenuItem>
                   )}
                   {(!bridgeResources[formData.bridge_type] || bridgeResources[formData.bridge_type].length === 0) && (
-                    <MenuItem disabled>No {formData.bridge_type}s available</MenuItem>
+                    <MenuItem disabled>{noResourcesText(t, formData.bridge_type)}</MenuItem>
                   )}
                   {(bridgeResources[formData.bridge_type] || []).map(option => (
                     <MenuItem key={option.uuid} value={option.uuid}>{option.name}</MenuItem>
                   ))}
                 </Select>
                 <FormHelperText>
-                  {errors.bridge_uuid || 'Select an existing resource or create a new one'}
+                  {errors.bridge_uuid || t('form.destinationHelp')}
                 </FormHelperText>
               </FormControl>
               {formData.bridge_uuid && onDrillDown && (
-                <Tooltip title={`Edit ${getBridgeTypeLabel(formData.bridge_type)}`}>
+                <Tooltip title={t('form.editType', { type: getBridgeTypeLabel(formData.bridge_type) })}>
                   <IconButton
                     size="small"
                     color="primary"
@@ -704,7 +686,7 @@ const DIDForm = forwardRef(({
                 </Tooltip>
               )}
               {onDrillDown && ['announcement', 'vml', 'call_condition', 'queue', 'ivr', 'bot'].includes(formData.bridge_type) && (
-                <Tooltip title={`Create New ${getBridgeTypeLabel(formData.bridge_type)}`}>
+                <Tooltip title={t('form.createNewTooltip', { type: getBridgeTypeLabel(formData.bridge_type) })}>
                   <IconButton
                     size="small"
                     color="primary"
@@ -759,22 +741,22 @@ const DIDForm = forwardRef(({
           )}
 
           {/* ── Additional Section ── */}
-          <FormSection label="Additional" />
+          <FormSection label={t('form.section.additional')} />
 
           {/* Notes */}
           <TextField
-            label="Notes"
+            label={t('form.notes')}
             value={formData.notes || ''}
             onChange={(e) => handleChange('notes', e.target.value)}
             fullWidth
             multiline
             rows={3}
-            placeholder="Optional notes about this Route"
+            placeholder={t('form.notesPlaceholder')}
           />
 
           {/* Meta Properties */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography className="did-form-section-label">Meta Properties</Typography>
+            <Typography className="did-form-section-label">{t('form.metaProperties')}</Typography>
             <Button
               onClick={addMetaField}
               startIcon={<AddIcon />}
@@ -782,7 +764,7 @@ const DIDForm = forwardRef(({
               size="small"
               className="did-form-add-meta-btn"
             >
-              Add
+              {t('form.add')}
             </Button>
           </Box>
 
@@ -793,22 +775,22 @@ const DIDForm = forwardRef(({
           {metaFields.map((field, index) => (
             <Box key={index} className="did-form-meta-row">
               <TextField
-                label="Key"
+                label={t('form.key')}
                 value={field.key}
                 onChange={(e) => updateMetaField(index, 'key', e.target.value)}
                 error={!!errors[`meta_${field.key}`]}
                 helperText={errors[`meta_${field.key}`] || ''}
                 fullWidth
                 size="small"
-                placeholder="e.g. department"
+                placeholder={t('form.keyPlaceholder')}
               />
               <TextField
-                label="Value"
+                label={t('form.value')}
                 value={field.value}
                 onChange={(e) => updateMetaField(index, 'value', e.target.value)}
                 fullWidth
                 size="small"
-                placeholder="e.g. sales"
+                placeholder={t('form.valuePlaceholder')}
               />
               <IconButton onClick={() => removeMetaField(index)} color="error" size="small" sx={{ mt: 0.5 }}>
                 <DeleteIcon />
@@ -818,7 +800,7 @@ const DIDForm = forwardRef(({
 
           {metaFields.length === 0 && (
             <Typography className="did-form-meta-empty">
-              No meta properties. Click &quot;Add&quot; to create key-value pairs.
+              {t('form.noMeta')}
             </Typography>
           )}
 
@@ -826,7 +808,7 @@ const DIDForm = forwardRef(({
           {showActions && (
             <Box className="did-form-actions" sx={{ mt: 1 }}>
               <Button onClick={onCancel} className="did-form-cancel-btn">
-                Cancel
+                {t('form.cancel')}
               </Button>
               <Button
                 onClick={handleSubmit}
@@ -835,7 +817,7 @@ const DIDForm = forwardRef(({
                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
                 className="did-form-save-btn"
               >
-                {did ? 'Update Route' : 'Create Route'}
+                {did ? t('form.update') : t('form.create')}
               </Button>
             </Box>
           )}

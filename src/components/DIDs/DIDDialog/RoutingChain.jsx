@@ -16,17 +16,28 @@ import { queuesApi } from '../../../services/api/queuesApi';
 import { getCallCondition } from '../../../services/api/callConditionsApi';
 import { ivrApi } from '../../../services/api/ivrApi';
 import { bridgeApi } from '../../../services/api/bridgeApi';
+import AudioPreview from '../../common/AudioPreview/AudioPreview.jsx';
+import { useTranslation } from 'react-i18next';
+import { conditionToForm } from '../../Bridges/CallConditionBridge/callConditionSchedule';
+import { WeekSummary } from '../../Bridges/CallConditionBridge/WeekHoursEditor';
+import { describeRule } from '../../Bridges/CallConditionBridge/MoreRules';
 
 const TYPE_CONFIG = {
-  queue: { icon: HeadsetIcon, color: '#2e7d32', label: 'Queue' },
-  call_condition: { icon: ClockIcon, color: '#ed6c02', label: 'Call Condition' },
-  ivr: { icon: IvrIcon, color: '#7b1fa2', label: 'IVR Menu' },
-  announcement: { icon: AnnouncementIcon, color: '#0288d1', label: 'Announcement' },
-  vml: { icon: VmlIcon, color: '#616161', label: 'VML' },
-  bot: { icon: BotIcon, color: '#d32f2f', label: 'Bot' },
-  extension: { icon: ExtensionIcon, color: '#00796b', label: 'Device' },
-  number: { icon: PhoneIcon, color: '#455a64', label: 'Number' },
+  queue: { icon: HeadsetIcon, color: '#2e7d32' },
+  call_condition: { icon: ClockIcon, color: '#ed6c02' },
+  ivr: { icon: IvrIcon, color: '#7b1fa2' },
+  announcement: { icon: AnnouncementIcon, color: '#0288d1' },
+  vml: { icon: VmlIcon, color: '#616161' },
+  bot: { icon: BotIcon, color: '#d32f2f' },
+  extension: { icon: ExtensionIcon, color: '#00796b' },
+  number: { icon: PhoneIcon, color: '#455a64' },
 };
+
+// A bridge type's icon and colour, with its name in the current language. A
+// type the chain does not know shows its own value.
+const typeInfo = (t, type, fallbackLabel = type) => (TYPE_CONFIG[type]
+  ? { ...TYPE_CONFIG[type], label: t(`chain.type.${type}`) }
+  : { icon: PhoneIcon, color: 'var(--mui-palette-text-secondary)', label: fallbackLabel });
 
 const formatStrategy = (s) => s ? String(s).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
 
@@ -61,7 +72,8 @@ const getStatusDotColor = (tier) => {
 /* ── Shared sub-components ── */
 
 const CardHeader = ({ type, onEdit }) => {
-  const config = TYPE_CONFIG[type] || { icon: PhoneIcon, color: 'var(--mui-palette-text-secondary)', label: type };
+  const { t } = useTranslation('routes');
+  const config = typeInfo(t, type);
   const Icon = config.icon;
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
@@ -77,7 +89,7 @@ const CardHeader = ({ type, onEdit }) => {
           onClick={onEdit}
           sx={{ textTransform: 'none', fontSize: '0.75rem', minWidth: 0, py: 0 }}
         >
-          Edit
+          {t('chain.edit')}
         </Button>
       )}
     </Box>
@@ -103,14 +115,15 @@ const SectionDivider = ({ label }) => (
 );
 
 const DownstreamBadge = ({ label, type, name, onEdit }) => {
-  const config = TYPE_CONFIG[type] || { icon: PhoneIcon, color: 'var(--mui-palette-text-secondary)', label: type };
+  const { t } = useTranslation('routes');
+  const config = typeInfo(t, type);
   const Icon = config.icon;
   return (
     <Box sx={{
       display: 'flex', alignItems: 'center', gap: 1,
       px: 1.5, py: 0.75,
       bgcolor: 'action.hover', borderRadius: 1,
-      borderLeft: `3px solid ${config.color}`,
+      borderInlineStart: `3px solid ${config.color}`,
     }}>
       <Icon sx={{ fontSize: 16, color: config.color }} />
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -118,11 +131,11 @@ const DownstreamBadge = ({ label, type, name, onEdit }) => {
           {label}
         </Typography>
         <Typography variant="body2" fontWeight={500} noWrap sx={{ fontSize: '0.8rem' }}>
-          {config.label}: {name}
+          {t('chain.typeAndName', { type: config.label, name })}
         </Typography>
       </Box>
       {onEdit && (
-        <Tooltip title={`Edit ${config.label}`}>
+        <Tooltip title={t('chain.editType', { type: config.label })}>
           <IconButton size="small" onClick={onEdit} sx={{ p: 0.25 }}>
             <EditIcon sx={{ fontSize: 14 }} />
           </IconButton>
@@ -135,26 +148,27 @@ const DownstreamBadge = ({ label, type, name, onEdit }) => {
 /* ── Bridge-specific cards ── */
 
 const QueueCard = ({ data, timeoutDest, onEditBridge }) => {
+  const { t } = useTranslation('routes');
   const [expanded, setExpanded] = useState(false);
   const tiers = data.tiers || [];
   const VISIBLE = 5;
   const visibleTiers = expanded ? tiers : tiers.slice(0, VISIBLE);
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderLeft: `4px solid ${TYPE_CONFIG.queue.color}` }}>
+    <Paper variant="outlined" sx={{ p: 2, borderInlineStart: `4px solid ${TYPE_CONFIG.queue.color}` }}>
       <CardHeader type="queue" onEdit={onEditBridge ? () => onEditBridge('queue', data) : null} />
       <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{data.name}</Typography>
       <StatChips items={[
         formatStrategy(data.strategy),
-        data.max_wait_time ? `${data.max_wait_time}s wait` : null,
-        `${tiers.length} agent${tiers.length !== 1 ? 's' : ''}`,
-        data.enabled !== false ? 'Enabled' : 'Disabled',
+        data.max_wait_time ? t('chain.waitSeconds', { n: data.max_wait_time }) : null,
+        t(tiers.length === 1 ? 'chain.agentsOne' : 'chain.agentsOther', { n: tiers.length }),
+        data.enabled !== false ? t('chain.enabled') : t('chain.disabled'),
       ]} />
 
       {tiers.length > 0 && (
         <>
           <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-            Agents
+            {t('chain.agents')}
           </Typography>
           {visibleTiers.map((tier) => {
             const dotColor = getStatusDotColor(tier);
@@ -165,10 +179,10 @@ const QueueCard = ({ data, timeoutDest, onEditBridge }) => {
                   {tier.agent_name || tier.agent?.slice(0, 8)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                  Lvl {tier.level || '1'}
+                  {t('chain.level', { n: tier.level || '1' })}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                  Pos {tier.position || '1'}
+                  {t('chain.position', { n: tier.position || '1' })}
                 </Typography>
                 {(tier.agent_status || tier.agent_state || tier.state) && (
                   <Chip
@@ -187,7 +201,7 @@ const QueueCard = ({ data, timeoutDest, onEditBridge }) => {
           })}
           {tiers.length > VISIBLE && (
             <Button size="small" onClick={() => setExpanded(!expanded)} sx={{ textTransform: 'none', fontSize: '0.7rem', mt: 0.5 }}>
-              {expanded ? 'Show less' : `Show all ${tiers.length} agents`}
+              {expanded ? t('chain.showLess') : t('chain.showAllAgents', { n: tiers.length })}
             </Button>
           )}
         </>
@@ -195,9 +209,9 @@ const QueueCard = ({ data, timeoutDest, onEditBridge }) => {
 
       {timeoutDest && (
         <>
-          <SectionDivider label={`Timeout (${data.max_wait_time || 0}s)`} />
+          <SectionDivider label={t('chain.timeoutWait', { n: data.max_wait_time || 0 })} />
           <DownstreamBadge
-            label="Timeout Destination"
+            label={t('chain.timeoutDestination')}
             type={timeoutDest.type}
             name={timeoutDest.name}
             onEdit={onEditBridge ? () => onEditBridge(timeoutDest.type, timeoutDest.data) : null}
@@ -208,67 +222,70 @@ const QueueCard = ({ data, timeoutDest, onEditBridge }) => {
   );
 };
 
-const CallConditionCard = ({ data, ruleDestinations, fallbackDest, onEditBridge }) => {
-  const [expanded, setExpanded] = useState(false);
-  const resources = data.resources || [];
-  const VISIBLE = 5;
-  const visibleResources = expanded ? resources : resources.slice(0, VISIBLE);
-
+// One "→ Queue: Support ✎" line under a call condition rule.
+const ConditionDestination = ({ target, names, onEditBridge }) => {
+  const { t } = useTranslation('routes');
+  if (!target?.type) return null;
+  const config = typeInfo(t, target.type);
+  const name = names?.[target.uuid] || target.uuid?.slice(0, 8) || '';
+  const Icon = config.icon;
+  const editLabel = t('chain.editTypeNamed', { type: config.label, name });
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderLeft: `4px solid ${TYPE_CONFIG.call_condition.color}` }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+      <Typography variant="caption" color="text.secondary">{t('chain.arrow')}</Typography>
+      <Icon sx={{ fontSize: 14, color: config.color, flexShrink: 0 }} />
+      <Typography variant="body2" fontWeight={500} sx={{ flex: 1, minWidth: 0 }} noWrap>{t('chain.typeAndName', { type: config.label, name })}</Typography>
+      {onEditBridge && target.uuid && (
+        <Tooltip title={editLabel}>
+          <IconButton size="small" aria-label={editLabel} onClick={() => onEditBridge(target.type, { uuid: target.uuid })} sx={{ p: 0.25 }}>
+            <EditIcon sx={{ fontSize: 14 }} />
+          </IconButton>
+        </Tooltip>
+      )}
+    </Box>
+  );
+};
+
+// A call condition read the way its page shows it: business hours in short,
+// the rules checked before them as sentences, then where calls go otherwise.
+// The ✎ beside a destination edits that destination (a device, a queue...);
+// the header's Edit opens the condition itself.
+const CallConditionCard = ({ data, ruleDestinations, fallbackDest, onEditBridge }) => {
+  const { t } = useTranslation('callConditions');
+  const form = conditionToForm(data);
+  const anyOpen = form.week.some((day) => day.open);
+  return (
+    <Paper variant="outlined" sx={{ p: 2, borderInlineStart: `4px solid ${TYPE_CONFIG.call_condition.color}` }}>
       <CardHeader type="call_condition" onEdit={onEditBridge ? () => onEditBridge('call_condition', data) : null} />
       <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{data.name}</Typography>
-      <StatChips items={[
-        `${resources.length} rule${resources.length !== 1 ? 's' : ''}`,
-        data.enabled !== false ? 'Enabled' : 'Disabled',
-      ]} />
 
-      {resources.length > 0 && (
-        <>
-          <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-            Rules
+      {form.rules.length > 0 && (
+        <Box sx={{ mb: 1.5 }} data-testid="condition-rules">
+          <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block' }}>
+            {t('rules.title')}
           </Typography>
-          {visibleResources.map((res, i) => {
-            const bt = res.bridge_type === 'que' ? 'queue' : res.bridge_type;
-            const config = TYPE_CONFIG[bt] || { icon: PhoneIcon, color: 'var(--mui-palette-text-secondary)', label: bt || 'Unknown' };
-            const destName = ruleDestinations?.[res.bridge_uuid] || res.bridge?.name || bt;
-            const Icon = config.icon;
-            return (
-              <Box key={res.uuid || i} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.4, px: 0.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', width: 18, textAlign: 'right', flexShrink: 0 }}>
-                  #{i + 1}
-                </Typography>
-                <Typography variant="body2" sx={{ minWidth: 60, maxWidth: 120 }} noWrap>
-                  {res.name || `Rule ${i + 1}`}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">→</Typography>
-                <Icon sx={{ fontSize: 14, color: config.color, flexShrink: 0 }} />
-                <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
-                  {config.label}: {destName}
-                </Typography>
-                {onEditBridge && bt && res.bridge_uuid && (
-                  <Tooltip title={`Edit ${config.label}`}>
-                    <IconButton size="small" onClick={() => onEditBridge(bt, res.bridge || { uuid: res.bridge_uuid })} sx={{ p: 0.25 }}>
-                      <EditIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Box>
-            );
-          })}
-          {resources.length > VISIBLE && (
-            <Button size="small" onClick={() => setExpanded(!expanded)} sx={{ textTransform: 'none', fontSize: '0.7rem', mt: 0.5 }}>
-              {expanded ? 'Show less' : `+${resources.length - VISIBLE} more rules`}
-            </Button>
-          )}
-        </>
+          {form.rules.map((rule) => (
+            <Box key={rule.id} sx={{ py: 0.4 }}>
+              <Typography variant="body2">{describeRule(t, rule)}</Typography>
+              <ConditionDestination target={rule.target} names={ruleDestinations} onEditBridge={onEditBridge} />
+            </Box>
+          ))}
+        </Box>
       )}
+
+      <Box sx={{ mb: 1.5 }} data-testid="condition-hours">
+        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block' }}>
+          {t('hours.title')}
+        </Typography>
+        <WeekSummary week={form.week} />
+        {anyOpen && <ConditionDestination target={form.openTarget} names={ruleDestinations} onEditBridge={onEditBridge} />}
+      </Box>
 
       {fallbackDest && (
         <>
-          <SectionDivider label="Fallback" />
+          <SectionDivider label={t('targets.otherwise')} />
           <DownstreamBadge
-            label="Fallback Destination"
+            label={t('targets.otherwiseHint')}
             type={fallbackDest.type}
             name={fallbackDest.name}
             onEdit={onEditBridge ? () => onEditBridge(fallbackDest.type, fallbackDest.data) : null}
@@ -280,6 +297,7 @@ const CallConditionCard = ({ data, ruleDestinations, fallbackDest, onEditBridge 
 };
 
 const IVRCard = ({ data, entryDestinations, timeoutDest, invalidDest, onEditBridge }) => {
+  const { t } = useTranslation('routes');
   const [expanded, setExpanded] = useState(false);
   const entries = data.entries || data.options || {};
   const entryList = Array.isArray(entries)
@@ -289,23 +307,30 @@ const IVRCard = ({ data, entryDestinations, timeoutDest, invalidDest, onEditBrid
   const visibleEntries = expanded ? entryList : entryList.slice(0, VISIBLE);
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, borderLeft: `4px solid ${TYPE_CONFIG.ivr.color}` }}>
+    <Paper variant="outlined" sx={{ p: 2, borderInlineStart: `4px solid ${TYPE_CONFIG.ivr.color}` }}>
       <CardHeader type="ivr" onEdit={onEditBridge ? () => onEditBridge('ivr', data) : null} />
       <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{data.name}</Typography>
+      {/* The greeting callers hear before choosing. */}
+      {data.announcement_uuid && (
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block' }}>{t('chain.greeting')}</Typography>
+          <AudioPreview key={data.announcement_uuid} uuid={data.announcement_uuid} />
+        </Box>
+      )}
       <StatChips items={[
-        `${entryList.length} option${entryList.length !== 1 ? 's' : ''}`,
-        data.timeout ? `Timeout: ${data.timeout}s` : null,
-        data.enabled !== false ? 'Enabled' : 'Disabled',
+        t(entryList.length === 1 ? 'chain.optionsOne' : 'chain.optionsOther', { n: entryList.length }),
+        data.timeout ? t('chain.timeoutSeconds', { n: data.timeout }) : null,
+        data.enabled !== false ? t('chain.enabled') : t('chain.disabled'),
       ]} />
 
       {entryList.length > 0 && (
         <>
           <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-            Menu Options
+            {t('chain.menuOptions')}
           </Typography>
           {visibleEntries.map((entry, i) => {
             const bt = entry.bridge_type === 'que' ? 'queue' : entry.bridge_type;
-            const config = TYPE_CONFIG[bt] || { icon: PhoneIcon, color: 'var(--mui-palette-text-secondary)', label: bt || 'Unknown' };
+            const config = typeInfo(t, bt, bt || t('chain.unknown'));
             const destName = entryDestinations?.[entry.bridge_uuid] || entry.bridge?.name || bt || '';
             const Icon = config.icon;
             const digit = entry.key || entry.digit || entry.name || i;
@@ -317,13 +342,13 @@ const IVRCard = ({ data, entryDestinations, timeoutDest, invalidDest, onEditBrid
                     {entry.name}
                   </Typography>
                 )}
-                <Typography variant="caption" color="text.secondary">→</Typography>
+                <Typography variant="caption" color="text.secondary">{t('chain.arrow')}</Typography>
                 <Icon sx={{ fontSize: 14, color: config.color, flexShrink: 0 }} />
                 <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
-                  {config.label}: {destName}
+                  {t('chain.typeAndName', { type: config.label, name: destName })}
                 </Typography>
                 {onEditBridge && bt && entry.bridge_uuid && (
-                  <Tooltip title={`Edit ${config.label}`}>
+                  <Tooltip title={t('chain.editType', { type: config.label })}>
                     <IconButton size="small" onClick={() => onEditBridge(bt, entry.bridge || { uuid: entry.bridge_uuid })} sx={{ p: 0.25 }}>
                       <EditIcon sx={{ fontSize: 14 }} />
                     </IconButton>
@@ -334,7 +359,7 @@ const IVRCard = ({ data, entryDestinations, timeoutDest, invalidDest, onEditBrid
           })}
           {entryList.length > VISIBLE && (
             <Button size="small" onClick={() => setExpanded(!expanded)} sx={{ textTransform: 'none', fontSize: '0.7rem', mt: 0.5 }}>
-              {expanded ? 'Show less' : `+${entryList.length - VISIBLE} more`}
+              {expanded ? t('chain.showLess') : t('chain.more', { n: entryList.length - VISIBLE })}
             </Button>
           )}
         </>
@@ -342,14 +367,14 @@ const IVRCard = ({ data, entryDestinations, timeoutDest, invalidDest, onEditBrid
 
       {(timeoutDest || invalidDest) && (
         <>
-          <SectionDivider label="Fallback" />
+          <SectionDivider label={t('chain.fallback')} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
             {timeoutDest && (
-              <DownstreamBadge label="Timeout" type={timeoutDest.type} name={timeoutDest.name}
+              <DownstreamBadge label={t('chain.timeout')} type={timeoutDest.type} name={timeoutDest.name}
                 onEdit={onEditBridge ? () => onEditBridge(timeoutDest.type, timeoutDest.data) : null} />
             )}
             {invalidDest && (
-              <DownstreamBadge label="Invalid Input" type={invalidDest.type} name={invalidDest.name}
+              <DownstreamBadge label={t('chain.invalidInput')} type={invalidDest.type} name={invalidDest.name}
                 onEdit={onEditBridge ? () => onEditBridge(invalidDest.type, invalidDest.data) : null} />
             )}
           </Box>
@@ -360,15 +385,21 @@ const IVRCard = ({ data, entryDestinations, timeoutDest, invalidDest, onEditBrid
 };
 
 const SimpleCard = ({ type, data, onEditBridge }) => (
-  <Paper variant="outlined" sx={{ p: 2, borderLeft: `4px solid ${(TYPE_CONFIG[type] || {}).color || '#757575'}` }}>
+  <Paper variant="outlined" sx={{ p: 2, borderInlineStart: `4px solid ${(TYPE_CONFIG[type] || {}).color || '#757575'}` }}>
     <CardHeader type={type} onEdit={onEditBridge ? () => onEditBridge(type, data) : null} />
     <Typography variant="body2" fontWeight={600}>{data?.name || type}</Typography>
+    {type === 'announcement' && data?.uuid && (
+      <Box sx={{ mt: 1 }}>
+        <AudioPreview src={data.path || data.url} uuid={data.uuid} />
+      </Box>
+    )}
   </Paper>
 );
 
 /* ── Main orchestrator ── */
 
 const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge }) => {
+  const { t } = useTranslation('routes');
   const [bridgeInfo, setBridgeInfo] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -393,7 +424,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
           try {
             const dest = await bridgeApi.getBridgeResource(tbt, q.max_wait_time_bridge_uuid);
             const d = unwrapResource(dest);
-            timeoutDest = { type: tbt, name: d?.name || 'Unknown', data: d || { uuid: q.max_wait_time_bridge_uuid } };
+            timeoutDest = { type: tbt, name: d?.name || t('chain.unknown'), data: d || { uuid: q.max_wait_time_bridge_uuid } };
           } catch {
             timeoutDest = { type: tbt, name: q.max_wait_time_bridge_uuid.slice(0, 8), data: { uuid: q.max_wait_time_bridge_uuid } };
           }
@@ -431,7 +462,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
             bridgeApi.getBridgeResource(fbt, cc.fallback_bridge_uuid)
               .then(d => {
                 const fd = unwrapResource(d);
-                fallbackDest = { type: fbt, name: fd?.name || 'Unknown', data: fd || { uuid: cc.fallback_bridge_uuid } };
+                fallbackDest = { type: fbt, name: fd?.name || t('chain.unknown'), data: fd || { uuid: cc.fallback_bridge_uuid } };
               })
               .catch(() => {
                 fallbackDest = { type: fbt, name: cc.fallback_bridge_uuid.slice(0, 8), data: { uuid: cc.fallback_bridge_uuid } };
@@ -474,7 +505,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
             bridgeApi.getBridgeResource(tbt, ivr.timeout_bridge_uuid)
               .then(d => {
                 const td = unwrapResource(d);
-                timeoutDest = { type: tbt, name: td?.name || 'Unknown', data: td || { uuid: ivr.timeout_bridge_uuid } };
+                timeoutDest = { type: tbt, name: td?.name || t('chain.unknown'), data: td || { uuid: ivr.timeout_bridge_uuid } };
               })
               .catch(() => {
                 timeoutDest = { type: tbt, name: ivr.timeout_bridge_uuid.slice(0, 8), data: { uuid: ivr.timeout_bridge_uuid } };
@@ -488,7 +519,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
             bridgeApi.getBridgeResource(ibt, ivr.invalid_bridge_uuid)
               .then(d => {
                 const id2 = unwrapResource(d);
-                invalidDest = { type: ibt, name: id2?.name || 'Unknown', data: id2 || { uuid: ivr.invalid_bridge_uuid } };
+                invalidDest = { type: ibt, name: id2?.name || t('chain.unknown'), data: id2 || { uuid: ivr.invalid_bridge_uuid } };
               })
               .catch(() => {
                 invalidDest = { type: ibt, name: ivr.invalid_bridge_uuid.slice(0, 8), data: { uuid: ivr.invalid_bridge_uuid } };
@@ -515,7 +546,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
     } finally {
       setLoading(false);
     }
-  }, [bridgeType, bridgeUuid, environmentUuid]);
+  }, [bridgeType, bridgeUuid, environmentUuid, t]);
 
   useEffect(() => { buildChain(); }, [buildChain]);
 

@@ -12,6 +12,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import {
   RecordVoiceOver as TTSIcon,
   PlayArrow as PlayIcon,
@@ -42,6 +43,7 @@ export const TTSGenerator = ({
   maxLength = 500,
   disabled = false
 }) => {
+  const { t } = useTranslation('bridges');
   const [text, setText] = useState('');
   const [language, setLanguage] = useState('he-IL'); // Hebrew default for Google TTS (must match option value)
   const [providerUuid, setProviderUuid] = useState('');
@@ -70,18 +72,18 @@ export const TTSGenerator = ({
 
   // Available languages for Google TTS
   const languages = [
-    { code: 'he-IL', name: 'Hebrew (Israel)' },
-    { code: 'en-US', name: 'English (US)' },
-    { code: 'en-GB', name: 'English (UK)' },
-    { code: 'es-ES', name: 'Spanish (Spain)' },
-    { code: 'fr-FR', name: 'French (France)' },
-    { code: 'de-DE', name: 'German (Germany)' },
-    { code: 'it-IT', name: 'Italian (Italy)' },
-    { code: 'pt-BR', name: 'Portuguese (Brazil)' },
-    { code: 'ar-XA', name: 'Arabic' },
-    { code: 'ru-RU', name: 'Russian' },
-    { code: 'zh-CN', name: 'Chinese (Mandarin)' },
-    { code: 'ja-JP', name: 'Japanese' }
+    { code: 'he-IL', name: t('announcement.tts.languages.he-IL') },
+    { code: 'en-US', name: t('announcement.tts.languages.en-US') },
+    { code: 'en-GB', name: t('announcement.tts.languages.en-GB') },
+    { code: 'es-ES', name: t('announcement.tts.languages.es-ES') },
+    { code: 'fr-FR', name: t('announcement.tts.languages.fr-FR') },
+    { code: 'de-DE', name: t('announcement.tts.languages.de-DE') },
+    { code: 'it-IT', name: t('announcement.tts.languages.it-IT') },
+    { code: 'pt-BR', name: t('announcement.tts.languages.pt-BR') },
+    { code: 'ar-XA', name: t('announcement.tts.languages.ar-XA') },
+    { code: 'ru-RU', name: t('announcement.tts.languages.ru-RU') },
+    { code: 'zh-CN', name: t('announcement.tts.languages.zh-CN') },
+    { code: 'ja-JP', name: t('announcement.tts.languages.ja-JP') }
   ];
 
   // Handle generate button click
@@ -102,24 +104,23 @@ export const TTSGenerator = ({
       {!loadingProviders && ttsProviders.length === 0 && (
         <Alert severity="warning" icon={<WarningIcon />} sx={{ mb: 2 }}>
           <Typography variant="body2">
-            <strong>No TTS providers configured.</strong> To use Text-to-Speech, you need to create a TTS provider
-            with Google Cloud credentials in the Providers screen first.
+            <strong>{t('announcement.tts.noProviders')}</strong> {t('announcement.tts.noProvidersHint')}
           </Typography>
         </Alert>
       )}
 
       {/* TTS Provider Selection */}
       <FormControl fullWidth sx={{ mb: 2 }} disabled={disabled || generating || loadingProviders} required>
-        <InputLabel>TTS Provider *</InputLabel>
+        <InputLabel>{t('announcement.tts.provider')}</InputLabel>
         <Select
           value={providerUuid}
           onChange={(e) => setProviderUuid(e.target.value)}
-          label="TTS Provider *"
+          label={t('announcement.tts.provider')}
         >
           {loadingProviders ? (
-            <MenuItem disabled>Loading providers...</MenuItem>
+            <MenuItem disabled>{t('announcement.tts.loadingProviders')}</MenuItem>
           ) : ttsProviders.length === 0 ? (
-            <MenuItem disabled>No TTS providers available</MenuItem>
+            <MenuItem disabled>{t('announcement.tts.noneAvailable')}</MenuItem>
           ) : (
             ttsProviders.map((provider) => (
               <MenuItem key={provider.uuid} value={provider.uuid}>
@@ -132,7 +133,7 @@ export const TTSGenerator = ({
 
       {/* Text Input */}
       <TextField
-        label="Text to Convert"
+        label={t('announcement.tts.text')}
         value={text}
         onChange={(e) => setText(e.target.value)}
         multiline
@@ -140,19 +141,19 @@ export const TTSGenerator = ({
         fullWidth
         required
         disabled={disabled || generating || ttsProviders.length === 0}
-        placeholder="Enter the text you want to convert to speech..."
-        helperText={`${text.length}/${maxLength} characters`}
+        placeholder={t('announcement.tts.textPlaceholder')}
+        helperText={t('announcement.tts.characters', { used: text.length, max: maxLength })}
         error={text.length > maxLength}
         sx={{ mb: 2 }}
       />
 
       {/* Language Selection */}
       <FormControl fullWidth sx={{ mb: 2 }} disabled={disabled || generating || ttsProviders.length === 0}>
-        <InputLabel>Language</InputLabel>
+        <InputLabel>{t('announcement.tts.language')}</InputLabel>
         <Select
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          label="Language"
+          label={t('announcement.tts.language')}
         >
           {languages.map((lang) => (
             <MenuItem key={lang.code} value={lang.code}>
@@ -171,7 +172,7 @@ export const TTSGenerator = ({
         startIcon={generating ? <CircularProgress size={20} /> : <TTSIcon />}
         sx={{ mb: 2 }}
       >
-        {generating ? 'Generating Audio...' : 'Generate Audio'}
+        {generating ? t('announcement.tts.generating') : t('announcement.tts.generate')}
       </Button>
 
       {/* Error Alert */}
@@ -187,7 +188,7 @@ export const TTSGenerator = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
             <PlayIcon color="primary" />
             <Typography variant="subtitle2" fontWeight="medium">
-              Audio Preview
+              {t('announcement.file.preview')}
             </Typography>
           </Box>
 
@@ -196,11 +197,11 @@ export const TTSGenerator = ({
             src={previewUrl}
             style={{ width: '100%', marginTop: '8px' }}
           >
-            Your browser does not support the audio element.
+            {t('announcement.file.noAudioSupport')}
           </audio>
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            This is a preview of the generated audio. You can listen to it before creating the announcement.
+            {t('announcement.tts.previewHint')}
           </Typography>
         </Paper>
       )}
@@ -209,7 +210,7 @@ export const TTSGenerator = ({
       {!previewUrl && !generating && ttsProviders.length > 0 && (
         <Alert severity="info" icon={<TTSIcon />}>
           <Typography variant="body2">
-            Select a TTS provider, enter text and choose a language, then click "Generate Audio" to create a preview.
+            {t('announcement.tts.info', { button: t('announcement.tts.generate') })}
           </Typography>
         </Alert>
       )}

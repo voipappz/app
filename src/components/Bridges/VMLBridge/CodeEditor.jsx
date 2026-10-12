@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import { useTranslation } from 'react-i18next';
+import LtrIsland from '../../../i18n/LtrIsland';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import * as luaparse from 'luaparse';
 import {
@@ -280,6 +282,7 @@ export const CodeEditor = ({
   fullscreen = false,
   options = {}
 }) => {
+  const { t } = useTranslation('bridges');
   const [cursorInfo, setCursorInfo] = useState({ line: 1, col: 1 });
   const [syntaxErrors, setSyntaxErrors] = useState(0);
   const editorInstanceRef = useRef(null);
@@ -348,7 +351,7 @@ export const CodeEditor = ({
     >
       <CircularProgress />
       <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-        Loading code editor...
+        {t('vml.editor.loading')}
       </Typography>
     </Box>
   );
@@ -395,9 +398,8 @@ export const CodeEditor = ({
     ? {
         position: 'fixed',
         top: 0,
-        left: 0,
-        right: 0,
         bottom: 0,
+        insetInline: 0,
         zIndex: 9999,
         bgcolor: '#1A1D23',
         display: 'flex',
@@ -412,7 +414,7 @@ export const CodeEditor = ({
 
   return (
     <Box sx={containerSx}>
-      <Box sx={{ flex: fullscreen ? 1 : undefined }}>
+      <LtrIsland sx={{ flex: fullscreen ? 1 : undefined }}>
         <Editor
           height={fullscreen ? '100%' : editorHeight}
           language={language}
@@ -424,7 +426,7 @@ export const CodeEditor = ({
           options={defaultOptions}
           loading={<LoadingComponent />}
         />
-      </Box>
+      </LtrIsland>
       {/* Status bar */}
       <Box
         sx={{
@@ -443,13 +445,13 @@ export const CodeEditor = ({
         }}
       >
         <Typography variant="caption" sx={{ color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit' }}>
-          Ln {cursorInfo.line}, Col {cursorInfo.col}
+          {t('vml.editor.position', { line: cursorInfo.line, col: cursorInfo.col })}
         </Typography>
         <Typography variant="caption" sx={{ color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit' }}>
           Lua
         </Typography>
         <Typography variant="caption" sx={{ color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit' }}>
-          {charCount} chars
+          {t('vml.editor.chars', { chars: charCount })}
         </Typography>
         <Box sx={{ flex: 1 }} />
         <Typography
@@ -460,7 +462,7 @@ export const CodeEditor = ({
             color: syntaxErrors > 0 ? '#F44747' : '#6EDB8A'
           }}
         >
-          {syntaxErrors > 0 ? `${syntaxErrors} error${syntaxErrors > 1 ? 's' : ''}` : 'No errors'}
+          {syntaxErrors > 1 ? t('vml.editor.errorsMany', { n: syntaxErrors }) : syntaxErrors === 1 ? t('vml.editor.errorsOne') : t('vml.editor.noErrors')}
         </Typography>
       </Box>
     </Box>

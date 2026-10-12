@@ -6,7 +6,6 @@ import {
 } from '@mui/material';
 import PhoneIcon from '@mui/icons-material/Phone';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import PersonIcon from '@mui/icons-material/Person';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -25,8 +24,6 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
   const duration = call.profile?.talk_duration;
   const formattedDuration = duration ? formatDuration(parseInt(duration)) : '00:00:00';
   const cause = call.profile?.cause;
-  const environment = call.environment?.name || t('mobile.notAvailable');
-  const cid = call.profile?.cid || t('mobile.notAvailable');
   // Support both new and legacy recording URL paths
   const recordingUrl = call.recording?.url || call.profile?.recordingUrl;
   
@@ -175,20 +172,6 @@ const CallMobileCard = ({ call, onOpenRecording, onRowClick }) => {
               variant="outlined"
               sx={{ fontSize: '0.7rem', height: '20px' }}
             />
-          </Box>
-
-          <Box className="detail-item">
-            <PersonIcon fontSize="small" className="detail-icon" />
-            <Typography variant="body2" className="detail-label">{t('mobile.application')}</Typography>
-            <Typography variant="body2" className="detail-value" noWrap>
-              {environment}
-            </Typography>
-          </Box>
-
-          <Box className="detail-item">
-            <Typography variant="body2" className="detail-label" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-              {t('mobile.callId')} <Bdi>{cid}</Bdi>
-            </Typography>
           </Box>
         </Box>
       </CardContent>

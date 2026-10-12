@@ -205,13 +205,9 @@ export const duplicateVML = async (uuid) => {
 
 // ── VML AI Chat (EventStore-backed, same pattern as AIChat) ──
 
-const getAuthToken = () => {
-  try {
-    const authData = localStorage.getItem('auth');
-    if (authData) return JSON.parse(authData).access;
-  } catch { /* ignore */ }
-  return null;
-};
+// The active session's token: an account's, else a portal user's (reading
+// only `auth` sent a user's requests with no token).
+const getAuthToken = () => apiService.getToken();
 
 /**
  * Get VML chat sessions

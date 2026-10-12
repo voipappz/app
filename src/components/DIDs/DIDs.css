@@ -8,7 +8,7 @@
 .dids-sidebar {
   flex-shrink: 0;
   background: white;
-  border-right: 1px solid #e0e0e0;
+  border-inline-end: 1px solid #e0e0e0;
 }
 
 .dids-content {

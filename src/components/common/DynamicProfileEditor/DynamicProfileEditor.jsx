@@ -23,6 +23,8 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Add as AddIcon, Info as InfoIcon, LockOpen as LockOpenIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../i18n';
 import { profileParamsApi } from '../../../services/api/profileParamsApi';
 import SecretField from '../SecretField.jsx';
 
@@ -55,7 +57,9 @@ export const profileFieldError = (field, value) => {
   let re;
   try { re = new RegExp(field.pattern); } catch { return null; }
   if (re.test(v)) return null;
-  return field.example ? `Expected like ${field.example}` : 'Invalid format';
+  return field.example
+    ? i18n.t('profile.expectedLike', { ns: 'bridges', example: field.example })
+    : i18n.t('profile.invalidFormat', { ns: 'bridges' });
 };
 
 const DynamicProfileEditor = ({
@@ -63,7 +67,7 @@ const DynamicProfileEditor = ({
   profile = {},
   onChange,
   disabled = false,
-  title = 'Profile Properties',
+  title,
   grouped = false,
   nestByType = false,
   ownTypeOnly = false,
@@ -77,6 +81,8 @@ const DynamicProfileEditor = ({
   // fields changes, so a dialog can refuse to save a malformed value.
   onValidityChange = null,
 }) => {
+  const { t } = useTranslation('bridges');
+  const heading = title === undefined ? t('profile.title') : title;
   // Encrypted fields shown as text after a successful reveal.
   const [shown, setShown] = useState({});
   // When rendered inside a raised-zIndex dialog (e.g. a bridge at Z.L2/L3),
@@ -139,7 +145,7 @@ const DynamicProfileEditor = ({
         }
       } catch (err) {
         console.error('Error fetching profile params:', err);
-        setError('Failed to load profile fields');
+        setError(t('profile.loadFailed'));
       } finally {
         setLoading(false);
       }
@@ -249,13 +255,13 @@ const DynamicProfileEditor = ({
     if (!nestByType) return [];
     const map = {};
     fields.forEach((field) => {
-      const t = getFieldType(field);
-      if (!map[t]) map[t] = { name: t, fields: [], hasRequired: false, _sec: {} };
-      map[t].fields.push(field);
-      if (field.empty === false) map[t].hasRequired = true;
+      const fieldType = getFieldType(field);
+      if (!map[fieldType]) map[fieldType] = { name: fieldType, fields: [], hasRequired: false, _sec: {} };
+      map[fieldType].fields.push(field);
+      if (field.empty === false) map[fieldType].hasRequired = true;
       const sec = field.section || 'Other';
-      if (!map[t]._sec[sec]) map[t]._sec[sec] = { name: sec, fields: [] };
-      map[t]._sec[sec].fields.push(field);
+      if (!map[fieldType]._sec[sec]) map[fieldType]._sec[sec] = { name: sec, fields: [] };
+      map[fieldType]._sec[sec].fields.push(field);
     });
     // Editor's own type (e.g. "customer") first, then the rest alphabetically.
     return Object.values(map)
@@ -330,7 +336,7 @@ const DynamicProfileEditor = ({
             onFocus={() => { if (isMasked(value)) handleFieldChange(field.key, ''); }}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
             placeholder={isMasked(value) ? '' : (field.label || '')}
-            helperText={isMasked(value) ? 'Stored — click to replace' : undefined}
+            helperText={isMasked(value) ? t('profile.storedSecret') : undefined}
             disabled={disabled}
             error={hasError}
             required={isRequired}
@@ -340,7 +346,7 @@ const DynamicProfileEditor = ({
               // not something every editor gets.
               endAdornment: onReveal && isMasked(value) ? (
                 <InputAdornment position="end">
-                  <Tooltip title="Reveal stored secret (audited)">
+                  <Tooltip title={t('profile.revealSecret')}>
                     <IconButton
                       size="small"
                       edge="end"
@@ -389,7 +395,7 @@ const DynamicProfileEditor = ({
                 size="small"
               />
             }
-            label={value ? 'Yes' : 'No'}
+            label={value ? t('profile.yes') : t('profile.no')}
           />
         );
 
@@ -405,7 +411,7 @@ const DynamicProfileEditor = ({
               MenuProps={selectMenuProps}
             >
               <MenuItem value="">
-                <em>Select...</em>
+                <em>{t('profile.select')}</em>
               </MenuItem>
               {selectOptions.map((option, idx) => (
                 <MenuItem key={option.val || option.value || idx} value={option.val || option.value}>
@@ -581,7 +587,7 @@ const DynamicProfileEditor = ({
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
         <CircularProgress size={20} />
         <Typography variant="body2" color="text.secondary">
-          Loading profile fields...
+          {t('profile.loading')}
         </Typography>
       </Box>
     );
@@ -604,7 +610,7 @@ const DynamicProfileEditor = ({
     return (
       <Box sx={{ p: 2 }}>
         <Typography variant="body2" color="text.secondary">
-          This service type declares no configurable fields.
+          {t('profile.noFields')}
         </Typography>
       </Box>
     );
@@ -633,9 +639,9 @@ const DynamicProfileEditor = ({
 
   return (
     <Box sx={{ width: '100%' }}>
-      {title && (
+      {heading && (
         <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
-          {title}
+          {heading}
         </Typography>
       )}
 
@@ -655,7 +661,7 @@ const DynamicProfileEditor = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography fontWeight={600}>{formatGroupLabel(tg.name)}</Typography>
                   {tg.hasRequired && (
-                    <Chip label="Required" size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
+                    <Chip label={t('profile.required')} size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
                   )}
                   <Chip label={tgVisible.length} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
                 </Box>
@@ -697,7 +703,7 @@ const DynamicProfileEditor = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography fontWeight={600}>{section.name}</Typography>
                   {section.hasRequired && (
-                    <Chip label="Required" size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
+                    <Chip label={t('profile.required')} size="small" color="error" sx={{ height: 20, fontSize: '0.7rem' }} />
                   )}
                   <Chip label={sectionVisible.length} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
                 </Box>

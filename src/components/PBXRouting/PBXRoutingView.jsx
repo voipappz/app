@@ -284,7 +284,7 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { selectedEnvironments } = useCustomerEnvironment();
-  const { can } = usePermissions();
+  const { can, canRouteType } = usePermissions();
   const canWrite = can('routes', 'write');
   const [activeDid, setActiveDid] = useState(initialDidUuid || null);
 
@@ -381,6 +381,9 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
     if (!activeDid) return null;
     return allDids.find((d) => (d.uuid || d.id) === activeDid) || null;
   }, [activeDid, allDids]);
+  // Editing the open route and its flow also needs its type allowed (a user's
+  // ACL may limit route types; any other type is shown read-only).
+  const canWriteActive = Boolean(selectedDidObj) && canRouteType(selectedDidObj.type, 'write');
 
   // --- Fetch helper functions ---
 
@@ -400,11 +403,11 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
     try {
       const response = await didsApi.getTypes();
       const types = Array.isArray(response) ? response : (response?.data || []);
-      setDidTypes(types);
+      setDidTypes(types.filter((type) => canRouteType(type, 'write')));
     } catch (err) {
       console.error('Error fetching Route types:', err);
     }
-  }, [didTypes.length]);
+  }, [didTypes.length, canRouteType]);
 
   const fetchBridgeResources = useCallback(async (bridgeType, environmentUuid = null) => {
     if (!bridgeType) return [];
@@ -642,7 +645,7 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
     (_event, node) => {
       if (EDITABLE_TYPES.has(node.type)) {
         // Bridge/DID node editing persists changes — write permission required.
-        if (!canWrite) return;
+        if (!canWriteActive) return;
         if (node.type === 'did') {
           setBridgeResources({});
           Promise.all([fetchBridgeTypes(), fetchDIDTypes()]).catch(() => {});
@@ -652,7 +655,7 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
         openProviderDialogForEdit(node.data);
       }
     },
-    [canWrite, setSelectedNode, openProviderDialogForEdit, fetchBridgeTypes, fetchDIDTypes]
+    [canWriteActive, setSelectedNode, openProviderDialogForEdit, fetchBridgeTypes, fetchDIDTypes]
   );
 
   const handleEditorSave = useCallback(() => {
@@ -811,7 +814,7 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
         )}
 
         {/* Edit active DID button */}
-        {selectedDidObj && canWrite && (
+        {canWriteActive && (
           <Tooltip title="Edit Route">
             <IconButton size="small" onClick={() => openDIDWizardForEdit(selectedDidObj)} sx={{ flexShrink: 0 }}>
               <EditIcon fontSize="small" />
@@ -820,7 +823,7 @@ const PBXRoutingViewInner = ({ didUuid: initialDidUuid, didInfo: _didInfo, dids:
         )}
 
         {/* Delete active DID button */}
-        {selectedDidObj && canWrite && (
+        {canWriteActive && (
           <Tooltip title="Delete Route">
             <IconButton size="small" onClick={() => openDeleteDIDDialog(selectedDidObj)} sx={{ flexShrink: 0 }}>
               <DeleteIcon fontSize="small" sx={{ color: 'text.secondary' }} />

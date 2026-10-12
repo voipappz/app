@@ -1,0 +1,83 @@
+/* A route's details on a phone: header, a body that scrolls, and the
+   buttons pinned to the bottom, within reach of the thumb. */
+.route-details {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--theme-bg-primary);
+}
+
+.route-details-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--mui-palette-divider);
+}
+
+.route-details-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+.route-details-section {
+  padding: 12px 16px;
+}
+
+.route-details-section-title {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.route-details-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 0;
+  text-align: start;
+}
+
+/* A field that opens something is a whole-row tap target. */
+.route-details-field--link {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.route-details-field--link:hover,
+.route-details-field--link:focus-visible {
+  background-color: var(--mui-palette-action-hover);
+}
+
+[dir="rtl"] .route-details-open {
+  transform: scaleX(-1);
+}
+
+.route-details-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--mui-palette-divider);
+  background-color: var(--theme-bg-primary);
+}
+
+.route-details-actions .MuiButton-root {
+  min-height: 44px;
+}
+
+.route-details-duplicate {
+  width: 44px;
+  height: 44px;
+}

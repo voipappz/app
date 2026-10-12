@@ -46,7 +46,9 @@
     "callId": "Call ID:",
     "notAvailable": "N/A",
     "status": "Status:",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "today": "Today",
+    "yesterday": "Yesterday"
   },
   "stats": {
     "total": "Total",

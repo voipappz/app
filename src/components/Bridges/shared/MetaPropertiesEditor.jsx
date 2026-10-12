@@ -7,6 +7,7 @@ import {
   IconButton,
   Alert
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import {
   Add as AddIcon,
   Delete as DeleteIcon
@@ -28,9 +29,12 @@ export const MetaPropertiesEditor = ({
   onRemove,
   onUpdate,
   validateDuplicates = true,
-  title = "Meta Properties",
-  addButtonText = "Add Property"
+  title,
+  addButtonText
 }) => {
+  const { t } = useTranslation('bridges');
+  const heading = title ?? t('meta.title');
+  const addText = addButtonText ?? t('meta.add');
   const [duplicateError, setDuplicateError] = useState(null);
 
   // Validate for duplicate keys
@@ -38,9 +42,9 @@ export const MetaPropertiesEditor = ({
     if (validateDuplicates) {
       const keys = metaFields.map(f => f.key).filter(k => k.trim());
       const duplicates = keys.filter((k, i) => keys.indexOf(k) !== i);
-      setDuplicateError(duplicates.length > 0 ? 'Duplicate meta keys are not allowed' : null);
+      setDuplicateError(duplicates.length > 0 ? t('meta.duplicateKeys') : null);
     }
-  }, [metaFields, validateDuplicates]);
+  }, [metaFields, validateDuplicates, t]);
 
   // Check if a specific key is duplicate
   const isDuplicateKey = (key) => {
@@ -51,14 +55,14 @@ export const MetaPropertiesEditor = ({
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">{title}</Typography>
+        <Typography variant="h6">{heading}</Typography>
         <Button
           onClick={onAdd}
           startIcon={<AddIcon />}
           variant="outlined"
           size="small"
         >
-          {addButtonText}
+          {addText}
         </Button>
       </Box>
 
@@ -69,16 +73,16 @@ export const MetaPropertiesEditor = ({
       {metaFields.map((field, index) => (
         <Box key={index} sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-start' }}>
           <TextField
-            label="Key"
+            label={t('meta.key')}
             value={field.key}
             onChange={(e) => onUpdate(index, 'key', e.target.value)}
             error={isDuplicateKey(field.key)}
-            helperText={isDuplicateKey(field.key) ? 'Duplications are not allowed' : ''}
+            helperText={isDuplicateKey(field.key) ? t('meta.duplicateKey') : ''}
             fullWidth
             size="small"
           />
           <TextField
-            label="Value"
+            label={t('meta.value')}
             value={field.value}
             onChange={(e) => onUpdate(index, 'value', e.target.value)}
             fullWidth
@@ -96,7 +100,7 @@ export const MetaPropertiesEditor = ({
 
       {metaFields.length === 0 && (
         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-          No meta properties defined. Click "{addButtonText}" to add custom key-value pairs.
+          {t('meta.empty', { button: addText })}
         </Typography>
       )}
     </Box>

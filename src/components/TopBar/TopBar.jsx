@@ -55,8 +55,6 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CircleIcon from '@mui/icons-material/Circle';
 import CodeIcon from '@mui/icons-material/Code';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import TerminalIcon from '@mui/icons-material/Terminal';
@@ -65,7 +63,6 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
 import { useTour } from '../../context/TourContext';
-import { useThemeMode } from '../../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@mui/material/styles';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
@@ -131,7 +128,6 @@ import { CSS } from '@dnd-kit/utilities';
 import './TopBar.css';
 import TopBarPhoneButton from './TopBarPhoneButton.jsx';
 import { useIsUserSession } from '../../hooks/useIsUserSession';
-import SessionRoleBadge from '../common/SessionRoleBadge.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { ConfirmDialog } from '../ui';
@@ -176,7 +172,6 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
   const navigate = useNavigate();
 
   const { isAuthenticated, user, logout } = useAuth();
-  const { isDarkMode, toggleTheme } = useThemeMode();
   const { t } = useTranslation();
   // Physical sides for menus and popovers, mirrored in Hebrew (right to left).
   const isRtl = useTheme().direction === 'rtl';
@@ -858,11 +853,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
   const ActiveToolScreen = TOOL_SCREENS[activeTool];
   const activeToolItem = TOPBAR_NAV_ITEMS.find(item => item.path === activeTool && canAccess(item.aclKey))
     || (!userSession && ACCOUNT_TOOLS.find(item => item.path === activeTool));
-  const overflowTools = [
-    ...professionalTools,
-    // Appearance is the viewer's, not a permission: always offered.
-    { key: 'theme', always: true, label: isDarkMode ? 'Light Mode' : 'Dark Mode', icon: isDarkMode ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />, onClick: toggleTheme },
-  ].filter((tool) => tool.always || allow(tool.aclKey));
+  // Appearance (theme, language) lives in the sidebar's bottom tools.
+  const overflowTools = professionalTools.filter((tool) => allow(tool.aclKey));
 
   return (
     <>
@@ -878,8 +870,6 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         >
           <MenuIcon sx={{ fontSize: 22, transition: 'transform 220ms ease', transform: menuOpen ? 'rotate(90deg)' : 'rotate(0deg)' }} />
         </IconButton>
-        {/* Admin or User: which side is signed in, always in view. */}
-        <SessionRoleBadge />
         {/* Selected applications and their selector. The customer is the sidebar's. */}
         {userSession ? (
           <Typography data-testid="topbar-user-environment" sx={{ fontSize: '0.75rem', fontWeight: 600, px: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--theme-text-primary)' }}>
@@ -1018,7 +1008,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </Button>
           )}
 
-          {/* Support tools live in the sidebar; theme lives in the account tools. */}
+          {/* Support tools and appearance live in the sidebar. */}
 
           {/* Divider between admin and utility icons */}
           <Box sx={{ width: '1px', height: 24, backgroundColor: 'var(--border-light, #e5e7eb)', mx: 0.5, flexShrink: 0 }} />

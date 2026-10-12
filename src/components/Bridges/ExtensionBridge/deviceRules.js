@@ -2,6 +2,8 @@
 // import (Extensions → Import), so a row the importer accepts is one the form
 // would have accepted. The API applies the same rules (Mediators::Device::Import).
 
+import i18n from '../../../i18n';
+
 export const DEVICE_CSV_HEADERS = ['Username', 'Name', 'Password', 'CallerID'];
 
 const PASSWORD_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -12,12 +14,16 @@ export function generateDevicePassword(length = 12) {
   return Array.from(values, (v) => PASSWORD_CHARS[v % PASSWORD_CHARS.length]).join('');
 }
 
+// The device form passes its own `t`; the CSV import has none, so it speaks
+// the current language through i18n directly.
+const bridgesText = (key) => i18n.t(key, { ns: 'bridges' });
+
 // The form's messages, field by field; empty when the device is valid.
-export function deviceErrors({ name, username, password } = {}, { requirePassword = true } = {}) {
+export function deviceErrors({ name, username, password } = {}, { requirePassword = true, t = bridgesText } = {}) {
   const errors = {};
-  if (!String(name ?? '').trim()) errors.name = 'Name is required';
-  if (!String(username ?? '').trim()) errors.username = 'Device number is required';
-  if (requirePassword && !String(password ?? '').trim()) errors.password = 'Password is required for new devices';
+  if (!String(name ?? '').trim()) errors.name = t('device.errors.name');
+  if (!String(username ?? '').trim()) errors.username = t('device.errors.number');
+  if (requirePassword && !String(password ?? '').trim()) errors.password = t('device.errors.password');
   return errors;
 }
 
