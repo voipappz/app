@@ -1,5 +1,5 @@
 import './App.css';
-import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams, useParams } from 'react-router';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router';
 import { Suspense, lazy } from 'react';
 // Sentry is initialized in main.jsx
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -12,6 +12,8 @@ import { SoftphoneProvider } from './context/SoftphoneContext.jsx';
 import { QueryProvider } from './providers/QueryProvider';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary.jsx';
 import Layout from './components/Layout/Layout.jsx';
+// /routes: the list, or one route's workflow (?did=...).
+import RoutingScreen from './components/DIDs/RoutingScreen.jsx';
 import { TourOverlay } from './components/Tour';
 import { usePermissions } from './hooks/usePermissions';
 import { getPermittedNavItems } from './config/navConfig';
@@ -40,22 +42,6 @@ const Subscriptions = lazy(() => import('./components/Subscriptions/Subscription
 const Providers = lazy(() => import('./components/Providers/Providers.jsx'));
 const Environments = lazy(() => import('./components/Environments/Environments.jsx'));
 const DIDs = lazy(() => import('./components/DIDs/DIDs.jsx'));
-const PBXRouting = lazy(() => import('./components/PBXRouting/PBXRoutingView.jsx'));
-// Routing lands on the DIDs LIST; the flow canvas opens only via a row's
-// Edit button (?did=...). Closing the canvas returns to the list.
-const DIDsList = lazy(() => import('./components/DIDs/DIDs.jsx'));
-const RoutingScreen = () => {
-  const [params, setParams] = useSearchParams();
-  // /routing is reachable from both surfaces. Falling back to the list means
-  // falling back to the LIST FOR THIS SESSION — a portal user closing the
-  // canvas must not land on the console's DIDs screen.
-  const admin = useAuth();
-  const user = useUserAuth();
-  const portalMode = !admin.isAuthenticated && user.isAuthenticated;
-  return params.get('did')
-    ? <PBXRouting onClose={() => setParams({}, { replace: true })} />
-    : <DIDsList portalMode={portalMode} />;
-};
 // /dids/:id deep link — per-DID edit is the visual routing flow.
 const DIDEditRedirect = () => {
   const { id } = useParams();

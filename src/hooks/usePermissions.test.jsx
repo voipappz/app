@@ -40,3 +40,42 @@ describe('usePermissions under a portal user session', () => {
     expect(result.current.canAccess('logs')).toBe(false);
   });
 });
+
+// A user's ACL may limit route types (`routes.types`); an account's sets none.
+describe('usePermissions route types', () => {
+  const asUser = (acl) => {
+    admin.mockReturnValue({ acl: null, isAuthenticated: false });
+    portal.mockReturnValue({ acl, isAuthenticated: true });
+    return renderHook(() => usePermissions()).result.current;
+  };
+
+  it('allows only the listed types, and writing only with the routes write grant', () => {
+    const perms = asUser({ data: { routes: { main: ['read', 'write'], types: ['src', 'feature:spy'] } } });
+
+    expect(perms.routeTypes).toEqual(['src', 'feature:spy']);
+    expect(perms.canRouteType('src', 'write')).toBe(true);
+    expect(perms.canRouteType('dst', 'write')).toBe(false);
+    expect(perms.canAccess('routes')).toBe(true);
+  });
+
+  it('keeps a read-only grant read-only for every type', () => {
+    const perms = asUser({ data: { routes: { main: ['read'], types: ['src'] } } });
+
+    expect(perms.canRouteType('src', 'read')).toBe(true);
+    expect(perms.canRouteType('src', 'write')).toBe(false);
+  });
+
+  it('reads a document that still says dids', () => {
+    const perms = asUser({ data: { dids: { main: ['read', 'write'], types: ['dst'] } } });
+
+    expect(perms.canRouteType('dst', 'write')).toBe(true);
+    expect(perms.canRouteType('src', 'write')).toBe(false);
+  });
+
+  it('sets no limit when the ACL has no type list', () => {
+    const perms = asUser(aclWith('routes'));
+
+    expect(perms.routeTypes).toBeNull();
+    expect(perms.canRouteType('anything', 'write')).toBe(true);
+  });
+});

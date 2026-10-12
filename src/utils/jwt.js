@@ -108,6 +108,19 @@ const legacyCallsRead = (screen, permission, screenPerms) =>
   Object.entries(screenPerms).some(([key, perms]) =>
     key !== 'main' && (Array.isArray(perms) ? perms.length > 0 : Boolean(perms)));
 
+/**
+ * The route types an ACL limits its holder to (`routes.types`, e.g. `src`,
+ * `feature:spy`), or null when it sets no limit -- an account's ACL, or a
+ * document written before the list existed. The API filters what it returns
+ * by the same list; the client only uses it to hide what cannot be done.
+ */
+export const allowedRouteTypes = (acl) => {
+  if (!acl) return null;
+  const aclData = acl.data || acl.screens || acl;
+  const types = (aclData.routes || aclData.dids)?.types;
+  return Array.isArray(types) ? types : null;
+};
+
 export const hasPermission = (acl, screen, permission = 'read') => {
   // SECURITY: If no ACL is defined, deny all access
   if (!acl) {

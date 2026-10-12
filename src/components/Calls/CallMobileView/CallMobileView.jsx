@@ -3,9 +3,30 @@ import { useTranslation } from 'react-i18next';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { useInView } from 'react-intersection-observer';
 import CallMobileCard from '../CallMobileCard/CallMobileCard';
+import { dayKey, formatDayHeading } from '../../../utils/dateUtils';
+
+// The calls in order, cut into runs of one day each (the API sends newest
+// first, so the days come out newest first too).
+const groupByDay = (rows) => {
+  const groups = [];
+  rows.forEach((call) => {
+    const key = dayKey(call.created_at);
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) last.calls.push(call);
+    else groups.push({ key, date: call.created_at, calls: [call] });
+  });
+  return groups;
+};
 
 const CallMobileView = ({ rows, onOpenRecording, onRowClick, hasNextPage, loadingMore, onLoadMore }) => {
   const { t } = useTranslation('calls');
+  const today = dayKey(new Date());
+  const yesterday = dayKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const dayHeading = (group) => {
+    if (group.key === today) return t('mobile.today');
+    if (group.key === yesterday) return t('mobile.yesterday');
+    return formatDayHeading(group.date);
+  };
   // Intersection observer for lazy loading
   const { ref: loadMoreRef, inView } = useInView({
     threshold: 0,
@@ -43,13 +64,39 @@ const CallMobileView = ({ rows, onOpenRecording, onRowClick, hasNextPage, loadin
         }
       }}
     >
-      {rows.map((call) => (
-        <CallMobileCard
-          key={call.uuid || call.id || Math.random()}
-          call={call}
-          onOpenRecording={onOpenRecording}
-          onRowClick={onRowClick}
-        />
+      {/* Like a phone's own call history: one heading per day, which stays
+          at the top while that day's calls scroll under it. */}
+      {groupByDay(rows).map((group) => (
+        <Box component="section" key={group.key || 'unknown'}>
+          <Typography
+            variant="overline"
+            component="h3"
+            className="calls-mobile-day"
+            data-testid="calls-mobile-day"
+            sx={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 1,
+              display: 'block',
+              py: 0.5,
+              px: 0.5,
+              fontWeight: 700,
+              lineHeight: 1.8,
+              color: 'text.secondary',
+              bgcolor: 'var(--theme-bg-primary)',
+            }}
+          >
+            {dayHeading(group)}
+          </Typography>
+          {group.calls.map((call) => (
+            <CallMobileCard
+              key={call.uuid || call.id || Math.random()}
+              call={call}
+              onOpenRecording={onOpenRecording}
+              onRowClick={onRowClick}
+            />
+          ))}
+        </Box>
       ))}
       
       {/* Loading sentinel for lazy loading */}

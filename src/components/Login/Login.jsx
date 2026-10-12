@@ -8,7 +8,6 @@ import {
   FormHelperText,
   CircularProgress,
   Alert,
-  Chip,
   Link
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router';
@@ -64,8 +63,6 @@ const Login = ({ switcher = null }) => {
         <Typography component="h3" className="form-title form-title--inline">
           {t('admin.title')}
         </Typography>
-        <Chip label={t('common:role.admin')} color="primary" size="small" data-testid="admin-login-badge"
-          sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }} />
       </Box>
       <Typography variant="body2" className="forgot-description">
         {t('admin.forAdministrators')}

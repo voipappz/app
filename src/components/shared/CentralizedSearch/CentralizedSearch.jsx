@@ -605,6 +605,7 @@ const FilterPill = ({ segment, active, onApply, onRemove }) => {
  * @param {Function} onExport - Optional. If provided, shows Export CSV button
  * @param {Function} onColumnSelectorOpen - Optional. If provided, shows Columns button
  * @param {string} textParam - Param the bare search text is sent as (default search[name])
+ * @param {boolean} hideDateRange - Leave out the date range (Today / Month / Year...)
  */
 const CentralizedSearch = ({
   segments,
@@ -624,6 +625,7 @@ const CentralizedSearch = ({
   hideSearchInput = false,
   inlineFilters = null,
   textParam = 'search[name]',
+  hideDateRange = false,
 }) => {
   const { t } = useTranslation();
   // The bearer for the raw fetches in AjaxInput/TagFilterInput (they bypass
@@ -794,7 +796,7 @@ const CentralizedSearch = ({
   // Keep quick date ranges in the bar; advanced filters and table actions
   // open below it. Phones retain the inline layout.
   const openPopup = () => { if (!showFilterPanel) toggleFilterPanel(); };
-  const datePicker = (
+  const datePicker = !hideDateRange && (
     <EnhancedDateRangePicker dateRange={dateRange} setDateRange={onDateRangeChange} compact={docked} />
   );
 
@@ -1140,7 +1142,7 @@ const CentralizedSearch = ({
           <ClickAwayListener onClickAway={() => setShowFilterPanel(false)}>
             <Box className="topbar-search" ref={dockRef} data-testid="topbar-search">
               {searchInput}
-              {onDateRangeChange && <Box sx={{ flexShrink: 0 }}>{datePicker}</Box>}
+              {onDateRangeChange && datePicker && <Box sx={{ flexShrink: 0 }}>{datePicker}</Box>}
               <Popper
                 open={showFilterPanel}
                 anchorEl={dockRef.current}

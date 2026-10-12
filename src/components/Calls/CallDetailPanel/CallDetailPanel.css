@@ -1,5 +1,9 @@
 .call-detail-panel {
   width: 400px;
+  /* Beside the grid: keeps its width, but never more than half the row on a
+     narrow window (e.g. with DevTools docked). */
+  flex-shrink: 0;
+  max-width: 50%;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -12,6 +16,7 @@
 
 .call-detail-panel.mobile {
   width: 100%;
+  max-width: none;
   position: fixed;
   top: 0;
   left: 0;

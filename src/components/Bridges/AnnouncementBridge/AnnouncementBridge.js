@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { announcementsApi } from '../../../services/api/announcementsApi.js';
 
 /**
@@ -15,6 +16,7 @@ import { announcementsApi } from '../../../services/api/announcementsApi.js';
  * - Form state management
  */
 export const useAnnouncement = () => {
+  const { t } = useTranslation('bridges');
   // Mode state
   const [mode, setMode] = useState('file'); // 'file' | 'tts' | 'builtin'
 
@@ -82,16 +84,16 @@ export const useAnnouncement = () => {
         // Store the path for creating announcement from TTS
         setTTSPath(audioUrl);
       } else {
-        throw new Error('No audio URL in TTS response');
+        throw new Error(t('announcement.errors.noAudioUrl'));
       }
     } catch (err) {
       console.error('Error generating TTS:', err);
-      setError(err.message || 'Failed to generate audio');
+      setError(err.message || t('announcement.errors.generateFailed'));
       setTTSPreviewUrl(null);
     } finally {
       setGeneratingTTS(false);
     }
-  }, []);
+  }, [t]);
 
   /**
    * Save announcement (file upload or TTS)
@@ -106,7 +108,7 @@ export const useAnnouncement = () => {
       if (mode === 'file') {
         // File upload mode
         if (!file) {
-          throw new Error('Please select a file to upload');
+          throw new Error(t('announcement.errors.selectFile'));
         }
 
         setUploadStatus('uploading');
@@ -127,7 +129,7 @@ export const useAnnouncement = () => {
       } else {
         // TTS mode - use the path from TTS generation
         if (!ttsPath) {
-          throw new Error('Please generate audio first using the TTS provider');
+          throw new Error(t('announcement.errors.generateFirst'));
         }
 
         // Create announcement using the path from TTS generation
@@ -143,7 +145,7 @@ export const useAnnouncement = () => {
       return result;
     } catch (err) {
       console.error('Error saving announcement:', err);
-      setError(err.message || 'Failed to save announcement');
+      setError(err.message || t('announcement.errors.saveFailed'));
 
       if (mode === 'file') {
         setUploadStatus('error');
@@ -153,7 +155,7 @@ export const useAnnouncement = () => {
     } finally {
       setLoading(false);
     }
-  }, [mode, file, ttsPath]);
+  }, [mode, file, ttsPath, t]);
 
   /**
    * Reset state

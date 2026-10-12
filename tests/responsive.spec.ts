@@ -18,7 +18,7 @@ const VIEWPORTS = [
   { name: 'desktop', width: 1920, height: 1080, mobile: false },
 ];
 
-const SCREENS = ['/live', '/calls', '/users'];
+const SCREENS = ['/live', '/calls', '/users', '/routes'];
 
 async function expectNoHorizontalOverflow(page: any, label: string) {
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({
@@ -87,5 +87,32 @@ test.describe('Responsive layout smoke', () => {
     await page.locator('.topbar-container button:has(svg[data-testid="SearchIcon"])').first().click();
     await expect(page.locator('.command-palette-paper input')).toBeVisible({ timeout: 5000 });
     await page.keyboard.press('Escape');
+  });
+
+  test('phone (375) — a route opens as details, never as the workflow', async ({ authenticatedPage: page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/routes', { waitUntil: 'domcontentloaded', timeout: 20000 });
+
+    // Routes are cards, without row buttons (the workflow among them).
+    const card = page.getByTestId('mobile-record-card').first();
+    await expect(card).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('routing-did-button')).toHaveCount(0);
+    await expect(page.getByTestId('edit-did-button')).toHaveCount(0);
+
+    // A tap opens the details; the phone's Back closes them.
+    await card.click();
+    await expect(page.getByTestId('route-details')).toBeVisible();
+    await expect(page.getByText('Calls go to').first()).toBeVisible();
+    expect(page.url()).toContain('route=');
+    await page.goBack();
+    await expect(page.getByTestId('route-details')).toBeHidden();
+
+    // A link to the workflow lands on the same details instead.
+    await card.click();
+    const uuid = new URL(page.url()).searchParams.get('route');
+    await page.goto(`/routes?did=${uuid}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await expect(page.getByTestId('route-details')).toBeVisible({ timeout: 15000 });
+    expect(page.url()).toContain(`route=${uuid}`);
+    await expect(page.locator('.pbx-routing-canvas')).toHaveCount(0);
   });
 });

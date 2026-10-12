@@ -73,6 +73,12 @@ describe('CentralizedSearch without a top bar', () => {
     expect(screen.getByPlaceholderText('Search calls')).toBeTruthy();
     expect(screen.getByTestId('date-picker')).toBeTruthy();
   });
+
+  it('leaves the date range out when the screen asks', () => {
+    render(<CentralizedSearch {...props({ hideDateRange: true })} />);
+    expect(screen.getByPlaceholderText('Search calls')).toBeTruthy();
+    expect(screen.queryByTestId('date-picker')).toBeNull();
+  });
 });
 
 // A date-range segment's own inputs: they share a scope with the value's
