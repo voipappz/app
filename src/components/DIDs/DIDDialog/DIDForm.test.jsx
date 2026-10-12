@@ -14,12 +14,17 @@ vi.mock('../../../services/api/providersApi', () => ({
   providersApi: {
     getProviders: vi.fn(() => Promise.resolve([{ uuid: 'prov-pbx2', name: 'PBX2' }])),
     createProvider: vi.fn(),
+    getProvider: vi.fn(),
+    getProviderTypes: vi.fn(),
+    updateProvider: vi.fn(),
   },
 }));
 vi.mock('./RoutingChain.jsx', () => ({ default: () => null }));
 vi.mock('../../Bridges/NumberBridge/NumberSelector.jsx', () => ({ NumberSelector: () => null }));
 let mockUserSession = false;
 vi.mock('../../../hooks/useIsUserSession', () => ({ useIsUserSession: () => mockUserSession }));
+let canEditProviders = true;
+vi.mock('../../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: () => canEditProviders }) }));
 
 import DIDForm from './DIDForm.jsx';
 import { providersApi } from '../../../services/api/providersApi';
@@ -53,7 +58,7 @@ const pick = (label, option) => {
   fireEvent.click(screen.getByRole('option', { name: option }));
 };
 
-beforeEach(() => { vi.clearAllMocks(); mockUserSession = false; });
+beforeEach(() => { vi.clearAllMocks(); mockUserSession = false; canEditProviders = true; });
 
 describe('DIDForm', () => {
   it('puts Enabled on top, then asks for the type, in words', () => {
@@ -182,5 +187,77 @@ describe('DIDForm — the application', () => {
     renderForm({ did: route('dst') });
     expect(screen.queryByText('Application', { selector: 'label' })).toBeNull();
     expect(screen.queryByText('The application this Route belongs to')).toBeNull();
+  });
+});
+
+describe('editing a SIP provider inside a route', () => {
+  const provider = {
+    uuid: 'prov-pbx2', type: 'sip', name: 'PBX2', enabled: true,
+    profile: { address: '192.0.2.10', port: '5060', transport: 'tcp', custom_setting: 'keep' },
+  };
+  beforeEach(() => {
+    providersApi.getProvider.mockResolvedValue(provider);
+    providersApi.getProviderTypes.mockResolvedValue([{ value: 'sip', fields: [
+      { key: 'address', label: 'Carrier address', required: true },
+      { key: 'port', label: 'Port', type: 'number' },
+      { key: 'transport', label: 'Transport' },
+    ] }]);
+    providersApi.updateProvider.mockResolvedValue({ ...provider, name: 'Updated PBX' });
+  });
+  const openProvider = async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Edit SIP provider' }));
+    return screen.findByRole('textbox', { name: /^Carrier address/ });
+  };
+  const trunk = () => route('feature:trunk', { bridge_type: 'sip_provider', bridge_uuid: provider.uuid });
+
+  it('loads the full provider, saves profile changes, and preserves the route draft', async () => {
+    const onSave = vi.fn();
+    renderForm({ did: trunk(), onSave });
+    fireEvent.change(field('Name'), { target: { value: 'Unsaved route' } });
+    fireEvent.change(await openProvider(), { target: { value: '192.0.2.20' } });
+    expect(providersApi.getProvider).toHaveBeenCalledWith(provider.uuid);
+    fireEvent.change(screen.getByRole('textbox', { name: /^Provider name/ }), { target: { value: 'Updated PBX' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Update provider' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(providersApi.updateProvider).toHaveBeenCalledExactlyOnceWith(provider.uuid, {
+      name: 'Updated PBX', notes: '', enabled: true,
+      profile: { ...provider.profile, address: '192.0.2.20' },
+    });
+    expect(field('Name')).toHaveValue('Unsaved route');
+    expect(screen.getByText('Updated PBX')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Update Route' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Unsaved route', bridge_type: 'sip_provider', bridge_uuid: provider.uuid,
+    })));
+  });
+
+  it('keeps edits visible on server rejection and cancels without saving the route', async () => {
+    providersApi.updateProvider.mockRejectedValue(new Error('Invalid carrier address'));
+    const onSave = vi.fn();
+    renderForm({ did: trunk(), onSave });
+    fireEvent.change(await openProvider(), { target: { value: 'invalid address' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Update provider' }));
+    expect(await screen.findByText('Invalid carrier address')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /^Carrier address/ })).toHaveValue('invalid address');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('prevents saving when the provider could not be loaded', async () => {
+    providersApi.getProvider.mockRejectedValue(new Error('Unable to fetch provider'));
+    renderForm({ did: trunk() });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit SIP provider' }));
+    expect(await screen.findByText('Unable to fetch provider')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Update provider' })).toBeDisabled();
+    expect(providersApi.updateProvider).not.toHaveBeenCalled();
+  });
+
+  it('does not offer provider editing without provider write permission', () => {
+    canEditProviders = false;
+    renderForm({ did: trunk() });
+    expect(screen.queryByRole('button', { name: 'Edit SIP provider' })).not.toBeInTheDocument();
   });
 });

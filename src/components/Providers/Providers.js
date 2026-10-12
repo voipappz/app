@@ -296,6 +296,7 @@ export const useProviders = () => {
         error.response?.data?.message ||
         (selectedProvider ? 'Failed to update provider' : 'Failed to create provider');
       showError(errorMessage);
+      throw error;
     } finally {
       setDialogLoading(false);
     }

@@ -113,11 +113,11 @@
   padding: 0;
 }
 
-/* Popup head: the date range on the left, the screen's actions on the right. */
+/* Keep table actions aligned at the end of the filter popup. */
 .topbar-search-popup-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
 }

@@ -102,7 +102,7 @@ import { openZendeskWidget } from '../../services/zendeskWidget';
 import { useApiHealth } from '../../hooks/useApiHealth';
 import { useGatusHealth } from '../../hooks/useGatusHealth';
 import { HEALTH_COLORS, overallHealth } from './healthLevel';
-import GatusHealthPanel from '../Monitoring/GatusHealthPanel.jsx';
+import NodeHealthPanel from '../Monitoring/NodeHealthPanel.jsx';
 import ApiHealthPanel from '../Monitoring/ApiHealthPanel.jsx';
 import LiveDrawer from '../Live/LiveDrawer.jsx';
 import { EnvironmentChartsPanel } from '../Live/panels/EntityChartsPanels.jsx';
@@ -1436,19 +1436,18 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
       <Dialog open={healthDialogOpen} onClose={() => { setHealthDialogOpen(false); setHealthNode(null); }} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CircleIcon sx={{ fontSize: 20, color: (healthNode ? nodeHealth.isHealthy : healthStatus.isHealthy) ? '#4caf50' : '#f44336' }} />
-          {healthNode ? `${healthNode.name} · Gatus health` : 'Health'}
+          {healthNode ? `${healthNode.name} · health` : 'Health'}
         </DialogTitle>
         <DialogContent dividers>
           {/* Main icon: authenticated API detail. Node button: that node's
-              Gatus relay over NATS. Keep both explicit and independently fast. */}
+              own report over NATS (node.health). Keep both explicit and
+              independently fast. */}
           {healthNode ? (
-            <GatusHealthPanel
-              endpoints={nodeHealth.endpoints}
-              summary={nodeHealth.summary}
+            <NodeHealthPanel
+              row={nodeHealth.row}
               loading={nodeHealth.loading}
               error={nodeHealth.error}
               title={`${healthNode.name} · Monitors`}
-              detailApiBase={`/custom/nodes/${encodeURIComponent(healthNode.uuid || healthNode.id || healthNode.name)}/endpoints`}
             />
           ) : (
             healthDialogOpen && <ApiHealthPanel />

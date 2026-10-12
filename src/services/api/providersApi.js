@@ -1,5 +1,10 @@
 import { apiService, toFormData } from '../apiService';
 
+// Existing webhook providers remain editable, but are not offered for creation.
+export const getCreatableProviderTypes = (types = []) => types.filter(
+  (type) => (typeof type === 'string' ? type : type.value) !== 'webhook'
+);
+
 /**
  * Provider API service
  * Handles all provider-related API operations including nested tariffs
@@ -20,34 +25,31 @@ export const providersApi = {
    * Provider types, as an ARRAY of { value, label, description, fields, services,
    * service_field, profile_fields }.
    *
-   * `?action=types` returns Provider.types_catalog — an OBJECT keyed by type
-   * ({ sip: {...}, smtp: {...} }), not the array of strings this used to get.
-   * Providers.js guards with `if (Array.isArray(types))`, which is false for an
-   * object, so setProviderTypes never ran, providerTypes stayed [], and the
-   * "Provider Type" dropdown rendered with zero options — you could not set a
-   * type when creating a provider. It failed silently: no error, just an empty
-   * select.
-   *
-   * Normalized here rather than at each call site, and the per-type `fields`
-   * (label/type/secret/required) are kept, since that is what a type-driven
-   * create wizard needs.
+   * The detailed catalog omits some supported types (including DID). Merge
+   * the server's complete type_names list with its catalog metadata so those
+   * types remain selectable without maintaining another list in the client.
    */
   getProviderTypes: async () => {
-    const catalog = await apiService.get('/api/providers?action=catalog', {}, 'fetching provider types', false);
+    const catalog = await apiService.get('/api/providers?action=types', {}, 'fetching provider types', false);
     if (Array.isArray(catalog)) {
       // Older servers still answer with a bare array of type names.
       return catalog.map(t => (typeof t === 'string' ? { value: t, label: t.toUpperCase() } : t));
     }
     if (!catalog || typeof catalog !== 'object') return [];
-    return Object.entries(catalog).map(([value, spec]) => ({
-      value,
-      label: spec?.label || value.toUpperCase(),
-      description: spec?.description || '',
-      fields: spec?.fields || [],
-      services: spec?.services || null,
-      service_field: spec?.service_field || null,
-      profile_fields: spec?.profile_fields || [],
-    }));
+    const names = await apiService.get('/api/providers?action=type_names', {}, 'fetching supported provider types', false);
+    if (!Array.isArray(names)) throw new Error('Invalid provider type list from server');
+    return names.map((value) => {
+      const spec = catalog[value];
+      return {
+        value,
+        label: spec?.label || value.toUpperCase(),
+        description: spec?.description || '',
+        fields: spec?.fields || [],
+        services: spec?.services || null,
+        service_field: spec?.service_field || null,
+        profile_fields: spec?.profile_fields || [],
+      };
+    });
   },
 
   /**

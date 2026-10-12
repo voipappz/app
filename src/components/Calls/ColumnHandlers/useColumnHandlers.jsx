@@ -27,7 +27,7 @@ const COLUMN_WIDTHS = {
   caller_id_number: 140,
   provider: 130,
   environment: 130,
-  recording: 110,
+  recording: 180,
   actions: 90,
 };
 const FLEX_COLUMNS = new Set(['caller', 'callee', 'contact', 'fullname', 'user_name', 'name']);

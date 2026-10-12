@@ -9,7 +9,7 @@ import { usePermissions } from '../../../hooks/usePermissions';
  *
  * Two ways to name the record:
  *   subject + uuid — events ABOUT it. `subject` must be one the API records
- *     events under (GET /api/events/subjects: call, did, user, extension,
+ *     events under (GET /api/events/subjects: call, route, user, extension,
  *     subscription, tariff, campaign, environment, message, ...).
  *   actor — events it CAUSED (an account's email): sign-ins, audits, changes.
  *     Accounts use this; nothing is recorded with an account as its subject.

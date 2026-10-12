@@ -32,18 +32,19 @@ describe('CentralizedSearch docked in the top bar', () => {
   });
   afterEach(() => slot.remove());
 
-  it('puts the search field in the top bar slot and keeps the date range out of sight', () => {
+  it('puts the search field and date selector directly in the top bar', () => {
     render(<CentralizedSearch {...props()} />);
     expect(slot.contains(screen.getByPlaceholderText('Search calls'))).toBe(true);
-    expect(screen.queryByTestId('date-picker')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Date range: Today' })).toBeTruthy();
+    expect(slot.contains(screen.getByTestId('date-picker'))).toBe(true);
+    expect(screen.queryByTestId('topbar-search-popup')).toBeNull();
   });
 
-  it('opens the date range and filters as a popup when the field is focused', () => {
+  it('opens filters on focus while keeping the date selector in the bar', () => {
     render(<CentralizedSearch {...props()} />);
     fireEvent.focus(screen.getByPlaceholderText('Search calls'));
     const popup = screen.getByTestId('topbar-search-popup');
-    expect(popup.contains(screen.getByTestId('date-picker'))).toBe(true);
+    expect(popup.contains(screen.getByTestId('date-picker'))).toBe(false);
+    expect(slot.contains(screen.getByTestId('date-picker'))).toBe(true);
     expect(popup.textContent).toContain('Caller');
     // Refresh and the screen's other actions live in the popup, not in the bar.
     expect(popup.contains(screen.getByRole('button', { name: 'Refresh' }))).toBe(true);

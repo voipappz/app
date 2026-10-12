@@ -6,6 +6,7 @@ import { Box, Typography, Tooltip } from '@mui/material';
  *
  * `variant`:
  *  - 'card'    a bordered tile (dashboard): the number large, in its colour.
+ *  - 'compact' a single-line number and label with a selected outline (Calls).
  *  - 'minimal' no box (Calls, above the list): a colour underline marks the
  *              active one, so the row reads as a line of numbers, not buttons.
  *
@@ -20,6 +21,7 @@ import { Box, Typography, Tooltip } from '@mui/material';
 const StatCounter = ({ label, value, color = 'var(--counter-total)', active = false, onClick, tooltip, variant = 'card' }) => {
   const known = value != null && value !== '';
   const minimal = variant === 'minimal';
+  const compact = variant === 'compact';
 
   const card = (
     <Box
@@ -30,7 +32,19 @@ const StatCounter = ({ label, value, color = 'var(--counter-total)', active = fa
       onKeyDown={onClick ? (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e); }
       } : undefined}
-      sx={minimal ? {
+      sx={compact ? {
+        display: 'inline-flex', alignItems: 'center', gap: 0.75,
+        px: 1, py: 0.5, minHeight: 32, boxSizing: 'border-box', borderRadius: 1,
+        cursor: onClick ? 'pointer' : 'default', userSelect: 'none',
+        bgcolor: active ? 'var(--accent-primary-alpha-8)' : 'transparent',
+        border: '1px solid',
+        borderColor: active ? 'var(--accent-primary)' : 'transparent',
+        transition: 'background-color .12s, border-color .12s',
+        '&:hover': onClick ? {
+          bgcolor: 'var(--theme-hover)',
+        } : undefined,
+        '&:focus-visible': { outline: '2px solid var(--accent-primary)', outlineOffset: 2 },
+      } : minimal ? {
         px: 1, pt: 0.25, pb: 0.5, minWidth: 64,
         cursor: onClick ? 'pointer' : 'default', userSelect: 'none',
         borderBottom: '2px solid', borderColor: active ? color : 'transparent',
@@ -52,15 +66,15 @@ const StatCounter = ({ label, value, color = 'var(--counter-total)', active = fa
       }}
     >
       <Typography sx={{
-        fontSize: minimal ? '1.1rem' : '1.75rem', fontWeight: 700, lineHeight: 1.1,
+        fontSize: compact ? '0.95rem' : minimal ? '1.1rem' : '1.75rem', fontWeight: 700, lineHeight: 1.1,
         fontVariantNumeric: 'tabular-nums',
-        color: known ? color : 'var(--theme-text-secondary)',
+        color: known ? (compact ? 'var(--theme-text-primary)' : color) : 'var(--theme-text-secondary)',
       }}>
         {known ? value : '—'}
       </Typography>
       <Typography sx={{
-        fontSize: minimal ? '0.6rem' : '0.66rem', fontWeight: 600, letterSpacing: '0.05em',
-        textTransform: 'uppercase', color: 'var(--theme-text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap',
+        fontSize: compact ? '0.75rem' : minimal ? '0.6rem' : '0.66rem', fontWeight: compact ? 500 : 600, letterSpacing: compact ? 0 : '0.05em',
+        textTransform: compact ? 'none' : 'uppercase', color: 'var(--theme-text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap',
       }}>
         {label}
       </Typography>

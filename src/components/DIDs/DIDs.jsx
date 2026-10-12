@@ -671,7 +671,7 @@ const DIDs = ({ portalMode = false }) => {
                                 </IconButton>
                               </Tooltip>
                             )}
-                            <RowEventsButton subject="did" uuid={did.uuid} />
+                            <RowEventsButton subject="route" uuid={did.uuid} />
                             {canWriteRoute(did) && (
                               <Tooltip title="Delete">
                                 <IconButton

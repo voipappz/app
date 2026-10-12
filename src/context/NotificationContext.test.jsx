@@ -26,11 +26,20 @@ describe('NotificationProvider toaster', () => {
     expect(screen.getByText('Service unavailable')).toBeInTheDocument();
   });
 
-  it('caps a burst at three visible toasts', () => {
+  it('stacks distinct messages without dropping earlier ones', () => {
     render(<NotificationProvider><Harness /></NotificationProvider>);
     fireEvent.click(screen.getByRole('button', { name: 'burst' }));
-    expect(screen.getAllByTestId('notification-toast')).toHaveLength(3);
+    expect(screen.getAllByTestId('notification-toast')).toHaveLength(4);
+    expect(screen.getByText('one')).toBeInTheDocument();
+    expect(screen.getByText('four')).toBeInTheDocument();
+  });
+
+  it('dismisses one message without clearing the rest of the stack', () => {
+    render(<NotificationProvider><Harness /></NotificationProvider>);
+    fireEvent.click(screen.getByRole('button', { name: 'burst' }));
+    fireEvent.click(screen.getAllByTestId('notification-toast-close')[0]);
     expect(screen.queryByText('one')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('notification-toast')).toHaveLength(3);
     expect(screen.getByText('four')).toBeInTheDocument();
   });
 });

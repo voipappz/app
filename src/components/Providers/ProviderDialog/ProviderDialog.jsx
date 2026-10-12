@@ -24,17 +24,7 @@ import { useState, useEffect } from 'react';
 import { formatDate } from '../../../utils/dateUtils';
 import { parseServerErrors, is406Error } from '../../../utils/formValidation';
 import SecretField from '../../common/SecretField.jsx';
-
-/**
- * Provider types supported by the API
- * Each type has different field requirements
- */
-/**
- * Fallback provider types - used only if server types not provided via props
- */
-const FALLBACK_PROVIDER_TYPES = [
-  'sip', 'did', 'sms', 'gateway', 'webhook', 'caller_id_number', 'tts', 'stt', 'smtp', 'llm'
-];
+import { providersApi, getCreatableProviderTypes } from '../../../services/api/providersApi';
 
 /**
  * Voice gender options for TTS providers
@@ -58,8 +48,23 @@ const ProviderDialog = ({
   providerTypes: propTypes,
   llmServices: propLlmServices
 }) => {
-  // Use server-provided types/services or fallbacks
-  const PROVIDER_TYPES = (propTypes || FALLBACK_PROVIDER_TYPES).map(t =>
+  const [serverTypes, setServerTypes] = useState([]);
+  const [typesLoading, setTypesLoading] = useState(false);
+  const [typesError, setTypesError] = useState('');
+  useEffect(() => {
+    if (!open || propTypes != null) return;
+    let cancelled = false;
+    setServerTypes([]);
+    setTypesLoading(true);
+    setTypesError('');
+    providersApi.getProviderTypes()
+      .then((types) => { if (!cancelled) setServerTypes(types); })
+      .catch(() => { if (!cancelled) setTypesError('Unable to load provider types. Close and reopen this dialog to retry.'); })
+      .finally(() => { if (!cancelled) setTypesLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, propTypes]);
+  const availableTypes = propTypes ?? serverTypes;
+  const PROVIDER_TYPES = (provider ? availableTypes : getCreatableProviderTypes(availableTypes)).map(t =>
     typeof t === 'string' ? { value: t, label: t.toUpperCase() } : t
   );
   const LLM_SERVICES = (propLlmServices || []).map(svc => ({
@@ -159,7 +164,7 @@ const ProviderDialog = ({
     }
   };
 
-  const [formData, setFormData] = useState(getDefaultFormData('sip'));
+  const [formData, setFormData] = useState(getDefaultFormData(''));
 
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
@@ -229,7 +234,7 @@ const ProviderDialog = ({
         });
       }
     } else {
-      setFormData(getDefaultFormData('sip'));
+      setFormData(getDefaultFormData(''));
     }
     setErrors({});
     setApiError('');
@@ -282,7 +287,10 @@ const ProviderDialog = ({
 
   const validateForm = () => {
     const newErrors = {};
-    const providerType = formData.type || 'sip';
+    const providerType = formData.type;
+    if (!provider && !PROVIDER_TYPES.some((type) => type.value === providerType)) {
+      newErrors.type = 'Choose an available provider type';
+    }
 
     // Common validation - name is always required
     if (!formData.name?.trim()) {
@@ -415,6 +423,7 @@ const ProviderDialog = ({
       </DialogTitle>
       
       <DialogContent dividers>
+        {typesError && <Alert severity="error" sx={{ mb: 2 }}>{typesError}</Alert>}
         {apiError && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {apiError}
@@ -464,10 +473,10 @@ const ProviderDialog = ({
             <FormControl fullWidth required disabled={!!provider}>
               <InputLabel required>Provider Type</InputLabel>
               <Select
-                value={formData.type || 'sip'}
+                value={formData.type || ''}
                 onChange={(e) => handleChange('type', e.target.value)}
                 label="Provider Type"
-                disabled={loading || !!provider}
+                disabled={loading || typesLoading || !!provider}
                 data-testid="type-select"
               >
                 {PROVIDER_TYPES.map((type) => (
@@ -1011,7 +1020,7 @@ const ProviderDialog = ({
           onClick={handleSubmit}
           variant="contained"
           color="primary"
-          disabled={loading}
+          disabled={loading || (!provider && (typesLoading || !PROVIDER_TYPES.some((type) => type.value === formData.type)))}
           data-testid="submit-provider-button"
           startIcon={loading ? <CircularProgress size={20} /> : null}
         >
