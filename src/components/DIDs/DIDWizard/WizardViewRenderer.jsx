@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import DIDForm from '../DIDDialog/DIDForm';
 import { IVRBridge } from '../../Bridges/IVRBridge/IVRBridge';
 import { QueueBridge } from '../../Bridges/QueueBridge/QueueBridge';
@@ -25,6 +26,9 @@ const WizardViewRenderer = ({
   onDrillDown,
   loading,
 }) => {
+  // VML calls onSave followed by onClose. Return its result when it closes,
+  // so saving pops just the VML view and preserves the route's draft.
+  const savedVml = useRef(null);
   if (!view) return null;
 
   const { type, mode, data, environmentUuid } = view;
@@ -94,8 +98,8 @@ const WizardViewRenderer = ({
       return (
         <VMLBridge
           open={true}
-          onClose={onCancel}
-          onSave={(savedData) => onCancel(savedData)}
+          onClose={() => onCancel(savedVml.current)}
+          onSave={(savedData) => { savedVml.current = savedData; }}
           environmentUuid={environmentUuid}
           vml={data}
           mode={mode}

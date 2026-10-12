@@ -13,18 +13,22 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
 import { nodesApi } from '../../services/api/nodesApi';
-import { toHealth } from '../../utils/gatus';
 import { useAuth } from '../../context/AuthContext';
-import GatusHealthPanel from './GatusHealthPanel.jsx';
+import NodeHealthPanel, { toNodeHealth } from './NodeHealthPanel.jsx';
 import NodeEditDialog from './NodeEditDialog.jsx';
 import { ConfirmDialog } from '../ui';
 
 /**
  * MonitoringNodes — the list of nodes on the Monitoring page. Each node shows its
- * identity (name, type, IP, roles) and its Gatus health (GET /custom/nodes/:id/health
- * via NATS to the node's local Gatus). Health is fetched for every node once the
- * list loads so the status dot + up-count are visible at a glance; expanding a
- * node shows the full per-endpoint panel from the same fetch.
+ * identity (name, type, IP, roles) and its OWN health: the report every node
+ * answers on `node:<uuid>:node.health` over NATS — its checks (SIP, media,
+ * control, license, system) and live metrics (calls, registrations, ...). ONE
+ * request asks the whole fleet (GET /api/nodes?action=connected), so the status
+ * dot and up-count show at a glance and expanding a node needs no second call.
+ *
+ * NOT Gatus. This screen used GET /custom/nodes/:uuid/health, which answers
+ * with the MOTHERSHIP's Gatus board — Admin SPA, Kong, PgCat — under every
+ * node's name. Gatus belongs on the Monitoring screen.
  *
  * This is also where nodes are MANAGED (/api/nodes CRUD). Nodes are deployment
  * infrastructure rather than tenant data — the va.yaml served to a node
@@ -45,14 +49,13 @@ export default function MonitoringNodes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(null);
-  const [health, setHealth] = useState({}); // id -> { loading, data, error }
   const [versions, setVersions] = useState({}); // id -> version.json payload
   // Which nodes are on the NATS bus right now: uuid -> { connected, ok, reason }
   // from ONE GET /api/nodes?action=connected (the API asks every table node over
-  // NATS in parallel). Separate from Gatus health above: a node can be on the
-  // bus and failing its checks, or healthy per Gatus and unreachable over NATS.
+  // NATS in parallel), each connected row carrying the node's own report in
+  // `health`. `connected` and `ok` stay two facts: a node can be on the bus and
+  // failing its own checks.
   const [bus, setBus] = useState({ loading: false, rows: {}, error: null });
-  const healthFiredRef = useRef(new Set()); // ids already fetched (or in flight)
   const versionFiredRef = useRef(new Set());
 
   // Deployed build per node: nodes serve /version.json (like the admin build
@@ -99,10 +102,8 @@ export default function MonitoringNodes() {
     setLoading(true); setError(null);
     try {
       const r = await nodesApi.getNodes();
-      // Reloading nodes also re-checks health + versions + bus status
-      healthFiredRef.current.clear();
+      // Reloading nodes also re-asks every node (bus status + health) and versions
       versionFiredRef.current.clear();
-      setHealth({});
       setVersions({});
       setNodes(Array.isArray(r) ? r : (r?.nodes || []));
       loadBus();
@@ -172,39 +173,17 @@ export default function MonitoringNodes() {
     }
   };
 
-  const fetchHealth = useCallback(async (node) => {
-    const id = idOf(node);
-    setHealth((prev) => ({ ...prev, [id]: { loading: true } }));
-    try {
-      const raw = await nodesApi.getNodeHealth(id);
-      setHealth((prev) => ({ ...prev, [id]: { loading: false, data: toHealth(raw) } }));
-    } catch (e) {
-      setHealth((prev) => ({ ...prev, [id]: { loading: false, error: e?.message || 'Health check failed' } }));
-    }
-  }, []);
-
-  // Eager health: fetch Gatus status for every node as soon as the list loads,
-  // so each row's dot shows up/down without needing to expand.
-  useEffect(() => {
-    nodes.filter((n) => n && n.name).forEach((node) => {
-      const id = idOf(node);
-      if (healthFiredRef.current.has(id)) return;
-      healthFiredRef.current.add(id);
-      fetchHealth(node);
-    });
-  }, [nodes, fetchHealth]);
-
   const toggle = (node) => {
     const id = idOf(node);
     if (expanded === id) { setExpanded(null); return; }
     setExpanded(id);
-    if (!health[id]) fetchHealth(node);
   };
 
   const statusDot = (node) => {
-    const h = health[idOf(node)];
-    // Grey while loading; then green/red from Gatus.
-    const color = !h || h.loading ? '#bdbdbd' : h.error ? '#f44336' : h.data?.isHealthy ? '#4caf50' : '#f44336';
+    // Grey while asking, or for a node the API does not ask (va.yaml only);
+    // red when it does not answer or its own checks fail; green when all pass.
+    const b = node.uuid ? bus.rows[node.uuid] : null;
+    const color = bus.loading || !b ? '#bdbdbd' : b.connected && b.ok ? '#4caf50' : '#f44336';
     return <FiberManualRecordIcon sx={{ fontSize: 12, color }} />;
   };
 
@@ -280,7 +259,8 @@ export default function MonitoringNodes() {
           {nodes.filter((n) => n && n.name).map((node) => {
             const id = idOf(node);
             const open = expanded === id;
-            const h = health[id];
+            const row = node.uuid ? bus.rows[node.uuid] : null;
+            const summary = row?.connected ? toNodeHealth(row.health).summary : null;
             return (
               <Box key={id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                 <Box
@@ -299,9 +279,9 @@ export default function MonitoringNodes() {
                             sx={{ height: 16, fontSize: '0.6rem', fontFamily: 'monospace' }} />
                         </Tooltip>
                       )}
-                      {h && !h.loading && !h.error && h.data?.summary && (
+                      {summary && summary.total > 0 && (
                         <Typography variant="caption" color="text.secondary">
-                          {h.data.summary.up}/{h.data.summary.total} up
+                          {summary.up}/{summary.total} up
                         </Typography>
                       )}
                     </Box>
@@ -346,17 +326,14 @@ export default function MonitoringNodes() {
 
                 <Collapse in={open} timeout="auto" unmountOnExit>
                   <Box sx={{ px: 1.5, pb: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
-                    {!h || h.loading ? (
-                      <Box sx={{ p: 2, textAlign: 'center' }}><CircularProgress size={20} /></Box>
-                    ) : (
-                      <GatusHealthPanel
+                    <Box sx={{ pt: 1.5 }}>
+                      <NodeHealthPanel
                         title={`${node.name} · health`}
-                        endpoints={h.data?.endpoints || []}
-                        summary={h.data?.summary}
-                        error={h.error}
-                        detailApiBase={`/custom/nodes/${encodeURIComponent(id)}/endpoints`}
+                        row={row}
+                        loading={bus.loading}
+                        error={bus.error}
                       />
-                    )}
+                    </Box>
                   </Box>
                 </Collapse>
               </Box>
