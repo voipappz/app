@@ -530,6 +530,7 @@ const DIDForm = forwardRef(({
               helperText={errors.number || (submitAttempted && !formData.number?.trim()
                 ? 'Number is required' : 'E.164 format, e.g. +14155551234')}
               placeholder="+14155551234"
+              inputProps={{ inputMode: 'tel' }}
             />
           )}
 

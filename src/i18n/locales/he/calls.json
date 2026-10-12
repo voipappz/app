@@ -46,7 +46,9 @@
     "callId": "מזהה שיחה:",
     "notAvailable": "לא זמין",
     "status": "סטטוס:",
-    "unknown": "לא ידוע"
+    "unknown": "לא ידוע",
+    "today": "היום",
+    "yesterday": "אתמול"
   },
   "stats": {
     "total": "סה״כ",

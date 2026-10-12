@@ -4,8 +4,11 @@ import {
   Typography,
   IconButton,
   Box,
-  Fade
+  Fade,
+  Slide,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useWizard } from './DIDWizard.js';
 import WizardBreadcrumb from './WizardBreadcrumb';
@@ -168,6 +171,11 @@ const DIDWizard = ({
     onClose();
   }, [close, onClose]);
 
+  // On a phone the form fills the screen: its fields need the keyboard, which
+  // would cover half of a smaller panel.
+  const theme = useTheme();
+  const isPhone = useMediaQuery(theme.breakpoints.down('md'));
+
   // Get help text for current view
   const help = currentView
     ? VIEW_HELP[currentView.type]?.[currentView.mode] || VIEW_HELP[currentView.type]?.create
@@ -179,9 +187,11 @@ const DIDWizard = ({
       onClose={handleClose}
       maxWidth="md"
       fullWidth
+      fullScreen={isPhone}
       className="wizard-dialog"
-      TransitionComponent={Fade}
-      TransitionProps={{ timeout: 200 }}
+      data-testid="did-wizard"
+      TransitionComponent={isPhone ? Slide : Fade}
+      TransitionProps={isPhone ? { direction: 'up', timeout: 250 } : { timeout: 200 }}
       slotProps={{
         backdrop: {
           sx: { backgroundColor: 'rgba(30, 37, 48, 0.4)' }
@@ -207,9 +217,11 @@ const DIDWizard = ({
                 <Typography className="wizard-header-title">
                   {help.title}
                 </Typography>
-                <Typography className="wizard-header-desc" sx={{ mt: 0.5 }}>
-                  {help.desc}
-                </Typography>
+                {!isPhone && (
+                  <Typography className="wizard-header-desc" sx={{ mt: 0.5 }}>
+                    {help.desc}
+                  </Typography>
+                )}
               </>
             )}
           </Box>
@@ -219,6 +231,7 @@ const DIDWizard = ({
             <WizardBreadcrumb
               viewStack={viewStack}
               onNavigateTo={handleNavigateTo}
+              compact={isPhone}
               onBack={() => popView()}
               canGoBack={canGoBack}
             />

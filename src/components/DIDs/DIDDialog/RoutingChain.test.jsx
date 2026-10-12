@@ -44,3 +44,23 @@ describe('editing VML from the route preview', () => {
     }
   );
 });
+
+describe('listening from the route preview', () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it('offers the announcement to play', async () => {
+    bridgeApi.getBridgeResource.mockResolvedValue({ uuid: 'ann-1', name: 'Welcome', path: 'https://files.example/ann-1.wav' });
+    render(<RoutingChain bridgeType="announcement" bridgeUuid="ann-1" environmentUuid="env-1" />);
+
+    expect(await screen.findByText('Welcome')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play announcement' })).toBeInTheDocument();
+  });
+
+  it("offers an IVR's greeting to play", async () => {
+    ivrApi.getIVR.mockResolvedValue({ uuid: 'ivr-1', name: 'Main menu', announcement_uuid: 'ann-1' });
+    render(<RoutingChain bridgeType="ivr" bridgeUuid="ivr-1" environmentUuid="env-1" />);
+
+    expect(await screen.findByText('Greeting')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play announcement' })).toBeInTheDocument();
+  });
+});

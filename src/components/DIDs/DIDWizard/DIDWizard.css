@@ -1,7 +1,7 @@
 /* DID Wizard — AWS-style panel wizard */
 
-/* ───── Dialog: not fullscreen, centered panel ───── */
-.wizard-dialog .MuiDialog-paper {
+/* ───── Dialog: a centered panel; full screen on a phone ───── */
+.wizard-dialog .MuiDialog-paper:not(.MuiDialog-paperFullScreen) {
   border-radius: 12px;
   max-height: 90vh;
   height: 90vh;
@@ -117,6 +117,48 @@
   align-items: center;
 }
 
+/* ───── Phone trail: one line, the step before › the current step ───── */
+.wizard-breadcrumb-compact {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 16px 10px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.wizard-crumb-more {
+  flex-shrink: 0;
+}
+
+/* The parent gives way first: the current step gets the room. */
+.wizard-crumb-parent {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 45%;
+}
+
+.wizard-crumb-current {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--navy-900, #1E2530);
+  padding-inline-start: 4px;
+}
+
+.wizard-crumb-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[dir="rtl"] .wizard-breadcrumb-compact .wizard-crumb-separator {
+  transform: scaleX(-1);
+}
+
 /* ───── View container ───── */
 .wizard-view-container {
   position: relative;
@@ -167,7 +209,7 @@
 
 /* ───── Responsive ───── */
 @media (max-width: 768px) {
-  .wizard-dialog .MuiDialog-paper {
+  .wizard-dialog .MuiDialog-paper:not(.MuiDialog-paperFullScreen) {
     margin: 8px;
     max-height: 96vh;
     height: 96vh;
@@ -184,5 +226,33 @@
 
   .wizard-view {
     padding: 20px;
+  }
+}
+
+/* ───── Phone: full screen, clear of the notch and the home bar ───── */
+.wizard-dialog .MuiDialog-paperFullScreen {
+  padding-top: env(safe-area-inset-top);
+}
+
+@media (max-width: 899.95px) {
+  .wizard-header {
+    padding: 14px 16px 0;
+  }
+
+  .wizard-header-title {
+    font-size: 1.2rem !important;
+  }
+
+  .wizard-close-btn {
+    top: calc(10px + env(safe-area-inset-top)) !important;
+  }
+
+  .wizard-breadcrumb-bar {
+    padding: 8px 16px 10px;
+  }
+
+  /* The form's own sticky buttons give the bottom its space. */
+  .wizard-view {
+    padding: 16px 16px 0;
   }
 }

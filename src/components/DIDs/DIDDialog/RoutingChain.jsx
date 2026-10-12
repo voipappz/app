@@ -16,6 +16,7 @@ import { queuesApi } from '../../../services/api/queuesApi';
 import { getCallCondition } from '../../../services/api/callConditionsApi';
 import { ivrApi } from '../../../services/api/ivrApi';
 import { bridgeApi } from '../../../services/api/bridgeApi';
+import AudioPreview from '../../common/AudioPreview/AudioPreview.jsx';
 
 const TYPE_CONFIG = {
   queue: { icon: HeadsetIcon, color: '#2e7d32', label: 'Queue' },
@@ -292,6 +293,13 @@ const IVRCard = ({ data, entryDestinations, timeoutDest, invalidDest, onEditBrid
     <Paper variant="outlined" sx={{ p: 2, borderLeft: `4px solid ${TYPE_CONFIG.ivr.color}` }}>
       <CardHeader type="ivr" onEdit={onEditBridge ? () => onEditBridge('ivr', data) : null} />
       <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{data.name}</Typography>
+      {/* The greeting callers hear before choosing. */}
+      {data.announcement_uuid && (
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block' }}>Greeting</Typography>
+          <AudioPreview key={data.announcement_uuid} uuid={data.announcement_uuid} />
+        </Box>
+      )}
       <StatChips items={[
         `${entryList.length} option${entryList.length !== 1 ? 's' : ''}`,
         data.timeout ? `Timeout: ${data.timeout}s` : null,
@@ -363,6 +371,11 @@ const SimpleCard = ({ type, data, onEditBridge }) => (
   <Paper variant="outlined" sx={{ p: 2, borderLeft: `4px solid ${(TYPE_CONFIG[type] || {}).color || '#757575'}` }}>
     <CardHeader type={type} onEdit={onEditBridge ? () => onEditBridge(type, data) : null} />
     <Typography variant="body2" fontWeight={600}>{data?.name || type}</Typography>
+    {type === 'announcement' && data?.uuid && (
+      <Box sx={{ mt: 1 }}>
+        <AudioPreview src={data.path || data.url} uuid={data.uuid} />
+      </Box>
+    )}
   </Paper>
 );
 
