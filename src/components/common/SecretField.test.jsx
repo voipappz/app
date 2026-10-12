@@ -19,7 +19,9 @@ describe('SecretField', () => {
     expect(input).toHaveAttribute('autocomplete', 'off');
     expect(input).toHaveAttribute('data-1p-ignore', 'true');
     expect(input).toHaveAttribute('data-lpignore', 'true');
-    expect(input.style.webkitTextSecurity || input.getAttribute('style')).toMatch(/disc/);
+    // jsdom 30 drops the inline -webkit-text-security it does not know, so the
+    // masking is checked through the attribute the component sets with it.
+    expect(input).toHaveAttribute('data-secret-field', 'masked');
   });
 
   it('shows the value when revealed', async () => {
