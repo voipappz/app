@@ -456,7 +456,7 @@ const Calls = () => {
   // Create grid columns with icons and actions
   const gridColumns = useMemo(() => {
     const columns = createGridColumns(visibleColumns, DirectionIcon, CauseIcon, RecordingControls, CallActions, handleAddNote);
-    return [{
+    return [...columns, {
       field: 'callRowActions',
       headerName: '',
       width: canViewEvents ? 88 : 52,
@@ -464,6 +464,7 @@ const Calls = () => {
       filterable: false,
       disableColumnMenu: true,
       resizable: false,
+      align: 'right',
       renderCell: ({ row }) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
           <Tooltip title="Call info">
@@ -486,7 +487,7 @@ const Calls = () => {
         />
         </Box>
       ),
-    }, ...columns];
+    }];
   }, [visibleColumns, createGridColumns, canViewEvents]);
 
   // Answered/No-Answer/Outgoing/Incoming are REAL search filters now — each maps
@@ -700,7 +701,7 @@ const Calls = () => {
             { label: t('stats.incoming'), value: summaryCounts.incoming, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: t('stats.incomingHint') },
           ].map((item) => (
             <StatCounter
-              variant="compact"
+              variant="minimal"
               key={item.label}
               label={item.label}
               value={item.value}

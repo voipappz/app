@@ -30,6 +30,10 @@ const TYPE_CONFIG = {
 
 const formatStrategy = (s) => s ? String(s).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
 
+// VML's own `data` is script text, not a response envelope. Keep the
+// resource (especially its UUID) when opening it from the route preview.
+const unwrapResource = (response) => response?.data?.uuid ? response.data : response;
+
 const getAgentStatusColor = (status) => {
   if (!status) return '#9e9e9e';
   const s = status.toLowerCase();
@@ -380,7 +384,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
     try {
       if (bt === 'queue') {
         const resp = await queuesApi.getQueue(bridgeUuid);
-        const q = resp?.data || resp;
+        const q = unwrapResource(resp);
         if (!q) { setBridgeInfo(null); return; }
 
         let timeoutDest = null;
@@ -388,7 +392,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
         if (tbt && q.max_wait_time_bridge_uuid) {
           try {
             const dest = await bridgeApi.getBridgeResource(tbt, q.max_wait_time_bridge_uuid);
-            const d = dest?.data || dest;
+            const d = unwrapResource(dest);
             timeoutDest = { type: tbt, name: d?.name || 'Unknown', data: d || { uuid: q.max_wait_time_bridge_uuid } };
           } catch {
             timeoutDest = { type: tbt, name: q.max_wait_time_bridge_uuid.slice(0, 8), data: { uuid: q.max_wait_time_bridge_uuid } };
@@ -399,7 +403,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
 
       } else if (bt === 'call_condition') {
         const resp = await getCallCondition(bridgeUuid);
-        const cc = resp?.data || resp;
+        const cc = unwrapResource(resp);
         if (!cc) { setBridgeInfo(null); return; }
 
         const resources = cc.resources || [];
@@ -414,7 +418,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
             const rbt = r.bridge_type === 'que' ? 'queue' : r.bridge_type;
             destPromises.push(
               bridgeApi.getBridgeResource(rbt, r.bridge_uuid)
-                .then(d => { ruleDestinations[r.bridge_uuid] = (d?.data || d)?.name || rbt; })
+                .then(d => { ruleDestinations[r.bridge_uuid] = unwrapResource(d)?.name || rbt; })
                 .catch(() => { ruleDestinations[r.bridge_uuid] = r.bridge_uuid.slice(0, 8); })
             );
           }
@@ -426,7 +430,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
           destPromises.push(
             bridgeApi.getBridgeResource(fbt, cc.fallback_bridge_uuid)
               .then(d => {
-                const fd = d?.data || d;
+                const fd = unwrapResource(d);
                 fallbackDest = { type: fbt, name: fd?.name || 'Unknown', data: fd || { uuid: cc.fallback_bridge_uuid } };
               })
               .catch(() => {
@@ -440,7 +444,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
 
       } else if (bt === 'ivr') {
         const resp = await ivrApi.getIVR(bridgeUuid);
-        const ivr = resp?.data || resp;
+        const ivr = unwrapResource(resp);
         if (!ivr) { setBridgeInfo(null); return; }
 
         const entries = ivr.entries || ivr.options || {};
@@ -455,7 +459,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
             const ebt = e.bridge_type === 'que' ? 'queue' : e.bridge_type;
             destPromises.push(
               bridgeApi.getBridgeResource(ebt, e.bridge_uuid)
-                .then(d => { entryDestinations[e.bridge_uuid] = (d?.data || d)?.name || ebt; })
+                .then(d => { entryDestinations[e.bridge_uuid] = unwrapResource(d)?.name || ebt; })
                 .catch(() => { entryDestinations[e.bridge_uuid] = e.bridge_uuid.slice(0, 8); })
             );
           }
@@ -469,7 +473,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
           destPromises.push(
             bridgeApi.getBridgeResource(tbt, ivr.timeout_bridge_uuid)
               .then(d => {
-                const td = d?.data || d;
+                const td = unwrapResource(d);
                 timeoutDest = { type: tbt, name: td?.name || 'Unknown', data: td || { uuid: ivr.timeout_bridge_uuid } };
               })
               .catch(() => {
@@ -483,7 +487,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
           destPromises.push(
             bridgeApi.getBridgeResource(ibt, ivr.invalid_bridge_uuid)
               .then(d => {
-                const id2 = d?.data || d;
+                const id2 = unwrapResource(d);
                 invalidDest = { type: ibt, name: id2?.name || 'Unknown', data: id2 || { uuid: ivr.invalid_bridge_uuid } };
               })
               .catch(() => {
@@ -499,7 +503,7 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
         // Simple types: announcement, vml, bot, extension, number
         try {
           const resp = await bridgeApi.getBridgeResource(bt, bridgeUuid);
-          const d = resp?.data || resp;
+          const d = unwrapResource(resp);
           setBridgeInfo({ type: bt, data: d || { uuid: bridgeUuid, name: bt } });
         } catch {
           setBridgeInfo({ type: bt, data: { uuid: bridgeUuid, name: bt } });
