@@ -64,3 +64,32 @@ describe('listening from the route preview', () => {
     expect(screen.getByRole('button', { name: 'Play announcement' })).toBeInTheDocument();
   });
 });
+
+describe('a call condition in the route preview', () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it('reads as business hours and rules, not "rule 1, rule 2"', async () => {
+    getCallCondition.mockResolvedValue({
+      uuid: 'cc-1', name: 'office_hours', fallback_bridge_type: 'vml', fallback_bridge_uuid: 'v-1',
+      resources: [
+        { name: 'rule_1', bridge_type: 'extension', bridge_uuid: 'e-1', segments: [{ uuid: 's1', field: 'call.caller', operator: 'PREFIX', val: ['+97250'] }] },
+        { name: 'open_1', bridge_type: 'queue', bridge_uuid: 'q-1', segments: [
+          { uuid: 's2', field: 'time.weekday', operator: 'IN', val: ['0', '1', '2', '3', '4'] },
+          { uuid: 's3', field: 'time.hour', operator: 'BETWEEN', val: ['9', '16'] },
+        ] },
+      ],
+    });
+    bridgeApi.getBridgeResource.mockImplementation(async (type) => ({ extension: { name: 'Front desk' }, queue: { name: 'Support' }, vml: { name: 'Voicemail' } }[type]));
+    const onEditBridge = vi.fn();
+    render(<RoutingChain bridgeType="call_condition" bridgeUuid="cc-1" environmentUuid="env-1" onEditBridge={onEditBridge} />);
+
+    expect(await screen.findByTestId('week-summary')).toHaveTextContent('Sun–Thu 09:00–17:00 · Fri–Sat Closed');
+    expect(screen.getByText(/starts with/)).toHaveTextContent("If the caller's number starts with ⁦+97250⁩");
+    expect(screen.getByText('Queue: Support')).toBeInTheDocument();
+    expect(screen.queryByText(/rule_1|Rule 1/)).toBeNull();
+
+    // The pencil beside a destination edits that destination.
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Device: Front desk' }));
+    expect(onEditBridge).toHaveBeenCalledWith('extension', { uuid: 'e-1' });
+  });
+});

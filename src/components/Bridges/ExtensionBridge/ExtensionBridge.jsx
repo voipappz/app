@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
+  useMediaQuery,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -59,13 +61,17 @@ import SecretField from '../../common/SecretField.jsx';
  * - containerMode: 'dialog' | 'panel' - Render as Dialog wrapper or inline Box (default: 'dialog')
  * - onDrillDown: function - Optional drill-down handler (unused; ExtensionBridge is a leaf component)
  */
+// One empty list for every render: a fresh `[]` each time made the effect
+// below see a "new" list, reset the form, render again -- forever.
+const NO_ENVIRONMENTS = [];
+
 export const ExtensionBridge = ({
   open,
   onClose,
   onSave,
   environmentUuid = null,
   extension = null,
-  environments = [],
+  environments = NO_ENVIRONMENTS,
   mode = 'edit',
   hideEnvironment = true,
   handleApiInternally = true,
@@ -76,6 +82,9 @@ export const ExtensionBridge = ({
 }) => {
   const userSession = useIsUserSession();
   const layer = zLayer || Z.L2;
+  const theme = useTheme();
+  // A phone has no room to spare for the device's internal id.
+  const isPhone = useMediaQuery(theme.breakpoints.down('md'));
   // Determine if we're in create or edit mode
   const isEditMode = mode === 'edit' && extension !== null;
 
@@ -267,8 +276,8 @@ export const ExtensionBridge = ({
   const formContent = (
     <Box component="form" autoComplete="off" noValidate>
       <Grid container spacing={3} direction="column">
-        {/* Extension UUID (read-only, edit mode only) */}
-        {extension?.uuid && (
+        {/* Extension UUID (read-only, edit mode only, not on a phone) */}
+        {extension?.uuid && !isPhone && (
           <Grid size={12}>
             <TextField
               label="UUID"

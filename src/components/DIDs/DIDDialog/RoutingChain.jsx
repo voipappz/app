@@ -17,6 +17,10 @@ import { getCallCondition } from '../../../services/api/callConditionsApi';
 import { ivrApi } from '../../../services/api/ivrApi';
 import { bridgeApi } from '../../../services/api/bridgeApi';
 import AudioPreview from '../../common/AudioPreview/AudioPreview.jsx';
+import { useTranslation } from 'react-i18next';
+import { conditionToForm } from '../../Bridges/CallConditionBridge/callConditionSchedule';
+import { WeekSummary } from '../../Bridges/CallConditionBridge/WeekHoursEditor';
+import { describeRule } from '../../Bridges/CallConditionBridge/MoreRules';
 
 const TYPE_CONFIG = {
   queue: { icon: HeadsetIcon, color: '#2e7d32', label: 'Queue' },
@@ -209,67 +213,69 @@ const QueueCard = ({ data, timeoutDest, onEditBridge }) => {
   );
 };
 
-const CallConditionCard = ({ data, ruleDestinations, fallbackDest, onEditBridge }) => {
-  const [expanded, setExpanded] = useState(false);
-  const resources = data.resources || [];
-  const VISIBLE = 5;
-  const visibleResources = expanded ? resources : resources.slice(0, VISIBLE);
+// One "→ Queue: Support ✎" line under a call condition rule.
+const ConditionDestination = ({ target, names, onEditBridge }) => {
+  if (!target?.type) return null;
+  const config = TYPE_CONFIG[target.type] || { icon: PhoneIcon, color: 'var(--mui-palette-text-secondary)', label: target.type };
+  const name = names?.[target.uuid] || target.uuid?.slice(0, 8) || '';
+  const Icon = config.icon;
+  const editLabel = `Edit ${config.label}: ${name}`;
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+      <Typography variant="caption" color="text.secondary">→</Typography>
+      <Icon sx={{ fontSize: 14, color: config.color, flexShrink: 0 }} />
+      <Typography variant="body2" fontWeight={500} sx={{ flex: 1, minWidth: 0 }} noWrap>{config.label}: {name}</Typography>
+      {onEditBridge && target.uuid && (
+        <Tooltip title={editLabel}>
+          <IconButton size="small" aria-label={editLabel} onClick={() => onEditBridge(target.type, { uuid: target.uuid })} sx={{ p: 0.25 }}>
+            <EditIcon sx={{ fontSize: 14 }} />
+          </IconButton>
+        </Tooltip>
+      )}
+    </Box>
+  );
+};
 
+// A call condition read the way its page shows it: business hours in short,
+// the rules checked before them as sentences, then where calls go otherwise.
+// The ✎ beside a destination edits that destination (a device, a queue...);
+// the header's Edit opens the condition itself.
+const CallConditionCard = ({ data, ruleDestinations, fallbackDest, onEditBridge }) => {
+  const { t } = useTranslation('callConditions');
+  const form = conditionToForm(data);
+  const anyOpen = form.week.some((day) => day.open);
   return (
     <Paper variant="outlined" sx={{ p: 2, borderLeft: `4px solid ${TYPE_CONFIG.call_condition.color}` }}>
       <CardHeader type="call_condition" onEdit={onEditBridge ? () => onEditBridge('call_condition', data) : null} />
       <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>{data.name}</Typography>
-      <StatChips items={[
-        `${resources.length} rule${resources.length !== 1 ? 's' : ''}`,
-        data.enabled !== false ? 'Enabled' : 'Disabled',
-      ]} />
 
-      {resources.length > 0 && (
-        <>
-          <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-            Rules
+      {form.rules.length > 0 && (
+        <Box sx={{ mb: 1.5 }} data-testid="condition-rules">
+          <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block' }}>
+            {t('rules.title')}
           </Typography>
-          {visibleResources.map((res, i) => {
-            const bt = res.bridge_type === 'que' ? 'queue' : res.bridge_type;
-            const config = TYPE_CONFIG[bt] || { icon: PhoneIcon, color: 'var(--mui-palette-text-secondary)', label: bt || 'Unknown' };
-            const destName = ruleDestinations?.[res.bridge_uuid] || res.bridge?.name || bt;
-            const Icon = config.icon;
-            return (
-              <Box key={res.uuid || i} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.4, px: 0.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', width: 18, textAlign: 'right', flexShrink: 0 }}>
-                  #{i + 1}
-                </Typography>
-                <Typography variant="body2" sx={{ minWidth: 60, maxWidth: 120 }} noWrap>
-                  {res.name || `Rule ${i + 1}`}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">→</Typography>
-                <Icon sx={{ fontSize: 14, color: config.color, flexShrink: 0 }} />
-                <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
-                  {config.label}: {destName}
-                </Typography>
-                {onEditBridge && bt && res.bridge_uuid && (
-                  <Tooltip title={`Edit ${config.label}`}>
-                    <IconButton size="small" onClick={() => onEditBridge(bt, res.bridge || { uuid: res.bridge_uuid })} sx={{ p: 0.25 }}>
-                      <EditIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Box>
-            );
-          })}
-          {resources.length > VISIBLE && (
-            <Button size="small" onClick={() => setExpanded(!expanded)} sx={{ textTransform: 'none', fontSize: '0.7rem', mt: 0.5 }}>
-              {expanded ? 'Show less' : `+${resources.length - VISIBLE} more rules`}
-            </Button>
-          )}
-        </>
+          {form.rules.map((rule) => (
+            <Box key={rule.id} sx={{ py: 0.4 }}>
+              <Typography variant="body2">{describeRule(t, rule)}</Typography>
+              <ConditionDestination target={rule.target} names={ruleDestinations} onEditBridge={onEditBridge} />
+            </Box>
+          ))}
+        </Box>
       )}
+
+      <Box sx={{ mb: 1.5 }} data-testid="condition-hours">
+        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ display: 'block' }}>
+          {t('hours.title')}
+        </Typography>
+        <WeekSummary week={form.week} />
+        {anyOpen && <ConditionDestination target={form.openTarget} names={ruleDestinations} onEditBridge={onEditBridge} />}
+      </Box>
 
       {fallbackDest && (
         <>
-          <SectionDivider label="Fallback" />
+          <SectionDivider label={t('targets.otherwise')} />
           <DownstreamBadge
-            label="Fallback Destination"
+            label={t('targets.otherwiseHint')}
             type={fallbackDest.type}
             name={fallbackDest.name}
             onEdit={onEditBridge ? () => onEditBridge(fallbackDest.type, fallbackDest.data) : null}

@@ -39,6 +39,7 @@ const PHYSICAL_SIDES_IN_SX = [
 const CONVERTED = [
   'src/i18n/**',
   'src/components/Extensions/**',
+  'src/components/Bridges/CallConditionBridge/**',
   'src/components/Login/**',
   'src/components/shared/ResponsiveTable/**',
   'src/components/ui/**',

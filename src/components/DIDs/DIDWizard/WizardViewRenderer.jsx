@@ -26,9 +26,18 @@ const WizardViewRenderer = ({
   onDrillDown,
   loading,
 }) => {
-  // VML calls onSave followed by onClose. Return its result when it closes,
-  // so saving pops just the VML view and preserves the route's draft.
-  const savedVml = useRef(null);
+  // Every bridge editor, on saving, calls onSave and then onClose. Each would
+  // go back one view, so saving went back two: past the editor that opened
+  // this one (e.g. a new announcement made from a call condition landed on the
+  // route). The first call ends this view; the second is ignored.
+  const finished = useRef(false);
+  const finish = (result = null) => {
+    if (finished.current) return;
+    finished.current = true;
+    onCancel(result);
+  };
+  const close = () => finish(null);
+  const save = (savedData) => finish(savedData);
   if (!view) return null;
 
   const { type, mode, data, environmentUuid } = view;
@@ -53,8 +62,8 @@ const WizardViewRenderer = ({
       return (
         <IVRBridge
           open={true}
-          onClose={onCancel}
-          onSave={(savedData) => onCancel(savedData)}
+          onClose={close}
+          onSave={save}
           environmentUuid={environmentUuid}
           ivr={data}
           mode={mode}
@@ -68,8 +77,8 @@ const WizardViewRenderer = ({
       return (
         <QueueBridge
           open={true}
-          onClose={onCancel}
-          onSave={(savedData) => onCancel(savedData)}
+          onClose={close}
+          onSave={save}
           environmentUuid={environmentUuid}
           queue={data}
           mode={mode}
@@ -83,8 +92,8 @@ const WizardViewRenderer = ({
       return (
         <AnnouncementBridge
           open={true}
-          onClose={onCancel}
-          onSave={(savedData) => onCancel(savedData)}
+          onClose={close}
+          onSave={save}
           environmentUuid={environmentUuid}
           announcement={data}
           editMode={mode}
@@ -98,8 +107,8 @@ const WizardViewRenderer = ({
       return (
         <VMLBridge
           open={true}
-          onClose={() => onCancel(savedVml.current)}
-          onSave={(savedData) => { savedVml.current = savedData; }}
+          onClose={close}
+          onSave={save}
           environmentUuid={environmentUuid}
           vml={data}
           mode={mode}
@@ -113,8 +122,8 @@ const WizardViewRenderer = ({
       return (
         <CallConditionBridge
           open={true}
-          onClose={onCancel}
-          onSave={(savedData) => onCancel(savedData)}
+          onClose={close}
+          onSave={save}
           environmentUuid={environmentUuid}
           callCondition={data}
           mode={mode}
@@ -128,8 +137,8 @@ const WizardViewRenderer = ({
       return (
         <BotBridge
           open={true}
-          onClose={onCancel}
-          onSave={(savedData) => onCancel(savedData)}
+          onClose={close}
+          onSave={save}
           environmentUuid={environmentUuid}
           bot={data}
           mode={mode}
@@ -143,8 +152,8 @@ const WizardViewRenderer = ({
       return (
         <ExtensionBridge
           open={true}
-          onClose={onCancel}
-          onSave={(savedData) => onCancel(savedData)}
+          onClose={close}
+          onSave={save}
           environmentUuid={environmentUuid}
           extension={data}
           mode={mode}

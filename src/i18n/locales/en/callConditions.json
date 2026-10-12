@@ -1,0 +1,151 @@
+{
+  "title": {
+    "create": "Create call condition",
+    "edit": "Edit call condition"
+  },
+  "name": {
+    "label": "Name",
+    "help": "English letters, numbers, - and _",
+    "placeholder": "office_hours"
+  },
+  "application": "Application",
+  "notes": {
+    "add": "Add a note",
+    "label": "Notes"
+  },
+  "hours": {
+    "title": "Business hours",
+    "timezone": "Times are in the application's time zone.",
+    "openSwitch": "Open on {{day}}",
+    "closed": "Closed",
+    "from": "From",
+    "to": "To",
+    "range": "{{from}}–{{to}}",
+    "addHours": "Add hours",
+    "removeHours": "Remove these hours",
+    "copyToAll": "Copy {{day}} to all days",
+    "copied": "Copied {{day}} to all days",
+    "closedAllWeek": "Closed all week",
+    "dayRun": "{{first}}–{{last}}"
+  },
+  "targets": {
+    "whileOpen": "While open",
+    "whileOpenHint": "During business hours",
+    "otherwise": "Otherwise",
+    "otherwiseHint": "All other times",
+    "choose": "Choose where calls go"
+  },
+  "destination": {
+    "title": "Where calls go",
+    "type": "Type",
+    "target": "Destination",
+    "createNew": "Create new",
+    "edit": "Edit this destination",
+    "none": "None available yet",
+    "done": "Done",
+    "cancel": "Cancel"
+  },
+  "types": {
+    "extension": "Device",
+    "queue": "Queue",
+    "ivr": "IVR menu",
+    "announcement": "Announcement",
+    "number": "Number",
+    "call_condition": "Call condition",
+    "vml": "VML script",
+    "conference": "Conference",
+    "bot": "Bot",
+    "user_login": "User login"
+  },
+  "rules": {
+    "title": "More rules",
+    "hint": "Checked first, top to bottom, before business hours.",
+    "add": "Add rule",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "delete": "Delete rule",
+    "kept": "A rule this page can't show. It's kept as it is.",
+    "goesTo": "→ {{destination}}"
+  },
+  "sentence": {
+    "callerIS": "If the caller is {{value}}",
+    "callerPREFIX": "If the caller's number starts with {{value}}",
+    "callerIN": "If the caller is one of {{value}}",
+    "dialledIS": "If the number dialled is {{value}}",
+    "dialledPREFIX": "If the number dialled starts with {{value}}",
+    "dialledIN": "If the number dialled is one of {{value}}",
+    "time": "On {{days}}, {{hours}}",
+    "allDay": "all day",
+    "everyDay": "every day",
+    "month": "In {{months}}"
+  },
+  "ruleDialog": {
+    "titleNew": "New rule",
+    "titleEdit": "Edit rule",
+    "when": "When",
+    "kinds": {
+      "caller": "The caller",
+      "dialled": "The number dialled",
+      "time": "Days and hours",
+      "month": "Months"
+    },
+    "operator": {
+      "IS": "is",
+      "PREFIX": "starts with",
+      "IN": "is one of"
+    },
+    "value": "Number",
+    "valueListHelp": "Separate numbers with commas",
+    "days": "Days",
+    "allDay": "All day",
+    "months": "Months",
+    "goesTo": "Send the call to",
+    "save": "Save rule",
+    "cancel": "Cancel"
+  },
+  "days": {
+    "short": {
+      "0": "Sun",
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat"
+    }
+  },
+  "months": {
+    "1": "Jan",
+    "2": "Feb",
+    "3": "Mar",
+    "4": "Apr",
+    "5": "May",
+    "6": "Jun",
+    "7": "Jul",
+    "8": "Aug",
+    "9": "Sep",
+    "10": "Oct",
+    "11": "Nov",
+    "12": "Dec"
+  },
+  "actions": {
+    "create": "Create",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving…"
+  },
+  "errors": {
+    "nameRequired": "Enter a name",
+    "nameFormat": "Use English letters, numbers, - or _ (no spaces)",
+    "noHours": "Add hours or close this day",
+    "endBeforeStart": "The end must be after the start",
+    "destinationRequired": "Choose where calls go",
+    "valueRequired": "Enter a number",
+    "daysRequired": "Pick at least one day",
+    "monthsRequired": "Pick at least one month",
+    "fixFirst": "Fill in the highlighted fields first.",
+    "load": "Couldn't load this call condition.",
+    "save": "Couldn't save: {{message}}",
+    "noApplication": "Choose an application first."
+  }
+}
