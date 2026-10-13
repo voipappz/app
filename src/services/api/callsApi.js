@@ -111,6 +111,52 @@ export const callsApi = {
   },
 
   /**
+   * A call's transcription, when one was made.
+   * @param {string} callId - The call UUID
+   * @returns {Promise<string|null>} - The text, or null when the call has none (404)
+   */
+  getTranscript: async (callId) => {
+    try {
+      const response = await apiService.get(`/api/calls/${callId}/transcript`, {}, `fetching transcript for call ${callId}`, false);
+      return response?.transcript || null;
+    } catch (error) {
+      if (error?.status === 404) return null;
+      throw error;
+    }
+  },
+
+  /**
+   * The latest calls with a number, either way: calls from it and calls to it.
+   * A user's search cannot say "caller OR callee" in one query, so it asks
+   * twice. The search matches parts of numbers, so only exact matches stay.
+   * @param {string} number - The other party's number
+   * @param {number} limit - At most this many, newest first
+   * @returns {Promise<Array>} - Calls
+   */
+  getNumberHistory: async (number, limit = 20) => {
+    const digits = (value) => String(value ?? '').replace(/[^\d+*#]/g, '');
+    const wanted = digits(number);
+    if (!wanted) return [];
+    // All time: without a date the account search stops at the start of the month.
+    const allTime = `${Math.floor(new Date(2000, 0, 1).getTime() / 1000)} - ${Math.floor(Date.now() / 1000) + 86400}`;
+    const ask = (field) => {
+      const query = new URLSearchParams({ page: 1, per_page: limit, order_by: 'created_at', order_type: 'desc', 'search[created_at]': allTime });
+      query.append(`search[call.${field}][IS][]`, wanted);
+      return apiService.get(`/api/calls?${query.toString()}`, {}, `fetching calls with ${field} ${wanted}`, false);
+    };
+    const rows = (response) => (Array.isArray(response) ? response : response?.data || []);
+    const [from, to] = await Promise.all([ask('caller'), ask('callee')]);
+    const byUuid = new Map();
+    [...rows(from), ...rows(to)].forEach((call) => {
+      const profile = call?.profile || {};
+      if (call?.uuid && (digits(profile.caller) === wanted || digits(profile.callee) === wanted)) byUuid.set(call.uuid, call);
+    });
+    return [...byUuid.values()]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, limit);
+  },
+
+  /**
    * Get spanning tree data for call
    * @param {string} callId - The call ID/UUID
    * @returns {Promise<Array>} - Spanning tree data

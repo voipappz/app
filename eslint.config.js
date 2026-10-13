@@ -60,6 +60,15 @@ const CONVERTED = [
   'src/components/Bridges/shared/**',
   'src/components/common/DynamicProfileEditor/**',
   'src/components/common/AudioPreview/**',
+  // The phone drawer
+  'src/components/Phone/**',
+  'src/components/TopBar/TopBarPhoneButton.jsx',
+  'src/components/Portal/PortalSidebar.jsx',
+  // The phone call log
+  'src/components/Calls/CallLogRow/**',
+  'src/components/Calls/CallLogFilter/**',
+  'src/components/Calls/CallDetailsScreen/**',
+  'src/components/Calls/CallMobileView/**',
   'src/components/Login/**',
   'src/components/shared/ResponsiveTable/**',
   'src/components/ui/**',

@@ -4,7 +4,9 @@
 // history tab are not (they're admin-console-specific integrations, not part
 // of the core WebRTC migration) — follow-up if wanted.
 import Bdi from '../../i18n/Bdi';
+import LtrIsland from '../../i18n/LtrIsland';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, IconButton, Tabs, Tab, TextField, Button, Typography, Stack, Tooltip, Avatar, Paper
 } from '@mui/material';
@@ -30,6 +32,7 @@ import CallToast from './CallToast.jsx';
 import TransferControls from './TransferControls.jsx';
 import PhoneCallsTab from './PhoneCallsTab.jsx';
 import PhonePresence from './PhonePresence.jsx';
+import { formatTime } from '../../utils/dateUtils';
 import { ACCENT, GREEN, MUTED, PANEL, PANEL_HEADER } from './panelTheme.js';
 // Calls · Dialpad along the bottom; Settings is the gear in the header.
 // Calls remain in the shared Calls screen; the phone lives in the drawer.
@@ -61,6 +64,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
     dial, answer, hangup, sendDtmf, setMuted, setHeld, setDoNotDisturb,
     transfer, consult, settings, logs = [], clearLogs, disconnect, updateSettings
   } = useSoftphone();
+  const { t } = useTranslation('phone');
   const sidebar = usePortalSidebar();
 
   // An account has no extension of its own: until it signs the phone in (as a
@@ -100,15 +104,15 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
   const timer = useCallTimer(call?.state === 'active' ? call.connectedAt : null);
 
   const ext = settings?.username || '—';
-  const name = settings?.displayName || settings?.username || 'guest';
+  const name = settings?.displayName || settings?.username || t('header.guest');
   const initial = (name?.trim()?.[0] || 'G').toUpperCase();
   const statusText = !networkAvailable
-    ? 'Network offline'
+    ? t('header.networkOffline')
     : connected
-      ? 'Ready'
-      : status === 'connecting' ? 'Connecting…'
-        : status === 'unavailable' ? 'Unavailable'
-          : 'Offline';
+      ? t('header.ready')
+      : status === 'connecting' ? t('header.connecting')
+        : status === 'unavailable' ? t('header.unavailable')
+          : t('header.offline');
 
   const press = (k) => {
     if (call?.state === 'active') sendDtmf(k);
@@ -125,13 +129,13 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
     const n = (target || number).trim();
     // Silence was the bug: an empty number or an unregistered phone returned
     // here with no feedback whatsoever, so the green button looked dead.
-    if (!n) { setDialError('Enter a number to call'); return; }
-    if (!connected) { setDialError('Phone is not registered'); return; }
+    if (!n) { setDialError(t('dialpad.enterNumberToCall')); return; }
+    if (!connected) { setDialError(t('dialpad.notRegistered')); return; }
     setDialError(null);
     try {
       await dial(n);
     } catch (error) {
-      setDialError(error?.message || 'Call could not be started');
+      setDialError(error?.message || t('dialpad.couldNotStart'));
     }
   };
 
@@ -164,7 +168,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
             />
             <Typography sx={{ mt: 0.5, fontSize: '0.68rem', color: MUTED, display: 'flex', alignItems: 'center', gap: 0.5 }} noWrap>
               <Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: DOT[status] || '#94a3b8', display: 'inline-block' }} />
-              {statusText}{settings?.domain ? ` • ${settings.domain}` : ''}
+              {statusText}{settings?.domain ? <> • <Bdi>{settings.domain}</Bdi></> : ''}
             </Typography>
             {lastError && (
               <Typography
@@ -179,13 +183,13 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
               </Typography>
             )}
           </Box>
-          <Tooltip title={settingsOpen ? 'Back' : 'Settings'}>
-            <IconButton size="small" data-testid="phone-settings" aria-label={settingsOpen ? 'Close settings' : 'Settings'}
+          <Tooltip title={settingsOpen ? t('header.back') : t('header.settings')}>
+            <IconButton size="small" data-testid="phone-settings" aria-label={settingsOpen ? t('header.closeSettings') : t('header.settings')}
               sx={{ color: settingsOpen ? ACCENT : MUTED }} onClick={() => setSettingsOpen((v) => !v)}>
               <SettingsIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Logs">
+          <Tooltip title={t('header.logs')}>
             <IconButton size="small" sx={{ color: logsOpen ? ACCENT : MUTED }} onClick={() => setLogsOpen((v) => !v)}><TerminalIcon fontSize="small" /></IconButton>
           </Tooltip>
         </Box>
@@ -210,22 +214,22 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                   }}
                   sx={{ borderColor: 'rgba(255,255,255,0.3)', color: '#e5e7eb' }}
                 >
-                  Sign the phone out
+                  {t('settingsTab.signOut')}
                 </Button>
               </Box>
             </Box>
           ) : logsOpen ? (
             <Box sx={{ p: 1, flex: 1, display: 'flex', flexDirection: 'column' }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
-                <Typography variant="caption" sx={{ color: MUTED }}>SIP.js logs ({logs.length})</Typography>
-                <Button size="small" onClick={() => clearLogs?.()} disabled={!logs.length} sx={{ minWidth: 0, color: MUTED }}>Clear</Button>
+                <Typography variant="caption" sx={{ color: MUTED }}>{t('logs.title', { total: logs.length })}</Typography>
+                <Button size="small" onClick={() => clearLogs?.()} disabled={!logs.length} sx={{ minWidth: 0, color: MUTED }}>{t('logs.clear')}</Button>
               </Stack>
               <Box sx={{ flex: 1, maxHeight: 320, overflow: 'auto', bgcolor: '#0f172a', borderRadius: 1, p: 1, fontFamily: 'monospace', fontSize: '0.66rem', direction: 'ltr' }}>
                 {logs.length === 0 ? (
-                  <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)' }}>No logs yet — connect or place a call.</Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)' }}>{t('logs.empty')}</Typography>
                 ) : logs.map((l, i) => (
                   <Box key={i} sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', mb: 0.25, color: LOG_COLOR[l.level] || '#cbd5e1' }}>
-                    <span style={{ color: '#475569' }}>{new Date(l.ts).toLocaleTimeString()} </span>
+                    <span style={{ color: '#475569' }}>{formatTime(l.ts, true)} </span>
                     <span style={{ color: 'var(--mui-palette-text-secondary)' }}>[{l.category}] </span>{l.content}
                   </Box>
                 ))}
@@ -237,17 +241,17 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
           ) : inCall ? (
             <Box sx={{ p: 2, textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <Typography variant="overline" sx={{ color: MUTED }}>
-                {call.direction === 'inbound' ? 'Incoming' : 'Calling'}
+                {call.direction === 'inbound' ? t('call.incoming') : t('call.calling')}
               </Typography>
               <Typography variant="h6" sx={{ direction: 'ltr', color: '#fff' }}>{call.remote}</Typography>
               <Typography variant="body2" sx={{ mb: 2, color: MUTED }}>
-                {call.state === 'active' ? timer : call.state === 'ringing' ? 'Ringing…' : 'Connecting…'}
+                {call.state === 'active' ? <Bdi>{timer}</Bdi> : call.state === 'ringing' ? t('call.ringing') : t('call.connecting')}
               </Typography>
               <Stack direction="row" spacing={1} justifyContent="center">
                 <IconButton onClick={() => setMuted(!muted)} sx={{ color: muted ? '#ef4444' : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}>
                   {muted ? <MicOffIcon /> : <MicIcon />}
                 </IconButton>
-                <Tooltip title={held ? 'Resume' : 'Hold'}>
+                <Tooltip title={held ? t('call.resume') : t('call.hold')}>
                   <span>
                     <IconButton
                       data-testid="phone-hold"
@@ -259,7 +263,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                     </IconButton>
                   </span>
                 </Tooltip>
-                <Tooltip title="Transfer">
+                <Tooltip title={t('call.transfer')}>
                   <span>
                     <IconButton
                       data-testid="phone-transfer-open"
@@ -277,7 +281,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                 {KEYS.map((k) => <Button key={k} sx={{ color: '#cbd5e1', fontSize: '1.1rem' }} onClick={() => press(k)}>{k}</Button>)}
               </Box>
               <Button fullWidth variant="contained" color="error" startIcon={<CallEndIcon />} onClick={() => hangup()} sx={{ borderRadius: 2, py: 1.1 }}>
-                Hang up
+                {t('call.hangUp')}
               </Button>
             </Box>
           ) : tab === 0 ? (
@@ -288,10 +292,10 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
             />
           ) : tab === 1 ? (
             <Box sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ position: 'relative', mb: 2 }}>
+              <LtrIsland sx={{ position: 'relative', mb: 2 }}>
                 <TextField
                   fullWidth size="small" value={number} onChange={(e) => setNumber(e.target.value)}
-                  placeholder="Enter number"
+                  placeholder={t('dialpad.enterNumber')}
                   inputProps={{ style: { direction: 'ltr', textAlign: 'center', fontSize: '1.25rem', color: 'var(--mui-palette-text-primary)' } }}
                   sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'var(--mui-palette-background-paper)', borderRadius: 1.5 } }}
                 />
@@ -300,7 +304,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                     <BackspaceIcon fontSize="small" />
                   </IconButton>
                 )}
-              </Box>
+              </LtrIsland>
               <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', rowGap: 1.5, mb: 2 }}>
                 {KEYS.map((k) => (
                   <Box
@@ -323,7 +327,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                   {dialError}
                 </Typography>
               )}
-              {!connected && <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', color: MUTED }}>Not connected — see Settings</Typography>}
+              {!connected && <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', color: MUTED }}>{t('dialpad.notConnected')}</Typography>}
             </Box>
           ) : null}
         </Box>
@@ -339,8 +343,8 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
               '& .MuiTabs-indicator': { backgroundColor: ACCENT }
             }}
           >
-            <Tab icon={<HistoryIcon fontSize="small" />} iconPosition="top" label="Calls" />
-            <Tab icon={<DialpadIcon fontSize="small" />} iconPosition="top" label="Dialpad" />
+            <Tab icon={<HistoryIcon fontSize="small" />} iconPosition="top" label={t('tabs.calls')} />
+            <Tab icon={<DialpadIcon fontSize="small" />} iconPosition="top" label={t('tabs.dialpad')} />
           </Tabs>
         )}
       </Paper>
@@ -348,7 +352,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
       {/* Global incoming-call toast */}
       <CallToast
         open={Boolean(incoming)}
-        title="Incoming call"
+        title={t('call.incomingTitle')}
         number={call?.remote}
         onAnswer={() => answer()}
         onReject={() => hangup()}

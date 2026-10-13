@@ -18,16 +18,18 @@ import enRoutes from './locales/en/routes.json';
 import heRoutes from './locales/he/routes.json';
 import enBridges from './locales/en/bridges.json';
 import heBridges from './locales/he/bridges.json';
+import enPhone from './locales/en/phone.json';
+import hePhone from './locales/he/phone.json';
 
 i18n.use(initReactI18next).init({
   resources: {
-    en: { common: enCommon, nav: enNav, auth: enAuth, extensions: enExtensions, calls: enCalls, callConditions: enCallConditions, routes: enRoutes, bridges: enBridges },
-    he: { common: heCommon, nav: heNav, auth: heAuth, extensions: heExtensions, calls: heCalls, callConditions: heCallConditions, routes: heRoutes, bridges: heBridges },
+    en: { common: enCommon, nav: enNav, auth: enAuth, extensions: enExtensions, calls: enCalls, callConditions: enCallConditions, routes: enRoutes, bridges: enBridges, phone: enPhone },
+    he: { common: heCommon, nav: heNav, auth: heAuth, extensions: heExtensions, calls: heCalls, callConditions: heCallConditions, routes: heRoutes, bridges: heBridges, phone: hePhone },
   },
   lng: readLanguage(), // start in the stored language, so text never flashes English
   fallbackLng: DEFAULT_LANGUAGE,
   supportedLngs: SUPPORTED_LANGUAGES,
-  ns: ['common', 'nav', 'auth', 'extensions', 'calls', 'callConditions', 'routes', 'bridges'],
+  ns: ['common', 'nav', 'auth', 'extensions', 'calls', 'callConditions', 'routes', 'bridges', 'phone'],
   defaultNS: 'common',
   interpolation: { escapeValue: false }, // React already escapes
   react: { useSuspense: false }, // a suspended translation inside Layout would reset its state

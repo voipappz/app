@@ -1,0 +1,117 @@
+{
+  "action": {
+    "close": "סגירה"
+  },
+  "topBar": {
+    "close": "סגירת הטלפון",
+    "status": "טלפון — {{status}}",
+    "notSignedIn": "לא מחובר"
+  },
+  "header": {
+    "guest": "אורח",
+    "networkOffline": "אין חיבור לרשת",
+    "ready": "מוכן",
+    "connecting": "מתחבר…",
+    "unavailable": "לא זמין",
+    "offline": "לא מחובר",
+    "back": "חזרה",
+    "settings": "הגדרות",
+    "closeSettings": "סגירת ההגדרות",
+    "logs": "יומנים"
+  },
+  "settingsTab": {
+    "signOut": "ניתוק הטלפון"
+  },
+  "logs": {
+    "title": "יומני SIP.js ({{total}})",
+    "clear": "ניקוי",
+    "empty": "אין יומנים עדיין — התחברו או חייגו שיחה."
+  },
+  "call": {
+    "incoming": "שיחה נכנסת",
+    "calling": "מחייג",
+    "ringing": "מצלצל…",
+    "connecting": "מתחבר…",
+    "resume": "חזרה לשיחה",
+    "hold": "המתנה",
+    "transfer": "העברה",
+    "hangUp": "סיום שיחה",
+    "incomingTitle": "שיחה נכנסת"
+  },
+  "dialpad": {
+    "enterNumber": "הזינו מספר",
+    "enterNumberToCall": "הזינו מספר לחיוג",
+    "notRegistered": "הטלפון אינו רשום",
+    "couldNotStart": "לא ניתן היה להתחיל את השיחה",
+    "notConnected": "לא מחובר — ראו הגדרות"
+  },
+  "tabs": {
+    "calls": "שיחות",
+    "dialpad": "חיוג"
+  },
+  "toast": {
+    "reject": "דחייה",
+    "answer": "מענה"
+  },
+  "transfer": {
+    "to": "העברה אל",
+    "consulting": "התייעצות עם {{remote}}",
+    "connectedAnnounce": "מחובר — הודיעו על השיחה",
+    "ringing": "מצלצל…",
+    "complete": "השלמת ההעברה",
+    "cancel": "ביטול",
+    "target": "שלוחה או מספר",
+    "now": "העברה מיידית",
+    "consult": "התייעצות",
+    "referring": "מעביר…",
+    "completed": "השיחה הועברה",
+    "failed": "ההעברה נכשלה: {{reason}}"
+  },
+  "recent": {
+    "noPermission": "התפקיד שלכם אינו כולל שיחות.",
+    "empty": "אין שיחות אחרונות.",
+    "couldNotLoad": "לא ניתן היה לטעון את השיחות",
+    "callNumber": "חיוג אל {{number}}",
+    "noNumber": "אין מספר"
+  },
+  "presence": {
+    "doNotDisturb": "נא לא להפריע",
+    "couldNotChange": "לא ניתן היה לשנות את הסטטוס"
+  },
+  "sip": {
+    "ready": "מוכן",
+    "connecting": "מתחבר…",
+    "failed": "החיבור נכשל",
+    "offline": "לא מחובר",
+    "extension": "שלוחה",
+    "password": "סיסמה",
+    "domain": "דומיין SIP",
+    "wssUrl": "שרת WebSocket",
+    "displayName": "שם תצוגה",
+    "autoConnect": "התחברות אוטומטית",
+    "reconnect": "התחברות מחדש",
+    "connect": "התחברות",
+    "disconnect": "ניתוק"
+  },
+  "signIn": {
+    "tabDevice": "מכשיר",
+    "tabUser": "כניסת משתמש",
+    "findDevice": "חיפוש מכשיר",
+    "signingInAs": "מתחבר בתור {{name}}…",
+    "phoneFor": "טלפון של {{name}}",
+    "enterCode": "הזינו את הקוד שנשלח אל {{email}}.",
+    "verificationCode": "קוד אימות",
+    "verify": "אימות",
+    "emailOrExtension": "אימייל או שלוחה",
+    "password": "סיסמה",
+    "submit": "כניסה",
+    "error": {
+      "deviceFailed": "לא ניתן היה לחבר את הטלפון כמכשיר זה.",
+      "devicesNotLoaded": "לא ניתן היה לטעון את מכשירי החשבון.",
+      "credentialsRequired": "נדרשים אימייל וסיסמה",
+      "loginFailed": "הכניסה נכשלה. נסו שוב.",
+      "codeLength": "הזינו את הקוד בן 6 הספרות",
+      "codeInvalid": "הקוד שגוי או פג תוקף. נסו שוב."
+    }
+  }
+}

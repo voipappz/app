@@ -48,7 +48,64 @@
     "status": "Status:",
     "unknown": "Unknown",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "filter": {
+      "incoming": "Incoming",
+      "missed": "Not answered",
+      "all": "All calls",
+      "label": "Show",
+      "outgoing": "Outgoing"
+    },
+    "kind": {
+      "incoming": "Incoming",
+      "missedOutgoing": "Not answered",
+      "unknown": "Call",
+      "outgoing": "Outgoing",
+      "missedIncoming": "Missed"
+    },
+    "row": {
+      "incoming": "Incoming call from {{number}}, {{time}}",
+      "missedOutgoing": "Unanswered call to {{number}}, {{time}}",
+      "outgoing": "Outgoing call to {{number}}, {{time}}",
+      "missedIncoming": "Missed call from {{number}}, {{time}}"
+    },
+    "actions": {
+      "copy": "Copy number",
+      "details": "Details",
+      "copied": "Copied",
+      "call": "Call",
+      "play": "Play recording"
+    },
+    "details": {
+      "device": "Device",
+      "notAnswered": "Not answered",
+      "queue": "Queue",
+      "close": "Back",
+      "status": "Status",
+      "duration": "Duration",
+      "transcript": "Transcription",
+      "recording": "Recording",
+      "noTranscript": "No transcription for this call",
+      "to": "To",
+      "contact": "Contact",
+      "date": "Date",
+      "answered": "Answered",
+      "hangup": "Hangup",
+      "info": "Details",
+      "provider": "Provider",
+      "from": "From",
+      "agent": "Agent",
+      "download": "Download",
+      "title": "Call details",
+      "events": "Events",
+      "route": "Route",
+      "summary": "Summary",
+      "country": "Country",
+      "historyError": "Couldn't load the history",
+      "history": "History with this number",
+      "transcriptError": "Couldn't load the transcription",
+      "noHistory": "No other calls with this number"
+    }
   },
   "stats": {
     "total": "Total",

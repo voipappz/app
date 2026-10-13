@@ -12,6 +12,7 @@
 // "Do not disturb" is deliberately NOT one of them: it's local softphone
 // behaviour (reject incoming) and publishes nothing to the platform.
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MenuItem, Select, Typography, Box } from '@mui/material';
 import { statusesApi } from '../../services/api/statusesApi';
 import { GREEN, MUTED } from './panelTheme.js';
@@ -28,6 +29,7 @@ function pillColor(value) {
 }
 
 export default function PhonePresence({ userUuid, doNotDisturb, onDoNotDisturbChange }) {
+  const { t } = useTranslation('phone');
   const [statuses, setStatuses] = useState({});
   const [presence, setPresence] = useState('available');
   const [error, setError] = useState(null);
@@ -57,7 +59,7 @@ export default function PhonePresence({ userUuid, doNotDisturb, onDoNotDisturbCh
     setPresence(next);
     statusesApi.setAgentStatus(userUuid, next).catch((err) => {
       setPresence(previous);
-      setError(err?.message || 'Could not change status');
+      setError(err?.message || t('presence.couldNotChange'));
     });
   };
 
@@ -71,13 +73,13 @@ export default function PhonePresence({ userUuid, doNotDisturb, onDoNotDisturbCh
         // Options load lazily, so until the picker is first opened there is
         // no MenuItem matching the value — label it from the value itself and
         // let the fetched list only improve the wording.
-        renderValue={(v) => (v === DND ? 'Do not disturb' : (statuses[v] || String(v).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())))}
+        renderValue={(v) => (v === DND ? t('presence.doNotDisturb') : (statuses[v] || String(v).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())))}
         variant="standard"
         disableUnderline
         sx={{
           mt: 0.5, fontSize: '0.72rem', fontWeight: 700, color: '#fff', borderRadius: 1, px: 1, py: 0.1,
           bgcolor: pillColor(value),
-          '& .MuiSelect-select': { py: 0.2, pr: '20px !important' },
+          '& .MuiSelect-select': { py: 0.2, pe: '20px !important' },
           '& .MuiSvgIcon-root': { color: '#fff' }
         }}
         MenuProps={{ MenuListProps: { dense: true } }}
@@ -85,7 +87,7 @@ export default function PhonePresence({ userUuid, doNotDisturb, onDoNotDisturbCh
         {Object.entries(statuses).map(([key, label]) => (
           <MenuItem key={key} value={key} data-testid={`presence-${key}`}>{label}</MenuItem>
         ))}
-        <MenuItem value={DND} data-testid="presence-dnd">Do not disturb</MenuItem>
+        <MenuItem value={DND} data-testid="presence-dnd">{t('presence.doNotDisturb')}</MenuItem>
       </Select>
       {error && (
         <Typography data-testid="presence-error" sx={{ fontSize: '0.65rem', color: '#f87171', mt: 0.25 }}>

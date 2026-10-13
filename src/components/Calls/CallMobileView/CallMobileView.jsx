@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { useInView } from 'react-intersection-observer';
-import CallMobileCard from '../CallMobileCard/CallMobileCard';
+import CallLogRow from '../CallLogRow/CallLogRow';
+import CallDetailsScreen from '../CallDetailsScreen/CallDetailsScreen';
 import { dayKey, formatDayHeading } from '../../../utils/dateUtils';
 
 // The calls in order, cut into runs of one day each (the API sends newest
@@ -18,8 +19,11 @@ const groupByDay = (rows) => {
   return groups;
 };
 
-const CallMobileView = ({ rows, onOpenRecording, onRowClick, hasNextPage, loadingMore, onLoadMore }) => {
+const CallMobileView = ({ rows, hasNextPage, loadingMore, onLoadMore, canViewEvents, onViewEvents }) => {
   const { t } = useTranslation('calls');
+  // One line open at a time, like a phone's call history.
+  const [openUuid, setOpenUuid] = useState(null);
+  const [detailsCall, setDetailsCall] = useState(null);
   const today = dayKey(new Date());
   const yesterday = dayKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
   const dayHeading = (group) => {
@@ -54,14 +58,19 @@ const CallMobileView = ({ rows, onOpenRecording, onRowClick, hasNextPage, loadin
   }
 
   return (
-    <Box 
-      className="calls-mobile-view" 
-      sx={{ 
-        px: { xs: 1, sm: 2 }, 
+    // The list scrolls itself: the page around it is a fixed-height column
+    // (Layout clips its content), so the search and filter stay on top while
+    // the calls move under them.
+    <Box
+      className="calls-mobile-view"
+      data-testid="calls-mobile-list"
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: 'auto',
+        overscrollBehavior: 'contain',
+        px: { xs: 1, sm: 2 },
         pb: 2,
-        '& .agent-card': {
-          mb: 1
-        }
       }}
     >
       {/* Like a phone's own call history: one heading per day, which stays
@@ -88,14 +97,20 @@ const CallMobileView = ({ rows, onOpenRecording, onRowClick, hasNextPage, loadin
           >
             {dayHeading(group)}
           </Typography>
-          {group.calls.map((call) => (
-            <CallMobileCard
-              key={call.uuid || call.id || Math.random()}
-              call={call}
-              onOpenRecording={onOpenRecording}
-              onRowClick={onRowClick}
-            />
-          ))}
+          <Box component="ul" sx={{ p: 0, m: 0 }}>
+            {group.calls.map((call) => {
+              const id = call.uuid || call.id;
+              return (
+                <CallLogRow
+                  key={id}
+                  call={call}
+                  expanded={openUuid === id}
+                  onToggle={() => setOpenUuid((current) => (current === id ? null : id))}
+                  onOpenDetails={setDetailsCall}
+                />
+              );
+            })}
+          </Box>
         </Box>
       ))}
       
@@ -123,6 +138,14 @@ const CallMobileView = ({ rows, onOpenRecording, onRowClick, hasNextPage, loadin
           </Typography>
         </Box>
       )}
+      <CallDetailsScreen
+        call={detailsCall}
+        open={Boolean(detailsCall)}
+        onClose={() => setDetailsCall(null)}
+        onOpenCall={setDetailsCall}
+        canViewEvents={canViewEvents}
+        onViewEvents={onViewEvents}
+      />
     </Box>
   );
 };

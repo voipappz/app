@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import i18n from '../../i18n';
 import PhoneSignIn from './PhoneSignIn.jsx';
 
 const mockConnect = vi.fn(async () => {});
@@ -24,6 +25,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
 });
+
+afterEach(() => i18n.changeLanguage('en'));
 
 describe('signing the admin phone in', () => {
   it('registers as the device it was opened for, without saving its password', async () => {
@@ -65,5 +68,20 @@ describe('signing the admin phone in', () => {
     expect(path).toBe('/auth/logout');
     expect(body.get('token')).toBe('user-jwt');
     expect(localStorage.getItem('user_auth')).toBeNull();
+  });
+});
+
+describe('the phone sign-in in Hebrew', () => {
+  it('shows Hebrew tabs and labels, and keeps device names as they are', async () => {
+    await i18n.changeLanguage('he');
+    render(<PhoneSignIn />);
+
+    expect(screen.getByRole('tab', { name: 'מכשיר' })).toBeInTheDocument();
+    expect(screen.getByLabelText('חיפוש מכשיר')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Reception/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'כניסת משתמש' }));
+    expect(screen.getByLabelText('אימייל או שלוחה')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'כניסה' })).toBeInTheDocument();
   });
 });

@@ -7,6 +7,7 @@
 // Lazily fetched: only when this tab is actually shown, so opening the phone
 // on the Dialpad never fires a calls request.
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, CircularProgress, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import CallIcon from '@mui/icons-material/Call';
 import CallMadeIcon from '@mui/icons-material/CallMade';
@@ -14,12 +15,10 @@ import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import { callsApi } from '../../services/api/callsApi';
 import { usePermissions } from '../../hooks/usePermissions';
 import { mapRecentCall } from '../Dashboard/useDashboardSnapshot.js';
+import Bdi from '../../i18n/Bdi';
+import { formatTime } from '../../utils/dateUtils';
+import { isolated } from './isolated.js';
 import { MUTED, GREEN } from './panelTheme.js';
-
-function fmtWhen(value) {
-  const d = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(String(value)) ? value : `${value}Z`);
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 function fmtDuration(seconds) {
   const s = Math.max(0, Math.round(Number(seconds) || 0));
@@ -37,6 +36,7 @@ function counterparty(call) {
 }
 
 export default function PhoneCallsTab({ active, onDial, onOpenCall }) {
+  const { t } = useTranslation('phone');
   const [calls, setCalls] = useState(null); // null = not loaded yet
   const [error, setError] = useState(null);
   // Without the Calls read permission the API answers 403: do not ask.
@@ -54,14 +54,14 @@ export default function PhoneCallsTab({ active, onDial, onOpenCall }) {
             : [];
         setCalls(rows.map(mapRecentCall));
       })
-      .catch((err) => { if (alive) { setError(err?.message || 'Could not load calls'); setCalls([]); } });
+      .catch((err) => { if (alive) { setError(err?.message || t('recent.couldNotLoad')); setCalls([]); } });
     return () => { alive = false; };
-  }, [active, allowed, calls]);
+  }, [active, allowed, calls, t]);
 
   if (!allowed) {
     return (
       <Box sx={{ py: 6, textAlign: 'center' }}>
-        <Typography variant="body2" sx={{ color: MUTED }}>Your role does not include Calls.</Typography>
+        <Typography variant="body2" sx={{ color: MUTED }}>{t('recent.noPermission')}</Typography>
       </Box>
     );
   }
@@ -77,7 +77,7 @@ export default function PhoneCallsTab({ active, onDial, onOpenCall }) {
   }
 
   if (calls.length === 0) {
-    return <Typography variant="body2" sx={{ p: 2, textAlign: 'center', color: MUTED }}>No recent calls.</Typography>;
+    return <Typography variant="body2" sx={{ p: 2, textAlign: 'center', color: MUTED }}>{t('recent.empty')}</Typography>;
   }
 
   return (
@@ -106,15 +106,15 @@ export default function PhoneCallsTab({ active, onDial, onOpenCall }) {
               ? <CallReceivedIcon fontSize="small" sx={{ color: '#60a5fa' }} />
               : <CallMadeIcon fontSize="small" sx={{ color: GREEN }} />}
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontSize: '0.85rem', color: '#e5e7eb', direction: 'ltr' }} noWrap>
-                {number || '—'}
+              <Typography sx={{ fontSize: '0.85rem', color: '#e5e7eb' }} noWrap>
+                <Bdi>{number || '—'}</Bdi>
               </Typography>
               <Typography sx={{ fontSize: '0.68rem', color: MUTED }} noWrap>
-                {fmtWhen(call.started_at)}{call.duration_sec ? ` • ${fmtDuration(call.duration_sec)}` : ''}
+                {formatTime(call.started_at)}{call.duration_sec ? ` • ${fmtDuration(call.duration_sec)}` : ''}
                 {call.status ? ` • ${call.status}` : ''}
               </Typography>
             </Box>
-            <Tooltip title={number ? `Call ${number}` : 'No number'}>
+            <Tooltip title={number ? t('recent.callNumber', { number: isolated(number) }) : t('recent.noNumber')}>
               <span>
                 <IconButton
                   size="small"
