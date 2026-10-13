@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Tooltip, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
@@ -7,6 +7,7 @@ import { GlobalSearchProvider } from '../../context/GlobalSearchContext';
 
 // Resizing changes only the paper, keeping the screen and its filters mounted.
 export default function ToolDialog({ title, open, onClose, confirmClose = false, children }) {
+  const titleId = useId();
   const [fullscreen, setFullscreen] = useState(false);
   const [closing, setClosing] = useState(false);
   const close = () => { setClosing(false); setFullscreen(false); onClose(); };
@@ -20,11 +21,11 @@ export default function ToolDialog({ title, open, onClose, confirmClose = false,
         fullScreen={fullscreen}
         maxWidth="xl"
         fullWidth
-        aria-label={title}
+        aria-labelledby={titleId}
         PaperProps={{ sx: { height: fullscreen ? '100%' : '90dvh', display: 'flex', flexDirection: 'column' } }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1, pr: 1 }}>
-          <Typography component="span" variant="h6" sx={{ flex: 1 }}>{title}</Typography>
+        <DialogTitle id={`${titleId}-header`} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1, pr: 1 }}>
+          <Typography id={titleId} component="span" variant="h6" sx={{ flex: 1 }}>{title}</Typography>
           <Tooltip title={fullscreen ? 'Restore size' : 'Expand to fullscreen'}>
             <IconButton aria-label={fullscreen ? 'Restore size' : 'Expand to fullscreen'} onClick={() => setFullscreen(value => !value)}>
               {fullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
