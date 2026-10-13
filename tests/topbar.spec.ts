@@ -64,5 +64,21 @@ test.describe('Top bar', () => {
     for (const name of ['Settings', 'Wizard', 'Nodes', 'Providers', 'Events', 'Syslog', 'Monitoring']) {
       await expect(tools.getByRole('button', { name, exact: true })).toHaveCount(0);
     }
+
+    await tools.getByRole('button', { name: 'Support', exact: true }).click();
+    const supportMenu = page.getByRole('menu', { name: 'Support' });
+    await expect(supportMenu).toBeVisible();
+    for (const name of ['MCP', 'DevZone', 'Documentation', 'Tickets']) {
+      await expect(supportMenu.getByRole('menuitem', { name, exact: true })).toBeVisible();
+    }
+    await supportMenu.getByRole('menuitem', { name: 'DevZone', exact: true }).click();
+    const devZone = page.getByRole('dialog', { name: 'DevZone', exact: true });
+    await expect(devZone).toBeVisible();
+    await expect(supportMenu).toBeHidden();
+    await expect(page).toHaveURL(/\/calls(?:\?|$)/);
+    await devZone.getByRole('button', { name: 'Expand to fullscreen', exact: true }).click();
+    await expect(devZone.getByRole('button', { name: 'Restore size', exact: true })).toBeVisible();
+    await devZone.getByRole('button', { name: 'Close DevZone', exact: true }).click();
+    await expect(devZone).toBeHidden();
   });
 });
