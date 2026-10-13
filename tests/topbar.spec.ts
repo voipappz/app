@@ -3,7 +3,7 @@ import { test, expect } from './auth-fixture';
 /**
  * The top bar: the open screen's search field beside the application selector,
  * its popup (date range, filters, refresh / export / columns), and the
- * top-right tools, which are down to Help and the health dot.
+ * top-right tools, including Support (which replaced Help) and the health dot.
  */
 test.describe('Top bar', () => {
   test.setTimeout(process.env.CI ? 90000 : 30000);
@@ -54,11 +54,12 @@ test.describe('Top bar', () => {
     expect(field!.width).toBeGreaterThan(bar!.width * 0.6);
   });
 
-  test('the top-right tools are Help and the health dot only', async ({ authenticatedPage: page }) => {
+  test('the top-right tools show Support instead of Help and the health dot', async ({ authenticatedPage: page }) => {
     await page.goto('/calls', { waitUntil: 'domcontentloaded', timeout: 20000 });
 
     const tools = page.locator('.topbar-actions');
-    await expect(tools.getByRole('button', { name: 'Help', exact: true })).toBeVisible({ timeout: 30000 });
+    await expect(tools.getByRole('button', { name: 'Support', exact: true })).toBeVisible({ timeout: 30000 });
+    await expect(tools.getByRole('button', { name: 'Help', exact: true })).toHaveCount(0);
     await expect(tools.getByRole('button', { name: 'Health', exact: true })).toBeVisible();
     for (const name of ['Settings', 'Wizard', 'Nodes', 'Providers', 'Events', 'Syslog', 'Monitoring']) {
       await expect(tools.getByRole('button', { name, exact: true })).toHaveCount(0);
