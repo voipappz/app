@@ -9,6 +9,7 @@ import {
   Divider,
   Drawer,
   List,
+  ListItemButton,
   ListItemText,
   ListItemIcon,
   Tooltip,
@@ -57,6 +58,8 @@ import CircleIcon from '@mui/icons-material/Circle';
 import CodeIcon from '@mui/icons-material/Code';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -250,6 +253,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
 
   // Zendesk tickets modal — reuse the full useTickets hook (conversations, replies, status editing)
   const [ticketsModalOpen, setTicketsModalOpen] = useState(false);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
   const {
     tickets,
     loading: ticketsLoading,
@@ -954,7 +958,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
             the room from the field. */}
         <Box sx={{ flex: 1, minWidth: 0, display: { xs: 'block', sm: 'none' } }} />
 
-        {/* Topbar utility icons (support tools live in the left Support menu) */}
+        {/* Topbar utility icons and Support */}
         <Box className="topbar-actions">
           {/* Actions + observability nav — inline on desktop, in ⋮ on phones */}
           {!isPhone && (
@@ -969,18 +973,20 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </>
           )}
 
-          {/* Help — the support widget (answers, articles, "Get in touch").
-              It has no floating launcher of its own any more. Settings moved
-              to the customer menu in the sidebar. An account's. */}
+          {/* Support replaces Help for admin accounts, on desktop and mobile. */}
           {!userSession && (
-            <Tooltip title={t('shell.help')}>
+            <Tooltip title={t('shell.support')}>
               <IconButton
                 size="small"
-                aria-label={t('shell.help')}
-                onClick={openZendeskWidget}
+                aria-label={t('shell.support')}
+                aria-haspopup="dialog"
+                aria-expanded={supportModalOpen}
+                aria-controls={supportModalOpen ? 'support-dialog' : undefined}
+                data-tour="help-button"
+                onClick={() => setSupportModalOpen(true)}
                 sx={{ color: 'var(--theme-text-secondary)', '&:hover': { backgroundColor: 'var(--theme-hover)' } }}
               >
-                <HelpOutlineIcon fontSize="small" />
+                <SupportAgentIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
@@ -1008,7 +1014,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </Button>
           )}
 
-          {/* Support tools and appearance live in the sidebar. */}
+          {/* Appearance controls live in the sidebar. */}
 
           {/* Divider between admin and utility icons */}
           <Box sx={{ width: '1px', height: 24, backgroundColor: 'var(--border-light, #e5e7eb)', mx: 0.5, flexShrink: 0 }} />
@@ -1505,6 +1511,49 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           )}
         </Box>
       </Dialog>
+
+      {!userSession && (
+        <Dialog
+          id="support-dialog"
+          open={supportModalOpen}
+          onClose={() => setSupportModalOpen(false)}
+          aria-labelledby="support-dialog-title"
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle id="support-dialog-title">{t('shell.support')}</DialogTitle>
+          <DialogContent dividers>
+            <List disablePadding>
+              <ListItemButton onClick={() => { setSupportModalOpen(false); navigate('/mcp'); }}>
+                <ListItemIcon><HubOutlinedIcon /></ListItemIcon>
+                <ListItemText primary="MCP" />
+              </ListItemButton>
+              <ListItemButton onClick={() => { setSupportModalOpen(false); navigate('/devzone'); }}>
+                <ListItemIcon><CodeIcon /></ListItemIcon>
+                <ListItemText primary="DevZone" />
+              </ListItemButton>
+              <ListItemButton
+                component="a"
+                href="https://voipappz.zendesk.com/hc/en-us"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setSupportModalOpen(false)}
+              >
+                <ListItemIcon><HelpOutlineIcon /></ListItemIcon>
+                <ListItemText primary={t('shell.documentation')} />
+                <OpenInNewIcon fontSize="small" />
+              </ListItemButton>
+              <ListItemButton onClick={() => { setSupportModalOpen(false); handleTicketsOpen(); }}>
+                <ListItemIcon><ConfirmationNumberIcon /></ListItemIcon>
+                <ListItemText primary={t('shell.tickets')} />
+              </ListItemButton>
+            </List>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSupportModalOpen(false)}>{t('action.cancel')}</Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       {/* Tickets Modal — full table + detail view with conversations */}
       <Dialog
