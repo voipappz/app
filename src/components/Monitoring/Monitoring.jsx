@@ -7,7 +7,6 @@ import {
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import FavoriteIcon from '@mui/icons-material/Favorite';
 import DnsIcon from '@mui/icons-material/Dns';
 import StorageIcon from '@mui/icons-material/Storage';
 import MemoryIcon from '@mui/icons-material/Memory';
@@ -141,10 +140,9 @@ const Monitoring = () => {
   const [healthFocus, setHealthFocus] = useState(null);
 
   // The MOTHERSHIP's Gatus: what this box watches (data layer, API, gateway,
-  // SBC, and the voip node's own /health/node). It does not change with the
-  // host selector — a node's own checks are on the Nodes screen, asked over
-  // NATS. This panel used to switch to /custom/nodes/:uuid/health for a picked
-  // node, which answered with this same board under the node's name.
+  // SBC, and the voip node's own /health/node). Its summary feeds the Health
+  // list; its tiles are in the Health section, under that list. A node's own checks
+  // are on the Nodes screen, asked over NATS.
   const fleetHealth = useGatusHealth();
 
   const gridSx = useMemo(() => ({
@@ -207,18 +205,17 @@ const Monitoring = () => {
           </Suspense>
         ) : (
         <>
-            {/* Gatus is the first operational surface: choose a node and see
-                its live relay status before drilling into historical metrics. */}
             <Paper elevation={0} sx={{
-              border: '1px solid var(--theme-border)', borderRadius: '12px',
-              backgroundColor: 'var(--theme-bg-primary)', overflow: 'hidden',
+              px: 2, py: 1, border: '1px solid var(--theme-border)',
+              borderRadius: '8px', backgroundColor: 'var(--theme-bg-primary)',
             }}>
-              <Box sx={{ p: 2, borderBottom: '1px solid var(--theme-border)', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FavoriteIcon fontSize="small" sx={{ color: fleetHealth.summary.down === 0 && fleetHealth.summary.total > 0 ? '#10b981' : '#f59e0b' }} />
-                <Typography sx={{ fontWeight: 600 }}>Live service health</Typography>
-                <Typography variant="caption" sx={{ ml: 'auto', color: 'var(--theme-text-secondary)' }}>Gatus · mothership checks</Typography>
-              </Box>
-              <Box sx={{ p: 2 }}>
+              <HealthList health={apiHealth} gatusSummary={fleetHealth.summary} onOpen={setHealthFocus} />
+              {/* The mothership's Gatus, in the tile design (history bars,
+                  uptime, click a tile to zoom), under the API's own checks. It
+                  used to sit under every node on the Nodes screen, where it was
+                  this same board under the node's name; a node's own checks are
+                  on Nodes now, asked over NATS. */}
+              <Box sx={{ mt: 1, mb: 1 }} data-testid="health-gatus">
                 <GatusHealthPanel
                   endpoints={fleetHealth.endpoints}
                   summary={fleetHealth.summary}
@@ -227,13 +224,6 @@ const Monitoring = () => {
                   title="Mothership · Gatus"
                 />
               </Box>
-            </Paper>
-
-            <Paper elevation={0} sx={{
-              px: 2, py: 1, border: '1px solid var(--theme-border)',
-              borderRadius: '8px', backgroundColor: 'var(--theme-bg-primary)',
-            }}>
-              <HealthList health={apiHealth} gatusSummary={fleetHealth.summary} onOpen={setHealthFocus} />
             </Paper>
 
             {/* Host metrics — Influxer models, thresholds from config/alerts.yaml */}
