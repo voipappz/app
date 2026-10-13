@@ -141,7 +141,7 @@ const Monitoring = () => {
 
   // The MOTHERSHIP's Gatus: what this box watches (data layer, API, gateway,
   // SBC, and the voip node's own /health/node). Its summary feeds the Health
-  // list; its tiles are in the "Health — verbose" dialog. A node's own checks
+  // list; its tiles are in the Health section, under that list. A node's own checks
   // are on the Nodes screen, asked over NATS.
   const fleetHealth = useGatusHealth();
 
@@ -210,6 +210,20 @@ const Monitoring = () => {
               borderRadius: '8px', backgroundColor: 'var(--theme-bg-primary)',
             }}>
               <HealthList health={apiHealth} gatusSummary={fleetHealth.summary} onOpen={setHealthFocus} />
+              {/* The mothership's Gatus, in the tile design (history bars,
+                  uptime, click a tile to zoom), under the API's own checks. It
+                  used to sit under every node on the Nodes screen, where it was
+                  this same board under the node's name; a node's own checks are
+                  on Nodes now, asked over NATS. */}
+              <Box sx={{ mt: 1, mb: 1 }} data-testid="health-gatus">
+                <GatusHealthPanel
+                  endpoints={fleetHealth.endpoints}
+                  summary={fleetHealth.summary}
+                  loading={fleetHealth.loading}
+                  error={fleetHealth.error || fleetHealth.response?.error}
+                  title="Mothership · Gatus"
+                />
+              </Box>
             </Paper>
 
             {/* Host metrics — Influxer models, thresholds from config/alerts.yaml */}
@@ -345,22 +359,7 @@ const Monitoring = () => {
 
       <Dialog open={Boolean(healthFocus)} onClose={() => setHealthFocus(null)} maxWidth="md" fullWidth>
         <DialogTitle>Health — verbose</DialogTitle>
-        <DialogContent>
-          <ApiHealthPanel focus={healthFocus} summary={apiHealth.response} />
-          {/* The mothership's Gatus, in the tile design (history bars, uptime,
-              click a tile to zoom). It lived on the page and, before that, under
-              every node on the Nodes screen — where it was this same board
-              under the node's name. A node's own checks are on Nodes. */}
-          <Box sx={{ mt: 2 }}>
-            <GatusHealthPanel
-              endpoints={fleetHealth.endpoints}
-              summary={fleetHealth.summary}
-              loading={fleetHealth.loading}
-              error={fleetHealth.error || fleetHealth.response?.error}
-              title="Mothership · Gatus"
-            />
-          </Box>
-        </DialogContent>
+        <DialogContent><ApiHealthPanel focus={healthFocus} summary={apiHealth.response} /></DialogContent>
         <DialogActions><Button onClick={() => setHealthFocus(null)}>Close</Button></DialogActions>
       </Dialog>
     </Box>
