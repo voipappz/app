@@ -269,6 +269,7 @@ const ServicesInner = () => {
   // Inline setup (the config area above the flow) — same fields as Edit.
   const [setup, setSetup] = useState(null);
   const [setupSaving, setSetupSaving] = useState(false);
+  const [saveNotice, setSaveNotice] = useState(null);
 
   // Attached workflow preview — the current workflow's flow, shown up top.
   const [wfPreview, setWfPreview] = useState(null);
@@ -359,6 +360,7 @@ const ServicesInner = () => {
   const saveSetup = useCallback(async () => {
     if (!selected?.uuid || !setup) return;
     setSetupSaving(true);
+    setSaveNotice(null);
     try {
       const profile = { ...(svc.profile || {}) };
       delete profile.code;
@@ -372,8 +374,18 @@ const ServicesInner = () => {
         profile,
         notes: svc.notes,
       });
-      await fetchServices();
-      await fetchFull();
+      setSaveNotice({ severity: 'success', message: 'Service saved.' });
+      try {
+        await fetchServices();
+        await fetchFull();
+      } catch {
+        setSaveNotice({ severity: 'warning', message: 'Service saved, but the list could not refresh. Please refresh it.' });
+      }
+    } catch (error) {
+      setSaveNotice({
+        severity: 'error',
+        message: error?.response?.data?.message || error?.message || 'Could not save service. Please try again.',
+      });
     } finally {
       setSetupSaving(false);
     }
@@ -385,6 +397,15 @@ const ServicesInner = () => {
       || setup.enabled !== (svc.enabled !== false)
       || JSON.stringify(setup.triggers) !== JSON.stringify(svc.triggers || []);
   }, [svc, setup]);
+
+  const selectService = (service) => {
+    if (setupSaving) return false;
+    if (service.uuid === selected?.uuid) return true;
+    if (setupDirty && !window.confirm('Discard unsaved changes to this service?')) return false;
+    setSaveNotice(null);
+    setSelected(service);
+    return true;
+  };
 
   // Load the attached workflow's flow for the preview: explicit handler
   // workflow_uuid first, else the first linked workflow.
@@ -505,7 +526,7 @@ const ServicesInner = () => {
         <Divider />
         <List dense sx={{ overflowY: 'auto', flex: 1 }}>
           {services.map((s) => (
-            <ListItemButton key={s.uuid} selected={selected?.uuid === s.uuid} onClick={() => setSelected(s)}
+            <ListItemButton key={s.uuid} selected={selected?.uuid === s.uuid} onClick={() => selectService(s)}
               sx={{ alignItems: 'flex-start' }}>
               <Box sx={{ width: 8, height: 8, borderRadius: '50%', mr: 1, mt: 1,
                 bgcolor: s.enabled ? 'var(--accent-success)' : 'var(--text-tertiary)' }} />
@@ -534,7 +555,7 @@ const ServicesInner = () => {
                 } />
               <Tooltip title="Logs">
                 <IconButton size="small" edge="end"
-                  onClick={(e) => { e.stopPropagation(); setSelected(s); setLogsOpen(true); }}>
+                  onClick={(e) => { e.stopPropagation(); if (selectService(s)) setLogsOpen(true); }}>
                   <ArticleIcon sx={{ fontSize: 15 }} />
                 </IconButton>
               </Tooltip>
@@ -574,6 +595,12 @@ const ServicesInner = () => {
                 Save
               </Button>
             </Box>
+
+            {saveNotice && (
+              <Alert severity={saveNotice.severity} onClose={() => setSaveNotice(null)} sx={{ mx: 1.5, my: 1 }}>
+                {saveNotice.message}
+              </Alert>
+            )}
 
             {/* CONFIG — up top, all in one screen: name/enabled + triggers/handler
                 setup, and the attached workflow's current flow when there is one. */}
