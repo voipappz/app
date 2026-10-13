@@ -455,14 +455,23 @@ const ServicesInner = () => {
 
   const runSim = useCallback(async () => {
     if (!selected?.uuid || !simEvent) return;
+    const realCallUuid = simCallUuid.trim();
+    if (svc?.type === 'scalla' && simDeliver && !realCallUuid) {
+      setSimResult({ error: 'Enter a real Call UUID before running this service.' });
+      return;
+    }
     setSimRunning(true); setSimResult(null);
     let event_data = {};
     try { event_data = simData.trim() ? JSON.parse(simData) : {}; }
     catch { setSimResult({ error: 'Event data is not valid JSON' }); setSimRunning(false); return; }
     try {
       const res = await servicesApi.simulate(selected.uuid, {
-        event_name: simEvent, event_data,
-        call_uuid: simCallUuid.trim() || undefined,
+        event_name: simEvent,
+        // The Scalla example contains illustrative phone numbers. Once a real
+        // call is selected, omit it so it cannot replace the persisted caller,
+        // agent, PBX number, timestamps, durations, or recording URL.
+        event_data: svc?.type === 'scalla' && realCallUuid ? {} : event_data,
+        call_uuid: realCallUuid || undefined,
         deliver: simDeliver && DELIVERABLE_TYPES.includes(svc?.type),
       });
       setSimResult(res || { event_name: simEvent, results: [] });
@@ -802,11 +811,13 @@ const ServicesInner = () => {
             sx={{ '& textarea': { fontFamily: 'monospace', fontSize: '0.8rem' } }}
           />
           <TextField
-            label="Call UUID (optional)"
+            label={svc?.type === 'scalla' ? 'Call UUID (required to send)' : 'Call UUID (optional)'}
             value={simCallUuid}
             onChange={(e) => setSimCallUuid(e.target.value)}
             fullWidth size="small" sx={{ mt: 2 }}
-            helperText="Build the event from a real call instead of the example data."
+            helperText={svc?.type === 'scalla'
+              ? 'Scalla delivery uses this persisted call instead of the example phone numbers.'
+              : 'Build the event from a real call instead of the example data.'}
           />
           {DELIVERABLE_TYPES.includes(svc?.type) && (
             <FormControlLabel
@@ -825,14 +836,18 @@ const ServicesInner = () => {
             />
           )}
           {simResult && (
-            <Alert severity={simResult.error ? 'error' : 'success'} sx={{ mt: 2 }} onClose={() => setSimResult(null)}>
+            <Alert severity={simResult.error || (simResult.results || []).some((r) => r.status === 'failed') ? 'error' : 'success'} sx={{ mt: 2 }} onClose={() => setSimResult(null)}>
               {simResult.error ? (
                 <Typography variant="caption">{simResult.error}</Typography>
               ) : (
                 <Box>
                   <Typography variant="caption" fontWeight={700} display="block">Simulated: {simResult.event_name || simEvent}</Typography>
                   <Typography variant="caption" display="block">
-                    {simResult.delivered ? 'Sent to the endpoint.' : 'Not sent: this was a dry run.'}
+                    {simResult.delivered
+                      ? 'Accepted by the endpoint.'
+                      : simDeliver
+                        ? 'Not delivered: inspect the failed step below.'
+                        : 'Not sent: this was a dry run.'}
                   </Typography>
                   {(simResult.results || []).map((r, i) => (
                     <Box key={i} sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
@@ -851,7 +866,8 @@ const ServicesInner = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setSimOpen(false)} sx={{ textTransform: 'none' }}>Close</Button>
-          <Button onClick={runSim} variant="contained" color="success" disabled={!simEvent || simRunning}
+          <Button onClick={runSim} variant="contained" color="success"
+            disabled={!simEvent || simRunning || (svc?.type === 'scalla' && simDeliver && !simCallUuid.trim())}
             startIcon={simRunning ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />} sx={{ textTransform: 'none' }}>
             Run
           </Button>
