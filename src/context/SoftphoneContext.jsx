@@ -136,8 +136,9 @@ function SoftphoneLive({ settings, setSettings, updateSettings, children }) {
   //
   // NEVER while logged out. Without this guard a logged-out browser kept taking
   // calls, by two separate routes:
-  //   1. defaultSipSettings() spreads envSipOverrides() LAST, so on a build with
-  //      VITE_SIP_* creds baked in the "cleared" settings are still registerable.
+  //   1. builds once baked a SIP username and password into VITE_SIP_*, so the
+  //      "cleared" settings were still registerable (no build can now: the
+  //      env carries only the endpoint, see lib/sip/sipSettings.js).
   //   2. unregister() finishes with status 'idle' — the exact trigger below — so
   //      the teardown re-armed the very effect that undid it.
   // Registration is a property of being signed in; gate it on that, not on the

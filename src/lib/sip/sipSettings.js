@@ -1,6 +1,6 @@
 // SIP softphone settings — what the Settings tab edits and persists locally.
-// Defaults come from VITE_SIP_* (see ./config.js); with no env set, the
-// endpoint is auto-populated from the logged-in user's environment
+// Endpoint defaults come from VITE_SIP_* (see ./config.js); with no env set,
+// the endpoint is auto-populated from the logged-in user's environment
 // (sipSettingsFromUser) and the softphone stays unconfigured until then.
 import { loadSipConfig } from './config';
 
@@ -8,21 +8,26 @@ import { loadSipConfig } from './config';
 
 const KEY = 'sip-settings';
 
-// Settings hardcoded via env (VITE_SIP_*) — only the keys actually set. A web
-// softphone needs the SIP password client-side to register, so it lives in the
-// bundle; fine for a demo/tenant build, rotate per deployment. Returns ONLY the
-// provided keys so they can be layered as authoritative overrides.
+// Endpoint settings from env (VITE_SIP_*): the WSS server, the domain and a
+// display name, nothing else. A SIP username or password is NEVER read from
+// the build environment: Vite inlines every VITE_* value into the public
+// bundle, so a password there is published to anyone who loads the page. The
+// phone gets its credentials from the signed-in user, a picked device, or the
+// Settings form, and holds the password in memory only.
 function envSipOverrides() {
   const o = {};
   const set = (k, v) => { if (v) o[k] = v; };
-  set('username', import.meta.env.VITE_SIP_USERNAME);
-  set('password', import.meta.env.VITE_SIP_PASSWORD);
   set('displayName', import.meta.env.VITE_SIP_DISPLAY_NAME);
   set('wssUrl', import.meta.env.VITE_SIP_WSS_URL);
   set('domain', import.meta.env.VITE_SIP_DOMAIN);
-  const ac = import.meta.env.VITE_SIP_AUTOCONNECT;
-  if (ac === '1' || ac === 'true') o.autoConnect = true;
   return o;
+}
+
+// The stored copy never carries the password. Older builds wrote it, so a
+// load drops it and rewrites the entry without it.
+function withoutPassword(s) {
+  const { password: _password, ...rest } = s || {};
+  return rest;
 }
 
 export function defaultSipSettings() {
@@ -33,16 +38,19 @@ export function defaultSipSettings() {
 export function loadSipSettings() {
   try {
     const raw = localStorage.getItem(KEY);
-    // Hardcoded VITE_SIP_* env creds are AUTHORITATIVE — applied last so they
-    // override stale localStorage (e.g. an old account entered in the UI). A
-    // tenant/demo build with baked creds then always registers the right account.
-    if (raw) return { ...defaultSipSettings(), ...JSON.parse(raw), ...envSipOverrides() };
+    if (raw) {
+      const stored = JSON.parse(raw);
+      if (stored && Object.prototype.hasOwnProperty.call(stored, 'password')) {
+        localStorage.setItem(KEY, JSON.stringify(withoutPassword(stored)));
+      }
+      return { ...defaultSipSettings(), ...withoutPassword(stored), password: '', ...envSipOverrides() };
+    }
   } catch { /* corrupt/absent -> defaults */ }
   return defaultSipSettings();
 }
 
 export function saveSipSettings(s) {
-  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* storage disabled */ }
+  try { localStorage.setItem(KEY, JSON.stringify(withoutPassword(s))); } catch { /* storage disabled */ }
 }
 
 export function clearSipSettings() {
