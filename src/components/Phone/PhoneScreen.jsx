@@ -5,6 +5,7 @@
 // of the core WebRTC migration) — follow-up if wanted.
 import Bdi from '../../i18n/Bdi';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, IconButton, Tabs, Tab, TextField, Button, Typography, Stack, Tooltip, Avatar, Paper
 } from '@mui/material';
@@ -21,6 +22,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import { useSoftphone } from '../../context/SoftphoneContext';
 import { usePortalSidebar } from '../../context/PortalSidebarContext';
 import { defaultSipSettings, sipSettingsReady } from '../../lib/sip/sipSettings';
@@ -56,6 +58,7 @@ function useCallTimer(connectedAt) {
 // `device` (an account session only): sign the phone in as this device.
 // `initialNumber`: put a clicked number in the dialpad (useCallNumber).
 export default function PhoneScreen({ embedded = false, initialTab, device, initialNumber }) {
+  const { t } = useTranslation('calls');
   const {
     status, connected, call, muted, held, doNotDisturb, networkAvailable, lastError,
     dial, answer, hangup, sendDtmf, setMuted, setHeld, setDoNotDisturb,
@@ -85,9 +88,15 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
   }, [initialNumber]);
   const [logsOpen, setLogsOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [keypadOpen, setKeypadOpen] = useState(false);
   const [holdPending, setHoldPending] = useState(false);
   const [dialError, setDialError] = useState(null);
   const logEndRef = useRef(null);
+
+  useEffect(() => {
+    setKeypadOpen(false);
+    setTransferOpen(false);
+  }, [call?.id]);
 
   useEffect(() => { void requestIncomingCallNotifications(); }, []);
   useEffect(() => { if (logsOpen) logEndRef.current?.scrollIntoView({ block: 'end' }); }, [logs, logsOpen]);
@@ -151,7 +160,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
         }}
       >
         {/* Header — avatar, name / ext, ready status */}
-        <Box sx={{ bgcolor: PANEL_HEADER, px: 1.5, py: 1.25, display: 'flex', gap: 1.25, alignItems: 'flex-start' }}>
+        <Box sx={{ bgcolor: PANEL_HEADER, px: 1.5, py: 1.25, display: 'flex', gap: 1, alignItems: 'flex-start', flexShrink: 0 }}>
           <Avatar sx={{ width: 44, height: 44, bgcolor: '#5b6675', fontSize: '1.1rem' }}>{initial}</Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }} noWrap>
@@ -181,12 +190,12 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
           </Box>
           <Tooltip title={settingsOpen ? 'Back' : 'Settings'}>
             <IconButton size="small" data-testid="phone-settings" aria-label={settingsOpen ? 'Close settings' : 'Settings'}
-              sx={{ color: settingsOpen ? ACCENT : MUTED }} onClick={() => setSettingsOpen((v) => !v)}>
+              sx={{ width: 44, height: 44, color: settingsOpen ? ACCENT : MUTED }} onClick={() => setSettingsOpen((v) => !v)}>
               <SettingsIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Logs">
-            <IconButton size="small" sx={{ color: logsOpen ? ACCENT : MUTED }} onClick={() => setLogsOpen((v) => !v)}><TerminalIcon fontSize="small" /></IconButton>
+            <IconButton size="small" aria-label={t('phone.logs')} aria-pressed={logsOpen} sx={{ width: 44, height: 44, color: logsOpen ? ACCENT : MUTED }} onClick={() => setLogsOpen((v) => !v)}><TerminalIcon fontSize="small" /></IconButton>
           </Tooltip>
         </Box>
 
@@ -235,50 +244,51 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
           ) : needsSignIn && !inCall ? (
             <PhoneSignIn device={openedForOtherDevice ? device : undefined} />
           ) : inCall ? (
-            <Box sx={{ p: 2, textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <Typography variant="overline" sx={{ color: MUTED }}>
-                {call.direction === 'inbound' ? 'Incoming' : 'Calling'}
-              </Typography>
-              <Typography variant="h6" sx={{ direction: 'ltr', color: '#fff' }}>{call.remote}</Typography>
-              <Typography variant="body2" sx={{ mb: 2, color: MUTED }}>
-                {call.state === 'active' ? timer : call.state === 'ringing' ? 'Ringing…' : 'Connecting…'}
-              </Typography>
-              <Stack direction="row" spacing={1} justifyContent="center">
-                <IconButton onClick={() => setMuted(!muted)} sx={{ color: muted ? '#ef4444' : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}>
-                  {muted ? <MicOffIcon /> : <MicIcon />}
-                </IconButton>
-                <Tooltip title={held ? 'Resume' : 'Hold'}>
-                  <span>
-                    <IconButton
-                      data-testid="phone-hold"
-                      disabled={call.state !== 'active' || holdPending || transferBusy}
-                      onClick={toggleHold}
-                      sx={{ color: held ? ACCENT : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}
-                    >
-                      {held ? <PlayArrowIcon /> : <PauseIcon />}
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title="Transfer">
-                  <span>
-                    <IconButton
-                      data-testid="phone-transfer-open"
-                      disabled={call.state !== 'active'}
-                      onClick={() => setTransferOpen((v) => !v)}
-                      sx={{ color: transferOpen || transferBusy ? ACCENT : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}
-                    >
-                      <PhoneForwardedIcon />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </Stack>
-              <TransferControls open={transferOpen} onClose={() => setTransferOpen(false)} callActive={call.state === 'active'} />
-              <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0.5, mt: 2, mb: 2 }}>
-                {KEYS.map((k) => <Button key={k} sx={{ color: '#cbd5e1', fontSize: '1.1rem' }} onClick={() => press(k)}>{k}</Button>)}
+            <Box sx={{ p: 2, textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ py: 3 }}>
+                <Avatar sx={{ width: 72, height: 72, mx: 'auto', mb: 1.5, bgcolor: PANEL_HEADER, color: call.state === 'active' && !held ? GREEN : MUTED }}>
+                  <PersonOutlineIcon sx={{ fontSize: 40 }} />
+                </Avatar>
+                <Typography variant="overline" sx={{ color: MUTED }}>
+                  {t(call.direction === 'inbound' ? 'phone.incoming' : 'phone.outgoing')}
+                </Typography>
+                <Typography variant="h6" sx={{ color: '#fff', overflowWrap: 'anywhere' }}><Bdi>{call.remote}</Bdi></Typography>
+                <Typography role="status" variant="body2" sx={{ mt: 0.5, color: held ? ACCENT : MUTED }}>
+                  {t(call.state === 'active' ? held ? 'phone.onHold' : 'phone.connected' : call.state === 'ringing' ? 'phone.ringing' : 'phone.connecting')}
+                </Typography>
+                {call.state === 'active' && <Typography sx={{ mt: 0.5, fontVariantNumeric: 'tabular-nums', color: MUTED }}><Bdi>{timer}</Bdi></Typography>}
               </Box>
-              <Button fullWidth variant="contained" color="error" startIcon={<CallEndIcon />} onClick={() => hangup()} sx={{ borderRadius: 2, py: 1.1 }}>
-                Hang up
-              </Button>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1, '& .MuiButton-root': { minHeight: 52, textTransform: 'none', gap: 1, color: '#e5e7eb', bgcolor: 'rgba(255,255,255,0.08)', '&.Mui-disabled': { color: MUTED, opacity: 0.6 }, '&[aria-pressed="true"]': { color: ACCENT, bgcolor: 'rgba(245,166,35,0.12)' } } }}>
+                <Button aria-pressed={muted} onClick={() => setMuted(!muted)}>
+                  {muted ? <MicOffIcon /> : <MicIcon />}
+                  {t(muted ? 'phone.unmute' : 'phone.mute')}
+                </Button>
+                <Button
+                  data-testid="phone-hold"
+                  aria-pressed={held}
+                  disabled={call.state !== 'active' || holdPending || transferBusy}
+                  onClick={toggleHold}
+                >
+                  {held ? <PlayArrowIcon /> : <PauseIcon />}
+                  {t(held ? 'phone.resume' : 'phone.hold')}
+                </Button>
+                <Button
+                  data-testid="phone-transfer-open"
+                  aria-expanded={transferOpen || transferBusy}
+                  disabled={call.state !== 'active'}
+                  onClick={() => setTransferOpen((v) => !v)}
+                >
+                  <PhoneForwardedIcon />
+                  {t('phone.transfer')}
+                </Button>
+                <Button aria-expanded={keypadOpen} disabled={call.state !== 'active'} onClick={() => setKeypadOpen((v) => !v)}>
+                  <DialpadIcon />{t('phone.keypad')}
+                </Button>
+              </Box>
+              <TransferControls open={transferOpen} onClose={() => setTransferOpen(false)} callActive={call.state === 'active'} />
+              {keypadOpen && <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 0.5, mt: 2 }}>
+                {KEYS.map((k) => <Button key={k} disabled={call.state !== 'active'} sx={{ minWidth: 0, minHeight: 44, color: '#cbd5e1', fontSize: '1.1rem' }} onClick={() => sendDtmf(k)}>{k}</Button>)}
+              </Box>}
             </Box>
           ) : tab === 0 ? (
             <PhoneCallsTab
@@ -291,32 +301,32 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
               <Box sx={{ position: 'relative', mb: 2 }}>
                 <TextField
                   fullWidth size="small" value={number} onChange={(e) => setNumber(e.target.value)}
-                  placeholder="Enter number"
-                  inputProps={{ style: { direction: 'ltr', textAlign: 'center', fontSize: '1.25rem', color: 'var(--mui-palette-text-primary)' } }}
+                  placeholder={t('phone.enterNumber')}
+                  inputProps={{ 'aria-label': t('phone.enterNumber'), style: { direction: 'ltr', textAlign: 'center', fontSize: '1.25rem', color: 'var(--mui-palette-text-primary)' } }}
                   sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'var(--mui-palette-background-paper)', borderRadius: 1.5 } }}
                 />
                 {number && (
-                  <IconButton size="small" onClick={() => setNumber((n) => n.slice(0, -1))} sx={{ position: 'absolute', insetInlineEnd: 4, top: '50%', transform: 'translateY(-50%)', color: 'var(--mui-palette-text-secondary)' }}>
+                  <IconButton size="small" aria-label={t('phone.backspace')} onClick={() => setNumber((n) => n.slice(0, -1))} sx={{ width: 44, height: 44, position: 'absolute', insetInlineEnd: 4, top: '50%', transform: 'translateY(-50%)', color: 'var(--mui-palette-text-secondary)' }}>
                     <BackspaceIcon fontSize="small" />
                   </IconButton>
                 )}
               </Box>
               <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', rowGap: 1.5, mb: 2 }}>
                 {KEYS.map((k) => (
-                  <Box
-                    key={k} role="button" onClick={() => press(k)}
-                    sx={{ textAlign: 'center', fontSize: '1.5rem', color: '#dfe5ec', cursor: 'pointer', userSelect: 'none', py: { xs: 1.25, sm: 0.5 }, borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }}
+                  <Button
+                    key={k} onClick={() => press(k)}
+                    sx={{ minHeight: 44, minWidth: 0, fontSize: '1.5rem', color: '#dfe5ec', py: { xs: 1.25, sm: 0.5 }, borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }}
                   >
                     {k}
-                  </Box>
+                  </Button>
                 ))}
               </Box>
               <Box sx={{ flex: 1 }} />
               <Button
-                fullWidth variant="contained" onClick={() => startCall()} disabled={!connected || !number.trim()}
+                fullWidth variant="contained" startIcon={<CallIcon />} onClick={() => startCall()} disabled={!connected || !number.trim()}
                 sx={{ bgcolor: GREEN, borderRadius: 1.5, py: 1.2, '&:hover': { bgcolor: '#28b14c' }, '&.Mui-disabled': { bgcolor: 'rgba(52,199,89,0.4)', color: '#f0fdf4' } }}
               >
-                <CallIcon />
+                {t('phone.call')}
               </Button>
               {dialError && (
                 <Typography data-testid="dial-error" variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', color: '#fca5a5' }}>
@@ -327,6 +337,15 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
             </Box>
           ) : null}
         </Box>
+
+        {inCall && (
+          <Stack direction="row" spacing={1} sx={{ p: 2, flexShrink: 0, bgcolor: PANEL_HEADER }}>
+            {incoming && <Button fullWidth variant="contained" color="success" startIcon={<CallIcon />} onClick={() => answer()} sx={{ minHeight: 48, borderRadius: 2 }}>{t('phone.answer')}</Button>}
+            <Button fullWidth variant="contained" color="error" startIcon={<CallEndIcon />} onClick={() => hangup()} sx={{ minHeight: 48, borderRadius: 2 }}>
+              {t(incoming ? 'phone.decline' : 'phone.hangUp')}
+            </Button>
+          </Stack>
+        )}
 
         {/* Bottom tabs — Calls / Dialpad / Assistant (Settings is the gear) */}
         {!logsOpen && !settingsOpen && !inCall && !needsSignIn && (

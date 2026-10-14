@@ -1,4 +1,25 @@
 {
+  "phone": {
+    "logs": "יומן הטלפון",
+    "incoming": "שיחה נכנסת",
+    "outgoing": "שיחה יוצאת",
+    "onHold": "בהמתנה",
+    "connected": "מחובר",
+    "ringing": "מצלצל…",
+    "connecting": "מתחבר…",
+    "mute": "השתקה",
+    "unmute": "ביטול השתקה",
+    "hold": "המתנה",
+    "resume": "חזרה לשיחה",
+    "transfer": "העברה",
+    "keypad": "לוח מקשים",
+    "enterNumber": "הזנת מספר",
+    "backspace": "מחיקת הספרה האחרונה",
+    "call": "חיוג",
+    "answer": "מענה",
+    "decline": "דחייה",
+    "hangUp": "ניתוק"
+  },
   "search": {
     "placeholder": "חיפוש לפי מתקשר, נמען, משתמש, ניתוב או מזהה שיחה",
     "quick": "חיפוש מהיר..."

@@ -1,4 +1,25 @@
 {
+  "phone": {
+    "logs": "Phone logs",
+    "incoming": "Incoming call",
+    "outgoing": "Outgoing call",
+    "onHold": "On hold",
+    "connected": "Connected",
+    "ringing": "Ringing…",
+    "connecting": "Connecting…",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "hold": "Hold",
+    "resume": "Resume",
+    "transfer": "Transfer",
+    "keypad": "Keypad",
+    "enterNumber": "Enter number",
+    "backspace": "Delete last digit",
+    "call": "Call",
+    "answer": "Answer",
+    "decline": "Decline",
+    "hangUp": "Hang up"
+  },
   "search": {
     "placeholder": "Search caller, callee, user, route or call ID",
     "quick": "Quick search..."
