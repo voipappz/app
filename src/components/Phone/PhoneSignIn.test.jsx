@@ -3,15 +3,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import i18n from '../../i18n';
 import PhoneSignIn from './PhoneSignIn.jsx';
 
-const mockConnect = vi.fn(async () => {});
-vi.mock('../../context/SoftphoneContext', () => ({ useSoftphone: () => ({ connect: mockConnect }) }));
+// The phone signs in as a DEVICE: the context fetches that device's phone
+// token. Nothing here handles a SIP username or password.
+const mockSignInDevice = vi.fn(async () => {});
+vi.mock('../../context/SoftphoneContext', () => ({ useSoftphone: () => ({ signInDevice: mockSignInDevice }) }));
 
-const reception = {
-  uuid: 'dev-1', name: 'Reception', username: '201', password: 's3cret',
-  environment: { domain: '6174.nimbusip.com', wss_server: 'sbc.voipappz.io:7443' },
-};
 const mockGetExtensions = vi.fn(async () => ({ data: [{ uuid: 'dev-1', name: 'Reception', username: '201' }, { uuid: 'dev-2', name: 'Sales', username: '202' }] }));
-const mockGetExtension = vi.fn(async () => reception);
+const mockGetExtension = vi.fn();
 vi.mock('../../services/api/extensionsApi', () => ({
   extensionsApi: { getExtensions: (...a) => mockGetExtensions(...a), getExtension: (...a) => mockGetExtension(...a) },
 }));
@@ -29,28 +27,25 @@ beforeEach(() => {
 afterEach(() => i18n.changeLanguage('en'));
 
 describe('signing the admin phone in', () => {
-  it('registers as the device it was opened for, without saving its password', async () => {
+  it('signs in as the device it was opened for, from its token, without saving it', async () => {
     render(<PhoneSignIn device={{ uuid: 'dev-1', username: '201' }} />);
-    await waitFor(() => expect(mockConnect).toHaveBeenCalled());
-    expect(mockGetExtension).toHaveBeenCalledWith('dev-1');
-    expect(mockConnect).toHaveBeenCalledWith(
-      expect.objectContaining({ username: '201', password: 's3cret', domain: '6174.nimbusip.com' }),
-      { persist: false },
-    );
+    await waitFor(() => expect(mockSignInDevice).toHaveBeenCalledWith('dev-1', { persist: false }));
+    // The device's plain record (with its SIP secret) is never fetched.
+    expect(mockGetExtension).not.toHaveBeenCalled();
   });
 
-  it('registers as a device picked from the account', async () => {
+  it('signs in as a device picked from the account', async () => {
     render(<PhoneSignIn />);
     fireEvent.click(await screen.findByRole('button', { name: /Reception/ }));
-    await waitFor(() => expect(mockConnect).toHaveBeenCalledWith(expect.objectContaining({ username: '201' }), { persist: false }));
+    await waitFor(() => expect(mockSignInDevice).toHaveBeenCalledWith('dev-1', { persist: false }));
   });
 
   // The user login only feeds the phone. Stored as a portal session it would
   // end the admin's session (sessionIsolation), so it is revoked instead.
-  it('registers as a user through the portal login, and does not keep the user session', async () => {
+  it('signs in as a user\'s extension through the portal login, and does not keep the user session', async () => {
     mockAxiosPost
       .mockResolvedValueOnce({ data: { otp_sent: true, temp_token: 'tmp' } })
-      .mockResolvedValueOnce({ data: { token: 'user-jwt', user: { name: 'Dana', extension: { username: '305', password: 'ext-pw' }, environment: { domain: 'd.example', wss_server: 'wss://sbc' } } } });
+      .mockResolvedValueOnce({ data: { token: 'user-jwt', user: { name: 'Dana', extension: { uuid: 'ext-305', username: '305' } } } });
 
     render(<PhoneSignIn />);
     fireEvent.click(screen.getByRole('tab', { name: 'User login' }));
@@ -61,7 +56,8 @@ describe('signing the admin phone in', () => {
     fireEvent.change(await screen.findByLabelText('Verification code'), { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verify' }));
 
-    await waitFor(() => expect(mockConnect).toHaveBeenCalledWith(expect.objectContaining({ username: '305', password: 'ext-pw' }), { persist: false }));
+    // The user's login fetches the phone token once, then is revoked.
+    await waitFor(() => expect(mockSignInDevice).toHaveBeenCalledWith('ext-305', { persist: false, authorization: 'Bearer user-jwt' }));
     expect(mockAxiosPost.mock.calls[0][0]).toBe('/auth/user_login');
     expect(mockAxiosPost.mock.calls[1][0]).toBe('/auth/user/otp/verify');
     const [path, body] = mockApiPost.mock.calls[0];

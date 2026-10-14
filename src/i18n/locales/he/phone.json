@@ -91,7 +91,9 @@
     "autoConnect": "התחברות אוטומטית",
     "reconnect": "התחברות מחדש",
     "connect": "התחברות",
-    "disconnect": "ניתוק"
+    "disconnect": "ניתוק",
+    "device": "מכשיר",
+    "renewsAt": "החיבור מתחדש ב־"
   },
   "signIn": {
     "tabDevice": "מכשיר",

@@ -91,7 +91,9 @@
     "autoConnect": "Connect automatically",
     "reconnect": "Reconnect",
     "connect": "Connect",
-    "disconnect": "Disconnect"
+    "disconnect": "Disconnect",
+    "device": "Device",
+    "renewsAt": "Sign-in renews at"
   },
   "signIn": {
     "tabDevice": "Device",

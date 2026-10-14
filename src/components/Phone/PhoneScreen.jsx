@@ -25,7 +25,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useSoftphone } from '../../context/SoftphoneContext';
 import { usePortalSidebar } from '../../context/PortalSidebarContext';
-import { defaultSipSettings, sipSettingsReady } from '../../lib/sip/sipSettings';
+import { defaultSipSettings } from '../../lib/sip/sipSettings';
 import SipSettingsForm from './SipSettingsForm.jsx';
 import PhoneSignIn from './PhoneSignIn.jsx';
 import CallToast from './CallToast.jsx';
@@ -70,8 +70,10 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
   // An account has no extension of its own: until it signs the phone in (as a
   // device, or through a user login) the panel is that sign-in. Opened for a
   // device other than the one registered, it signs in as that device.
-  const openedForOtherDevice = Boolean(device?.uuid) && String(device.username ?? '') !== String(settings?.username ?? '');
-  const needsSignIn = !sipSettingsReady(settings || {}) || openedForOtherDevice;
+  // The phone holds a device once its token has been fetched; a reload keeps
+  // the device uuid and fetches a fresh token for it.
+  const openedForOtherDevice = Boolean(device?.uuid) && device.uuid !== settings?.deviceUuid;
+  const needsSignIn = !settings?.deviceUuid || openedForOtherDevice;
 
   const [tab, setTab] = useState(() => Math.max(TABS.indexOf(initialTab || 'dialpad'), 0));
   const [settingsOpen, setSettingsOpen] = useState(false);
