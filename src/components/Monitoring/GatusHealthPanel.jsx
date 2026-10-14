@@ -6,13 +6,21 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useGatusHealth } from '../../hooks/useGatusHealth';
+import { apiService } from '../../services/apiService';
 
 const UP = '#10b981';
 const DOWN = '#ef4444';
 const DURATIONS = ['1h', '24h', '7d', '30d'];
 
-const fetchText = (url) => fetch(url, { headers: { Accept: 'text/plain' } }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
-const fetchJson = (url) => fetch(url, { headers: { Accept: 'application/json' } }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+// The Gatus API sits behind the same authenticated route as the statuses list
+// (useGatusHealth). A bare fetch() carried no credential, so every detail
+// call came back 401 and the zoom opened empty. Go through apiService, which
+// signs the request and refreshes an expired token.
+const fetchText = (url) => apiService.getText(url, 'Gatus detail').catch(() => null);
+const fetchJson = (url) => {
+  apiService.clearCache(url);
+  return apiService.get(url, { headers: { Accept: 'application/json' } }, 'Gatus detail', false, true).catch(() => null);
+};
 
 const pct = (v) => (v == null || v === '' ? '—' : `${(parseFloat(v) * 100).toFixed(2)}%`);
 const ms = (v) => (v == null || v === '' ? '—' : `${Math.round(parseFloat(v))} ms`);
@@ -88,6 +96,7 @@ const DetailDialog = ({ ep, onClose, apiBase = '/api/v1/endpoints' }) => {
 
   const durations = (results.map((r) => (r.duration ? r.duration / 1e6 : null)).filter((v) => v != null));
   const minMs = durations.length ? Math.round(Math.min(...durations)) : null;
+  const latest = results[0] || null;
   const maxMs = durations.length ? Math.round(Math.max(...durations)) : null;
 
   return (
@@ -107,6 +116,30 @@ const DetailDialog = ({ ep, onClose, apiBase = '/api/v1/endpoints' }) => {
           <StatBox label="Response Range" value={minMs != null ? `${minMs}-${maxMs} ms` : '—'} />
           <StatBox label="Last Check" value={when(ep.lastCheck)} />
         </Box>
+
+        {/* The latest check: what Gatus asked and what came back */}
+        {latest && (
+          <Box sx={{ mb: 2 }} data-testid="gatus-latest-check">
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.75 }}>
+              Latest check <Typography component="span" variant="caption" color="text.secondary">· {when(latest.timestamp)}</Typography>
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+              {latest.hostname && <StatBox label="Host" value={latest.hostname} />}
+              {typeof latest.status === 'number' && latest.status > 0 && <StatBox label="HTTP" value={latest.status} color={latest.status < 400 ? UP : DOWN} />}
+              <StatBox label="Duration" value={latest.duration ? `${Math.round(latest.duration / 1e6)} ms` : '—'} />
+              {latest.ip && <StatBox label="IP" value={latest.ip} />}
+            </Box>
+            {(latest.conditionResults || []).map((c, i) => (
+              <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.25 }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: c.success ? UP : DOWN, minWidth: 14 }}>{c.success ? '✓' : '✗'}</Typography>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>{c.condition}</Typography>
+              </Box>
+            ))}
+            {(latest.errors || []).map((e, i) => (
+              <Alert key={i} severity="error" sx={{ mt: 0.5, py: 0, '& .MuiAlert-message': { fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-word' } }}>{e}</Alert>
+            ))}
+          </Box>
+        )}
 
         {/* Uptime windows */}
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.75 }}>Uptime Statistics</Typography>
@@ -227,7 +260,7 @@ const GatusHealthPanel = (props) => {
         <FavoriteIcon sx={{ fontSize: 18, color: summary.down === 0 ? UP : DOWN }} />
         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{title}</Typography>
         <Chip label={`${summary.up}/${summary.total} up`} size="small" sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600, color: summary.down === 0 ? UP : DOWN, backgroundColor: summary.down === 0 ? '#10b98114' : '#ef444414' }} />
-        <Typography variant="caption" sx={{ ml: 'auto', color: 'var(--theme-text-secondary)' }}>via Gatus · click a tile to zoom</Typography>
+        <Typography variant="caption" sx={{ ml: 'auto', color: 'var(--theme-text-secondary)' }}>via Gatus · click a tile for details</Typography>
       </Box>
 
       {/* Compact square grid — fits all endpoints without scrolling */}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import LogVolumeChart from './LogVolumeChart.jsx';
 import {
   Box,
   Paper,
@@ -20,6 +21,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  TablePagination,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -36,7 +38,9 @@ import {
 } from '@mui/icons-material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import DateLocalizationProvider from '../../i18n/DateLocalizationProvider';
-import { useSystemLogs } from './SystemLogs';
+import { useSystemLogs, chartGroupFor, chartInterval, FACETS } from './SystemLogs';
+import { formatNumber } from '../../utils/numberUtils';
+import LogFacets from './LogFacets.jsx';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
 import {
   LEVEL_CONFIG,
@@ -86,7 +90,18 @@ const displayLog = (log) => {
   };
 };
 
-const GROUP_LABELS = { source: 'Source', host: 'Server', severity: 'Level', session: 'Call', action: 'Type' };
+// Fixed column widths of the log table.
+const COL = { time: 150, host: 120, source: 110 };
+// "2026-10-14 17:24:03.150" from whatever time shape the row carries.
+const formatLogTime = (t) => {
+  if (!t) return '';
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return String(t);
+  const p = (n, w = 2) => String(n).padStart(w, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
+};
+// The chart's split, named by the server tag it counts by.
+const CHART_GROUP_LABELS = { severity: 'Level', app: 'Source', host: 'Server', action: 'Type' };
 
 // Main SystemLogs component
 const SystemLogs = ({ initialParams }) => {
@@ -96,9 +111,12 @@ const SystemLogs = ({ initialParams }) => {
     loading,
     totalCount,
     pagination,
-    setPagination,
-    hasMore,
-    loadMore,
+    setPage,
+    setPageSize,
+    volume,
+    volumeLoading,
+    facets,
+    facetsLoading,
 
     apps,
     nodes,
@@ -246,25 +264,6 @@ const SystemLogs = ({ initialParams }) => {
 
   // Syslog is a message stream. Group the visible page by fields that are
   // actually present on the API rows; missing values stay in one honest bucket.
-  const groupedLogs = useMemo(() => {
-    const valueFor = (log) => {
-      if (groupBy === 'source') return displayLog(log).source;
-      if (groupBy === 'host') return log.host || log.node || log.server;
-      if (groupBy === 'severity') return log.severity || log.level;
-      if (groupBy === 'facility') return log.facility;
-      if (groupBy === 'session') return sessionOf(log) || 'No session';
-      if (groupBy === 'action') return typeOf(log) || 'No type';
-      return 'All messages';
-    };
-    const groups = new Map();
-    logs.forEach((log) => {
-      const label = String(valueFor(log) || 'Unknown');
-      if (!groups.has(label)) groups.set(label, []);
-      groups.get(label).push(log);
-    });
-    return [...groups.entries()];
-  }, [logs, groupBy]);
-
   // Any value in Log details becomes a filter in one click: the three with a
   // dropdown set it, everything else (key=value fields) searches the message.
   const filterBy = useCallback((key, value) => {
@@ -293,35 +292,24 @@ const SystemLogs = ({ initialParams }) => {
     setSearchQuery(needle);
   }, [setSearchQuery]);
 
-  const applyGroupFilter = useCallback((value) => {
-    if (groupBy === 'session') {
-      if (value !== 'No session') filterBySession(value);
-      return;
-    }
-    if (groupBy === 'action') {
-      setSelectedAction(value === 'No type' ? '' : value);
-      return;
-    }
-    if (groupBy === 'host') {
-      setSelectedHost(value === 'Unknown' ? '' : value);
-      return;
-    }
-    if (groupBy === 'severity') {
-      const severity = String(value).toLowerCase();
-      setSelectedSeverity(severity === 'error' ? 'err' : severity === 'warn' ? 'warning' : severity);
-      return;
-    }
-    if (groupBy === 'source') {
-      const sourceNames = apps.map((app) => typeof app === 'string' ? app : app.name);
-      if (sourceNames.includes(value)) {
-        setSelectedApp(value);
-      } else {
-        const query = `${value}:`;
-        setLocalSearch(query);
-        setSearchQuery(query);
-      }
-    }
-  }, [groupBy, apps, filterBySession, setSelectedAction, setSelectedHost, setSelectedSeverity, setSelectedApp, setSearchQuery]);
+  // A facet value picked in the side panel filters by it ('' clears it).
+  const selectFacet = useCallback((param, value) => {
+    if (param === 'severity') setSelectedSeverity(value);
+    else if (param === 'app') setSelectedApp(value);
+    else if (param === 'host') setSelectedHost(value);
+    else if (param === 'action') setSelectedAction(value);
+  }, [setSelectedSeverity, setSelectedApp, setSelectedHost, setSelectedAction]);
+
+  // The aggregate lowercases tag values; filters need the exact name, so a
+  // counted value is matched back to the name the server lists it under.
+  const canonicalFacetValue = useCallback((key, value) => {
+    const lower = String(value).toLowerCase();
+    const pick = (names) => names.find((n) => String(n).toLowerCase() === lower);
+    if (key === 'app') return pick(apps.map((a) => (typeof a === 'string' ? a : a.name))) || value;
+    if (key === 'host') return pick(nodes.map((n) => (typeof n === 'string' ? n : n.name))) || value;
+    if (key === 'action') return pick(actions.map((r) => r.action)) || value;
+    return value;
+  }, [apps, nodes, actions]);
 
   const sessionFilter = searchQuery.match(SESSION_NEEDLE)?.[1];
 
@@ -530,20 +518,10 @@ const SystemLogs = ({ initialParams }) => {
 
           {/* Count */}
           <Chip
-            label={`${logs.length} / ${totalCount}`}
+            label={`${formatNumber(totalCount)} messages`}
             size="small"
             sx={{ fontFamily: 'monospace', fontSize: '11px' }}
           />
-          <FormControl size="small" sx={{ minWidth: 92 }}>
-            <Select
-              value={pagination.limit}
-              onChange={(e) => setPagination({ page: 0, limit: Number(e.target.value) })}
-              inputProps={{ 'aria-label': 'Logs per page' }}
-              sx={{ fontSize: '11px', '& .MuiSelect-select': { py: 0.5 } }}
-            >
-              {[25, 50, 100, 200].map((size) => <MenuItem key={size} value={size}>{size} per load</MenuItem>)}
-            </Select>
-          </FormControl>
         </Box>
       </Paper>
 
@@ -651,20 +629,19 @@ const SystemLogs = ({ initialParams }) => {
           <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-            Group by:
+            Split chart by:
           </Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <Select
               value={groupBy}
               onChange={(e) => setGroupBy(e.target.value)}
-              inputProps={{ 'aria-label': 'Group log timeline by' }}
+              inputProps={{ 'aria-label': 'Split the volume chart by' }}
               sx={{ fontSize: '12px' }}
             >
-              <MenuItem value="session">Call (session)</MenuItem>
-              <MenuItem value="action">Type</MenuItem>
-              <MenuItem value="source">Source</MenuItem>
-              <MenuItem value="host">Server</MenuItem>
               <MenuItem value="severity">Level</MenuItem>
+              <MenuItem value="app">Source</MenuItem>
+              <MenuItem value="host">Server</MenuItem>
+              <MenuItem value="action">Type</MenuItem>
             </Select>
           </FormControl>
 
@@ -692,61 +669,72 @@ const SystemLogs = ({ initialParams }) => {
         )}
       </Paper>
 
-      {/* Message-first stream. Sources and other structured values are useful
-          as group headers; each line itself stays focused on the log message. */}
-      <Paper
-        elevation={0}
-        data-testid="syslog-stream"
-        onScroll={(event) => {
-          const el = event.currentTarget;
-          if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) loadMore();
-        }}
-        sx={{ flex: 1, minHeight: 0, overflow: 'auto', border: '1px solid var(--mui-palette-divider)', borderRadius: 1, bgcolor: 'var(--mui-palette-background-paper)' }}>
-        {loading && logs.length === 0 ? (
-          <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary', fontSize: '0.82rem' }}>Loading messages…</Typography>
-        ) : groupedLogs.length === 0 ? (
-          <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary', fontSize: '0.82rem' }}>No log messages found</Typography>
-        ) : groupedLogs.map(([group, entries]) => (
-          <Box key={group} component="section">
-            <Box
-              role="button"
-              tabIndex={0}
-              onClick={() => applyGroupFilter(group)}
-              onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') applyGroupFilter(group); }}
-              sx={{ position: 'sticky', top: 0, zIndex: 1, px: 1, py: 0.35, display: 'flex', alignItems: 'center', gap: 0.75, bgcolor: 'var(--mui-palette-surface-muted)', borderTop: '1px solid var(--mui-palette-divider)', borderBottom: '1px solid var(--mui-palette-divider)', cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-            >
-              <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' }}>
-                {GROUP_LABELS[groupBy] || 'Messages'}
-              </Typography>
-              <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{group}</Typography>
-              <Chip label={entries.length} size="small" sx={{ ml: 'auto', height: 18, fontSize: '0.62rem' }} />
+      {/* The explorer: facets (server counts) | histogram + table + pager. */}
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', gap: 1 }}>
+        <LogFacets
+          facets={FACETS}
+          counts={facets}
+          loading={facetsLoading}
+          selected={{ severity: selectedSeverity, app: selectedApp, host: selectedHost, action: selectedAction }}
+          onSelect={selectFacet}
+          canonical={canonicalFacetValue}
+        />
+        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <LogVolumeChart
+            data={volume}
+            loading={volumeLoading}
+            groupLabel={CHART_GROUP_LABELS[chartGroupFor(groupBy)]}
+            interval={dateRange?.start && dateRange?.end ? chartInterval(dateRange.start, dateRange.end) : 'hour'}
+            onSelectRange={(start, end) => setDateRange({ start, end, period: 'custom' })}
+          />
+
+          {/* One row per line: level bar, time, server, source, message. */}
+          <Paper
+            elevation={0}
+            data-testid="syslog-stream"
+            sx={{ flex: 1, minHeight: 0, overflow: 'auto', border: '1px solid var(--mui-palette-divider)', borderRadius: 1, bgcolor: 'var(--mui-palette-background-paper)' }}>
+            <Box role="row" sx={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', gap: 1, pl: 1.5, pr: 1, py: 0.4, bgcolor: 'var(--mui-palette-surface-muted)', borderBottom: '1px solid var(--mui-palette-divider)' }}>
+              {[['Date', COL.time], ['Server', COL.host], ['Source', COL.source]].map(([label, width]) => (
+                <Typography key={label} role="columnheader" sx={{ width, flexShrink: 0, fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' }}>{label}</Typography>
+              ))}
+              <Typography role="columnheader" sx={{ flex: 1, fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' }}>Message</Typography>
             </Box>
-            {entries.map((log, index) => {
+            {loading && logs.length === 0 ? (
+              <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary', fontSize: '0.82rem' }}>Loading messages…</Typography>
+            ) : logs.length === 0 ? (
+              <Typography sx={{ p: 3, textAlign: 'center', color: 'text.secondary', fontSize: '0.82rem' }}>No log messages found</Typography>
+            ) : logs.map((log, index) => {
               const rawLevel = String(log.severity || log.level || 'info').toLowerCase();
               const level = normalizeSeverityKey(rawLevel);
               const levelStyle = LEVEL_CONFIG[level] || LEVEL_CONFIG[rawLevel] || LEVEL_CONFIG.info;
               const displayed = displayLog(log);
               const message = displayed.message;
               const time = log.time || log.timestamp || log.isodate;
+              const host = log.host || log.node || log.server || '';
               const session = sessionOf(log);
               const type = typeOf(log);
               const rawLine = `${String(time || '')} ${rawLevel.toUpperCase()} ${displayed.source} - ${String(log.message || log.msg || message)}`;
               const chipSx = { height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.6 }, flexShrink: 0 };
+              const cell = { flexShrink: 0, fontSize: '0.7rem', fontFamily: '"JetBrains Mono", monospace', color: 'text.secondary' };
               return (
                 <Box
-                  key={log.uuid || log.id || `${group}-${index}`}
+                  key={log.uuid || log.id || `${time}-${index}`}
+                  role="row"
                   onClick={() => setSelectedLog(log)}
-                  sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1, py: 0.25, minHeight: 26, borderBottom: '1px solid var(--mui-palette-divider)', cursor: 'pointer', overflow: 'hidden', '&:hover': { bgcolor: 'action.hover' } }}
+                  title={rawLine}
+                  sx={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 1, pl: 1.5, pr: 1, py: 0.25, minHeight: 26, borderBottom: '1px solid var(--mui-palette-divider)', cursor: 'pointer', overflow: 'hidden', '&:hover': { bgcolor: 'action.hover' },
+                    '&::before': { content: '""', position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, bgcolor: levelStyle.color } }}
                 >
-                  <Typography noWrap title={rawLine} sx={{ flex: 1, minWidth: 0, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', lineHeight: 1.25 }}>
-                    <Box component="span" sx={{ color: 'text.secondary' }}>{String(time || '')}</Box>
-                    {' '}
-                    <Box component="span" sx={{ color: levelStyle.color, fontWeight: 700 }}>{rawLevel.toUpperCase()}</Box>
-                    {' '}
-                    <Box component="span" sx={{ color: 'text.secondary' }}>{displayed.source}</Box>
-                    {' - '}{message}
+                  <Typography noWrap sx={{ ...cell, width: COL.time }}>{formatLogTime(time)}</Typography>
+                  <Typography noWrap sx={{ ...cell, width: COL.host }} title={host}>{host || '—'}</Typography>
+                  <Typography noWrap sx={{ ...cell, width: COL.source, color: 'text.primary' }} title={displayed.source}>{displayed.source}</Typography>
+                  <Typography noWrap sx={{ flex: 1, minWidth: 0, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', lineHeight: 1.25 }}>
+                    {!['info', 'notice', 'debug'].includes(level) && (
+                      <Box component="span" sx={{ color: levelStyle.color, fontWeight: 700, mr: 0.75 }}>{rawLevel.toUpperCase()}</Box>
+                    )}
+                    {message}
                   </Typography>
-                  {type && groupBy !== 'action' && (
+                  {type && (
                     <Chip
                       size="small"
                       label={type}
@@ -757,7 +745,7 @@ const SystemLogs = ({ initialParams }) => {
                       sx={chipSx}
                     />
                   )}
-                  {session && groupBy !== 'session' && (
+                  {session && (
                     <Tooltip title={`Show this call: session ${session}`}>
                       <Chip
                         size="small"
@@ -777,24 +765,26 @@ const SystemLogs = ({ initialParams }) => {
                 </Box>
               );
             })}
-          </Box>
-        ))}
-        {logs.length > 0 && (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, py: 1 }}>
-            {loading ? (
-              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>Loading older messages…</Typography>
-            ) : hasMore ? (
-              <Button size="small" onClick={loadMore}>Load more</Button>
-            ) : (
-              <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>End of the selected time range</Typography>
-            )}
-          </Box>
-        )}
-      </Paper>
+          </Paper>
 
-      <Typography data-testid="syslog-count" sx={{ flexShrink: 0, fontSize: '0.72rem', color: 'text.secondary', px: 0.5 }}>
-        {logs.length.toLocaleString()} of {totalCount.toLocaleString()} messages loaded
-      </Typography>
+          {/* Server-side paging: the server filters and counts, one page at a time. */}
+          <TablePagination
+            component="div"
+            data-testid="syslog-pagination"
+            count={totalCount}
+            page={totalCount === 0 ? 0 : Math.min(pagination.page, Math.max(0, Math.ceil(totalCount / pagination.limit) - 1))}
+            onPageChange={(_, page) => setPage(page)}
+            rowsPerPage={pagination.limit}
+            rowsPerPageOptions={[25, 50, 100, 200, 500]}
+            onRowsPerPageChange={(e) => setPageSize(Number(e.target.value))}
+            labelRowsPerPage="Per page"
+            showFirstButton
+            showLastButton
+            sx={{ flexShrink: 0, border: '1px solid var(--mui-palette-divider)', borderRadius: 1, bgcolor: 'var(--mui-palette-background-paper)',
+              '& .MuiTablePagination-toolbar': { minHeight: 40 } }}
+          />
+        </Box>
+      </Box>
 
       <Dialog
         open={Boolean(selectedLog)}

@@ -34,29 +34,75 @@ describe('Logs in the top-bar tool dialog', () => {
     render(<ToolDialog title="Syslog" open onClose={vi.fn()}><LogsScreen /></ToolDialog>);
 
     expect(await screen.findByRole('dialog', { name: 'Syslog' })).toBeInTheDocument();
-    expect(await screen.findByTestId('syslog-count')).toHaveTextContent('0 of 0 messages loaded');
+    expect(await screen.findByTestId('syslog-pagination')).toHaveTextContent('0–0 of 0');
   });
 });
 
-describe('Syslog scrolling', () => {
-  it('loads the next page when scrolled to the bottom and appends it', async () => {
+describe('Syslog paging', () => {
+  it('pages through the server one page at a time, replacing the list', async () => {
     syslogsApi.fetchLogs.mockImplementation((params) => Promise.resolve(
       params.page === 1 ? { data: page(0, 100), total: 150 } : { data: page(100, 50), total: 150 },
     ));
+    const user = userEvent.setup();
     render(<LogsScreen />);
-    await screen.findByText(/100 of 150 messages loaded/);
+    const pager = await screen.findByTestId('syslog-pagination');
+    await waitFor(() => expect(pager).toHaveTextContent('1–100 of 150'));
+    expect(screen.getAllByText(/line 0 call_uuid/).length).toBeGreaterThan(0);
 
-    const stream = screen.getByTestId('syslog-stream');
-    Object.defineProperties(stream, {
-      scrollHeight: { configurable: true, value: 2000 },
-      clientHeight: { configurable: true, value: 500 },
-      scrollTop: { configurable: true, value: 1400 },
+    await user.click(screen.getByRole('button', { name: /next page/i }));
+    await waitFor(() => expect(pager).toHaveTextContent('101–150 of 150'));
+    expect(syslogsApi.fetchLogs).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, per_page: 100 }));
+    // The second page REPLACES the first.
+    expect(screen.queryByText(/^line 0 call_uuid/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/line 149 call_uuid/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('Facets and the volume chart come from the server', () => {
+  it('lists each facet\'s values with the server\'s counts, and filters on a click', async () => {
+    syslogsApi.fetchAggregate.mockImplementation((params) => Promise.resolve({
+      data: params.group_by === 'severity'
+        ? [{ time: 't1', info: 40, err: 2 }, { time: 't2', info: 10 }]
+        : params.group_by === 'app'
+          ? [{ time: 't1', node: 30, api: 22 }]
+          : [],
+    }));
+    syslogsApi.fetchApps.mockImplementation(() => Promise.resolve(['Node', 'api']));
+    const user = userEvent.setup();
+    render(<LogsScreen />);
+
+    const facets = await screen.findByTestId('syslog-facets');
+    // Summed over every bucket of the whole window, largest first.
+    expect(await screen.findByRole('button', { name: 'Level info, 50' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Level err, 2' })).toBeInTheDocument();
+    // The aggregate lowercases tags; the facet shows and filters by the real name.
+    const nodeSource = await screen.findByRole('button', { name: 'Source Node, 30' });
+    expect(facets).toContainElement(nodeSource);
+
+    await user.click(nodeSource);
+    await waitFor(() => expect(syslogsApi.fetchLogs).toHaveBeenLastCalledWith(expect.objectContaining({ app: 'Node', page: 1 })));
+    // A facet's own filter is left out of its count, the others are applied.
+    await waitFor(() => {
+      const appCall = syslogsApi.fetchAggregate.mock.calls.map((c) => c[0]).filter((p) => p.group_by === 'app').pop();
+      expect(appCall.app).toBeUndefined();
+      const levelCall = syslogsApi.fetchAggregate.mock.calls.map((c) => c[0]).filter((p) => p.group_by === 'severity' && p.interval === 'day').pop();
+      expect(levelCall.app).toBe('Node');
     });
-    fireEvent.scroll(stream);
 
-    expect(await screen.findByText(/150 of 150 messages loaded/)).toBeInTheDocument();
-    expect(syslogsApi.fetchLogs).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
-    expect(screen.getByText('End of the selected time range')).toBeInTheDocument();
+    // Clicking the selected value clears it.
+    await user.click(screen.getByRole('button', { name: 'Source Node, 30' }));
+    await waitFor(() => expect(syslogsApi.fetchLogs.mock.calls.at(-1)[0].app).toBeUndefined());
+  });
+
+  it('charts the whole window from the server, split by the chosen facet', async () => {
+    syslogsApi.fetchAggregate.mockImplementation(() => Promise.resolve({ data: [{ time: '2026-09-27T10:00:00Z', info: 7, err: 1 }] }));
+    render(<LogsScreen />);
+    const chart = await screen.findByTestId('syslog-volume');
+    await waitFor(() => expect(chart).toHaveTextContent('8 in range'));
+    expect(chart).toHaveTextContent('by level');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Split the volume chart by' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Server' }));
+    await waitFor(() => expect(syslogsApi.fetchAggregate.mock.calls.some(([p]) => p.group_by === 'host' && p.interval !== 'day')).toBe(true));
   });
 });
 
