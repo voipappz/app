@@ -1,5 +1,21 @@
 import { apiService, toFormData } from '../apiService';
 
+// Older form-encoded saves turned permission arrays into comma-separated
+// strings. Read those records safely, but always write arrays from now on.
+const normalizeACL = (acl) => {
+  if (!acl?.data) return acl;
+  return {
+    ...acl,
+    data: Object.fromEntries(Object.entries(acl.data).map(([service, elements]) => [
+      service,
+      Object.fromEntries(Object.entries(elements).map(([element, permissions]) => [
+        element,
+        Array.isArray(permissions) ? permissions : String(permissions || '').split(',').map(p => p.trim()).filter(Boolean),
+      ])),
+    ])),
+  };
+};
+
 /**
  * ACLs (Access Control Lists) API Service
  * Handles all ACL management operations including CRUD and permissions
@@ -29,7 +45,7 @@ export const aclsApi = {
    */
   getACL: async (aclId) => {
     const url = `/api/acls/${aclId}`;
-    return apiService.get(url, {}, `fetching ACL ${aclId}`, false);
+    return normalizeACL(await apiService.get(url, {}, `fetching ACL ${aclId}`, false));
   },
 
   /**
@@ -58,12 +74,7 @@ export const aclsApi = {
    */
   createACL: async (aclData) => {
     const url = `/api/acls`;
-    const headers = {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    };
-
-    const formData = toFormData(aclData);
-    return apiService.post(url, formData, headers, 'creating ACL', true);
+    return apiService.post(url, normalizeACL(aclData), {}, 'creating ACL', true);
   },
 
   /**
@@ -74,12 +85,7 @@ export const aclsApi = {
    */
   updateACL: async (aclId, aclData) => {
     const url = `/api/acls/${aclId}`;
-    const headers = {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    };
-
-    const formData = toFormData(aclData);
-    return apiService.patch(url, formData, headers, `updating ACL ${aclId}`, true);
+    return apiService.patch(url, normalizeACL(aclData), {}, `updating ACL ${aclId}`, true);
   },
 
   /**
