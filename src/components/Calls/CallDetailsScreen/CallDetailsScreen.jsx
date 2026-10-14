@@ -1,16 +1,16 @@
-import { Box, Button, ButtonBase, CircularProgress, IconButton, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, IconButton, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { ArrowBack as BackIcon, Download as DownloadIcon, Phone as PhoneIcon, Timeline as EventsIcon } from '@mui/icons-material';
 import { ResponsiveDialog } from '../../ui';
 import Bdi from '../../../i18n/Bdi';
-import { isolated } from '../../Phone/isolated';
-import { formatDate, formatDayHeading, formatTime } from '../../../utils/dateUtils';
+import { formatDate } from '../../../utils/dateUtils';
 import { useDialNow } from '../../../hooks/useDialNow';
 import CallDirectionIcon from '../CallLogRow/CallDirectionIcon';
 import { callFacts, recordingUrl, shortDuration } from '../CallLogRow/callDirection';
 import { callSummary } from './callSummary';
 import { useCallDetails } from './useCallDetails';
+import CallHistory from '../CallHistory/CallHistory';
 
 // The call's own facts, in the order a person asks them. Numbers and names
 // come from the server as they are; empty ones are left out.
@@ -56,7 +56,7 @@ export default function CallDetailsScreen({ call, open, onClose, onOpenCall, can
   const { t } = useTranslation('calls');
   const theme = useTheme();
   const { canDial, dialNow } = useDialNow();
-  const { transcript, history } = useCallDetails(open ? call : null);
+  const { transcript } = useCallDetails(open ? call : null);
   if (!call) return null;
 
   const facts = callFacts(call);
@@ -135,43 +135,10 @@ export default function CallDetailsScreen({ call, open, onClose, onOpenCall, can
         </Section>
 
         <Section title={t('mobile.details.history')} testId="call-details-history">
-          {history.status === 'loading' && <CircularProgress size={20} />}
-          {history.status === 'error' && <Typography variant="body2" color="error">{t('mobile.details.historyError')}</Typography>}
-          {history.status === 'done' && history.calls.length === 0 && (
-            <Typography variant="body2" color="text.secondary">{t('mobile.details.noHistory')}</Typography>
-          )}
-          {history.calls.length > 0 && (
-            <Box component="ul" sx={{ p: 0, m: 0 }}>
-              {history.calls.map((other) => <HistoryLine key={other.uuid} call={other} onOpen={onOpenCall} />)}
-            </Box>
-          )}
+          <CallHistory callUuid={call.uuid} onOpenCall={onOpenCall} />
         </Section>
       </Box>
     </ResponsiveDialog>
   );
 }
 
-// An earlier call with the same number: direction, day and time, duration.
-function HistoryLine({ call, onOpen }) {
-  const { t } = useTranslation('calls');
-  const facts = callFacts(call);
-  const when = `${formatDayHeading(call.created_at)} ${formatTime(call.created_at)}`;
-  const label = facts.kind === 'unknown'
-    ? `${t('mobile.kind.unknown')} ${isolated(facts.number)}, ${when}`
-    : t(`mobile.row.${facts.kind}`, { number: isolated(facts.number), time: when });
-  return (
-    <Box component="li" sx={{ listStyle: 'none' }}>
-      <ButtonBase
-        onClick={() => onOpen(call)}
-        aria-label={label}
-        sx={{ width: '100%', minHeight: 44, gap: 1.5, justifyContent: 'flex-start', textAlign: 'start', borderRadius: 1 }}
-      >
-        <CallDirectionIcon kind={facts.kind} />
-        <Typography component="span" variant="body2" sx={{ flex: 1, color: facts.missed ? 'error.main' : 'text.primary' }}>{when}</Typography>
-        <Typography component="span" variant="body2" color="text.secondary" dir="ltr">
-          {facts.missed ? '–' : shortDuration(facts.seconds)}
-        </Typography>
-      </ButtonBase>
-    </Box>
-  );
-}

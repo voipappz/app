@@ -1050,6 +1050,7 @@ const Calls = () => {
             <CallLogsPanel
               call={selectedCall}
               onBack={() => setPanelMode('details')}
+              onOpenCall={(other) => { setSelectedCall(other); setPanelMode('details'); }}
               onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
             />
           )}

@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'react';
 import { callsApi } from '../../../services/api/callsApi';
-import { callFacts } from '../CallLogRow/callDirection';
 
 // status: 'loading' | 'done' | 'error'
-const LOADING = { status: 'loading', text: null, calls: [] };
+const LOADING = { status: 'loading', text: null };
 
 /**
- * What the details page loads beyond the call itself: its transcription, and
- * the other calls with the same number. Opening another call reloads both; an
- * answer for a call no longer shown is dropped.
+ * What the details page loads beyond the call itself: its transcription.
+ * Opening another call reloads it; an answer for a call no longer shown is
+ * dropped.
  */
 export function useCallDetails(call) {
   const uuid = call?.uuid;
-  const { number } = callFacts(call);
   const [transcript, setTranscript] = useState(LOADING);
-  const [history, setHistory] = useState(LOADING);
 
   useEffect(() => {
     if (!uuid) return undefined;
@@ -26,15 +23,5 @@ export function useCallDetails(call) {
     return () => { current = false; };
   }, [uuid]);
 
-  useEffect(() => {
-    if (!uuid) return undefined;
-    let current = true;
-    setHistory(LOADING);
-    callsApi.getNumberHistory(number)
-      .then((calls) => { if (current) setHistory({ status: 'done', calls: calls.filter((c) => c.uuid !== uuid) }); })
-      .catch(() => { if (current) setHistory({ status: 'error', calls: [] }); });
-    return () => { current = false; };
-  }, [uuid, number]);
-
-  return { transcript, history };
+  return { transcript };
 }

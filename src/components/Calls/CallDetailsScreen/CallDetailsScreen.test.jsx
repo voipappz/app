@@ -8,7 +8,7 @@ const dialNow = vi.fn();
 let canDial = true;
 vi.mock('../../../hooks/useDialNow', () => ({ useDialNow: () => ({ canDial, dialNow }) }));
 vi.mock('../../../services/api/callsApi', () => ({
-  callsApi: { getTranscript: vi.fn(), getNumberHistory: vi.fn() },
+  callsApi: { getTranscript: vi.fn(), getCallHistory: vi.fn() },
 }));
 
 const call = {
@@ -26,7 +26,7 @@ beforeEach(() => {
   canDial = true;
   dialNow.mockReset();
   callsApi.getTranscript.mockResolvedValue('Hello, I would like to book a table.');
-  callsApi.getNumberHistory.mockResolvedValue([call, earlier]);
+  callsApi.getCallHistory.mockResolvedValue([call, earlier]);
 });
 afterEach(() => i18n.changeLanguage('en'));
 
@@ -68,9 +68,9 @@ describe('CallDetailsScreen', () => {
     expect(await screen.findByText('No transcription for this call')).toBeInTheDocument();
   });
 
-  it('lists the other calls with this number, and opens one', async () => {
+  it("lists the call's history from the server, and opens one", async () => {
     const { onOpenCall } = renderScreen();
-    expect(callsApi.getNumberHistory).toHaveBeenCalledWith('0541234567');
+    expect(callsApi.getCallHistory).toHaveBeenCalledWith('c1');
     const line = await screen.findByRole('button', { name: /^Unanswered call to .*0541234567/ });
     expect(within(screen.getByTestId('call-details-history')).getAllByRole('button')).toHaveLength(1);
     fireEvent.click(line);
