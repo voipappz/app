@@ -22,6 +22,7 @@ import SystemLogs from './SystemLogs.jsx';
  * were splitting one stream into six views, five of which could not work.
  * Ad-hoc Influx querying still lives on Monitoring → Metric explorer.
  */
-const LogsScreen = () => <SystemLogs />;
+// Props pass through so a link can open the screen on one call (?session=).
+const LogsScreen = (props) => <SystemLogs {...props} />;
 
 export default LogsScreen;

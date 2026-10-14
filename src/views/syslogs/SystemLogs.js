@@ -11,6 +11,8 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
   // Dropdown data
   const [apps, setApps] = useState([]);
   const [nodes, setNodes] = useState([]);
+  // Message types ({ action, count }) seen in the window: the Type filter.
+  const [actions, setActions] = useState([]);
 
   // Pagination
   const [pagination, setPagination] = useState({
@@ -29,8 +31,12 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     // page's query string and silently inherit its ?search=, turning the
     // whole-stream view into a filtered one.
     const q = new URLSearchParams(initialParams != null ? initialParams : window.location.search);
+    // A call is one `session=<id>` across the node's lines and this API's, so
+    // ?session=<id> is the link a dialplan refusal or a CDR can carry.
+    const session = q.get('session') || '';
     return {
-      search: q.get('search') || q.get('inline') || '',
+      search: q.get('search') || q.get('inline') || (session ? `session=${session}` : ''),
+      action: q.get('action') || q.get('type') || '',
       app: q.get('app') || '',
       host: q.get('host') || '',
       severity: ({ error: 'err', warn: 'warning' })[q.get('severity')] || q.get('severity') || '',
@@ -42,6 +48,7 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
   const [selectedApp, setSelectedApp] = useState(initial.app);
   const [selectedHost, setSelectedHost] = useState(initial.host);
   const [selectedSeverity, setSelectedSeverity] = useState(initial.severity);
+  const [selectedAction, setSelectedAction] = useState(initial.action);
   const filterText = useMemo(() => ({
     customerUuid: customerUuid || '',
   }), [customerUuid]);
@@ -49,9 +56,10 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     app: selectedApp,
     host: selectedHost,
     severity: selectedSeverity,
+    action: selectedAction,
     customer_uuid: filterText.customerUuid,
     inline: searchQuery,
-  }).filter(([, value]) => value)), [selectedApp, selectedHost, selectedSeverity, filterText, searchQuery]);
+  }).filter(([, value]) => value)), [selectedApp, selectedHost, selectedSeverity, selectedAction, filterText, searchQuery]);
   const [groupBy, setGroupBy] = useState('source');
 
   // Date range with period tracking (Events-style shape)
@@ -81,6 +89,30 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
       setNodes([]);
     }
   }, []);
+
+  // The types offered follow the window: a type nobody logged in it is not
+  // offered, and one that stops appearing drops out.
+  // Only the newest request may land: a slow answer for the previous window or
+  // customer must not replace the current list.
+  const actionsSeq = useRef(0);
+  const loadActions = useCallback(async () => {
+    const seq = ++actionsSeq.current;
+    try {
+      const params = { customer_uuid: customerUuid || undefined };
+      if (dateRange?.start && dateRange?.end) {
+        params.from = Math.floor(dateRange.start.getTime() / 1000);
+        params.to = Math.floor(dateRange.end.getTime() / 1000);
+      }
+      const response = await syslogsApi.fetchActions(params);
+      if (seq !== actionsSeq.current) return;
+      const rows = Array.isArray(response) ? response : response?.data || [];
+      setActions(rows.filter((row) => row && row.action));
+    } catch (error) {
+      if (seq !== actionsSeq.current) return;
+      console.error('Failed to load log message types:', error);
+      setActions([]);
+    }
+  }, [customerUuid, dateRange]);
 
   // Load syslogs from the InfluxDB-backed /api/logs endpoint. Page 1 replaces
   // the list; every later page (scrolling down) is appended to it. Only the
@@ -143,7 +175,7 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
 
   useEffect(() => {
     setPagination((current) => current.page === 0 ? current : { ...current, page: 0 });
-  }, [dateRange, selectedApp, selectedHost, selectedSeverity, filterText, searchQuery, pagination.limit]);
+  }, [dateRange, selectedApp, selectedHost, selectedSeverity, selectedAction, filterText, searchQuery, pagination.limit]);
 
   // Period quick-select handler
   const handlePeriodSelect = useCallback((period) => {
@@ -168,8 +200,9 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
       (searchQuery && searchQuery.trim() !== '') ||
       selectedApp !== '' ||
       selectedHost !== '' ||
-      selectedSeverity !== '',
-    [searchQuery, selectedApp, selectedHost, selectedSeverity]
+      selectedSeverity !== '' ||
+      selectedAction !== '',
+    [searchQuery, selectedApp, selectedHost, selectedSeverity, selectedAction]
   );
 
   const clearFilters = useCallback(() => {
@@ -177,6 +210,7 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     setSelectedApp('');
     setSelectedHost('');
     setSelectedSeverity('');
+    setSelectedAction('');
   }, []);
 
   // Enable trace (for live syslog streaming)
@@ -249,6 +283,10 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     loadNodes();
   }, [loadApps, loadNodes]);
 
+  useEffect(() => {
+    loadActions();
+  }, [loadActions]);
+
   // A source only has meaning inside its customer scope. Do not retain a
   // source selected under the previous customer while the new source list is
   // loading; that produced an empty, confusing log table after a scope switch.
@@ -293,6 +331,7 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     // Dropdown data
     apps,
     nodes,
+    actions,
 
     // Filters
     searchQuery,
@@ -303,6 +342,8 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     setSelectedHost,
     selectedSeverity,
     setSelectedSeverity,
+    selectedAction,
+    setSelectedAction,
     groupBy,
     setGroupBy,
 
