@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import { useSoftphone } from '../../context/SoftphoneContext';
 import { extensionsApi } from '../../services/api/extensionsApi';
 import { apiService } from '../../services/apiService';
@@ -23,6 +24,7 @@ const messageOf = (err, fallback) => err?.response?.data?.message || err?.respon
  * device is written to localStorage.
  */
 export function usePhoneSignIn({ device } = {}) {
+  const { t } = useTranslation('phone');
   const { signInDevice } = useSoftphone();
   const [mode, setMode] = useState('device');
   const [busy, setBusy] = useState(false);
@@ -44,7 +46,7 @@ export function usePhoneSignIn({ device } = {}) {
 
   const signInAsDevice = useCallback((picked) => run(async () => {
     await signInDevice(picked.uuid, { persist: false });
-  }, 'Could not sign the phone in as this device.'), [run, signInDevice]);
+  }, t('signIn.error.deviceFailed')), [run, signInDevice, t]);
 
   // Opened for a device (a Devices row, a user's extension): sign in as it,
   // once per device.
@@ -60,9 +62,9 @@ export function usePhoneSignIn({ device } = {}) {
     let alive = true;
     extensionsApi.getExtensions({ per_page: 100 })
       .then((response) => { if (alive) setDevices(listOf(response)); })
-      .catch(() => { if (alive) setError('Could not load the account’s devices.'); });
+      .catch(() => { if (alive) setError(t('signIn.error.devicesNotLoaded')); });
     return () => { alive = false; };
-  }, [mode, device]);
+  }, [mode, device, t]);
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -83,22 +85,22 @@ export function usePhoneSignIn({ device } = {}) {
 
   const submitUserLogin = useCallback((event) => {
     event?.preventDefault();
-    if (!email || !password) { setError('Email and password are required'); return; }
+    if (!email || !password) { setError(t('signIn.error.credentialsRequired')); return; }
     run(async () => {
       const { data } = await axios.post('/auth/user_login', { email, password }, { params: { email, password } });
       if (data?.otp_sent && data?.temp_token) setTempToken(data.temp_token);
       else await finishUserLogin(data);
-    }, 'Login failed. Please try again.');
-  }, [email, password, run, finishUserLogin]);
+    }, t('signIn.error.loginFailed'));
+  }, [email, password, run, finishUserLogin, t]);
 
   const submitCode = useCallback((event) => {
     event?.preventDefault();
-    if (code.length !== 6) { setError('Please enter the 6-digit code'); return; }
+    if (code.length !== 6) { setError(t('signIn.error.codeLength')); return; }
     run(async () => {
       const { data } = await axios.post('/auth/user/otp/verify', null, { params: { temp_token: tempToken, code, email, password } });
       await finishUserLogin(data);
-    }, 'Invalid or expired code. Please try again.');
-  }, [code, tempToken, email, password, run, finishUserLogin]);
+    }, t('signIn.error.codeInvalid'));
+  }, [code, tempToken, email, password, run, finishUserLogin, t]);
 
   const changeMode = useCallback((next) => { setMode(next); setError(''); }, []);
 

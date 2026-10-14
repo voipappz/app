@@ -98,3 +98,19 @@ export const formatDayHeading = (dateInput) => {
     ...(otherYear ? { year: 'numeric' } : {}),
   });
 };
+
+/**
+ * A clock time ("14:05", or "14:05:09" with seconds) in the viewer's language.
+ * @param {string | Date} dateInput
+ * @param {boolean} [withSeconds]
+ * @returns {string} The time, or '' if the input is invalid.
+ */
+export const formatTime = (dateInput, withSeconds = false) => {
+  const date = typeof dateInput === 'number' ? new Date(dateInput) : toDate(dateInput);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString(currentLocaleTag(), {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(withSeconds ? { second: '2-digit' } : {}),
+  });
+};

@@ -58,6 +58,7 @@ Reports, Accounts, Templates, Tariffs, Settings, Events, Syslog, Monitoring,
 Providers; then the dialogs they open (e.g. the device form in
 `Bridges/ExtensionBridge`). Also left: the search and breadcrumb names, the
 top bar's tool dialogs, the shared Yes/No chip (`utils/chipStyles.js`),
-`constants/tours.js`, and the physical sides still in `Calls`, `Sidebar`,
-`CentralizedSearch` and `EnhancedDateRangePicker` (convert, then add to
-`CONVERTED`). Bootstrap 5 loaded in `index.html` should go in its own PR.
+`constants/tours.js`, `constants/tooltips.js`, and the physical sides still
+in `Calls`, `Sidebar`, `CentralizedSearch` and `EnhancedDateRangePicker`
+(convert, then add to `CONVERTED`). Bootstrap 5 loaded in `index.html` should
+go in its own PR.

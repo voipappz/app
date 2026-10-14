@@ -24,7 +24,11 @@ vi.mock('../../Bridges/NumberBridge/NumberSelector.jsx', () => ({ NumberSelector
 let mockUserSession = false;
 vi.mock('../../../hooks/useIsUserSession', () => ({ useIsUserSession: () => mockUserSession }));
 let canEditProviders = true;
-vi.mock('../../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: () => canEditProviders }) }));
+// The user's ACL write grants on destination types (unset: none).
+let writable = [];
+vi.mock('../../../hooks/usePermissions', () => ({
+  usePermissions: () => ({ can: (key, action) => (key === 'providers' ? canEditProviders : action === 'write' && writable.includes(key)) }),
+}));
 
 import DIDForm from './DIDForm.jsx';
 import { providersApi } from '../../../services/api/providersApi';
@@ -58,7 +62,7 @@ const pick = (label, option) => {
   fireEvent.click(screen.getByRole('option', { name: option }));
 };
 
-beforeEach(() => { vi.clearAllMocks(); mockUserSession = false; canEditProviders = true; });
+beforeEach(() => { vi.clearAllMocks(); mockUserSession = false; canEditProviders = true; writable = []; });
 
 describe('DIDForm', () => {
   it('puts Enabled on top, then asks for the type, in words', () => {
@@ -261,5 +265,48 @@ describe('editing a SIP provider inside a route', () => {
     canEditProviders = false;
     renderForm({ did: trunk() });
     expect(screen.queryByRole('button', { name: 'Edit SIP provider' })).not.toBeInTheDocument();
+  });
+});
+
+describe('creating a destination from the route', () => {
+  const queueRoute = () => route('dst', { bridge_type: 'queue', bridge_uuid: '' });
+  const createButton = () => screen.queryByRole('button', { name: 'Create New Queue' });
+
+  it('lets an account create one', () => {
+    renderForm({ did: queueRoute(), bridgeTypes: ['queue'], onDrillDown: vi.fn() });
+    expect(createButton()).toBeInTheDocument();
+  });
+
+  it("lets a user create one only where the user's ACL grants write", () => {
+    mockUserSession = true;
+    const { unmount } = renderForm({ did: queueRoute(), bridgeTypes: ['queue'], onDrillDown: vi.fn() });
+    expect(createButton()).toBeNull();
+    unmount();
+
+    writable = ['queue'];
+    renderForm({ did: queueRoute(), bridgeTypes: ['queue'], onDrillDown: vi.fn() });
+    expect(createButton()).toBeInTheDocument();
+  });
+});
+
+describe('editing the destination from the route', () => {
+  const queueRoute = () => route('dst', { bridge_type: 'queue', bridge_uuid: 'q-1' });
+  const props = { bridgeTypes: ['queue'], bridgeResources: { queue: [{ uuid: 'q-1', name: 'Sales' }] }, onDrillDown: vi.fn() };
+  const editButton = () => screen.queryByRole('button', { name: 'Edit Queue' });
+
+  it('lets an account edit it', () => {
+    renderForm({ did: queueRoute(), ...props });
+    expect(editButton()).toBeInTheDocument();
+  });
+
+  it("lets a user edit it only where the user's ACL grants write", () => {
+    mockUserSession = true;
+    const { unmount } = renderForm({ did: queueRoute(), ...props });
+    expect(editButton()).toBeNull();
+    unmount();
+
+    writable = ['queue'];
+    renderForm({ did: queueRoute(), ...props });
+    expect(editButton()).toBeInTheDocument();
   });
 });

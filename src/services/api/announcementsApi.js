@@ -1,4 +1,5 @@
 import { apiService, toFormData } from '../apiService.js';
+import { listFilters } from './bridgeApi.js';
 
 /**
  * Announcements API Service
@@ -336,13 +337,7 @@ export const getAllAnnouncements = async (environmentUuid, options = {}) => {
   queryParts.push(`per_page=${options.perPage || 9999}`);
   queryParts.push(`page=${options.page || 1}`);
 
-  if (environmentUuid) {
-    queryParts.push(`search[environment_uuid]=${encodeURIComponent(environmentUuid)}`);
-  }
-
-  if (options.enabled !== undefined) {
-    queryParts.push(`search[enabled]=${options.enabled}`);
-  }
+  queryParts.push(...listFilters({ environmentUuid, enabled: options.enabled }));
 
   const url = `/api/announcements?${queryParts.join('&')}`;
 

@@ -11,11 +11,13 @@
 //
 // Ported from app (i18n stripped, useSipPhoneCtx -> useSoftphone).
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
 import PhoneForwardedIcon from '@mui/icons-material/PhoneForwarded';
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import CloseIcon from '@mui/icons-material/Close';
 import { useSoftphone } from '../../context/SoftphoneContext';
+import { isolated } from './isolated.js';
 import { ACCENT, DANGER, GREEN, MUTED } from './panelTheme';
 
 const FIELD_SX = {
@@ -23,6 +25,7 @@ const FIELD_SX = {
 };
 
 export default function TransferControls({ open, onClose, callActive }) {
+  const { t } = useTranslation('phone');
   const {
     transfer, consult, transferBlind, startAttendedTransfer,
     completeAttendedTransfer, cancelAttendedTransfer
@@ -49,11 +52,11 @@ export default function TransferControls({ open, onClose, callActive }) {
   const cancel = () => run(async () => { await cancelAttendedTransfer(); closeAndReset(); });
 
   const statusLine = referring
-    ? 'Transferring…'
+    ? t('transfer.referring')
     : transfer?.phase === 'completed'
-      ? 'Call transferred'
+      ? t('transfer.completed')
       : transfer?.phase === 'failed'
-        ? `Transfer failed: ${transfer.reason || ''}`
+        ? t('transfer.failed', { reason: transfer.reason || '' })
         : null;
 
   if (!open && !consulting && !transfer) return null;
@@ -62,10 +65,10 @@ export default function TransferControls({ open, onClose, callActive }) {
     <Box sx={{ mt: 1, p: 1.25, borderRadius: 2, bgcolor: 'rgba(0,0,0,0.18)', textAlign: 'start' }} data-testid="phone-transfer-panel">
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
         <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: MUTED }}>
-          {consulting ? `Consulting ${consult.remote}` : 'Transfer to'}
+          {consulting ? t('transfer.consulting', { remote: isolated(consult.remote) }) : t('transfer.to')}
         </Typography>
         {!consulting && !referring && (
-          <IconButton size="small" sx={{ color: MUTED }} onClick={closeAndReset} aria-label="Close">
+          <IconButton size="small" sx={{ color: MUTED }} onClick={closeAndReset} aria-label={t('action.close')}>
             <CloseIcon fontSize="small" />
           </IconButton>
         )}
@@ -74,7 +77,7 @@ export default function TransferControls({ open, onClose, callActive }) {
       {consulting ? (
         <>
           <Typography sx={{ fontSize: '0.72rem', color: MUTED, mb: 1 }}>
-            {consult.state === 'active' ? 'Connected — announce the call' : 'Ringing…'}
+            {consult.state === 'active' ? t('transfer.connectedAnnounce') : t('transfer.ringing')}
           </Typography>
           <Stack direction="row" spacing={1}>
             <Button
@@ -84,14 +87,14 @@ export default function TransferControls({ open, onClose, callActive }) {
               onClick={complete}
               sx={{ bgcolor: GREEN, borderRadius: 1.5, '&:hover': { bgcolor: '#28b14c' } }}
             >
-              Complete transfer
+              {t('transfer.complete')}
             </Button>
             <Button
               data-testid="phone-transfer-cancel"
               fullWidth size="small" variant="outlined" disabled={busy} onClick={cancel}
               sx={{ borderRadius: 1.5, color: '#e5e7eb', borderColor: 'rgba(255,255,255,0.3)' }}
             >
-              Cancel
+              {t('transfer.cancel')}
             </Button>
           </Stack>
         </>
@@ -102,7 +105,7 @@ export default function TransferControls({ open, onClose, callActive }) {
             fullWidth size="small" value={target} disabled={busy || referring}
             onChange={(e) => setTarget(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && canStart) blind(); }}
-            placeholder="Extension or number"
+            placeholder={t('transfer.target')}
             inputProps={{ style: { direction: 'ltr', color: 'var(--mui-palette-text-primary)' } }}
             sx={FIELD_SX}
           />
@@ -113,7 +116,7 @@ export default function TransferControls({ open, onClose, callActive }) {
               disabled={!canStart || referring} onClick={blind}
               sx={{ bgcolor: GREEN, borderRadius: 1.5, '&:hover': { bgcolor: '#28b14c' } }}
             >
-              Transfer now
+              {t('transfer.now')}
             </Button>
             <Button
               data-testid="phone-transfer-attended"
@@ -121,7 +124,7 @@ export default function TransferControls({ open, onClose, callActive }) {
               disabled={!canStart || referring} onClick={consultFirst}
               sx={{ borderRadius: 1.5, color: '#e5e7eb', borderColor: 'rgba(255,255,255,0.3)' }}
             >
-              Consult
+              {t('transfer.consult')}
             </Button>
           </Stack>
         </>

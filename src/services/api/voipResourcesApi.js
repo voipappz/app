@@ -1,5 +1,5 @@
 import { apiService } from '../apiService';
-import { bridgeApi } from './bridgeApi.js';
+import { bridgeApi, listFilters } from './bridgeApi.js';
 
 /**
  * VoIP Resources API Service
@@ -33,11 +33,7 @@ export const getBridgeResourceList = async (type, params = {}) => {
 
     // Handle search parameters - brackets must NOT be encoded
     const enabled = params.enabled !== undefined ? params.enabled : true;
-    queryParts.push(`search[enabled]=${enabled}`);
-
-    if (params.environment_uuid) {
-      queryParts.push(`search[environment_uuid]=${encodeURIComponent(params.environment_uuid)}`);
-    }
+    queryParts.push(...listFilters({ environmentUuid: params.environment_uuid, enabled }));
 
     // Use direct endpoint: /api/announcements, /api/devices, etc.
     const url = `/api/${type}?${queryParts.join('&')}`;

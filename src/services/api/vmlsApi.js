@@ -1,4 +1,5 @@
 import { apiService, toFormData } from '../apiService.js';
+import { listFilters } from './bridgeApi.js';
 
 /**
  * VMls API Service
@@ -149,13 +150,7 @@ export const getAllVMLs = async (options = {}) => {
   queryParts.push(`per_page=${options.perPage || 9999}`);
   queryParts.push(`page=${options.page || 1}`);
 
-  if (options.environment_uuid) {
-    queryParts.push(`search[environment_uuid]=${encodeURIComponent(options.environment_uuid)}`);
-  }
-
-  if (options.enabled !== undefined && options.enabled !== '') {
-    queryParts.push(`search[enabled]=${options.enabled}`);
-  }
+  queryParts.push(...listFilters({ environmentUuid: options.environment_uuid, enabled: options.enabled }));
 
   if (options.name) {
     queryParts.push(`search[name]=${encodeURIComponent(options.name)}`);

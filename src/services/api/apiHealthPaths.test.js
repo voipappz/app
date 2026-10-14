@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: true }) }));
 
@@ -12,7 +12,9 @@ import { checkHealth } from '../../hooks/useApiHealth';
 const answer = (status, body) => ({ status, ok: status < 400, text: async () => body });
 
 describe('the API health paths', () => {
-  afterEach(() => { vi.unstubAllGlobals(); });
+  // The paths are what is checked, not a developer's .env base URL.
+  beforeEach(() => { vi.stubEnv('VITE_API_BASE_URL', ''); });
+  afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
   it('detailed health is /api/health/detailed', async () => {
     const fetch = vi.fn().mockResolvedValue(answer(200, '{"overall":{"status":"healthy","healthy":true},"checks":{}}'));

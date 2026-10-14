@@ -5,6 +5,7 @@
 // server it registers on and when the token renews; Connect asks for a fresh
 // token and registers again.
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Button, FormControlLabel, Switch, Typography, Stack } from '@mui/material';
 import { useSoftphone } from '../../context/SoftphoneContext';
 import { formatDate } from '../../utils/dateUtils';
@@ -21,6 +22,7 @@ const Row = ({ label, value }) => (
 );
 
 export default function SipSettingsForm() {
+  const { t } = useTranslation('phone');
   const { settings, updateSettings, connect, disconnect, status, connected, lastError } = useSoftphone();
   const [busy, setBusy] = useState(false);
 
@@ -37,13 +39,13 @@ export default function SipSettingsForm() {
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
         <Box sx={{ width: 9, height: 9, borderRadius: '50%', bgcolor: STATUS_COLOR[status] || '#9ca3af' }} />
         <Typography variant="body2" sx={{ color: '#475569' }}>
-          {connected ? 'Ready' : status === 'connecting' ? 'Connecting…' : status === 'failed' ? 'Connection failed' : 'Offline'}
+          {connected ? t('sip.ready') : status === 'connecting' ? t('sip.connecting') : status === 'failed' ? t('sip.failed') : t('sip.offline')}
         </Typography>
       </Stack>
 
-      <Row label="Device" value={settings.displayName && device ? `${settings.displayName} (${device})` : device} />
-      <Row label="WebSocket server" value={settings.wssUrl} />
-      <Row label="Sign-in renews at" value={renews} />
+      <Row label={t('sip.device')} value={settings.displayName && device ? `${settings.displayName} (${device})` : device} />
+      <Row label={t('sip.wssUrl')} value={settings.wssUrl} />
+      <Row label={t('sip.renewsAt')} value={renews} />
       {lastError && (
         <Typography variant="caption" color="error" sx={{ display: 'block', mb: 1 }} data-testid="phone-signin-error">
           {lastError}
@@ -52,17 +54,17 @@ export default function SipSettingsForm() {
 
       <FormControlLabel
         control={<Switch size="small" checked={!!settings.autoConnect} onChange={(e) => updateSettings({ ...settings, autoConnect: e.target.checked })} />}
-        label={<Typography variant="body2">Connect automatically</Typography>}
+        label={<Typography variant="body2">{t('sip.autoConnect')}</Typography>}
         sx={{ mt: 0.5 }}
       />
 
       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
         <Button fullWidth variant="contained" size="small" disabled={busy || !settings.deviceUuid} onClick={onConnect}>
-          {connected ? 'Reconnect' : 'Connect'}
+          {connected ? t('sip.reconnect') : t('sip.connect')}
         </Button>
         {connected && (
           <Button fullWidth variant="outlined" size="small" color="inherit" onClick={() => disconnect()}>
-            Disconnect
+            {t('sip.disconnect')}
           </Button>
         )}
       </Stack>

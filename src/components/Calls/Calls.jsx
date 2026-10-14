@@ -26,6 +26,8 @@ import CustomFooter from './CustomFooter/CustomFooter.jsx';
 import ColumnSelector from './ColumnSelector/ColumnSelector.jsx';
 import FilterEditDialog from './FilterEditDialog/FilterEditDialog.jsx';
 import CallActions from './CallActions/CallActions.jsx';
+import CallLogFilter from './CallLogFilter/CallLogFilter';
+import { activeCallFilter, withCallFilter } from './CallLogRow/callDirection';
 import CallMobileView from './CallMobileView/CallMobileView.jsx';
 import CallDetailPanel from './CallDetailPanel/CallDetailPanel.jsx';
 import CallConversationPanel from './CallDetailPanel/CallConversationPanel.jsx';
@@ -260,7 +262,10 @@ const Calls = () => {
   const handleQuickSearch = (e) => {
     if (e.key === 'Enter') {
       if (quickSearchText.trim()) {
-        const searchParams = { 'search[inline]': quickSearchText.trim() };
+        // On a phone the call filter stays on while searching.
+        const searchParams = isMobile
+          ? withCallFilter({ 'search[inline]': quickSearchText.trim() }, activeCallFilter(currentSearchParams))
+          : { 'search[inline]': quickSearchText.trim() };
         handleSearch(searchParams, false);
       } else {
         // Clear search when text is empty
@@ -648,6 +653,10 @@ const Calls = () => {
           gap: 1,
           mb: 0.5,
         }}>
+          <CallLogFilter
+            value={activeCallFilter(currentSearchParams)}
+            onChange={(choice) => handleSearch(withCallFilter(currentSearchParams, choice), false)}
+          />
           <TextField
             placeholder={t('search.quick')}
             value={quickSearchText}
@@ -894,11 +903,11 @@ const Calls = () => {
         (
           <CallMobileView
             rows={displayRows}
-            onOpenRecording={handleOpenRecording}
-            onRowClick={(call) => setSelectedCall(call)}
             hasNextPage={hasNextPage}
             loadingMore={loadingMore}
             onLoadMore={() => loadMoreCalls(dateRange)}
+            canViewEvents={canViewEvents}
+            onViewEvents={(call) => goToEvents('call', call.uuid || call.id)}
           />
         )
       ) : (
@@ -1041,6 +1050,7 @@ const Calls = () => {
             <CallLogsPanel
               call={selectedCall}
               onBack={() => setPanelMode('details')}
+              onOpenCall={(other) => { setSelectedCall(other); setPanelMode('details'); }}
               onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
             />
           )}

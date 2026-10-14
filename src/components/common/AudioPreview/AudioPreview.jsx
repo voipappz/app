@@ -28,8 +28,9 @@ const audioAddress = async (uuid) => {
  *
  * @param {string} src - The audio address, when the caller already has it.
  * @param {string} uuid - The announcement, to look the address up when `src` is missing.
+ * @param {string} playLabel - What the play button says, when it is not an announcement.
  */
-export default function AudioPreview({ src, uuid }) {
+export default function AudioPreview({ src, uuid, playLabel }) {
   const { t } = useTranslation('bridges');
   const audioRef = useRef(null);
   const [address, setAddress] = useState(src || null);
@@ -88,7 +89,7 @@ export default function AudioPreview({ src, uuid }) {
     <Box data-testid="audio-preview" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }} onClick={(event) => event.stopPropagation()}>
       <IconButton
         onClick={toggle}
-        aria-label={status === 'playing' ? t('audio.pause') : t('audio.play')}
+        aria-label={status === 'playing' ? t('audio.pause') : (playLabel || t('audio.play'))}
         color="primary"
         sx={{ width: 44, height: 44, flexShrink: 0, bgcolor: 'action.hover' }}
       >

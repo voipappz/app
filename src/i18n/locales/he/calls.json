@@ -48,7 +48,64 @@
     "status": "סטטוס:",
     "unknown": "לא ידוע",
     "today": "היום",
-    "yesterday": "אתמול"
+    "yesterday": "אתמול",
+    "filter": {
+      "incoming": "נכנסות",
+      "missed": "שלא נענו",
+      "all": "כל השיחות",
+      "label": "הצג",
+      "outgoing": "יוצאות"
+    },
+    "kind": {
+      "incoming": "נכנסת",
+      "missedOutgoing": "לא נענתה",
+      "unknown": "שיחה",
+      "outgoing": "יוצאת",
+      "missedIncoming": "לא נענתה"
+    },
+    "row": {
+      "incoming": "שיחה נכנסת מ־{{number}}, {{time}}",
+      "missedOutgoing": "שיחה יוצאת שלא נענתה אל {{number}}, {{time}}",
+      "outgoing": "שיחה יוצאת אל {{number}}, {{time}}",
+      "missedIncoming": "שיחה שלא נענתה מ־{{number}}, {{time}}"
+    },
+    "actions": {
+      "copy": "העתק מספר",
+      "details": "פרטים",
+      "copied": "הועתק",
+      "call": "התקשר",
+      "play": "נגן הקלטה"
+    },
+    "details": {
+      "device": "מכשיר",
+      "notAnswered": "לא נענתה",
+      "queue": "תור",
+      "close": "חזרה",
+      "status": "סטטוס",
+      "duration": "משך",
+      "transcript": "תמלול",
+      "recording": "הקלטה",
+      "noTranscript": "אין תמלול לשיחה זו",
+      "to": "אל",
+      "contact": "איש קשר",
+      "date": "תאריך",
+      "answered": "נענתה",
+      "hangup": "ניתוק",
+      "info": "פרטים",
+      "provider": "ספק",
+      "from": "מ־",
+      "agent": "נציג",
+      "download": "הורדה",
+      "title": "פרטי שיחה",
+      "events": "אירועים",
+      "route": "ניתוב",
+      "summary": "סיכום",
+      "country": "מדינה",
+      "historyError": "לא ניתן לטעון את ההיסטוריה",
+      "history": "היסטוריה עם מספר זה",
+      "transcriptError": "לא ניתן לטעון את התמלול",
+      "noHistory": "אין שיחות נוספות עם מספר זה"
+    }
   },
   "stats": {
     "total": "סה״כ",

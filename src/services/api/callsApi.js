@@ -111,6 +111,37 @@ export const callsApi = {
   },
 
   /**
+   * A call's transcription, when one was made.
+   * @param {string} callId - The call UUID
+   * @returns {Promise<string|null>} - The text, or null when the call has none (404)
+   */
+  getTranscript: async (callId) => {
+    try {
+      const response = await apiService.get(`/api/calls/${callId}/transcript`, {}, `fetching transcript for call ${callId}`, false);
+      return response?.transcript || null;
+    } catch (error) {
+      if (error?.status === 404) return null;
+      throw error;
+    }
+  },
+
+  /**
+   * The other calls with this call's number, as the server picks them. It also
+   * decides what an unknown or hidden number means, so the app sends only the call.
+   * @param {string} callId - The call UUID
+   * @returns {Promise<Array>} - Calls, in the server's order; none when it has no history (404)
+   */
+  getCallHistory: async (callId) => {
+    try {
+      const response = await apiService.get(`/api/calls/${callId}?action=history`, {}, `fetching history for call ${callId}`, false);
+      return Array.isArray(response) ? response : response?.data || [];
+    } catch (error) {
+      if (error?.status === 404) return [];
+      throw error;
+    }
+  },
+
+  /**
    * Get spanning tree data for call
    * @param {string} callId - The call ID/UUID
    * @returns {Promise<Array>} - Spanning tree data
