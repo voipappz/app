@@ -55,19 +55,38 @@ const parseLogFields = (message = '') => {
   return fields;
 };
 
+// One call (or one node request) is one `session=<id>` across the node's
+// lines and this API's; the message TYPE is the `action` tag — an action
+// (did.updated, node.license_invalid) or a node line's request kind (sip_auth,
+// dialplan, sofia.conf). Both ride in the message as key=value extras and the
+// API also parses them into `fields`.
+const fieldsOf = (log) => log.fields || parseLogFields(log.message || log.msg);
+const sessionOf = (log) => String(log.session || fieldsOf(log).session || '');
+const typeOf = (log) => String(log.action || fieldsOf(log).action || fieldsOf(log).kind || '');
+const shortId = (id) => (id.length > 14 ? `${id.slice(0, 8)}…` : id);
+const SESSION_NEEDLE = /^session=(\S+)$/;
+
 // Crystal's NATS relay preserves the logger/component by prefixing the stored
 // message (`http.client: Performing request`). Split that transport shape for
-// display without changing the raw value shown in Log details.
+// display without changing the raw value shown in Log details. The session and
+// type extras are shown as chips on the line, so they leave the text too.
 const displayLog = (log) => {
   const rawMessage = String(log.message || log.msg || '');
   const relayedNodeLine = (log.app === 'node' || log.app === 'crystal')
     ? rawMessage.match(/^([\w./-]+):\s+([\s\S]+)$/)
     : null;
+  // Pliny appends its extras AFTER the message text, so only a trailing run of
+  // these tokens is metadata; the same words inside a sentence stay.
+  const message = (relayedNodeLine?.[2] || rawMessage)
+    .replace(/(?:\s+(?:session|kind|action)=\S*)+\s*$/, '')
+    .trim();
   return {
     source: log.source || relayedNodeLine?.[1] || log.app || log.type || 'Unknown',
-    message: relayedNodeLine?.[2] || rawMessage,
+    message,
   };
 };
+
+const GROUP_LABELS = { source: 'Source', host: 'Server', severity: 'Level', session: 'Call', action: 'Type' };
 
 // Main SystemLogs component
 const SystemLogs = ({ initialParams }) => {
@@ -83,6 +102,7 @@ const SystemLogs = ({ initialParams }) => {
 
     apps,
     nodes,
+    actions,
 
     searchQuery,
     setSearchQuery,
@@ -92,6 +112,8 @@ const SystemLogs = ({ initialParams }) => {
     setSelectedHost,
     selectedSeverity,
     setSelectedSeverity,
+    selectedAction,
+    setSelectedAction,
     groupBy,
     setGroupBy,
 
@@ -230,6 +252,8 @@ const SystemLogs = ({ initialParams }) => {
       if (groupBy === 'host') return log.host || log.node || log.server;
       if (groupBy === 'severity') return log.severity || log.level;
       if (groupBy === 'facility') return log.facility;
+      if (groupBy === 'session') return sessionOf(log) || 'No session';
+      if (groupBy === 'action') return typeOf(log) || 'No type';
       return 'All messages';
     };
     const groups = new Map();
@@ -247,6 +271,7 @@ const SystemLogs = ({ initialParams }) => {
     const text = String(value);
     if (key === 'server') setSelectedHost(text);
     else if (key === 'source') setSelectedApp(text);
+    else if (key === 'type' || key === 'action') setSelectedAction(text);
     else if (key === 'level') {
       const severity = text.toLowerCase();
       setSelectedSeverity(severity === 'error' ? 'err' : severity === 'warn' ? 'warning' : severity);
@@ -256,9 +281,27 @@ const SystemLogs = ({ initialParams }) => {
       setSearchQuery(needle);
     }
     setSelectedLog(null);
-  }, [setSelectedHost, setSelectedApp, setSelectedSeverity, setSearchQuery]);
+  }, [setSelectedHost, setSelectedApp, setSelectedAction, setSelectedSeverity, setSearchQuery]);
+
+  // One click on a line's session chip shows that whole call; on its type chip,
+  // every line of that type.
+  const filterBySession = useCallback((id) => {
+    const needle = `session=${id}`;
+    // A search still being typed must not land after the chip and undo it.
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    setLocalSearch(needle);
+    setSearchQuery(needle);
+  }, [setSearchQuery]);
 
   const applyGroupFilter = useCallback((value) => {
+    if (groupBy === 'session') {
+      if (value !== 'No session') filterBySession(value);
+      return;
+    }
+    if (groupBy === 'action') {
+      setSelectedAction(value === 'No type' ? '' : value);
+      return;
+    }
     if (groupBy === 'host') {
       setSelectedHost(value === 'Unknown' ? '' : value);
       return;
@@ -278,7 +321,9 @@ const SystemLogs = ({ initialParams }) => {
         setSearchQuery(query);
       }
     }
-  }, [groupBy, apps, setSelectedHost, setSelectedSeverity, setSelectedApp, setSearchQuery]);
+  }, [groupBy, apps, filterBySession, setSelectedAction, setSelectedHost, setSelectedSeverity, setSelectedApp, setSearchQuery]);
+
+  const sessionFilter = searchQuery.match(SESSION_NEEDLE)?.[1];
 
   if (!selectedCustomer) {
     return (
@@ -372,7 +417,7 @@ const SystemLogs = ({ initialParams }) => {
           <TextField
             size="small"
             label="Search"
-            placeholder="Email, ID, IP, or message"
+            placeholder="Message, session id, call uuid"
             value={localSearch}
             onChange={handleSearchChange}
             InputProps={{
@@ -578,6 +623,31 @@ const SystemLogs = ({ initialParams }) => {
             </Select>
           </FormControl>
 
+          {/* Message type: the action tag — a node request kind (sip_auth,
+              dialplan, sofia.conf) or an action (node.license_invalid). The
+              list is what the window actually holds; a type that is filtered
+              on but no longer in the window stays selectable. */}
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <Select
+              value={selectedAction || ''}
+              onChange={(e) => setSelectedAction(e.target.value)}
+              displayEmpty
+              inputProps={{ 'aria-label': 'Filter logs by type' }}
+              sx={{ fontSize: '12px' }}
+            >
+              <MenuItem value=""><em>All types</em></MenuItem>
+              {selectedAction && !actions.some((row) => row.action === selectedAction) && (
+                <MenuItem value={selectedAction}>{selectedAction}</MenuItem>
+              )}
+              {actions.map((row) => (
+                <MenuItem key={row.action} value={row.action}>
+                  {row.action}
+                  <Typography component="span" sx={{ ml: 'auto', pl: 1, fontSize: '0.68rem', color: 'text.secondary' }}>{row.count}</Typography>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
@@ -590,6 +660,8 @@ const SystemLogs = ({ initialParams }) => {
               inputProps={{ 'aria-label': 'Group log timeline by' }}
               sx={{ fontSize: '12px' }}
             >
+              <MenuItem value="session">Call (session)</MenuItem>
+              <MenuItem value="action">Type</MenuItem>
               <MenuItem value="source">Source</MenuItem>
               <MenuItem value="host">Server</MenuItem>
               <MenuItem value="severity">Level</MenuItem>
@@ -614,7 +686,8 @@ const SystemLogs = ({ initialParams }) => {
             {selectedApp && <Chip size="small" label={`Source: ${selectedApp}`} onDelete={() => setSelectedApp('')} sx={{ height: 22, fontSize: '0.68rem' }} />}
             {selectedHost && <Chip size="small" label={`Server: ${selectedHost}`} onDelete={() => setSelectedHost('')} sx={{ height: 22, fontSize: '0.68rem' }} />}
             {selectedSeverity && <Chip size="small" label={`Level: ${selectedSeverity}`} onDelete={() => setSelectedSeverity('')} sx={{ height: 22, fontSize: '0.68rem' }} />}
-            {searchQuery && <Chip size="small" label={`Message: ${searchQuery}`} onDelete={handleClearSearch} sx={{ height: 22, fontSize: '0.68rem' }} />}
+            {selectedAction && <Chip size="small" label={`Type: ${selectedAction}`} onDelete={() => setSelectedAction('')} sx={{ height: 22, fontSize: '0.68rem' }} />}
+            {searchQuery && <Chip size="small" label={sessionFilter ? `Call: ${sessionFilter}` : `Message: ${searchQuery}`} onDelete={handleClearSearch} sx={{ height: 22, fontSize: '0.68rem' }} />}
           </Box>
         )}
       </Paper>
@@ -643,7 +716,7 @@ const SystemLogs = ({ initialParams }) => {
               sx={{ position: 'sticky', top: 0, zIndex: 1, px: 1, py: 0.35, display: 'flex', alignItems: 'center', gap: 0.75, bgcolor: 'var(--mui-palette-surface-muted)', borderTop: '1px solid var(--mui-palette-divider)', borderBottom: '1px solid var(--mui-palette-divider)', cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
             >
               <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' }}>
-                {groupBy === 'source' ? 'Source' : groupBy === 'host' ? 'Server' : groupBy === 'severity' ? 'Level' : 'Messages'}
+                {GROUP_LABELS[groupBy] || 'Messages'}
               </Typography>
               <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{group}</Typography>
               <Chip label={entries.length} size="small" sx={{ ml: 'auto', height: 18, fontSize: '0.62rem' }} />
@@ -655,7 +728,10 @@ const SystemLogs = ({ initialParams }) => {
               const displayed = displayLog(log);
               const message = displayed.message;
               const time = log.time || log.timestamp || log.isodate;
-              const rawLine = `${String(time || '')} ${rawLevel.toUpperCase()} ${displayed.source} - ${message}`;
+              const session = sessionOf(log);
+              const type = typeOf(log);
+              const rawLine = `${String(time || '')} ${rawLevel.toUpperCase()} ${displayed.source} - ${String(log.message || log.msg || message)}`;
+              const chipSx = { height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.6 }, flexShrink: 0 };
               return (
                 <Box
                   key={log.uuid || log.id || `${group}-${index}`}
@@ -670,6 +746,29 @@ const SystemLogs = ({ initialParams }) => {
                     <Box component="span" sx={{ color: 'text.secondary' }}>{displayed.source}</Box>
                     {' - '}{message}
                   </Typography>
+                  {type && groupBy !== 'action' && (
+                    <Chip
+                      size="small"
+                      label={type}
+                      aria-label={`Filter by type ${type}`}
+                      onClick={(event) => { event.stopPropagation(); setSelectedAction(type); }}
+                      color={selectedAction === type ? 'primary' : 'default'}
+                      variant="outlined"
+                      sx={chipSx}
+                    />
+                  )}
+                  {session && groupBy !== 'session' && (
+                    <Tooltip title={`Show this call: session ${session}`}>
+                      <Chip
+                        size="small"
+                        label={shortId(session)}
+                        aria-label={`Filter by session ${session}`}
+                        onClick={(event) => { event.stopPropagation(); filterBySession(session); }}
+                        color={sessionFilter === session ? 'primary' : 'default'}
+                        sx={{ ...chipSx, fontFamily: 'monospace' }}
+                      />
+                    </Tooltip>
+                  )}
                   <Tooltip title="Copy raw line">
                     <IconButton size="small" onClick={(event) => { event.stopPropagation(); navigator.clipboard.writeText(rawLine); }} sx={{ p: 0.2, flexShrink: 0 }}>
                       <ContentCopyIcon sx={{ fontSize: 14 }} />
@@ -720,6 +819,7 @@ const SystemLogs = ({ initialParams }) => {
               level: selectedLog?.severity || selectedLog?.level,
               server: selectedLog?.host,
               source: selectedLog?.app,
+              type: selectedLog ? typeOf(selectedLog) : undefined,
               ...selectedFields,
             }).filter(([, value]) => value !== undefined && value !== '').map(([key, value]) => (
               <React.Fragment key={key}>
