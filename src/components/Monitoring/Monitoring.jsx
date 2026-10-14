@@ -2,9 +2,11 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Box, Typography, Chip, IconButton, Tooltip, Switch, FormControlLabel,
-  Paper, Select, MenuItem, FormControl, Dialog, DialogTitle, DialogContent, DialogActions, Button,
-  Accordion, AccordionSummary, AccordionDetails,
+  Paper, Select, MenuItem, FormControl,
+  Accordion, AccordionSummary, AccordionDetails, Tab,
 } from '@mui/material';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import SectionTabs from '../shared/SectionTabs.jsx';
 import { DataGrid } from '@mui/x-data-grid';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DnsIcon from '@mui/icons-material/Dns';
@@ -21,9 +23,6 @@ import YabedaMetricViewer from './YabedaMetricViewer.jsx';
 import GatusHealthPanel from './GatusHealthPanel.jsx';
 import MonitoringNodes from './MonitoringNodes.jsx';
 import useGatusHealth from '../../hooks/useGatusHealth';
-import useApiHealth from '../../hooks/useApiHealth';
-import ApiHealthPanel from './ApiHealthPanel.jsx';
-import HealthList from './HealthList.jsx';
 import IntegrationCard from './IntegrationCard.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
 
@@ -128,16 +127,12 @@ const Monitoring = () => {
     currentValue, chartRows, thresholds, alertConfig,
     fetchData,
   } = useMonitoring();
-  const apiHealth = useApiHealth();
 
   const { canAccess } = usePermissions();
   const canReadLogs = canAccess('logs');
   // 'status' (health, metrics, log volume) or 'logs' (the log lines themselves).
   const [view, setView] = useState('status');
   const showLogs = view === 'logs' && canReadLogs;
-
-  // The service whose verbose health is open (null: closed).
-  const [healthFocus, setHealthFocus] = useState(null);
 
   // The MOTHERSHIP's Gatus: what this box watches (data layer, API, gateway,
   // SBC, and the voip node's own /health/node). Its summary feeds the Health
@@ -161,17 +156,15 @@ const Monitoring = () => {
         {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="h5" sx={{ fontWeight: 600, color: 'var(--theme-text-primary)' }}>{showLogs ? 'Logs' : 'Status'}</Typography>
-            {canReadLogs && (
-              <Box sx={{ display: 'flex', gap: 0.5 }} role="tablist" aria-label="Monitoring view">
-                {[['status', 'Status'], ['logs', 'Logs']].map(([key, label]) => (
-                  <Chip key={key} label={label} size="small" role="tab" aria-selected={view === key}
-                    variant={view === key ? 'filled' : 'outlined'}
-                    color={view === key ? 'primary' : 'default'}
-                    onClick={() => setView(key)}
-                    sx={{ fontSize: '0.75rem', cursor: 'pointer' }} />
-                ))}
-              </Box>
+            {canReadLogs ? (
+              <Paper sx={{ flexShrink: 0, backgroundColor: 'var(--mui-palette-background-paper)', border: '1px solid var(--mui-palette-divider)', borderRadius: 2 }}>
+                <SectionTabs value={view} onChange={(_, v) => setView(v)} aria-label="Monitoring view" sx={{ borderBottom: 'none' }}>
+                  <Tab value="status" label="Status" icon={<MonitorHeartIcon />} iconPosition="start" />
+                  <Tab value="logs" label="Logs" icon={<ArticleIcon />} iconPosition="start" />
+                </SectionTabs>
+              </Paper>
+            ) : (
+              <Typography variant="h5" sx={{ fontWeight: 600, color: 'var(--theme-text-primary)' }}>Status</Typography>
             )}
             {!showLogs && <HostSelector hosts={hosts} value={selectedHost} onChange={setSelectedHost} />}
           </Box>
@@ -205,26 +198,21 @@ const Monitoring = () => {
           </Suspense>
         ) : (
         <>
-            <Paper elevation={0} sx={{
-              px: 2, py: 1, border: '1px solid var(--theme-border)',
-              borderRadius: '8px', backgroundColor: 'var(--theme-bg-primary)',
-            }}>
-              <HealthList health={apiHealth} gatusSummary={fleetHealth.summary} onOpen={setHealthFocus} />
-              {/* The mothership's Gatus, in the tile design (history bars,
-                  uptime, click a tile to zoom), under the API's own checks. It
-                  used to sit under every node on the Nodes screen, where it was
-                  this same board under the node's name; a node's own checks are
-                  on Nodes now, asked over NATS. */}
-              <Box sx={{ mt: 1, mb: 1 }} data-testid="health-gatus">
+            <Box>
+              {/* Health is Gatus, and only Gatus: it probes the API's own
+                  /health along with the data layer, gateway, SBC and the voip
+                  node, so a second list of the API's checks here repeated it.
+                  Click a tile for its checks, conditions and errors. */}
+              <Box data-testid="health-gatus">
                 <GatusHealthPanel
                   endpoints={fleetHealth.endpoints}
                   summary={fleetHealth.summary}
                   loading={fleetHealth.loading}
                   error={fleetHealth.error || fleetHealth.response?.error}
-                  title="Mothership · Gatus"
+                  title="Health · Gatus"
                 />
               </Box>
-            </Paper>
+            </Box>
 
             {/* Host metrics — Influxer models, thresholds from config/alerts.yaml */}
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -357,11 +345,6 @@ const Monitoring = () => {
         )}
       </Box>
 
-      <Dialog open={Boolean(healthFocus)} onClose={() => setHealthFocus(null)} maxWidth="md" fullWidth>
-        <DialogTitle>Health — verbose</DialogTitle>
-        <DialogContent><ApiHealthPanel focus={healthFocus} summary={apiHealth.response} /></DialogContent>
-        <DialogActions><Button onClick={() => setHealthFocus(null)}>Close</Button></DialogActions>
-      </Dialog>
     </Box>
   );
 };
