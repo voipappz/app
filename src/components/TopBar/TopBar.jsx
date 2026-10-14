@@ -57,6 +57,8 @@ import CircleIcon from '@mui/icons-material/Circle';
 import CodeIcon from '@mui/icons-material/Code';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -74,13 +76,20 @@ import { accountsApi } from '../../services/api/accountsApi';
 // Screens reused inside modals (lazy so they stay out of the always-loaded TopBar bundle)
 const Events = lazy(() => import('../Events/Events.jsx'));
 const TOOL_SCREENS = {
+  '/mcp': lazy(() => import('../ApiDocs/McpWorkspace.jsx')),
+  '/devzone': lazy(() => import('../ApiDocs/ApiDocs.jsx')),
   '/logs': lazy(() => import('../../views/syslogs/LogsScreen.jsx')),
   '/monitoring': lazy(() => import('../Monitoring/Monitoring.jsx')),
   '/templates': lazy(() => import('../Templates/Templates.jsx')),
   '/settings': lazy(() => import('../Settings/Settings.jsx')),
 };
 // Top-right tools that are not ACL screens but still open in the tool dialog.
-const ACCOUNT_TOOLS = [{ text: 'Settings', path: '/settings' }];
+const ACCOUNT_TOOLS = [
+  { text: 'Settings', path: '/settings' },
+  { text: 'MCP', path: '/mcp' },
+  { text: 'DevZone', path: '/devzone' },
+  { text: 'Documentation', path: '/documentation' },
+];
 import ToolDialog from './ToolDialog.jsx';
 import { TOPBAR_SEARCH_SLOT_ID } from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 const Schema = lazy(() => import('../Appz/Schema.jsx'));
@@ -250,6 +259,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
 
   // Zendesk tickets modal — reuse the full useTickets hook (conversations, replies, status editing)
   const [ticketsModalOpen, setTicketsModalOpen] = useState(false);
+  const [supportMenuAnchor, setSupportMenuAnchor] = useState(null);
   const {
     tickets,
     loading: ticketsLoading,
@@ -954,7 +964,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
             the room from the field. */}
         <Box sx={{ flex: 1, minWidth: 0, display: { xs: 'block', sm: 'none' } }} />
 
-        {/* Topbar utility icons (support tools live in the left Support menu) */}
+        {/* Topbar utility icons and Support */}
         <Box className="topbar-actions">
           {/* Actions + observability nav — inline on desktop, in ⋮ on phones */}
           {!isPhone && (
@@ -969,18 +979,21 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </>
           )}
 
-          {/* Help — the support widget (answers, articles, "Get in touch").
-              It has no floating launcher of its own any more. Settings moved
-              to the customer menu in the sidebar. An account's. */}
+          {/* Support replaces Help for admin accounts, on desktop and mobile. */}
           {!userSession && (
-            <Tooltip title={t('shell.help')}>
+            <Tooltip title={t('shell.support')}>
               <IconButton
                 size="small"
-                aria-label={t('shell.help')}
-                onClick={openZendeskWidget}
+                aria-label={t('shell.support')}
+                id="support-button"
+                aria-haspopup="menu"
+                aria-expanded={Boolean(supportMenuAnchor)}
+                aria-controls={supportMenuAnchor ? 'support-menu' : undefined}
+                data-tour="help-button"
+                onClick={(event) => setSupportMenuAnchor(event.currentTarget)}
                 sx={{ color: 'var(--theme-text-secondary)', '&:hover': { backgroundColor: 'var(--theme-hover)' } }}
               >
-                <HelpOutlineIcon fontSize="small" />
+                <SupportAgentIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
@@ -1008,7 +1021,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </Button>
           )}
 
-          {/* Support tools and appearance live in the sidebar. */}
+          {/* Appearance controls live in the sidebar. */}
 
           {/* Divider between admin and utility icons */}
           <Box sx={{ width: '1px', height: 24, backgroundColor: 'var(--border-light, #e5e7eb)', mx: 0.5, flexShrink: 0 }} />
@@ -1476,6 +1489,17 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
             <ActiveToolScreen />
           </Box>
         </Suspense>}
+        {activeTool === '/documentation' && (
+          <Box sx={{ p: 3 }}>
+            <Typography sx={{ mb: 2 }}>
+              The Help Center opens separately because it does not allow embedding here.
+            </Typography>
+            <Button component="a" href="https://voipappz.zendesk.com/hc/en-us"
+              target="_blank" rel="noopener noreferrer" variant="outlined" endIcon={<OpenInNewIcon />}>
+              {t('shell.documentation')}
+            </Button>
+          </Box>
+        )}
       </ToolDialog>
 
       {/* Wizard Modal — reuses the Schema screen for quick resource creation. */}
@@ -1506,17 +1530,47 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         </Box>
       </Dialog>
 
+      {!userSession && (
+        <Menu
+          id="support-menu"
+          anchorEl={supportMenuAnchor}
+          open={Boolean(supportMenuAnchor)}
+          onClose={() => setSupportMenuAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          MenuListProps={{ 'aria-labelledby': 'support-button', dense: true }}
+          PaperProps={{ sx: { minWidth: 210, mt: 0.5 } }}
+        >
+          <MenuItem onClick={() => { setSupportMenuAnchor(null); setActiveTool('/mcp'); }}>
+            <ListItemIcon><HubOutlinedIcon fontSize="small" /></ListItemIcon>
+            <ListItemText primary="MCP" />
+          </MenuItem>
+          <MenuItem onClick={() => { setSupportMenuAnchor(null); setActiveTool('/devzone'); }}>
+            <ListItemIcon><CodeIcon fontSize="small" /></ListItemIcon>
+            <ListItemText primary="DevZone" />
+          </MenuItem>
+          <MenuItem
+            onClick={() => { setSupportMenuAnchor(null); setActiveTool('/documentation'); }}
+          >
+            <ListItemIcon><HelpOutlineIcon fontSize="small" /></ListItemIcon>
+            <ListItemText primary={t('shell.documentation')} />
+          </MenuItem>
+          <MenuItem onClick={() => { setSupportMenuAnchor(null); handleTicketsOpen(); }}>
+            <ListItemIcon><ConfirmationNumberIcon fontSize="small" /></ListItemIcon>
+            <ListItemText primary={t('shell.tickets')} />
+          </MenuItem>
+        </Menu>
+      )}
+
       {/* Tickets Modal — full table + detail view with conversations */}
-      <Dialog
+      <ToolDialog
+        title={t('shell.tickets')}
         open={ticketsModalOpen}
         onClose={() => { setTicketsModalOpen(false); handleCloseTicketDetail(); }}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{ sx: { height: '85vh', display: 'flex', flexDirection: 'column' } }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1.5, pr: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 3, py: 1 }}>
           <ConfirmationNumberIcon color="primary" sx={{ fontSize: 22 }} />
-          <Typography variant="h6" sx={{ flex: 1 }}>Tickets</Typography>
+          <Box sx={{ flex: 1 }} />
           {/* Support widget — Zendesk's answer bot suggests Help Center
               articles first, and "Get in touch" opens a ticket that lands in
               this same list (tagged with the account's customer). */}
@@ -1539,10 +1593,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               <OpenInNewIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <IconButton size="small" onClick={() => { setTicketsModalOpen(false); handleCloseTicketDetail(); }} sx={{ ml: 0.5 }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
+        </Box>
 
         {/* Filter Chips — click to filter by status, click active chip to clear */}
         <Box sx={{ px: 3, pb: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1703,7 +1754,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
             )}
           </Box>
         </DialogContent>
-      </Dialog>
+      </ToolDialog>
 
 
       {/* Account Dialogs */}

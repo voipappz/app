@@ -50,7 +50,17 @@ const ServiceWizard = ({ open, onClose, onSave, loading, hookServiceTypes = [], 
   }, [open]);
 
   const set = (field, value) => {
-    setForm((p) => ({ ...p, [field]: value }));
+    setForm((p) => {
+      if (field === 'type' && value !== p.type) {
+        const config = serviceTypeConfigs[value] || {};
+        return {
+          ...p, type: value,
+          profile: { ...(config.profile_defaults || {}) },
+          triggers: config.managed && Array.isArray(config.triggers) ? [...config.triggers] : [],
+        };
+      }
+      return { ...p, [field]: value };
+    });
     if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
   };
 

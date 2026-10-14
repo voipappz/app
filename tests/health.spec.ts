@@ -23,60 +23,31 @@ test.describe('Health API', () => {
     expect(text.length).toBeGreaterThan(0);
   });
 
-  test('Verbose health check returns 200', async ({ authenticatedPage: page }) => {
+  // The API's own health is /api/health at a mothership's Kong; /health there
+  // is GATUS (its endpoint statuses array). These used /health?verbose and
+  // /health/detailed and accepted whatever came back — Gatus's array, and a
+  // 404 — which is how the admin read Gatus as the API for weeks.
+  test('Verbose health is the API, not Gatus', async ({ authenticatedPage: page }) => {
     const apiBaseUrl = process.env.VITE_API_BASE_URL || '';
 
-    const response = await page.request.get(`${apiBaseUrl}/health?verbose`);
-
+    const response = await page.request.get(`${apiBaseUrl}/api/health?verbose`);
     console.log(`Verbose Health: ${response.status()}`);
-    expect(response.status()).toBe(200);
+    expect([200, 503]).toContain(response.status());
 
-    const text = await response.text();
-    console.log(`Verbose Health response: ${text}`);
-
-    // Try to parse as JSON, but accept plain text as well
-    try {
-      const data = JSON.parse(text);
-      console.log(`✅ Response is JSON`);
-
-      // Check for common verbose health fields
-      if (data.status) {
-        console.log(`✅ Status field present: ${data.status}`);
-      }
-
-      if (data.checks) {
-        console.log(`✅ Checks field present with ${Object.keys(data.checks).length} checks`);
-      }
-
-      if (data.timestamp) {
-        console.log(`✅ Timestamp field present: ${data.timestamp}`);
-      }
-
-      if (data.process) {
-        console.log(`✅ Process info present`);
-      }
-    } catch {
-      // Plain text response (e.g., "healthy")
-      console.log(`ℹ️ Response is plain text: ${text}`);
-      expect(text.toLowerCase()).toContain('healthy');
-    }
+    const data = await response.json();
+    expect(Array.isArray(data)).toBe(false);
+    expect(data.checks).toBeTruthy();
+    console.log(`✅ ${Object.keys(data.checks).length} checks: ${Object.keys(data.checks).join(', ')}`);
   });
 
-  test('Detailed health endpoint returns 200 or 401', async ({ authenticatedPage: page }) => {
+  test('Detailed health endpoint exists (200, or 401 without a token)', async ({ authenticatedPage: page }) => {
     const apiBaseUrl = process.env.VITE_API_BASE_URL || '';
 
-    const response = await page.request.get(`${apiBaseUrl}/health/detailed`);
-
+    const response = await page.request.get(`${apiBaseUrl}/api/health/detailed`);
     console.log(`Detailed Health: ${response.status()}`);
-    // Accept 200, 401 (auth required), or 404 (endpoint may not exist)
-    expect([200, 401, 404]).toContain(response.status());
-
-    if (response.status() === 200) {
-      const text = await response.text();
-      console.log(`Detailed Health response: ${text.substring(0, 200)}...`);
-    } else if (response.status() === 401) {
-      console.log('ℹ️ Detailed health requires authentication');
-    }
+    expect([200, 401]).toContain(response.status());
+    // JSON either way: the panel parses it, and "Cannot GET" was the bug.
+    await response.json();
   });
 
   test('LB health endpoint returns 200', async ({ authenticatedPage: page }) => {

@@ -23,8 +23,13 @@ const setState = (patch) => {
 
 // Always verbose: the topbar shows the per-dependency app health (database /
 // redis / nats) from the same poll, so every check carries the checks payload.
+//
+// /api/health, NOT /health: at the mothership's Kong /health is GATUS (its
+// endpoint statuses array) and the API's own health moved to /api/health
+// (mothership f12d37a, 2026-09-15). Polling /health showed Gatus's list where
+// the API's database / redis / nats checks belong.
 export const checkHealth = async ({ verbose = true } = {}) => {
-  const url = verbose ? '/health?verbose' : '/health';
+  const url = verbose ? '/api/health?verbose' : '/api/health';
   if (verbose) setState({ loading: state.response === null });
   try {
     const response = await fetch(url, {

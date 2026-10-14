@@ -17,11 +17,6 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import SupportAgentIcon from '@mui/icons-material/SupportAgent';
-import CodeIcon from '@mui/icons-material/Code';
-import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
-import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import ShieldIcon from '@mui/icons-material/Shield';
 import LanguageIcon from '@mui/icons-material/Language';
 import DarkModeIcon from '@mui/icons-material/DarkModeOutlined';
@@ -60,16 +55,10 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
   const towardPage = isRtl ? 'left' : 'right';
   const towardSidebar = isRtl ? 'right' : 'left';
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
-  const [supportMenuAnchor, setSupportMenuAnchor] = useState(null);
 
   const accountName = user?.fullName || user?.firstName || user?.email?.split('@')[0] || 'Account';
 
 
-  // The utility icons relocated from the removed top bar. They dispatch the same
-  // window events the (still-mounted) TopBar listens for to open its modals.
-  // The Wizard moved into the customer/environment box; Notifications moved to
-  // the Monitoring page's right rail; neither is repeated here.
-  const dispatch = (name, detail) => window.dispatchEvent(detail !== undefined ? new CustomEvent(name, { detail }) : new Event(name));
 
   const badges = useNavBadges(!userSession);            // live nav counts (account only)
 
@@ -146,54 +135,6 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
       <List className="sidebar-nav-list">
         {menuItems.map(renderNavItem)}
       </List>
-
-      {!userSession && (
-        <List disablePadding>
-            <ListItem disablePadding className="sidebar-nav-item">
-              <ListItemButton
-                id="sidebar-support-button"
-                className={`sidebar-nav-button ${['/mcp', '/devzone'].includes(location.pathname) ? 'active' : ''}`}
-                aria-label={t('shell.support')}
-                aria-haspopup="menu"
-                aria-expanded={Boolean(supportMenuAnchor)}
-                aria-controls={supportMenuAnchor ? 'sidebar-support-menu' : undefined}
-                onClick={(event) => setSupportMenuAnchor(event.currentTarget)}
-              >
-                <ListItemIcon className="sidebar-nav-icon"><SupportAgentIcon /></ListItemIcon>
-                <span className="sidebar-nav-text">{t('shell.support')}</span>
-              </ListItemButton>
-            </ListItem>
-          <Menu
-            id="sidebar-support-menu"
-            anchorEl={supportMenuAnchor}
-            open={Boolean(supportMenuAnchor)}
-            onClose={() => setSupportMenuAnchor(null)}
-            anchorOrigin={{ vertical: 'top', horizontal: towardPage }}
-            transformOrigin={{ vertical: 'top', horizontal: towardSidebar }}
-            MenuListProps={{ 'aria-labelledby': 'sidebar-support-button' }}
-          >
-            <MenuItem selected={isActive('/mcp')} onClick={() => { setSupportMenuAnchor(null); handleNavigate('/mcp'); }}>
-              <ListItemIcon><HubOutlinedIcon fontSize="small" /></ListItemIcon>MCP
-            </MenuItem>
-            <MenuItem selected={isActive('/devzone')} onClick={() => { setSupportMenuAnchor(null); handleNavigate('/devzone'); }}>
-              <ListItemIcon><CodeIcon fontSize="small" /></ListItemIcon>DevZone
-            </MenuItem>
-            <MenuItem
-              component="a"
-              href="https://voipappz.zendesk.com/hc/en-us"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-tour="help-button"
-              onClick={() => { setSupportMenuAnchor(null); onNavigate?.(); }}
-            >
-              <ListItemIcon><HelpOutlineIcon fontSize="small" /></ListItemIcon>{t('shell.documentation')}
-            </MenuItem>
-            <MenuItem onClick={() => { setSupportMenuAnchor(null); dispatch('openTicketsModal'); onNavigate?.(); }}>
-              <ListItemIcon><ConfirmationNumberIcon fontSize="small" /></ListItemIcon>{t('shell.tickets')}
-            </MenuItem>
-          </Menu>
-        </List>
-      )}
 
       {/* Bottom tools, followed by the account row. Appearance is the
           viewer's, not a permission: both sessions get it. */}
