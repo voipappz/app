@@ -403,5 +403,70 @@
     "numberHelp": "Device number (e.g., 1001)",
     "passwordRequiredHelp": "Required for new devices",
     "updating": "Updating..."
+  },
+  "ivrMenu": {
+    "loading": "Loading the phone menu…",
+    "loadError": "Couldn't load this phone menu",
+    "name": "Menu name",
+    "namePlaceholder": "e.g. Main menu",
+    "greeting": "Greeting",
+    "greetingHelp": "What callers hear first, before choosing.",
+    "greetingEdit": "Edit greeting",
+    "greetingNew": "New greeting",
+    "options": "Options",
+    "optionsHelp": "Tap a key to set what it does.",
+    "keyName": "Key {{key}}",
+    "keyFree": "Key {{key}}, not set",
+    "noKey": "If no key is pressed",
+    "seconds": "Seconds",
+    "wrongKey": "If a wrong key is pressed",
+    "tries": "Wrong keys allowed",
+    "notSet": "Not set",
+    "option": {
+      "titleNew": "Option for key {{key}}",
+      "titleEdit": "Key {{key}}",
+      "name": "Option name",
+      "namePlaceholder": "e.g. Sales",
+      "done": "Done",
+      "delete": "Delete option",
+      "deleteTitle": "Delete option {{key}}?",
+      "deleteMessage": "Callers who press {{key}} will hear the wrong-key message."
+    },
+    "destination": {
+      "type": "Type",
+      "target": "Destination",
+      "edit": "Edit {{type}}",
+      "create": "New {{type}}",
+      "loading": "Loading…",
+      "noItems": "Nothing here yet",
+      "noTypes": "There is nowhere you can send callers. Ask your admin for access."
+    },
+    "types": {
+      "extension": "Device",
+      "queue": "Queue",
+      "ivr": "IVR menu",
+      "announcement": "Message",
+      "call_condition": "Business hours",
+      "vml": "VML script",
+      "conference": "Conference",
+      "number": "Phone number",
+      "bot": "Bot"
+    },
+    "save": "Save phone menu",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "saveFailed": "Couldn't save the phone menu.",
+    "errors": {
+      "nameRequired": "Give the menu a name",
+      "greetingRequired": "Choose what callers hear first",
+      "optionIncomplete": "Give this option a name and a destination",
+      "destinationRequired": "Choose where to send the caller",
+      "secondsRange": "Between 1 and 300 seconds",
+      "triesRange": "Between 1 and 9"
+    },
+    "hints": {
+      "noOptions": "Add at least one option, or callers can only wait.",
+      "tooManyOptions": "More than 5 options are hard to remember. Consider another menu for the rest."
+    }
   }
 }

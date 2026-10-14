@@ -70,6 +70,8 @@ const CONVERTED = [
   'src/components/Calls/CallDetailsScreen/**',
   'src/components/Calls/CallMobileView/**',
   'src/components/Calls/CallHistory/**',
+  // The phone menu (IVR) for users
+  'src/components/Bridges/IvrMenu/**',
   'src/components/Login/**',
   'src/components/shared/ResponsiveTable/**',
   'src/components/ui/**',

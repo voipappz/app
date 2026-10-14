@@ -1,9 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import WizardViewRenderer from './WizardViewRenderer.jsx';
 
 vi.mock('../DIDDialog/DIDForm', () => ({ default: () => null }));
-vi.mock('../../Bridges/IVRBridge/IVRBridge', () => ({ IVRBridge: () => null }));
+vi.mock('../../Bridges/IVRBridge/IVRBridge', () => ({ IVRBridge: () => <p>Admin IVR form</p> }));
+vi.mock('../../Bridges/IvrMenu/IvrMenuEditor', () => ({ default: () => <p>Phone menu editor</p> }));
+let userSession = false;
+vi.mock('../../../hooks/useIsUserSession', () => ({ useIsUserSession: () => userSession }));
 vi.mock('../../Bridges/QueueBridge/QueueBridge', () => ({ QueueBridge: () => null }));
 vi.mock('../../Bridges/AnnouncementBridge/AnnouncementBridge.jsx', () => ({
   AnnouncementBridge: ({ onSave, onClose }) => <>
@@ -63,5 +66,20 @@ describe('an announcement made on the way', () => {
     render(<WizardViewRenderer view={{ type: 'announcement', mode: 'create' }} onCancel={onCancel} />);
     fireEvent.click(screen.getByRole('button', { name: 'Create announcement' }));
     expect(onCancel).toHaveBeenCalledExactlyOnceWith({ uuid: 'ann-1' });
+  });
+});
+
+describe('the IVR step', () => {
+  afterEach(() => { userSession = false; });
+
+  it('gives a portal user the phone-menu editor', () => {
+    userSession = true;
+    render(<WizardViewRenderer view={{ type: 'ivr', mode: 'create' }} onCancel={vi.fn()} />);
+    expect(screen.getByText('Phone menu editor')).toBeInTheDocument();
+  });
+
+  it('keeps the full IVR form for an account', () => {
+    render(<WizardViewRenderer view={{ type: 'ivr', mode: 'create' }} onCancel={vi.fn()} />);
+    expect(screen.getByText('Admin IVR form')).toBeInTheDocument();
   });
 });

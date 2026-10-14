@@ -1,5 +1,5 @@
 import { apiService, toFormData } from '../apiService.js';
-import { bridgeApi } from './bridgeApi.js';
+import { bridgeApi, listFilters } from './bridgeApi.js';
 
 /**
  * Call Conditions API Service
@@ -157,13 +157,7 @@ export const getAllCallConditions = async (options = {}) => {
   queryParts.push(`per_page=${options.perPage || 9999}`);
   queryParts.push(`page=${options.page || 1}`);
 
-  if (options.environment_uuid) {
-    queryParts.push(`search[environment_uuid]=${encodeURIComponent(options.environment_uuid)}`);
-  }
-
-  if (options.enabled !== undefined) {
-    queryParts.push(`search[enabled]=${options.enabled}`);
-  }
+  queryParts.push(...listFilters({ environmentUuid: options.environment_uuid, enabled: options.enabled }));
 
   // Ordering
   if (options.orderBy) {

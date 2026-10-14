@@ -403,5 +403,70 @@
     "numberHelp": "מספר המכשיר (לדוגמה: 1001)",
     "passwordRequiredHelp": "חובה במכשיר חדש",
     "updating": "מעדכן..."
+  },
+  "ivrMenu": {
+    "loading": "טוען את התפריט הטלפוני…",
+    "loadError": "לא ניתן לטעון את התפריט הטלפוני",
+    "name": "שם התפריט",
+    "namePlaceholder": "לדוגמה: תפריט ראשי",
+    "greeting": "הודעת פתיחה",
+    "greetingHelp": "מה שהמתקשרים שומעים קודם, לפני הבחירה.",
+    "greetingEdit": "עריכת הודעת פתיחה",
+    "greetingNew": "הודעת פתיחה חדשה",
+    "options": "אפשרויות",
+    "optionsHelp": "הקישו על מקש כדי לקבוע מה הוא עושה.",
+    "keyName": "מקש {{key}}",
+    "keyFree": "מקש {{key}}, לא נקבע",
+    "noKey": "אם לא נלחץ מקש",
+    "seconds": "שניות",
+    "wrongKey": "אם נלחץ מקש שגוי",
+    "tries": "הקשות שגויות מותרות",
+    "notSet": "לא נקבע",
+    "option": {
+      "titleNew": "אפשרות למקש {{key}}",
+      "titleEdit": "מקש {{key}}",
+      "name": "שם האפשרות",
+      "namePlaceholder": "לדוגמה: מכירות",
+      "done": "סיום",
+      "delete": "מחיקת אפשרות",
+      "deleteTitle": "למחוק את אפשרות {{key}}?",
+      "deleteMessage": "מתקשרים שילחצו {{key}} ישמעו את הודעת המקש השגוי."
+    },
+    "destination": {
+      "type": "סוג",
+      "target": "יעד",
+      "edit": "עריכת {{type}}",
+      "create": "יצירת {{type}}",
+      "loading": "טוען…",
+      "noItems": "אין כאן עדיין כלום",
+      "noTypes": "אין יעד שאפשר להעביר אליו מתקשרים. יש לבקש הרשאה ממנהל המערכת."
+    },
+    "types": {
+      "extension": "מכשיר",
+      "queue": "תור",
+      "ivr": "תפריט קולי",
+      "announcement": "הודעה",
+      "call_condition": "שעות פעילות",
+      "vml": "סקריפט VML",
+      "conference": "ועידה",
+      "number": "מספר טלפון",
+      "bot": "בוט"
+    },
+    "save": "שמירת התפריט",
+    "saving": "שומר…",
+    "cancel": "ביטול",
+    "saveFailed": "לא ניתן לשמור את התפריט הטלפוני.",
+    "errors": {
+      "nameRequired": "יש לתת שם לתפריט",
+      "greetingRequired": "יש לבחור מה המתקשרים שומעים קודם",
+      "optionIncomplete": "יש לתת לאפשרות שם ויעד",
+      "destinationRequired": "יש לבחור לאן להעביר את המתקשר",
+      "secondsRange": "בין 1 ל-300 שניות",
+      "triesRange": "בין 1 ל-9"
+    },
+    "hints": {
+      "noOptions": "כדאי להוסיף לפחות אפשרות אחת, אחרת המתקשרים יכולים רק להמתין.",
+      "tooManyOptions": "קשה לזכור יותר מ-5 אפשרויות. כדאי להעביר את השאר לתפריט נוסף."
+    }
   }
 }
