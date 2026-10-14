@@ -1,10 +1,12 @@
 // SIP softphone settings — what the Settings tab edits and persists locally.
 // Endpoint defaults come from VITE_SIP_* (see ./config.js); with no env set,
 // the endpoint is auto-populated from the logged-in user's environment
-// (sipSettingsFromUser) and the softphone stays unconfigured until then.
+// (the device's phone token) and the softphone stays unconfigured until then.
 import { loadSipConfig } from './config';
 
-// SipSettings shape: { wssUrl, domain, username, password, displayName, autoConnect }
+// SipSettings shape: { wssUrl, domain, username, password, displayName, autoConnect, deviceUuid, tokenExp }
+// username/password/domain/wssUrl come from the device's phone token; only
+// deviceUuid, autoConnect and the endpoint fields are ever stored.
 
 const KEY = 'sip-settings';
 
@@ -32,7 +34,7 @@ function withoutPassword(s) {
 
 export function defaultSipSettings() {
   const cfg = loadSipConfig();
-  return { wssUrl: cfg.wssUrl, domain: cfg.domain, username: '', password: '', displayName: '', autoConnect: false, ...envSipOverrides() };
+  return { wssUrl: cfg.wssUrl, domain: cfg.domain, username: '', password: '', displayName: '', autoConnect: false, deviceUuid: '', tokenExp: 0, ...envSipOverrides() };
 }
 
 export function loadSipSettings() {
@@ -57,70 +59,9 @@ export function clearSipSettings() {
   try { localStorage.removeItem(KEY); } catch { /* storage disabled */ }
 }
 
-// Derive SIP registration creds from the logged-in account — NOT hardcoded.
-// The AOR is sip:<username>@<domain> taken from the account email
-// (`200@6174.nimbusip.com` -> username `200`, domain `6174.nimbusip.com`), and
-// the SIP password is the same password the user just authenticated with (the
-// only point at which the plaintext is available — login verifies a bcrypt hash,
-// so it can't be recovered later). The WSS endpoint (the SBC/FreeSWITCH ws
-// binding) is NOT part of the account — it stays from config/env, since one SBC
-// fronts many account domains. autoConnect is enabled so the phone REGISTERs
-// right after login.
-export function sipSettingsFromAccount(email, password, base) {
-  const cur = base ?? loadSipSettings();
-  const at = String(email || '').indexOf('@');
-  const username = at > 0 ? email.slice(0, at) : (email || cur.username);
-  const domain = at > 0 ? email.slice(at + 1) : cur.domain;
-  return {
-    ...cur,
-    username,
-    domain,                                   // the account's domain
-    password: password || cur.password,       // the account's login password
-    displayName: cur.displayName || username,
-    autoConnect: true
-  };
-}
-
-// Derive SIP registration creds from the logged-in voipappz-api USER object —
-// mirrors app's WebRTC phone, which registers from
-// `user.extension.{username,password}` (the extension's own SIP secret) and
-// `user.environment.{domain,wss_server}` (environment is at user level, not on
-// the extension) — confirmed this exact shape comes back from voipappz-api's
-// own Serializers::User#login. The extension secret is preferred over the
-// login password, and the environment's wss_server over the config/env WSS.
-// Anything the user object doesn't carry falls back to sipSettingsFromAccount
-// (email/password), so this degrades gracefully when the login response is
-// sparse.
-export function sipSettingsFromUser(user, loginPassword, base) {
-  const cur = base ?? loadSipSettings();
-  const ext = user?.extension ?? {};
-  const env = user?.environment ?? ext.environment ?? {};
-
-  const username = ext.username || cur.username;
-  const password = ext.password || ext.secret || loginPassword || cur.password;
-  const domain = env.domain || cur.domain;
-  const rawWss = env.wss_server || '';
-  const wssUrl = rawWss
-    ? (rawWss.startsWith('ws') ? rawWss : `wss://${rawWss}`)
-    : cur.wssUrl;
-  const displayName = user?.fullname || user?.name || ext.name || username || cur.displayName;
-
-  // If the user object lacks the SIP essentials, fall back to the email/account
-  // derivation so login-time registration still has something to try.
-  if (!username || !domain) {
-    return sipSettingsFromAccount(user?.email || '', loginPassword || password, cur);
-  }
-
-  return { ...cur, username, password, domain, wssUrl, displayName, autoConnect: true };
-}
-
-// Register AS a device an account picked: the device object from
-// GET /api/devices/:uuid carries its own SIP secret and its environment's
-// domain and wss server — the same fields a user's login response nests under
-// `user.extension` and `user.environment`.
-export function sipSettingsFromDevice(device, base) {
-  return sipSettingsFromUser({ name: device?.name, extension: device, environment: device?.environment }, '', base);
-}
+// There is no credential derivation here any more: the phone registers
+// only from a device's short-lived token (./phoneToken.js). The login
+// password is never used as a SIP password.
 
 /** Enough config present to attempt a registration. */
 export function sipSettingsReady(s) {

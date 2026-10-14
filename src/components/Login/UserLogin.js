@@ -4,8 +4,6 @@ import { loginErrorText } from './loginErrors';
 import { useNavigate } from 'react-router';
 import axios from 'axios';
 import { useUserAuth } from '../../context/UserAuthContext';
-import { useSoftphone } from '../../context/SoftphoneContext';
-import { sipSettingsFromUser } from '../../lib/sip/sipSettings';
 import { getTokenExpiry } from '../../utils/jwt';
 import { logLoginDebug } from '../../utils/loginDebug';
 
@@ -37,7 +35,6 @@ export const useUserLogin = () => {
   const [tempToken, setTempToken] = useState('');
 
   const { login, setLoading, setError, loading, error } = useUserAuth();
-  const { connect: sipConnect } = useSoftphone();
   const navigate = useNavigate();
 
   const handleEmailChange = (e) => setEmail(e.target.value);
@@ -211,10 +208,10 @@ export const useUserLogin = () => {
     // AuthContext's login()/Login.js precaution against a same-tick race.
     localStorage.setItem('user_auth', JSON.stringify(authData));
 
+    // The softphone signs itself in as the user's extension once the session
+    // is up (SoftphoneContext, from the device's phone token). The login
+    // password is never handed to it.
     login(authData);
-    // Fire-and-forget — the softphone is optional; a registration failure
-    // here must never block landing on the dashboard.
-    try { sipConnect(sipSettingsFromUser(authData.user, password)); } catch { /* phone optional */ }
     navigate('/');
   };
 

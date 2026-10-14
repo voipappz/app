@@ -1,48 +1,35 @@
-// Settings tab — SIP config. Defaults come from VITE_SIP_* so only the
-// extension creds are usually needed. Connect/Disconnect toggles
-// registration; status dot shows Ready / Offline / failed. Ported from app
-// (i18n stripped, useSipPhoneCtx -> useSoftphone).
+// Settings tab. The phone has NO credential fields: it signs in as a device
+// from the short-lived token GET /api/devices/:uuid/phone issues (see
+// lib/sip/phoneToken.js and SoftphoneContext), so there is no username,
+// password or server to type. This shows which device the token is for, the
+// server it registers on and when the token renews; Connect asks for a fresh
+// token and registers again.
 import { useState } from 'react';
-import { Box, TextField, Button, FormControlLabel, Switch, Typography, Stack } from '@mui/material';
+import { Box, Button, FormControlLabel, Switch, Typography, Stack } from '@mui/material';
 import { useSoftphone } from '../../context/SoftphoneContext';
+import { formatDate } from '../../utils/dateUtils';
 
 const STATUS_COLOR = { registered: '#16a34a', connecting: '#f59e0b', failed: '#dc2626', unregistered: '#9ca3af', idle: '#9ca3af' };
 
+const Row = ({ label, value }) => (
+  <Box sx={{ mb: 1.25 }}>
+    <Typography sx={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.02em', color: 'rgba(255,255,255,0.55)', mb: 0.25 }}>
+      {label}
+    </Typography>
+    <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>{value || '—'}</Typography>
+  </Box>
+);
+
 export default function SipSettingsForm() {
-  const { settings, updateSettings, connect, disconnect, status, connected } = useSoftphone();
-  const [form, setForm] = useState(settings);
+  const { settings, updateSettings, connect, disconnect, status, connected, lastError } = useSoftphone();
   const [busy, setBusy] = useState(false);
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  // Static label ABOVE each input (not a floating MUI label) — on the tight dark
-  // panel the floating labels were clipped by the field above.
-  const field = (k, label, type = 'text') => (
-    <Box sx={{ mb: 1.5 }}>
-      <Typography
-        component="label"
-        htmlFor={`sip-${k}`}
-        sx={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.02em', color: 'rgba(255,255,255,0.55)', mb: 0.5 }}
-      >
-        {label}
-      </Typography>
-      <TextField
-        id={`sip-${k}`}
-        size="small"
-        fullWidth
-        type={type}
-        value={form[k] ?? ''}
-        onChange={set(k)}
-        sx={{
-          '& .MuiOutlinedInput-root': { bgcolor: 'var(--mui-palette-background-paper)', borderRadius: '8px' },
-          '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
-        }}
-      />
-    </Box>
-  );
+  const device = settings.username ? `${settings.username}@${settings.domain}` : '';
+  const renews = settings.tokenExp ? formatDate(settings.tokenExp * 1000) : '';
 
   const onConnect = async () => {
     setBusy(true);
-    try { updateSettings(form); await connect(form); } catch { /* status reflects failure */ } finally { setBusy(false); }
+    try { await connect(); } catch { /* lastError says why */ } finally { setBusy(false); }
   };
 
   return (
@@ -54,20 +41,23 @@ export default function SipSettingsForm() {
         </Typography>
       </Stack>
 
-      {field('username', 'Extension')}
-      {field('password', 'Password', 'password')}
-      {field('domain', 'SIP domain')}
-      {field('wssUrl', 'WebSocket server')}
-      {field('displayName', 'Display name')}
+      <Row label="Device" value={settings.displayName && device ? `${settings.displayName} (${device})` : device} />
+      <Row label="WebSocket server" value={settings.wssUrl} />
+      <Row label="Sign-in renews at" value={renews} />
+      {lastError && (
+        <Typography variant="caption" color="error" sx={{ display: 'block', mb: 1 }} data-testid="phone-signin-error">
+          {lastError}
+        </Typography>
+      )}
 
       <FormControlLabel
-        control={<Switch size="small" checked={!!form.autoConnect} onChange={(e) => setForm((f) => ({ ...f, autoConnect: e.target.checked }))} />}
+        control={<Switch size="small" checked={!!settings.autoConnect} onChange={(e) => updateSettings({ ...settings, autoConnect: e.target.checked })} />}
         label={<Typography variant="body2">Connect automatically</Typography>}
         sx={{ mt: 0.5 }}
       />
 
       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-        <Button fullWidth variant="contained" size="small" disabled={busy} onClick={onConnect}>
+        <Button fullWidth variant="contained" size="small" disabled={busy || !settings.deviceUuid} onClick={onConnect}>
           {connected ? 'Reconnect' : 'Connect'}
         </Button>
         {connected && (
