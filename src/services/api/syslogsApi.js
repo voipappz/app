@@ -99,6 +99,17 @@ export const syslogsApi = {
   fetchNodes: () =>
     apiService.get(`${BASE}/nodes`, {}, 'fetching syslog nodes', false, true),
 
+  /**
+   * Message types seen in the window: [{ action, count }], most frequent first.
+   * The `action` tag carries a line's action (did.updated, node.license_invalid)
+   * or, for a node line that names none, its request kind (sip_auth, dialplan,
+   * sofia.conf). This feeds the Type filter.
+   */
+  fetchActions: ({ from, to, customer_uuid } = {}) => {
+    const qs = buildQuery({ from, to, customer_uuid });
+    return apiService.get(`${BASE}/actions${qs ? `?${qs}` : ''}`, {}, 'fetching syslog message types', false, true);
+  },
+
   getTraceStatus: () =>
     apiService.get(`${BASE}/trace`, {}, 'checking syslog trace status', false, true),
 
