@@ -1,3 +1,4 @@
+import SoftphoneDownloadLinks from '../shared/SoftphoneDownloadLinks/SoftphoneDownloadLinks.jsx';
 import {
   Box,
   Button,
@@ -634,6 +635,7 @@ const Extensions = () => {
                 <Trans t={t} i18nKey="qr.extensionLine" values={{ application: qrExtension?.environment?.name || t('qr.noEnvironment') }}
                   components={{ device: <Bdi>{qrExtension?.username}</Bdi> }} />
               </Typography>
+              <SoftphoneDownloadLinks />
             </>
           )}
         </DialogContent>
