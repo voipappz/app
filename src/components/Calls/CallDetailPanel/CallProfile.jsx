@@ -100,7 +100,9 @@ const CallProfile = ({ profile }) => {
         sx={{
           m: 0,
           display: 'grid',
-          gridTemplateColumns: 'minmax(92px, max-content) minmax(0, 1fr)',
+          // The label column is capped: one long raw key (rtp_audio_in_jitter_…)
+          // used to take the panel and wrap every value onto several lines.
+          gridTemplateColumns: 'minmax(84px, 38%) minmax(0, 1fr)',
           columnGap: 1.5,
           fontSize: '0.78rem',
           '& > dt, & > dd': { py: 0.5, borderBottom: '1px solid var(--bg-tertiary)', m: 0 },
@@ -110,11 +112,11 @@ const CallProfile = ({ profile }) => {
           const label = row.known ? t(`profile.fields.${row.key}`, { defaultValue: row.key }) : row.key;
           return (
             <React.Fragment key={row.key}>
-              <Box component="dt" title={row.key} sx={{ color: 'var(--text-secondary)', fontWeight: 500, fontFamily: row.known ? 'Rubik, sans-serif' : '"JetBrains Mono", Consolas, monospace' }}>
+              <Box component="dt" title={row.key} sx={{ color: 'var(--text-secondary)', fontWeight: 500, overflowWrap: 'anywhere', fontFamily: row.known ? 'Rubik, sans-serif' : '"JetBrains Mono", Consolas, monospace' }}>
                 {label}
               </Box>
               <Box component="dd" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                <Box component="span" sx={{ color: 'var(--text-primary)', fontFamily: '"JetBrains Mono", Consolas, monospace', wordBreak: 'break-all' }}>
+                <Box component="span" sx={{ flex: 1, minWidth: 0, color: 'var(--text-primary)', fontFamily: '"JetBrains Mono", Consolas, monospace', wordBreak: 'break-all' }}>
                   <Bdi>{row.value}</Bdi>
                 </Box>
                 {row.copyable && <CopyButton text={row.raw} label={label} />}
