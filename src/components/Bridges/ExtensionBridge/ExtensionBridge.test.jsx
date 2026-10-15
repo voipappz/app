@@ -28,10 +28,16 @@ describe('editing a device', () => {
   });
 });
 
-describe('the device password is never shown', () => {
-  it('starts blank in edit mode, even if a password were passed in', () => {
-    render(<ExtensionBridge open mode="edit" extension={{ ...device, password: 'Leaked-Secret' }} containerMode="panel" onClose={() => {}} onSave={() => {}} />);
-    expect(screen.queryByDisplayValue('Leaked-Secret')).toBeNull();
+describe('the device password in edit mode', () => {
+  // GET /api/devices/:id (the edit load) carries it: the field is filled,
+  // masked, and the eye reveals it without asking the server again.
+  it('is filled from the edit load, masked, and revealed without a server call', () => {
+    render(<ExtensionBridge open mode="edit" extension={{ ...device, password: 'Loaded-Secret' }} containerMode="panel" onClose={() => {}} onSave={() => {}} />);
+    const field = screen.getByDisplayValue('Loaded-Secret');
+    expect(field).toHaveAttribute('type', 'password');
+    fireEvent.click(screen.getByRole('button', { name: /show password/i }));
+    expect(mockShowPassword).not.toHaveBeenCalled();
+    expect(screen.getByDisplayValue('Loaded-Secret')).toHaveAttribute('type', 'text');
   });
 
   it('emails the SIP login to the admin on request and says where it went', async () => {
