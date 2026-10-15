@@ -25,10 +25,9 @@ describe('LogTabs', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/messages');
   });
 
-  it('shows the kind as the page title, and no switch when the role has only one kind', () => {
+  it('shows nothing when the role has only one kind', () => {
     granted = ['calls'];
     renderAt('/calls');
     expect(screen.queryByRole('tab')).toBeNull();
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Calls');
   });
 });

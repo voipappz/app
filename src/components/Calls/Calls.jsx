@@ -32,7 +32,7 @@ import CallMobileView from './CallMobileView/CallMobileView.jsx';
 import CallDetailPanel from './CallDetailPanel/CallDetailPanel.jsx';
 import CallConversationPanel from './CallDetailPanel/CallConversationPanel.jsx';
 import CallLogsPanel from './CallDetailPanel/CallLogsPanel.jsx';
-import StatCounter from '../common/StatCounter/StatCounter.jsx';
+import StatChips from '../shared/StatChips/StatChips.jsx';
 import { DirectionIcon, CauseIcon, RecordingControls } from './CallIcons.jsx';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 import LiveDrawer from '../Live/LiveDrawer.jsx';
@@ -715,30 +715,22 @@ const Calls = () => {
           Rendered even with an empty grid — "0 calls" is an answer; the row
           vanishing is not. A null value renders "—", never a confident 0. */}
       {!isMobile && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1.5, mb: 1.5 }}>
-          {[
-            { label: t('stats.total'), value: summaryCounts.total, icon: <PhoneIcon />, color: 'var(--counter-total)', filterKey: null, tooltip: t('stats.totalHint') },
-            { label: t('stats.answered'), value: summaryCounts.answered, icon: <PhoneInTalkIcon />, color: 'var(--counter-answered)', filterKey: 'answered', tooltip: t('stats.answeredHint') },
-            { label: t('stats.noAnswer'), value: summaryCounts.noAnswer, icon: <PhoneMissedIcon />, color: 'var(--counter-no-answer)', filterKey: 'noAnswer', tooltip: t('stats.noAnswerHint') },
-            { label: t('stats.outgoing'), value: summaryCounts.outgoing, icon: <CallMadeIcon />, color: 'var(--counter-outgoing)', filterKey: 'outgoing', tooltip: t('stats.outgoingHint') },
-            { label: t('stats.incoming'), value: summaryCounts.incoming, icon: <CallReceivedIcon />, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: t('stats.incomingHint') },
-          ].map((item) => (
-            <StatCounter
-              variant="tile"
-              icon={item.icon}
-              key={item.label}
-              label={item.label}
-              value={item.value}
-              color={item.color}
-              tooltip={item.filterKey === null ? item.tooltip : `${item.tooltip} — click again to clear`}
-              active={item.filterKey === null ? !anyQuickActive : isQuickActive(item.filterKey)}
-              onClick={() => {
-                if (item.filterKey === null) clearQuickFilters();
-                else handleQuickFilterToggle(item.filterKey);
-              }}
-            />
-          ))}
-        </Box>
+        <StatChips
+          sx={{ mb: 1 }}
+          items={[
+            { key: 'total', label: t('stats.total'), value: summaryCounts.total, icon: <PhoneIcon />, colorVar: '--counter-total', filterKey: null },
+            { key: 'answered', label: t('stats.answered'), value: summaryCounts.answered, icon: <PhoneInTalkIcon />, colorVar: '--counter-answered', filterKey: 'answered' },
+            { key: 'noAnswer', label: t('stats.noAnswer'), value: summaryCounts.noAnswer, icon: <PhoneMissedIcon />, colorVar: '--counter-no-answer', filterKey: 'noAnswer' },
+            { key: 'outgoing', label: t('stats.outgoing'), value: summaryCounts.outgoing, icon: <CallMadeIcon />, colorVar: '--counter-outgoing', filterKey: 'outgoing' },
+            { key: 'incoming', label: t('stats.incoming'), value: summaryCounts.incoming, icon: <CallReceivedIcon />, colorVar: '--counter-incoming', filterKey: 'incoming' },
+          ].map(({ filterKey, value, ...item }) => ({
+            ...item,
+            // null is "unknown", never a confident 0.
+            value: value == null ? '—' : value,
+            active: filterKey === null ? !anyQuickActive : isQuickActive(filterKey),
+            onClick: () => (filterKey === null ? clearQuickFilters() : handleQuickFilterToggle(filterKey)),
+          }))}
+        />
       )}
       {/* THE chart of the screen. "Live now" swaps the timeline for the live
           monitor; group-by + date-bucket appear only for the timeline, since
@@ -749,9 +741,8 @@ const Calls = () => {
         <Paper
           elevation={0}
           sx={{
-            flexShrink: 0, border: '1px solid var(--theme-border)', borderRadius: '16px',
-            backgroundColor: 'var(--theme-bg-primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-            px: 2, pt: 1.25, pb: stripCollapsed ? 1.25 : 0.75, mb: 1.5,
+            flexShrink: 0, border: '1px solid var(--theme-border)', borderRadius: '8px',
+            backgroundColor: 'var(--theme-bg-secondary)', px: 1.5, pt: 0.75, pb: stripCollapsed ? 0.75 : 0.25, mb: 1,
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
@@ -958,7 +949,9 @@ const Calls = () => {
               hideFooterPagination
               disableSelectionOnClick
               autoHeight={false}
-              rowHeight={44}
+              // Dense, like the Logs screen: more calls on screen, less chrome.
+              rowHeight={34}
+              columnHeaderHeight={36}
               sx={{
                 height: '100%',
                 border: '1px solid var(--theme-border)',
@@ -989,6 +982,9 @@ const Calls = () => {
                 '& .MuiDataGrid-cell': {
                   borderBottom: '1px solid var(--theme-border)',
                   color: 'var(--theme-text-primary)',
+                  // One baseline per row: the recording player sat above the text.
+                  display: 'flex',
+                  alignItems: 'center',
                 },
                 '& .MuiDataGrid-row': {
                   cursor: 'pointer',
