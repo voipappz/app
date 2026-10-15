@@ -321,12 +321,11 @@ export const useAccounts = () => {
    * Handle sort change
    */
   const handleSortChange = useCallback((field) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('asc');
-    }
+    const newOrder = sortBy === field ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'asc';
+    setSortBy(field);
+    setSortOrder(newOrder);
+    setPage(0); // A new order starts at its first page, like every list screen
+    // State updates re-run the fetch effect — a direct call here double-fetched.
   }, [sortBy, sortOrder]);
 
   /**

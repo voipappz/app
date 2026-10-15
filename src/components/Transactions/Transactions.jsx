@@ -94,6 +94,7 @@ const Transactions = () => {
     const newOrder = sortBy === field ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'asc';
     setSortBy(field);
     setSortOrder(newOrder);
+    setPage(0);
   };
 
   const handleAddCredit = async () => {
