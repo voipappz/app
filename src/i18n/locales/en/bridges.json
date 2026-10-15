@@ -405,7 +405,8 @@
     "updating": "Updating...",
     "emailLogin": "Email me the SIP login",
     "emailLoginSent": "Sent to {{to}}",
-    "emailLoginFailed": "Could not send the email"
+    "emailLoginFailed": "Could not send the email",
+    "showPasswordFailed": "Could not load the password"
   },
   "ivrMenu": {
     "loading": "Loading the phone menu…",
