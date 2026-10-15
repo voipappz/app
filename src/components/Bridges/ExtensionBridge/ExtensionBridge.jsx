@@ -151,8 +151,9 @@ export const ExtensionBridge = ({
         setFormData({
           name: extension.name || '',
           username: extension.username || '',
-          // The API never returns a device's password; blank keeps the current one.
-          password: '',
+          // GET /api/devices/:id (the edit load) carries the password; the
+          // list does not, so a device opened from list data stays blank.
+          password: extension.password || '',
           notes: extension.notes || '',
           enabled: extension.enabled !== undefined ? extension.enabled : true,
           environment_uuid: extension.environment_uuid || extension.environment?.uuid || environmentUuid || '',
@@ -178,7 +179,9 @@ export const ExtensionBridge = ({
       setFormErrors({});
       setError(null);
       setShowPassword(false);
-      setFetchedPassword(null);
+      // The password the edit load carried: saving it back unchanged is not
+      // a password change.
+      setFetchedPassword(extension?.password || null);
       setRevealError('');
     }
   }, [open, extension, environmentUuid, environments]);
