@@ -40,6 +40,11 @@
   gap: 4px;
 }
 
+.centralized-search-exclude { visibility: hidden; }
+.centralized-search-filter-field:hover .centralized-search-exclude,
+.centralized-search-filter-field:focus-within .centralized-search-exclude,
+.centralized-search-exclude.is-on { visibility: visible; }
+
 /* Inline filter panel (drops down from search bar) */
 .centralized-search-filter-panel {
   background-color: var(--theme-bg-secondary, #fff);
