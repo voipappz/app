@@ -1,244 +1,205 @@
-# VoipAppz customer platform: reusable building blocks
+# Customer app builder: plan
 
-Research date: 14 October 2026. Status: proposed architecture and delivery plan.
+Date: 15 October 2026. Status: plan only. No code, packages or deployment.
 
-**Objective**
+## The idea
 
-Let each customer assemble their own application from VoipAppz capabilities: a call button inside a CRM, a complete phone, a contacts-and-history workspace, or an audio conference interface. Customers choose their layout, branding, navigation and authentication integration. Nimbus must consume the same supported building blocks.
+Customers get the source code of a VoipAppz app built on this repo's React + MUI
+components, and assemble their own app from it like Lego: pick blocks, arrange
+them, theme them, and change any line they want. A chat helps them do it.
 
-“Like Lego” means independently useful features with consistent interfaces, predictable behavior and documented ways to connect them. It does not mean publishing every internal Nimbus component. Begin with React + MUI and expand feature coverage gradually.
+We build on what already exists here: the components, the MUI theme, i18n
+(English/Hebrew), the softphone and the live cable. No new UI framework, no
+second design system, no Elixir.
 
-This document contains research findings, proposed decisions, concrete extraction targets and release gates. Package names and code examples are proposals, not existing published APIs. No SDK implementation, package publication or deployment accompanies this document.
+## Already decided in the API repo
 
-**Research method and limits**
+The platform side is planned in [voipappz/api](https://github.com/voipappz/api)
+docs. This plan does not repeat them; it follows them.
 
-Reviewed public GitHub repositories and package manifests, official React/MUI/Vite/npm documentation, Google's Material Design and API guidance, accessibility guidance, and relevant Nimbus source. Findings describe architectural patterns; they are not performance benchmarks or endorsements of another communications backend. External repositories were inspected, not installed or executed. GitHub default-branch links can change; pin any source revision before adopting code.
+| Doc | What it settles |
+|---|---|
+| [Customer application skeleton](https://github.com/voipappz/api/blob/main/docs/CUSTOMER_APPLICATION_SKELETON_PLAN.md) | The customer-owned starter is the primary deliverable. Business logic stays outside the core. |
+| [React/MUI skeleton](https://github.com/voipappz/api/blob/main/docs/REACT_MUI_SKELETON_IMPLEMENTATION_PLAN.md) | Build it as a narrow feature inside this repo first, extract the starter once stable. |
+| [Minimal call CRM](https://github.com/voipappz/api/blob/main/docs/MINIMAL_CRM_PORTAL_IMPLEMENTATION_PLAN.md) | The first app: contacts, custom fields, call activities, reminders. Its blocks and phases. |
+| [SaaS core boundary](https://github.com/voipappz/api/blob/main/docs/SAAS_CORE_BOUNDARY.md) | Event Store stays internal; customers get a small versioned set of public events. |
 
-The local review used the Nimbus checkout and a documentation worktree based on `origin/main` at `c1d6a0b`. At the user's request, this document is included on `feat/nimbus-phone-ux-review` alongside the [phone UX review notes](phone-ux-review.md). The phone UX implementation is not a prerequisite for evaluating this architecture. A later SDK implementation should rebase on the then-current main branch and coordinate overlapping phone changes.
+What that means for the app:
 
-**What established projects demonstrate**
+- **Event Store is internal.** Blocks never write to it or read it. They get a
+  scoped notification, then fetch the authorized state from the API.
+- **CRM data lives in the customer's backend**, not in the VoipAppz core. The
+  core supplies call context, permissions and call facts.
+- **The browser is not a security boundary.** A customer can change every line
+  of their copy; the API's checks still hold.
 
-| Reference | Observed pattern | Proposed application to VoipAppz |
-|---|---|---|
-| [LiveKit components](https://github.com/livekit/components-js), [React package manifest](https://github.com/livekit/components-js/blob/main/packages/react/package.json) | Separate core/React packages, public hooks and prefab exports, type declarations and peer dependencies. | Offer both complete features and smaller hooks/components. Customers should not need a full page or app shell. |
-| [Stream Video SDK](https://github.com/GetStream/stream-video-js), [React package manifest](https://github.com/GetStream/stream-video-js/blob/main/packages/react-sdk/package.json) | Client, React bindings and UI concerns are represented in distinct packages; styles have explicit packaging. | Separate communications state from presentation; make styling behavior explicit. |
-| [React-admin](https://github.com/marmelab/react-admin), [core manifest](https://github.com/marmelab/react-admin/blob/master/packages/ra-core/package.json), [MUI manifest](https://github.com/marmelab/react-admin/blob/master/packages/ra-ui-materialui/package.json) | Core and Material UI layers are separate. Data providers translate application operations to backend requests. | Define adapters at the application boundary instead of importing Nimbus services into every block. |
-| [Refine](https://github.com/refinedev/refine) | A headless approach makes application logic usable with different UI integrations. | Customers may build their own UI using our React hooks; MUI components remain optional. |
-| [Twilio React video example](https://github.com/twilio/twilio-video-app-react) | SDK events feed React hooks and contexts, with event subscriptions cleaned up. | Keep one authoritative communications state and subscribe to it rather than duplicating it across widgets. |
-| [MUI component customization](https://mui.com/material-ui/customization/overriding-component-structure/) and [composition](https://mui.com/material-ui/guides/composition/) | Named slots, slot props and composition provide explicit customization points. | Let customers replace selected headers, actions and empty states without forking our components. |
+This plan adds three things the API docs leave open: how this repo's existing
+components become blocks, how blocks reach the customer, and the chat builder.
 
-These are patterns to adopt selectively. Keep SIP.js, Janus, FreeSWITCH, Ruby and Crystal. Do not install LiveKit, Stream, React-admin or Refine merely to obtain their architecture. Do not copy their build systems or expose their internal APIs as ours.
+## 1. Existing components become blocks
 
-**Customer integration levels**
+Measured on this branch (`src/components/<dir>`, non-test files). "Auth reads"
+counts files that read `AuthContext`/`UserAuthContext` directly; those reads
+are what has to move into the platform layer.
 
-| Level | Customer wants | Deliverable |
-|---|---|---|
-| Complete feature | “Put a phone in my application.” | `Phone`, with documented configuration and events. |
-| Compose components | “Put history on the left and call controls on the right.” | Independently placeable `Dialpad`, `CallControls`, `CallHistory` and `ContactPicker`. |
-| Custom interface | “Use our own design.” | React providers and hooks with no MUI requirement. |
-| API integration | “Use our own frontend or backend.” | Framework-independent HTTP client and canonical API contract; browser calling still requires the browser communications integration. |
+| Block | Existing source | Size | Ties to Nimbus | Work |
+|---|---|---|---|---|
+| Phone | `Phone/`, `lib/sip/`, `context/SoftphoneContext.jsx` | ~1,000 lines | `SoftphoneContext` reads both auth contexts and stored SIP settings; `PhoneScreen` is tied to the drawer; `panelTheme.js` has fixed colours | First block to move. Session comes in as input; phone body separated from the drawer; colours from the theme |
+| Call history | `CallsLog/` | ~940 | `apiService`, navigation | Selection via callback instead of navigating |
+| Live board | `Live/`, `hooks/useLiveEntities.js` | ~1,400 | Environment from context | Environment comes in as input |
+| Dashboard widgets | `DashboardBuilder/` | ~2,300 | 1 auth read | Already a block system for widgets (templates, `react-grid-layout`, saved layouts); reuse it for page layout |
+| Calls | `Calls/` | ~6,300 | 7 auth reads | Later; the most tangled screen |
+| AI chat | `AIChat/` | ~1,700 | 1 auth read | Basis for the chat builder (streams from `/api/vmls/generate`) |
+| Admin screens | `Users/`, `Extensions/`, `Segments/` and others | | Account-only | Stay out of the default customer starter |
 
-The first release supports a React application. An iframe, Web Component, native mobile SDK, visual page builder or arbitrary plugin marketplace is a separate product decision, not a requirement for the first reusable library.
+Shared pieces every block already uses, kept as they are:
 
-**Architecture and package boundaries**
+- Theme: `src/theme/tokens.js`, `theme.js`
+- Dialogs: `src/components/ui/` (`ResponsiveDialog`, `ConfirmDialog`)
+- Tables and filters: `src/components/shared/` (`ResponsiveTable`, `Filters`,
+  date range picker)
+- Small parts: `src/components/common/` (`StatusChip`, `StatCard`, `PageHeader`)
+- Language: `src/i18n/` (`Bdi`, locale formatting) and
+  [docs/i18n-guide.md](i18n-guide.md)
 
-Use three initial packages in the existing repository. Start with one release train; use feature subpath exports rather than creating a package for every button.
+New blocks come from the CRM plan: `InteractionDrawer`, `ContactResolver`,
+`DynamicFieldForm`, `ContactEditor`, `CallActivityEditor`, `ReminderEditor`,
+`ActivityTimeline`, `ReminderList`.
 
-| Proposed package | Owns | Must not depend on |
-|---|---|---|
-| `@voipappz/core` | Configurable HTTP client, resource methods, normalized errors and shared domain contracts. | React, MUI, Nimbus routing, browser storage or an implicitly selected user. |
-| `@voipappz/react` | Providers, feature hooks, lifecycle integration and the existing SIP.js implementation behind a phone interface. | MUI, Nimbus auth contexts, dashboard components or a mandatory router. |
-| `@voipappz/mui` | Presentational components and ready-made feature compositions using the hooks. | Nimbus app shell, direct token lookup or backend administration secrets. |
+### What a block looks like
 
-```mermaid
-flowchart TD
-  Customer[Customer application] --> UI[Optional MUI components]
-  Nimbus[Nimbus application adapter] --> UI
-  Customer --> Hooks[React providers and hooks]
-  UI --> Hooks
-  Hooks --> Core[Core API client and contracts]
-  Hooks --> SIP[SIP.js integration]
-  Hooks -. Future conference integration .-> Conference[Conference controller]
-  Core --> API[VoipAppz API]
-  SIP --> Switch[Existing SIP and FreeSWITCH path]
-  Conference --> API
-  API -. Server-side room management .-> Janus[Janus]
+Each block is a folder, following the repo's existing component + hook pattern:
+
+```text
+src/features/call-history/
+  manifest.js        name, title, props, ACL key, API and realtime needs
+  CallHistory.jsx    MUI component
+  CallHistory.js     hook (state and actions)
+  CallHistory.css
+  locales/en.json, he.json
+  index.js           what other code may import
 ```
 
-The first extraction does not require rewriting `useSipPhone` into a framework-independent engine. Preserve its tested behavior inside the React package. Extract a standalone communications engine only when another supported consumer needs it. Core's HTTP operations can be framework-independent immediately.
+```js
+// manifest.js (proposed shape)
+export default {
+  name: 'call-history',
+  title: 'Call history',
+  aclKey: 'calls',
+  needs: ['session'],
+  props: { limit: { type: 'number', default: 25 } },
+};
+```
 
-Use npm workspaces for linked development and Vite library mode for distribution. Both are supported by the existing tools. No Nx, Turborepo, new package manager or new state framework is needed for this scope. [npm workspaces](https://docs.npmjs.com/cli/v11/using-npm/workspaces/), [Vite 6 library mode](https://v6.vite.dev/guide/build#library-mode)
+A block takes data and callbacks through props or narrow hooks. It does not read
+the auth contexts, the URL's tenant, or `apiService` directly.
 
-**What must change in Nimbus**
+### The platform layer
 
-Paths below are relative to the repository root and describe inspected code, not completed extraction work.
+One layer is **not** copied into the customer's code: the API client, the
+session, SIP and the cable. Today these are `apiService.js` (one shared
+instance), the two auth contexts, `SoftphoneContext` and `useWebSocket`. They
+become one platform module that blocks use through hooks. We keep it updatable,
+because call handling and security fixes must reach every customer.
 
-| Current location | Coupling found | Extraction action |
-|---|---|---|
-| `src/context/SoftphoneContext.jsx` | Reads both Nimbus authentication contexts and persisted SIP settings. | Introduce explicit session/configuration inputs; retain a Nimbus adapter for its existing login behavior. |
-| `src/lib/sip/useSipPhone.js` | Working React/SIP.js lifecycle with call reducers, reconnect and transfer handling. | Preserve this implementation first; expose a documented interface without exporting raw SIP.js sessions. |
-| `src/lib/sip/config.js` and `sipSettings.js` | Vite environment variables, fixed storage keys and credential persistence. | Pass runtime configuration; make storage an optional injected adapter. Keep environment interpretation in the host app. |
-| `src/components/Phone/PhoneScreen.jsx` | Combines drawer/navigation, settings, history and active-call rendering. | Separate the phone body and controls from Nimbus's drawer and navigation callbacks. |
-| `src/components/Phone/PhoneCallsTab.jsx` | Uses Nimbus permissions, API services and a dashboard mapper. | Move resource mapping into shared contracts/adapters; receive permission and selection behavior explicitly. |
-| `src/components/Phone/panelTheme.js` | Fixed panel colors. | Translate to MUI semantic theme values with a Nimbus preset. |
-| `src/services/apiService.js` | Shared browser token lookup, logout handling and window integrations. | Add an instance-based customer client; migrate Nimbus through an adapter rather than exporting this singleton. |
-| `src/services/sessionIsolation.js` | Encodes Nimbus's mutually exclusive admin/user sessions and clears personal browser storage. | Preserve that host policy in Nimbus; customer SDK instances must not clear unrelated application storage. |
+## 2. Delivery: like shadcn/ui
 
-**The contract every reusable block must satisfy**
+We take shadcn's delivery model, not its library. The components stay MUI.
 
-| Concern | Required behavior |
+| shadcn | VoipAppz |
 |---|---|
-| Data | Document the input model, IDs, pagination and supported actions. Share models across hooks and components. |
-| State | Define loading, empty, ready, error and unavailable behavior. Call controls also reflect pending operations and actual call state. |
-| Integration | Expose callbacks for selection/navigation. Do not change the host's URL or open a Nimbus sidebar internally. |
-| Customization | Support `sx`, documented slots/slot props, accessible labels and a small set of meaningful props. |
-| Authorization | Distinguish unsupported features from actions denied to the current user. Backend authorization remains authoritative. |
-| Lifecycle | Mounting another visual block must not create another registration, duplicate audio output or steal the microphone. |
-| Ownership | Document which provider owns the client/session and who disposes it. Unmounting a dialpad must not end a call. |
-| Isolation | Scope cache keys and subscriptions to client, environment and identity. Cancel stale requests and discard late events after logout/switch. |
-| Accessibility | Preserve keyboard operation, focus behavior, meaningful status announcements and usable mobile controls. |
-| Documentation | Include imports, prerequisites, examples, error behavior, supported versions and an independent consumer test. |
+| `npx shadcn init` | A starter repo: login, layout, theme, platform layer, no features |
+| `npx shadcn add button` | `npx voipappz add phone` copies `src/features/phone/` into the customer's app |
+| Registry JSON | The block manifests collected into one JSON file |
+| Blocks (whole sections) | Ready screens: phone, call history, CRM workspace, live board |
+| You own the copied code | Same for blocks. The platform layer stays ours and is updated |
 
-A presentational `CallControlsView` can accept state/actions as props; a connected `CallControls` can obtain the same contract from context. Keep the presentation logic shared. Use composition for layouts instead of accumulating dozens of unrelated boolean configuration flags.
+Updates to a copied block are the customer's choice: `npx voipappz diff phone`
+shows what changed upstream. The CLI comes after the registry works; at first a
+block is copied by hand from this repo.
 
-MUI's themeable-component guidance supports named component customization and defaults. Forward supported refs and DOM props, and compose event handlers so a customer's customization does not silently remove required behavior. [MUI themed components](https://v7.mui.com/material-ui/customization/creating-themed-components/), [MUI composition](https://mui.com/material-ui/guides/composition/)
+## 3. One file assembles the app
 
-**Proposed customer experience**
+`app.layout.json` says which blocks appear on which pages, the sidebar and the
+theme. The router and sidebar read it; today the sidebar is the hard-coded
+`NAV_ITEMS` list in `src/config/navConfig.js`.
 
-The following is an illustrative public interface, not runnable code from a released package. `platform` is created once by the host application with its runtime configuration and supported session callbacks; it is disposed when that host session ends. `customerTheme` is the customer's MUI theme.
-
-```jsx
-import { ThemeProvider } from '@mui/material/styles';
-import { VoipAppzProvider } from '@voipappz/react';
-import { Phone } from '@voipappz/mui/phone';
-
-export function CustomerWorkspace({ platform, customerTheme }) {
-  return (
-    <ThemeProvider theme={customerTheme}>
-      <VoipAppzProvider client={platform}>
-        <Phone />
-      </VoipAppzProvider>
-    </ThemeProvider>
-  );
+```json
+{
+  "theme": { "primary": "#1565c0", "mode": "light" },
+  "nav": ["calls", "contacts", "reminders"],
+  "pages": {
+    "calls": {
+      "title": "Calls",
+      "layout": [
+        { "block": "call-history", "x": 0, "y": 0, "w": 2, "h": 4 },
+        { "block": "phone", "x": 2, "y": 0, "w": 2, "h": 4, "props": { "compact": true } }
+      ]
+    }
+  }
 }
 ```
 
-The same provider should support a composed screen:
+The grid uses the same `x/y/w/h` model as the existing widget board
+(`DashboardBuilder/widgetLayout.js`). Nimbus itself is assembled from the same
+kind of file, so it proves the blocks every day.
 
-```jsx
-<Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-  <CallHistory onSelect={openCustomerCallDetails} />
-  <Stack spacing={2}>
-    <Dialpad />
-    <CallControls />
-  </Stack>
-</Stack>
+## 4. The chat builder
+
+This is what makes the experience different. Customers are developers who do not
+know VoIP. They say what they want, see it working, and keep real source code.
+
+```text
+"Put the phone on the right and the last 10 calls on the left"
+  → the chat proposes a change to app.layout.json
+  → live preview of the new page
+  → apply or undo
 ```
 
-These blocks share the same selected call and phone instance. A history-only application must be able to use history without initializing a phone or importing SIP.js into its bundle. A customer using hooks alone must not need MUI.
+It knows telephony, not just layout: it reads the registry and the customer's
+account, so it can answer "you have no queue yet; create one?" or "this user
+cannot see recordings; their ACL lacks that key".
 
-**Runtime configuration, identity and API behavior**
+Two levels, in order:
 
-Define a small explicit configuration surface: API base URL, current session/identity, token retrieval callback, optional fetch implementation, locale and optional diagnostics callback. Supply SIP credentials and WSS/ICE configuration separately from API tokens. The SDK must not infer them from Nimbus's local-storage keys or build-time `VITE_*` values.
+1. **Layout edits.** The chat only changes `app.layout.json`. Every change is
+   checked against the registry (block exists, props valid, ACL key exists), is
+   instant to preview and easy to undo. This is the first version.
+2. **Code edits.** The chat changes the customer's own source and shows a diff
+   ("add a VIP field to the contact form"). This works on the customer's copy,
+   through their AI tool or ours.
 
-Keep customer credentials in memory by default. A browser phone requires scoped SIP credentials at runtime; Janus administration secrets do not belong in the browser. Establish which current backend credential flows are suitable before the preview release. Do not document a new token-exchange or capability endpoint as available until it actually exists.
+Drag-and-drop editing sits next to the chat, reusing the widget board's grid.
+The model runs server side only; no AI key in the browser. The existing AI chat
+screen and its streaming endpoint are the starting point.
 
-Token refresh should have one owner and coalesce concurrent refresh attempts. Return typed authentication/permission errors to the host rather than globally redirecting or logging out unrelated sessions. On identity changes, dispose old subscriptions, clear that instance's cache and prevent old asynchronous results from entering the new session.
+## Order of work
 
-Resource methods should normalize API results at one boundary. The Ruby API's canonical OpenAPI remains the authority; do not maintain a conflicting contract inside React. Reuse current pagination semantics first. If new list endpoints are added, define ordering and pagination from the beginning. Google recommends anticipating pagination and treating compatibility as a behavioral contract, not just unchanged field names. This informs new API work; it does not require changing existing endpoints to Google's conventions. [Google AIP-158](https://google.aip.dev/158), [Google AIP-180](https://google.aip.dev/180)
-
-Use bounded retries only where an operation is safe to repeat. Do not automatically retry call creation, transfers or room creation after an ambiguous timeout without backend support for deduplication or reconciliation. Expose an error code, safe message, retryability and request correlation where available.
-
-An adapter is a practical integration boundary: React-admin's data-provider design translates shared operations into API-specific requests and responses. Our telephony actions should still have explicit domain methods rather than being forced into generic CRUD. [React-admin data providers](https://marmelab.com/react-admin/DataProviders.html)
-
-**Calling, conferences and multiple consumers**
-
-One configured phone instance owns registration, media and call state. Multiple visual consumers subscribe to it. Multiple authenticated clients must be isolated, but registering the same extension in several tabs/devices is a separate signaling/product policy; component reuse does not solve it automatically.
-
-Preserve the current call reducer and transfer state ownership. If an external store is introduced later, React's `useSyncExternalStore` is the native subscription interface; it requires stable snapshots and cleanup. Do not add a new state library solely for packaging. Verify setup/cleanup under Strict Mode. [React external stores](https://react.dev/reference/react/useSyncExternalStore), [React Strict Mode](https://react.dev/reference/react/StrictMode)
-
-A stable event contract should include call identity and distinguish registration state, call state and command failures. Avoid a second, independently updated copy of the call state in every widget. SDK internals and raw SIP/Janus objects should remain replaceable behind this interface.
-
-Importing a package must not request microphone access, connect a socket or register a phone. Connect only through the configured lifecycle, and acquire media through supported user actions. Show actionable microphone-denied and audio-playback-blocked states. Secure-context and browser permission requirements must be covered in the customer guide. [MDN media permissions](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)
-
-Janus remains a staged extension. The existing audio-room API foundation does not supply a finished participant UI, active-call conversion or verified browser-to-multiple-phone audio. First complete the FreeSWITCH/mod_janus/Lua path and live audio checks. Then define conference hooks and controls against proven backend behavior.
-
-AudioBridge and VideoRoom are distinct Janus plugins. Video requires its own participant/media lifecycle and an explicit policy preventing duplicate microphone/audio paths when combined with SIP audio. Treat video as a separate capability and release gate. [Janus AudioBridge](https://janus.conf.meetecho.com/docs/audiobridge.html), [Janus VideoRoom](https://janus.conf.meetecho.com/docs/videoroom.html)
-
-**Theme, language and accessible UX**
-
-Use semantic tokens such as surface, text, primary action, danger and focus. Keep Nimbus branding as one preset; do not hardcode it into customer components. Google's Material guidance describes tokens as shared values across design and implementation. Apply that principle through the existing MUI theme; a Material 3 migration is not required. [Google Material foundations](https://m3.material.io/foundations/)
-
-Inherit the host's theme. Avoid injecting a global CSS reset, loading fonts automatically, or modifying the host's document styles. A standalone demo may opt into its own baseline. Provide scoped English/Hebrew messages and a translation integration option; do not change the host's global i18n instance on import.
-
-Check narrow containers, not only full browser widths. Keep numbers and SIP identifiers readable in RTL. Explicitly handle direction on portaled menus/dialogs, and preserve focus when dialogs open and close. [MUI RTL](https://v7.mui.com/material-ui/customization/right-to-left/), [W3C dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
-
-Do not encode call state only by color. Label actions, show pending commands, explain unavailable operations, and announce meaningful state transitions without announcing the timer every second. Each supplied composition must include loading, empty, failure and permission-denied examples.
-
-**Packaging and compatibility**
-
-Publish documented ESM entry points and TypeScript declarations. Keep the existing JavaScript implementation where practical; type the public boundary without a repository-wide TypeScript rewrite. Add CommonJS only if a supported consumer requires it. Use explicit `exports` and a publication file allowlist. [Node package entry points](https://nodejs.org/api/packages.html#package-entry-points)
-
-Keep React/ReactDOM as peer dependencies. The MUI layer also shares compatible MUI/Emotion instances with the host. Externalize those imports, including relevant subpaths, from builds. Duplicate React can break hooks. Start with the repository's React 19/MUI 7 line and declare only compatibility combinations tested in CI; do not upgrade the app just because current documentation covers a newer major. [React duplicate-instance guidance](https://react.dev/warnings/invalid-hook-call-warning), [Vite library mode](https://v6.vite.dev/guide/build#library-mode)
-
-Keep optional feature imports independent. Verify that a history-only consumer excludes SIP/Janus/video code and that a hooks-only consumer excludes MUI. Mark side effects truthfully: required CSS must not disappear during tree shaking. Verify the packed artifact, not just workspace source links.
-
-Use preview versions before a stable public contract. Publish changelogs and migration instructions; after 1.0, treat incompatible public changes as major releases. Capture supported backend contract versions as well as frontend dependencies. [Semantic Versioning](https://semver.org/)
-
-Before publication, settle package ownership, registry visibility, support expectations and distribution rights. Review any third-party code/assets before copying them; this research proposes architectural patterns, not copied assets. Use the registry's supported provenance mechanism where applicable to connect releases to their source/build. [npm provenance](https://docs.npmjs.com/generating-provenance-statements/)
-
-**Feature catalogue and delivery order**
-
-| Stage | Reusable blocks | Boundary or dependency |
+| Step | Deliverable | Done when |
 |---|---|---|
-| First slice | Phone, dialpad, call status, mute/hold/end, existing transfer controls | Existing SIP.js behavior with explicit session configuration. |
-| Customer workspace | Call history, contact selection, contact details, availability | Verified customer API permissions and shared data models. |
-| Audio conferences | Conference entry, participants, invite/leave and authorized moderation | Completed API/node integration and real multiphone audio. |
-| Further platform features | Recordings, messaging, numbers, reports and customer settings | Separate API/readiness and permission review for each feature. |
-| Video | Video tiles, device selection, camera and screen sharing | Proven VideoRoom integration and media ownership model. |
+| 1 | Block folder convention and manifest; move Phone into `src/features/phone/` | Nimbus phone behaves exactly as before; the block has no direct auth reads |
+| 2 | Platform layer: client instance, session input, SIP and cable hooks | Phone and call history run with a session passed in, not read from Nimbus |
+| 3 | `app.layout.json` drives Nimbus's sidebar and pages | `NAV_ITEMS` comes from the layout file; ACL filtering unchanged |
+| 4 | First CRM story as blocks (CRM plan P3) | Save a contact with one custom field and create one reminder from a call |
+| 5 | Starter repo and registry JSON | A clean app with no Nimbus code places a call using copied blocks |
+| 6 | Chat builder v1: layout edits, preview, apply, undo | A developer builds a calls page by chat alone |
+| 7 | CLI `add` and `diff` | A block is added and updated without copying by hand |
 
-Administration-only capabilities stay outside the default customer surface. They can later become explicit packages or subpaths with their own permissions and support contract. A customer feature should not pull the whole admin application into its dependency graph.
+Steps 1 to 3 change Nimbus without changing what users see. Checks run in CI as
+the repo requires; locally only lint.
 
-**Implementation work packages and acceptance gates**
+## Open decisions
 
-| Work package | Deliverable | Acceptance gate |
-|---|---|---|
-| 1. Public interface design | Feature inventory, package exports, state/action models, auth/configuration and ownership contracts. | Reviewers can explain how a customer uses one block without Nimbus. |
-| 2. Phone extraction | Providers/hooks and MUI phone blocks with a Nimbus adapter. | Existing call/transfer behavior preserved; removing a visual block does not drop the session. |
-| 3. Independent consumer | A small customer React + MUI application installed from package tarballs. | No imports from Nimbus source, no Nimbus auth/router requirement, custom theme works. |
-| 4. Nimbus adoption | Nimbus imports the same packages; legacy internals are migrated incrementally. | No duplicated phone implementation and existing regressions remain green. |
-| 5. Customer preview | README, API reference, composition recipes, troubleshooting and compatibility matrix. | Another developer completes setup from documentation; package contents and declarations verified. |
-| 6. Feature expansion | History/contacts, then verified conferences and later video. | Each module meets the same isolation, lifecycle, permission and usability gates. |
+- How a customer's app gets its session and SIP credentials (open in the API
+  skeleton plan).
+- Where the chat model runs and who pays for it.
+- The starter's repository, licence and branding rights.
+- How copied blocks get updates: `diff` only, or a merge path.
+- Which pilot customer goes first.
 
-Use a separate SDK implementation branch/worktree. Keep UI design changes independently reviewable. Backend semantics and canonical contract changes belong in `voipappz-api`; FreeSWITCH/Lua/runtime work belongs in `va-crystal`. Split PRs by independently testable behavior rather than attempting a full-platform rewrite.
+## Not in this plan
 
-**Verification plan**
-
-Nimbus's current repository policy permits only `npm run lint` locally. The checks below are proposed CI or designated integration-environment work, not tests run while writing this document.
-
-| Area | Required evidence |
-|---|---|
-| Package consumption | Install packed artifacts into a clean customer example; resolve exports/types without workspace aliases; inspect published file list. |
-| Dependencies | One compatible React/MUI setup; hooks-only and history-only bundles exclude unrelated engines/UI; record size baselines before setting budgets. |
-| State/lifecycle | Strict Mode mount/cleanup, two widgets sharing one call, late events, logout, identity switch, reconnect and disposal. |
-| API/auth | Correct environment/token, denied permissions, expired sessions, cancellation, pagination and ambiguous mutation failures. |
-| UI | Real browser keyboard/focus checks, screen-reader-oriented labels, English/Hebrew, narrow/short containers, light/dark/custom themes. |
-| Existing phone | Incoming/outgoing calls, answer/decline, mute, hold/resume, DTMF and blind/attended transfer including cancel. |
-| Live media | At least two independent phones/browsers; verify audible media both ways, leave/rejoin, network interruptions and device/permission failures. A signaling success alone is insufficient. |
-| Conferences/video | Capability-specific tests only after backend implementation; confirm participants and avoid duplicated media paths. |
-| Host coexistence | No forced router, global CSS reset, shared storage cleanup, duplicate notifications or unexpected microphone/network access. |
-
-Keep an example gallery within the existing React/Vite tooling initially. Storybook or additional test frameworks are optional future choices only if a concrete maintenance need justifies them.
-
-**Release decisions still to resolve**
-
-- Select the first external customer application and supported browser/framework combinations. Use a React + MUI example first; add an SSR consumer before claiming SSR compatibility.
-- Confirm the backend-supported method for obtaining scoped API/SIP credentials, cross-origin access and environment identity.
-- Define extension behavior across tabs/devices; multiple UI widgets sharing a session is not the same feature as multiple simultaneous calls or registrations.
-- Confirm which customer operations are actually supported and permissioned; capability discovery may need backend work.
-- Choose package visibility and distribution ownership before publishing; no publication is implied by this research.
-- Assign maintainers and support/version policy before making stable compatibility promises.
-
-**Definition of done for the first release**
-
-A customer developer installs the preview packages into a clean React + MUI application, supplies supported runtime authentication/configuration, applies their own theme, and makes a call. They can replace the full phone with individual controls without rewriting signaling. Nimbus uses the same implementation. CI verifies both consumers, and a live test verifies actual audio. Customer docs clearly distinguish available features from planned Janus/video extensions.
+- Publishing npm packages before the blocks are stable.
+- A new state library, build tool or design system.
+- A full drag-and-drop page builder library. Add one (for example Puck) only if
+  the grid and the chat are not enough.

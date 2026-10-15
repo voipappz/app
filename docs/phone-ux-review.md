@@ -1,7 +1,7 @@
 # Phone UX review
 
-The broader customer SDK architecture and phased extraction plan are documented
-in [Customer platform research](customer-platform-lego-research-plan.md).
+The customer app builder plan (blocks, delivery and the chat builder) is
+in [Customer app builder](customer-platform-lego-research-plan.md).
 
 This branch improves the existing Nimbus SIP.js phone presentation. It uses the
 existing MUI icon set and palette, with a caller card, explicit call status,
