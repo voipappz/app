@@ -83,7 +83,10 @@
     "noEnvironment": "ללא אפליקציה",
     "copyUrl": "העתקת הכתובת",
     "copied": "הועתק!",
-    "download": "הורדה"
+    "download": "הורדה",
+    "getApp": "סרקו עם Cloud Softphone. להורדת האפליקציה:",
+    "googlePlay": "Google Play",
+    "appStore": "App Store"
   },
   "live": {
     "title": "רישומי SIP"
