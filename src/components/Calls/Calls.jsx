@@ -39,6 +39,10 @@ import LiveDrawer from '../Live/LiveDrawer.jsx';
 import LiveCallsPanel from '../Live/panels/LiveCallsPanel.jsx';
 import TimeHistogram from '../../views/syslogs/TimeHistogram';
 import { convertAggregateToHistogramFormat } from '../../utils/logFormatting';
+import PhoneIcon from '@mui/icons-material/Phone';
+import PhoneMissedIcon from '@mui/icons-material/PhoneMissed';
+import CallMadeIcon from '@mui/icons-material/CallMade';
+import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import LogTabs from '../shared/LogTabs/LogTabs.jsx';
 import ReportsPanel from '../Reports/ReportsPanel/ReportsPanel.jsx';
 import LiveChartStrip from '../Live/LiveChartStrip.jsx';
@@ -711,16 +715,17 @@ const Calls = () => {
           Rendered even with an empty grid — "0 calls" is an answer; the row
           vanishing is not. A null value renders "—", never a confident 0. */}
       {!isMobile && (
-        <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0.5, mb: 1, mt: 0.25, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1.5, mb: 1.5 }}>
           {[
-            { label: t('stats.total'), value: summaryCounts.total, color: 'var(--counter-total)', filterKey: null, tooltip: t('stats.totalHint') },
-            { label: t('stats.answered'), value: summaryCounts.answered, color: 'var(--counter-answered)', filterKey: 'answered', tooltip: t('stats.answeredHint') },
-            { label: t('stats.noAnswer'), value: summaryCounts.noAnswer, color: 'var(--counter-no-answer)', filterKey: 'noAnswer', tooltip: t('stats.noAnswerHint') },
-            { label: t('stats.outgoing'), value: summaryCounts.outgoing, color: 'var(--counter-outgoing)', filterKey: 'outgoing', tooltip: t('stats.outgoingHint') },
-            { label: t('stats.incoming'), value: summaryCounts.incoming, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: t('stats.incomingHint') },
+            { label: t('stats.total'), value: summaryCounts.total, icon: <PhoneIcon />, color: 'var(--counter-total)', filterKey: null, tooltip: t('stats.totalHint') },
+            { label: t('stats.answered'), value: summaryCounts.answered, icon: <PhoneInTalkIcon />, color: 'var(--counter-answered)', filterKey: 'answered', tooltip: t('stats.answeredHint') },
+            { label: t('stats.noAnswer'), value: summaryCounts.noAnswer, icon: <PhoneMissedIcon />, color: 'var(--counter-no-answer)', filterKey: 'noAnswer', tooltip: t('stats.noAnswerHint') },
+            { label: t('stats.outgoing'), value: summaryCounts.outgoing, icon: <CallMadeIcon />, color: 'var(--counter-outgoing)', filterKey: 'outgoing', tooltip: t('stats.outgoingHint') },
+            { label: t('stats.incoming'), value: summaryCounts.incoming, icon: <CallReceivedIcon />, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: t('stats.incomingHint') },
           ].map((item) => (
             <StatCounter
-              variant="minimal"
+              variant="tile"
+              icon={item.icon}
               key={item.label}
               label={item.label}
               value={item.value}
@@ -744,8 +749,9 @@ const Calls = () => {
         <Paper
           elevation={0}
           sx={{
-            flexShrink: 0, border: '1px solid var(--theme-border)', borderRadius: '8px',
-            backgroundColor: 'var(--theme-bg-secondary)', px: 1.5, pt: 0.75, pb: stripCollapsed ? 0.75 : 0.25, mb: 1,
+            flexShrink: 0, border: '1px solid var(--theme-border)', borderRadius: '16px',
+            backgroundColor: 'var(--theme-bg-primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            px: 2, pt: 1.25, pb: stripCollapsed ? 1.25 : 0.75, mb: 1.5,
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
@@ -893,9 +899,27 @@ const Calls = () => {
               />
             </LtrIsland>
           ) : (
-            <Typography variant="body2" sx={{ color: 'var(--mui-palette-text-secondary)', textAlign: 'center', py: 3 }}>
-              {t('chart.empty')}
-            </Typography>
+            <Box data-testid="calls-empty" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3, gap: 0.75 }}>
+              <Box sx={{ width: 48, height: 48, borderRadius: '14px', display: 'grid', placeItems: 'center', bgcolor: 'var(--theme-bg-secondary)', color: 'var(--theme-text-secondary)' }}>
+                <PhoneIcon />
+              </Box>
+              <Typography sx={{ fontWeight: 600, color: 'var(--theme-text-primary)' }}>{t('chart.emptyTitle')}</Typography>
+              <Typography variant="body2" sx={{ color: 'var(--theme-text-secondary)', maxWidth: 420 }}>
+                {Object.keys(currentSearchParams || {}).some((k) => k.startsWith('search[')) ? t('chart.emptyFiltered') : t('chart.emptyHint')}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <Button size="small" variant="outlined" sx={{ borderRadius: 999, textTransform: 'none' }}
+                  onClick={() => { const end = new Date(); end.setHours(23, 59, 59, 999); const start = new Date(end.getTime() - 7 * 864e5 + 1); start.setHours(0, 0, 0, 0); handleDateRangeChange([start, end]); }}>
+                  {t('chart.emptyLast7')}
+                </Button>
+                {Object.keys(currentSearchParams || {}).some((k) => k.startsWith('search[')) && (
+                  <Button size="small" variant="text" sx={{ borderRadius: 999, textTransform: 'none' }}
+                    onClick={() => handleClearAllFilters(setCurrentSearchParams)}>
+                    {t('chart.emptyClear')}
+                  </Button>
+                )}
+              </Box>
+            </Box>
           ))}
         </Paper>
       )}

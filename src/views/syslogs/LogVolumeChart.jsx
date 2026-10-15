@@ -6,10 +6,16 @@ import { formatDate } from '../../utils/dateUtils';
 
 // Level colours match the list; anything else takes the palette in order.
 const LEVEL_COLORS = {
-  emerg: '#7f1d1d', alert: '#991b1b', crit: '#dc2626', err: '#ef4444', error: '#ef4444',
-  warning: '#f59e0b', warn: '#f59e0b', notice: '#06b6d4', info: '#3b82f6', debug: '#94a3b8',
+  // Fixed status steps (critical / warning) for the levels that ARE a state;
+  // the informational levels take categorical slots. Validated with the
+  // dataviz skill's palette checks.
+  emerg: '#d03b3b', alert: '#d03b3b', crit: '#d03b3b', err: '#d03b3b', error: '#d03b3b',
+  warning: '#fab219', warn: '#fab219', notice: '#1baf7a', info: '#2a78d6', debug: '#8a8a85',
 };
-const PALETTE = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#84cc16'];
+// Categorical slots in FIXED order (never cycled): the dataviz skill's validated
+// palette - passes lightness, chroma, colour-blind separation and normal-vision
+// checks. Past 8 values the rest fold into "other".
+const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
 const MAX_SERIES = 8;
 
 const BUCKET_MS = { minute: 60e3, hour: 3.6e6, day: 8.64e7 };
@@ -44,7 +50,7 @@ export default function LogVolumeChart({ data = [], loading, groupLabel = 'Level
     };
   }, [data]);
 
-  const colorFor = (key, i) => LEVEL_COLORS[key] || (key === 'other' ? '#64748b' : PALETTE[i % PALETTE.length]);
+  const colorFor = (key, i) => LEVEL_COLORS[key] || (key === 'other' ? '#8a8a85' : PALETTE[Math.min(i, PALETTE.length - 1)]);
   const tick = (t) => {
     const d = new Date(t);
     if (Number.isNaN(d.getTime())) return t;
@@ -79,13 +85,13 @@ export default function LogVolumeChart({ data = [], loading, groupLabel = 'Level
             }}
             style={{ cursor: onSelectRange ? 'pointer' : 'default' }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--mui-palette-divider)" vertical={false} />
+            <CartesianGrid stroke="var(--mui-palette-divider)" strokeOpacity={0.6} vertical={false} />
             <XAxis dataKey="time" tickFormatter={tick} tick={{ fontSize: 10 }} minTickGap={24} />
             <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={44} />
             <Tooltip labelFormatter={(l) => formatDate(l)} contentStyle={{ fontSize: '0.75rem' }} />
             <Legend wrapperStyle={{ fontSize: '0.68rem' }} iconSize={8} />
             {keys.map((k, i) => (
-              <Bar key={k} dataKey={k} stackId="v" fill={colorFor(k, i)} isAnimationActive={false} />
+              <Bar key={k} dataKey={k} stackId="v" fill={colorFor(k, i)} stroke="var(--mui-palette-background-paper)" strokeWidth={2} isAnimationActive={false} />
             ))}
           </BarChart>
         </ResponsiveContainer>

@@ -5,8 +5,11 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 const LEVEL_COLORS = {
-  emerg: '#7f1d1d', alert: '#991b1b', crit: '#dc2626', err: '#ef4444', error: '#ef4444',
-  warning: '#f59e0b', warn: '#f59e0b', notice: '#06b6d4', info: '#3b82f6', debug: '#94a3b8',
+  // Fixed status steps (critical / warning) for the levels that ARE a state;
+  // the informational levels take categorical slots. Validated with the
+  // dataviz skill's palette checks.
+  emerg: '#d03b3b', alert: '#d03b3b', crit: '#d03b3b', err: '#d03b3b', error: '#d03b3b',
+  warning: '#fab219', warn: '#fab219', notice: '#1baf7a', info: '#2a78d6', debug: '#8a8a85',
 };
 const SHOWN = 8;
 
