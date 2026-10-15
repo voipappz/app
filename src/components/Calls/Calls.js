@@ -18,6 +18,64 @@ export const todayRange = () => {
   ];
 };
 
+// The cause values Mediators::Cdr::Cause writes that mean the call was NOT
+// answered. `none` (an outcome the switch could not classify) and a missing
+// cause (`unknown` in the aggregate) are neither answered nor unanswered: they
+// count in Total only, never folded into No Answer.
+export const NOT_ANSWERED_CAUSES = ['no_answer', 'busy', 'error'];
+
+const sumKeys = (buckets, keys) => (buckets || []).reduce((acc, bucket) => (
+  acc + Object.entries(bucket || {}).reduce((sub, [k, v]) => (
+    k !== 'time' && (keys === null || keys.includes(k)) ? sub + (Number(v) || 0) : sub
+  ), 0)
+), 0);
+
+// An API that predates metric=duration ignores it and answers with counts.
+// Identical buckets therefore mean "not supported", not "every call lasted 1s".
+const sameBuckets = (a, b) => {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || a.length === 0) return false;
+  return a.every((bucket, i) => {
+    const other = b[i] || {};
+    const keys = new Set([...Object.keys(bucket || {}), ...Object.keys(other)]);
+    return [...keys].every((k) => (k === 'time' ? bucket[k] === other[k] : Number(bucket[k]) === Number(other[k])));
+  });
+};
+
+// Summary counters and insights, derived from the aggregate the chart already
+// fetches. null (not 0) whenever a number is unknown, so "—" renders instead.
+//
+// Shape: aggregate { cause: [{time, answer: 2, no_answer: 1}, ...], direction: [...] },
+// durationAggregate: the cause buckets again with summed seconds, or null.
+export const deriveSummary = ({ aggregate, durationAggregate = null, loading = false, failed = false }) => {
+  const UNKNOWN = {
+    total: null, answered: null, noAnswer: null, incoming: null, outgoing: null,
+    answerRate: null, totalDuration: null, avgDuration: null,
+  };
+  if (failed) return UNKNOWN;
+  const cause = aggregate?.cause;
+  const direction = aggregate?.direction;
+  // Before the first response both are []; that is "unknown", not "zero".
+  if (!Array.isArray(cause) || !Array.isArray(direction)) return UNKNOWN;
+  if (loading && cause.length === 0 && direction.length === 0) return UNKNOWN;
+
+  const total = sumKeys(cause, null);
+  const answered = sumKeys(cause, ['answer']);
+  const durationKnown = Array.isArray(durationAggregate);
+  const answeredSeconds = durationKnown ? sumKeys(durationAggregate, ['answer']) : null;
+  return {
+    total,
+    answered,
+    noAnswer: sumKeys(cause, NOT_ANSWERED_CAUSES),
+    outgoing: sumKeys(direction, ['outgoing']),
+    incoming: sumKeys(direction, ['incoming']),
+    // A rate over no calls is not 0%.
+    answerRate: total > 0 ? answered / total : null,
+    totalDuration: durationKnown ? sumKeys(durationAggregate, null) : null,
+    // Per ANSWERED call: an unanswered call's duration is its ring time.
+    avgDuration: durationKnown && answered > 0 ? answeredSeconds / answered : null,
+  };
+};
+
 const useCalls = ({ allTime = false } = {}) => {
   // The active session's token: an account's, or a portal user's (the same
   // screen serves both; the API scopes a user token to its own environment).
@@ -52,6 +110,10 @@ const useCalls = ({ allTime = false } = {}) => {
   // A failed aggregate request must not look like "no calls" — the summary
   // counters read this to render "—" instead of a confident 0.
   const [aggregateError, setAggregateError] = useState(false);
+  // Summed call duration (seconds) per cause bucket — /calls/aggregate with
+  // metric=duration (CallAggregate METRICS). null = unknown: the request
+  // failed, or an API too old to know the metric answered with counts.
+  const [durationAggregate, setDurationAggregate] = useState(null);
 
   // Segments for filter sidebar
   const [segments, setSegments] = useState([]);
@@ -230,6 +292,9 @@ const useCalls = ({ allTime = false } = {}) => {
       // server-side grouping (disposition/queue/ivr/... — see CallAggregate).
       const groups = [...new Set(['cause', 'direction', ...extraGroups])];
       let failed = false;
+      const durationRequest = fetch(`${buildUrl('cause')}&metric=duration`, { method: 'GET', headers: commonHeaders })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
       const results = await Promise.all(
         groups.map((g) =>
           fetch(buildUrl(g), { method: 'GET', headers: commonHeaders })
@@ -239,6 +304,10 @@ const useCalls = ({ allTime = false } = {}) => {
       );
       const next = {};
       groups.forEach((g, i) => { next[g] = Array.isArray(results[i]) ? results[i] : []; });
+      const durations = await durationRequest;
+      setDurationAggregate(
+        Array.isArray(durations) && !sameBuckets(durations, next.cause) ? durations : null
+      );
       setAggregate(next);
       setAggregateError(failed);
     } finally {
@@ -261,32 +330,10 @@ const useCalls = ({ allTime = false } = {}) => {
   //
   // Shape: { cause: [{time, answer: 2, no_answer: 1}, ...], direction: [...] }
   // null (not 0) whenever the number is unknown, so "—" renders instead.
-  const summaryCounts = useMemo(() => {
-    const UNKNOWN = { total: null, answered: null, noAnswer: null, incoming: null, outgoing: null };
-    if (aggregateError) return UNKNOWN;
-
-    const sumKeys = (buckets, keys) => (buckets || []).reduce((acc, bucket) => (
-      acc + Object.entries(bucket || {}).reduce((sub, [k, v]) => (
-        k !== 'time' && (keys === null || keys.includes(k)) ? sub + (Number(v) || 0) : sub
-      ), 0)
-    ), 0);
-
-    const cause = aggregate?.cause;
-    const direction = aggregate?.direction;
-    // Before the first response both are []; that is "unknown", not "zero".
-    if (!Array.isArray(cause) || !Array.isArray(direction)) return UNKNOWN;
-    if (aggregateLoading && cause.length === 0 && direction.length === 0) return UNKNOWN;
-
-    const total = sumKeys(cause, null);
-    const answered = sumKeys(cause, ['answer']);
-    return {
-      total,
-      answered,
-      noAnswer: Math.max(total - answered, 0),
-      outgoing: sumKeys(direction, ['outgoing']),
-      incoming: sumKeys(direction, ['incoming']),
-    };
-  }, [aggregate, aggregateLoading, aggregateError]);
+  const summaryCounts = useMemo(
+    () => deriveSummary({ aggregate, durationAggregate, loading: aggregateLoading, failed: aggregateError }),
+    [aggregate, durationAggregate, aggregateLoading, aggregateError]
+  );
 
   // Fetch calls data with pagination support
   const fetchCalls = useCallback(async (range = dateRange, searchParams = null, resetData = true, pageOverride = null) => {

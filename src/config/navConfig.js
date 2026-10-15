@@ -30,6 +30,9 @@ export const NAV_ITEMS = [
   // bill against, and were previously only reachable through the picker
   // embedded in other dialogs.
   { text: 'Tariffs', labelKey: 'nav:tariffs',       path: '/tariffs',        iconComponent: RequestQuoteIcon,          aclKey: 'tariffs',                        group: 'MANAGE'   },
+  // Providers (the SIP trunks routes dial out through) were reachable only
+  // from Routes; a screen people manage on its own gets its own entry.
+  { text: 'Providers', labelKey: 'nav:providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'MANAGE'   },
   // The live-calls dashboard (pilot): the portal's landing screen, in the
   // console, scoped to the selected customer/environment. Gated on `calls`,
   // the data it shows.
@@ -59,11 +62,10 @@ export const TOPBAR_NAV_ITEMS = [
 ];
 
 // Screens with a route but no menu entry: they open from the screen they
-// belong to (Providers from Routes, Messages from the Logs tabs). Listed so a visit still has a name and
+// belong to (Messages from the Logs tabs). Listed so a visit still has a name and
 // icon in breadcrumbs and recent pages. Nodes has no route at all: it is
 // managed from the customer dialog.
 export const OFF_MENU_NAV_ITEMS = [
-  { text: 'Providers', labelKey: 'nav:providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'ADMIN'    },
   { text: 'Messages', labelKey: 'nav:messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'messages',                       group: 'MONITOR'  },
 ];
 
