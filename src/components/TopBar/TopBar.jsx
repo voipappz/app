@@ -136,6 +136,7 @@ import { SortableContext, useSortable, arrayMove, horizontalListSortingStrategy 
 import { CSS } from '@dnd-kit/utilities';
 import './TopBar.css';
 import TopBarPhoneButton from './TopBarPhoneButton.jsx';
+import AppearanceButtons from './AppearanceButtons.jsx';
 import { useIsUserSession } from '../../hooks/useIsUserSession';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useUserAuth } from '../../context/UserAuthContext';
@@ -1021,7 +1022,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </Button>
           )}
 
-          {/* Appearance controls live in the sidebar. */}
+          {/* Language and light/dark mode: top end corner, both sessions. */}
+          <AppearanceButtons />
 
           {/* Divider between admin and utility icons */}
           <Box sx={{ width: '1px', height: 24, backgroundColor: 'var(--border-light, #e5e7eb)', mx: 0.5, flexShrink: 0 }} />
