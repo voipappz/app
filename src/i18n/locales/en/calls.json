@@ -14,7 +14,12 @@
     "show": "Show chart",
     "hide": "Hide chart",
     "openList": "Open list",
-    "empty": "No calls in the selected period."
+    "empty": "No calls in the selected period.",
+    "emptyTitle": "No calls yet",
+    "emptyHint": "Calls in the selected period will appear here.",
+    "emptyFiltered": "No calls match these filters in the selected period.",
+    "emptyLast7": "Show the last 7 days",
+    "emptyClear": "Clear filters"
   },
   "bucket": {
     "auto": "Auto",
