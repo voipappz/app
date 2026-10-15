@@ -928,6 +928,9 @@ const CentralizedSearch = ({
 
                     {isString && showExclude && (
                       <Chip
+                        // Shown on hover/focus of its field, or while it is on:
+                        // thirteen "Exclude" buttons at rest were noise.
+                        className={`centralized-search-exclude ${isNegated ? 'is-on' : ''}`}
                         label={isNegated ? t('search.excluding') : t('search.exclude')}
                         size="small"
                         onClick={() => toggleNegate(fieldName)}
@@ -1153,7 +1156,8 @@ const CentralizedSearch = ({
                   <Box className="topbar-search-popup-head">
                     {actions}
                   </Box>
-                  {pillRow}
+                  {/* No pill row here: every pill is also a field of the
+                      panel below, so the dropdown said each filter twice. */}
                   {filterPanel}
                 </Paper>
               </Popper>
