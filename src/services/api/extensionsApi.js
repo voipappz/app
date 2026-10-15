@@ -36,6 +36,11 @@ export const extensionsApi = {
    * @param {string} extensionId - The extension ID
    * @returns {Promise<Object>} - Extension object
    */
+  // Emails the device's SIP login to the signed-in account's own address:
+  // the API never returns a device's password. Resolves to { sent_to }.
+  sendLogin: async (extensionId) =>
+    apiService.post(`/api/devices/${encodeURIComponent(extensionId)}/send_login`, {}, {}, 'emailing the device login', false),
+
   getExtension: async (extensionId) => {
     const url = `/api/devices/${extensionId}`;
     return apiService.get(url, {}, `fetching extension ${extensionId}`, false);

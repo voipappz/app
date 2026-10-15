@@ -402,7 +402,10 @@
     "numberPlaceholder": "e.g., 1001",
     "numberHelp": "Device number (e.g., 1001)",
     "passwordRequiredHelp": "Required for new devices",
-    "updating": "Updating..."
+    "updating": "Updating...",
+    "emailLogin": "Email me the SIP login",
+    "emailLoginSent": "Sent to {{to}}",
+    "emailLoginFailed": "Could not send the email"
   },
   "ivrMenu": {
     "loading": "Loading the phone menu…",
