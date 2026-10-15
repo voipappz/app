@@ -136,7 +136,6 @@ import { SortableContext, useSortable, arrayMove, horizontalListSortingStrategy 
 import { CSS } from '@dnd-kit/utilities';
 import './TopBar.css';
 import TopBarPhoneButton from './TopBarPhoneButton.jsx';
-import AppearanceButtons from './AppearanceButtons.jsx';
 import { useIsUserSession } from '../../hooks/useIsUserSession';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useUserAuth } from '../../context/UserAuthContext';
@@ -864,7 +863,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
   const ActiveToolScreen = TOOL_SCREENS[activeTool];
   const activeToolItem = TOPBAR_NAV_ITEMS.find(item => item.path === activeTool && canAccess(item.aclKey))
     || (!userSession && ACCOUNT_TOOLS.find(item => item.path === activeTool));
-  // Appearance (theme, language) lives in the sidebar's bottom tools.
+  // Appearance (theme, language) lives in the sidebar, beside the account.
   const overflowTools = professionalTools.filter((tool) => allow(tool.aclKey));
 
   return (
@@ -1022,8 +1021,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </Button>
           )}
 
-          {/* Language and light/dark mode: top end corner, both sessions. */}
-          <AppearanceButtons />
+          {/* Language and light/dark mode live in the sidebar, beside the account. */}
 
           {/* Divider between admin and utility icons */}
           <Box sx={{ width: '1px', height: 24, backgroundColor: 'var(--border-light, #e5e7eb)', mx: 0.5, flexShrink: 0 }} />

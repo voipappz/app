@@ -1,10 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ acl: null, user: { email: 'a@b.c', fullName: 'Admin' }, logout: vi.fn() }) }));
 vi.mock('../../context/UserAuthContext', () => ({ useUserAuth: () => ({ isAuthenticated: false }) }));
 vi.mock('../../hooks/useIsUserSession', () => ({ useIsUserSession: () => false }));
+const toggleTheme = vi.fn();
+const setLanguage = vi.fn();
+vi.mock('../../context/ThemeContext', () => ({ useThemeMode: () => ({ isDarkMode: false, toggleTheme }) }));
+vi.mock('../../i18n/LocaleContext', () => ({ useLocale: () => ({ language: 'en', setLanguage }) }));
 vi.mock('../../hooks/useNavBadges', () => ({ default: () => ({}) }));
 vi.mock('./CustomerSwitcher/SidebarCustomerSwitcher.jsx', () => ({ default: () => null }));
 vi.mock('../../config/navConfig', () => ({
@@ -45,5 +49,25 @@ describe('Sidebar: text when open, icons when collapsed', () => {
     expect(container.querySelector('.sidebar-container')).toHaveClass('collapsed');
     const devices = screen.getByRole('button', { name: 'Devices' });
     expect(within(devices).getByTestId('icon-devices')).toBeInTheDocument();
+  });
+
+  // Language and light/dark mode sit with the account, at the bottom: a row
+  // when open, stacked icons in the collapsed rail.
+  it('open: language and theme are a row just above the account', () => {
+    const { container } = show(false);
+    const tools = screen.getByTestId('sidebar-appearance');
+    expect(tools).not.toHaveClass('sidebar-bottom-tools--stacked');
+    expect(tools.nextElementSibling).toBe(container.querySelector('.sidebar-profile-section'));
+    fireEvent.click(screen.getByTestId('sidebar-language'));
+    expect(setLanguage).toHaveBeenCalledWith('he');
+    fireEvent.click(screen.getByTestId('sidebar-theme'));
+    expect(toggleTheme).toHaveBeenCalled();
+  });
+
+  it('collapsed: language and theme are stacked icons, each named', () => {
+    show(true);
+    expect(screen.getByTestId('sidebar-appearance')).toHaveClass('sidebar-bottom-tools--stacked');
+    expect(screen.getByTestId('sidebar-language')).toHaveAttribute('aria-label');
+    expect(screen.getByTestId('sidebar-theme')).toHaveAttribute('aria-label');
   });
 });
