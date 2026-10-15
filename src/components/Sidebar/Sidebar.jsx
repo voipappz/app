@@ -86,28 +86,38 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
   const renderNavItem = (item, index) => {
     const IconComp = item.iconComponent;
     const badge = navBadge(item.path);
+    const label = navLabel(t, item);
+    const count = badge ? (badge.count > 99 ? '99+' : badge.count) : null;
+    const button = (
+      <ListItemButton
+        onClick={() => handleNavigate(item.path)}
+        aria-label={label}
+        aria-current={isItemActive(item) ? 'page' : undefined}
+        className={`sidebar-nav-button ${isItemActive(item) ? 'active' : ''}`}
+      >
+        {/* Collapsed: the icon is the item (named in its tooltip). */}
+        <ListItemIcon className="sidebar-nav-icon" sx={{ minWidth: 'auto', justifyContent: 'center', position: 'relative' }}>
+          <IconComp />
+          {badge && collapsed && (
+            <Box component="span" sx={{
+              position: 'absolute', top: -3, right: 2, minWidth: 14, height: 14, px: 0.4,
+              borderRadius: '7px', backgroundColor: badge.color, color: '#fff',
+              fontSize: '0.58rem', fontWeight: 700, lineHeight: '14px', textAlign: 'center',
+            }}>
+              {count}
+            </Box>
+          )}
+        </ListItemIcon>
+        {/* Open: the words are the item. */}
+        <span className="sidebar-nav-text">{label}</span>
+        {badge && !collapsed && (
+          <Box component="span" className="sidebar-nav-badge" sx={{ backgroundColor: badge.color }}>{count}</Box>
+        )}
+      </ListItemButton>
+    );
     return (
       <ListItem key={item.path || index} disablePadding className="sidebar-nav-item">
-          <ListItemButton
-            onClick={() => handleNavigate(item.path)}
-            aria-label={navLabel(t, item)}
-            aria-current={isItemActive(item) ? 'page' : undefined}
-            className={`sidebar-nav-button ${isItemActive(item) ? 'active' : ''}`}
-          >
-            <ListItemIcon className="sidebar-nav-icon" sx={{ minWidth: 'auto', justifyContent: 'center', position: 'relative' }}>
-              <IconComp />
-              {badge && (
-                <Box component="span" sx={{
-                  position: 'absolute', top: -3, right: 2, minWidth: 14, height: 14, px: 0.4,
-                  borderRadius: '7px', backgroundColor: badge.color, color: '#fff',
-                  fontSize: '0.58rem', fontWeight: 700, lineHeight: '14px', textAlign: 'center',
-                }}>
-                  {badge.count > 99 ? '99+' : badge.count}
-                </Box>
-              )}
-            </ListItemIcon>
-            <span className="sidebar-nav-text">{navLabel(t, item)}</span>
-          </ListItemButton>
+        {collapsed ? <Tooltip title={label} placement={towardPage}>{button}</Tooltip> : button}
       </ListItem>
     );
   };

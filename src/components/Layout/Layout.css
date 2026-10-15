@@ -27,7 +27,7 @@
 }
 
 .content-container.sidebar-collapsed {
-  margin-inline-start: 0;
+  margin-inline-start: var(--sidebar-width-collapsed);
 }
 
 .content-container.mcp-fullscreen {

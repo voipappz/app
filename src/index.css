@@ -3,8 +3,9 @@
 /* Global Design System - Sentry Inspired (LIGHT THEME) */
 :root {
   /* Layout */
-  --sidebar-width: 72px;
-  --sidebar-width-collapsed: 0px;
+  /* Open: a text-only navigation panel. Collapsed: an icon-only rail. */
+  --sidebar-width: 200px;
+  --sidebar-width-collapsed: 64px;
 
   /* Light Theme Colors (Sentry inspired) */
   --bg-primary: #ffffff;
