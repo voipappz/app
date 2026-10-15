@@ -28,6 +28,18 @@ describe('Sidebar: text when open, icons when collapsed', () => {
     expect(calls).toHaveAttribute('aria-current', 'page');
   });
 
+  it('open: the account is named beside its avatar, with its email', () => {
+    show(false);
+    const who = screen.getByTestId('sidebar-profile-text');
+    expect(within(who).getByText('Admin')).toBeInTheDocument();
+    expect(within(who).getByText('a@b.c')).toBeInTheDocument();
+  });
+
+  it('collapsed: the account is the avatar alone', () => {
+    show(true);
+    expect(screen.queryByTestId('sidebar-profile-text')).not.toBeInTheDocument();
+  });
+
   it('collapsed: a rail of icons, each named for screen readers and in a tooltip', () => {
     const { container } = show(true);
     expect(container.querySelector('.sidebar-container')).toHaveClass('collapsed');
