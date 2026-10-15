@@ -22,6 +22,7 @@ import SubjectIcon from '@mui/icons-material/Subject';
 import DetailRow from './DetailRow';
 import ConversationMessages from './ConversationMessages';
 import CallTimeline from './CallTimeline';
+import CallProfile from './CallProfile';
 import { usePermissions } from '../../../hooks/usePermissions';
 import conversationService from '../../../services/conversationService';
 import { useAuth } from '../../../context/AuthContext';
@@ -250,7 +251,7 @@ const CallDetailPanel = ({ call, onClose, onViewLogs, onViewEvents, onCallBack, 
         />
         <DetailRow
           icon={<AccessTimeIcon />}
-          label="Duration"
+          label="Talk time"
           value={formattedDuration}
         />
         <DetailRow
@@ -298,6 +299,9 @@ const CallDetailPanel = ({ call, onClose, onViewLogs, onViewEvents, onCallBack, 
           copyable
         />
       </Box>
+
+      {/* Everything else the switch recorded about the call. */}
+      <CallProfile profile={call.profile} />
 
       {/* What happened around the call (record, recording, services…) */}
       {canSeeEvents && <>

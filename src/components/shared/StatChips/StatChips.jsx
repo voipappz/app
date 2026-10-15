@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Paper, Typography } from '@mui/material';
+import { Box, Paper, Tooltip, Typography } from '@mui/material';
 
 /**
  * StatChips — the shared clickable counter-chip bar used across screens
@@ -8,7 +8,8 @@ import { Box, Paper, Typography } from '@mui/material';
  * icon + value + label; clicking calls item.onClick. A `live` item gets a
  * pulsing dot so real-time counters are visually distinct from historical ones.
  *
- * items: [{ key, label, value, icon, color?, colorVar?, active?, live?, onClick? }]
+ * items: [{ key, label, value, icon, color?, colorVar?, active?, live?, onClick?, hint? }]
+ *   hint:     a tooltip saying what the number is (or what clicking does)
  *   color:    an explicit hex (e.g. '#8b5cf6'); takes precedence
  *   colorVar: a CSS var name (e.g. '--counter-total') matching the Calls theme
  */
@@ -23,9 +24,10 @@ const StatChips = ({ items = [], sx }) => {
       {items.map((item) => {
         const clickable = typeof item.onClick === 'function';
         const accent = colorOf(item);
-        return (
+        const chip = (
           <Paper
             key={item.key || item.label}
+            data-stat={item.key}
             elevation={0}
             role={clickable ? 'button' : undefined}
             tabIndex={clickable ? 0 : undefined}
@@ -107,6 +109,9 @@ const StatChips = ({ items = [], sx }) => {
             </Typography>
           </Paper>
         );
+        return item.hint
+          ? <Tooltip key={item.key || item.label} title={item.hint} describeChild>{chip}</Tooltip>
+          : chip;
       })}
     </Box>
   );
