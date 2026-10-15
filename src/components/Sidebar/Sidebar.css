@@ -534,6 +534,25 @@
   gap: 8px;
   padding-inline: 8px;
 }
+/* Language and theme sit with the account: one block, one divider above it.
+   Open: a row at the account's start edge. Collapsed: stacked in the rail. */
+.sidebar-bottom-tools + .sidebar-profile-section {
+  border-top: none;
+  padding-top: 2px;
+}
+.sidebar-container:not(.collapsed) .sidebar-bottom-tools:not(.sidebar-bottom-tools--stacked) {
+  justify-content: flex-start;
+  gap: 2px;
+  padding: 6px 8px 0;
+}
+.sidebar-bottom-tools--stacked {
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 2px;
+}
+.sidebar-bottom-tools .sidebar-tool-button svg {
+  font-size: 18px;
+}
 .sidebar-container:not(.collapsed) .sidebar-profile-text {
   flex: 1;
   overflow: hidden;
