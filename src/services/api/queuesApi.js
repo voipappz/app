@@ -11,7 +11,12 @@ export const queuesApi = {
   getQueues: async (params = {}) => {
     try {
       console.log('Queues API: Getting Queues with params:', params);
-      const response = await apiService.get('/api/queues', params, 'fetching queues');
+      // The params go on the URL. They used to be passed as apiService.get's
+      // fetch OPTIONS, so the server never saw page, per_page, order_by,
+      // order_type or search[...]: sorting and paging did nothing.
+      const queryString = new URLSearchParams(params).toString();
+      const url = `/api/queues${queryString ? `?${queryString}` : ''}`;
+      const response = await apiService.get(url, {}, 'fetching queues');
       console.log('Queues API: Response:', response);
       return response;
     } catch (error) {
