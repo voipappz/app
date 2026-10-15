@@ -129,7 +129,7 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
           selectors. */}
       {!userSession && (
         <Box className="sidebar-top">
-          <SidebarCustomerSwitcher />
+          <SidebarCustomerSwitcher expanded={!collapsed} />
         </Box>
       )}
 
@@ -183,10 +183,15 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
             </Badge>
           </IconButton>
         </Tooltip>
-        {wide && (
-          <Box className="sidebar-profile-text">
+        {/* Open (and the phone drawer): who is signed in, beside the avatar -
+            name, email, and which side. Collapsed: the avatar alone. */}
+        {(wide || !collapsed) && (
+          <Box className="sidebar-profile-text" data-testid="sidebar-profile-text">
             <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>{accountName}</Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
+            {user?.email && (
+              <Typography variant="caption" color="text.secondary" noWrap>{user.email}</Typography>
+            )}
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ opacity: 0.8 }}>
               {t(userSession ? 'signedInAs.user' : 'signedInAs.admin')}
             </Typography>
           </Box>

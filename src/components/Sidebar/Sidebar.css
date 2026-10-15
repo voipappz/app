@@ -523,3 +523,18 @@
   line-height: 18px;
   text-align: center;
 }
+
+/* Open: the customer and the account are named rows, not bare avatars. */
+.sidebar-container:not(.collapsed) .sidebar-top {
+  align-items: stretch;
+  padding: 8px 8px 4px;
+}
+.sidebar-container:not(.collapsed) .sidebar-profile-section {
+  justify-content: flex-start;
+  gap: 8px;
+  padding-inline: 8px;
+}
+.sidebar-container:not(.collapsed) .sidebar-profile-text {
+  flex: 1;
+  overflow: hidden;
+}
