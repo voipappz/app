@@ -105,6 +105,73 @@ deletable rows).
 
 Checks run in CI as this repo requires; locally only lint.
 
+## 7. CRM core on the event store
+
+Decided 2026-10-16: the CRM layer is event-sourced and dynamic. The shape
+comes from [RailsEventStore/ecommerce](https://github.com/RailsEventStore/ecommerce)
+`domains/crm`: a command, an aggregate that applies an event, and read models
+owned by the application that subscribe to events and write plain tables
+(`apps/rails_application/app/read_models/customers/configuration.rb` wires
+one handler per event). We copy that shape, not its deals, pipelines or
+companies. Our API is Sinatra + Sequel with Ruby Event Store already wired as
+`$event_store`; the node already publishes an `EventCall` per switch fact
+(`action`: ringing, answer, bridge, hold, hangup, ...).
+
+### Streams and events
+
+| Stream | Events | Note |
+|---|---|---|
+| `contact-<uuid>` | ContactRegistered {contact_id, environment_uuid, phone}, ContactFieldSet {field, value, by_user_uuid}, ContactTagged {key, value}, ContactUntagged {key}, ContactMerged {into} | One event per field change, as ecommerce's ContactEmailSet; the field key is data, so a new field needs no new class. |
+| `call-<call_uuid>` | the existing EventCall facts, plus CallerMatched {contact_id}, NoteAdded {text, by_user_uuid}, OutcomeSet {outcome} | Today EventCall sits only in the global stream and is found by `type_uuid`; linking each one into `call-<uuid>` gives the session timeline for free. |
+| `form-<environment_uuid>` | FieldDefined {key, label, type, options, required}, FieldRetired {key} | The dynamic part: a site adds a field with an event, not a migration. |
+
+### Dynamic fields and tags
+
+- The form is the FieldDefined events folded into a field registry (key,
+  label, type, options). The React `DynamicFieldForm` from the CRM plan
+  renders from that registry; values go back as ContactFieldSet.
+- "Tags" stay the meta key:value model every list screen already shows
+  (`MetaTagChips`): ContactTagged writes into `contacts.meta`, so chips and
+  list filters work unchanged.
+- Read models are plain, rebuildable tables: `contacts` (uuid,
+  environment_uuid, phone, name, email, fields jsonb, meta jsonb,
+  last_session_at), `sessions` (call_uuid, environment_uuid, contact_uuid,
+  direction, started_at, answered_at, ended_at, user_uuid, outcome) and
+  `session_events` (call_uuid, at, kind, text). One idempotent handler per
+  event, no external effects on replay.
+
+### Live and history share one key
+
+The phone reads `X-Va-Call-Uuid` from the INVITE (it already does), the
+cable's `call_events` stream carries `{type: "call", type_uuid: <call_uuid>,
+action}` live, and `call-<uuid>` holds the history. So the SIP session, the
+live row and the timeline are the same session. The Sessions screen takes
+live rows from the cable (`useLiveEntities`) and everything else from the read
+models; it never polls.
+
+### API and ACL
+
+Form-url-encoded, tenant-scoped, ACL-gated like every other endpoint:
+`GET /api/sessions` (history; live rows come from the cable),
+`GET /api/sessions/:call_uuid/events`, `POST /api/sessions/:call_uuid/notes`,
+`GET|PATCH /api/contacts/:uuid` (fields, meta), `GET|POST /api/forms`
+(field definitions). A user sees a pane only with its key: `calls` for
+sessions, `messages` for SMS, and two new keys, `notes` and `contacts`. The
+phone needs no key: a user with an extension gets it.
+
+### First version, about three weeks
+
+One developer with Claude, API repo access, tests on CI. The phone is done
+(PR #226, CI green).
+
+1. Week 1, API: Contact aggregate, FieldDefined, the three read models, the
+   endpoints above; link EventCall into `call-<uuid>`.
+2. Week 2, app: Sessions list live from the cable plus history, the session
+   timeline, the contact pane with the dynamic form and tags, ACL keys.
+3. Week 3: notes and outcome, Hebrew and 375px, CI tests; a SIPp scenario
+   that calls the user's extension and drives the phone and the timeline end
+   to end.
+
 ## 6. Decisions for the owner
 
 1. Tier prices per concurrent-call band, and whether source blocks ship in
