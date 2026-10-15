@@ -172,6 +172,38 @@ One developer with Claude, API repo access, tests on CI. The phone is done
    that calls the user's extension and drives the phone and the timeline end
    to end.
 
+## 8. What we take from Discourse
+
+[discourse.org/features](https://www.discourse.org/features), read on
+2026-10-16. Discourse is a forum, but it is the best example of a product
+that ships source, stays simple, and still feels complete. The mapping:
+
+| Discourse feature | Ours | When |
+|---|---|---|
+| Conversations, not pages (content loads as you scroll) | Sessions list scrolls, no pagination; live rows pinned on top | Step B1 |
+| Simple, but with context (one flowing list, expandable context) | Session timeline is one list; a note or transfer expands in place | Step B2 |
+| Chat in real time, move messages into topics | Notes and SMS live in the session; nothing is "moved", the session is the topic | Step B2, step 4 (SMS) |
+| Reply via email | SMS and email replies land in the same session thread | Step 4 |
+| A personal touch (custom sidebar, preferences) | Per-user column and layout choices we already store; ☰ hides the list | Done / B1 |
+| Born mobile, born to touch | The 375px rule and the stacked three panes | Every step |
+| Trust system, community moderation | ACL keys per pane and control; nothing without a key | Every step |
+| Admin dashboard | The Dashboard board, with the Live seed (section 5, D1 to D3) | Plan D |
+| Comprehensive API (any on-screen action through the API) | Rule for the framework: every screen action is a form-url-encoded endpoint, so a customer's block can do what our screen does | Every step |
+| 100% open source | Customers get the source (section 1) | Done |
+| One-click updates | The installable kit's update path from the dashboard | Step 1 |
+| Auto-save drafts | Note drafts kept per session in the browser | B2 |
+| Post revision history | Free: every change is an event in the store | Section 7 |
+| Desktop notifications | Incoming call alerts already exist; add session mentions later | Done / later |
+| Summarize topics (AI) | AI summary of a session, from the chat builder's LLM endpoint | Step 5 |
+| Links automatically expand | Rich previews in notes | Later |
+| Personal messaging | Agent to agent chat inside the app | Later |
+| Dark mode and WCAG scheme | MUI theme, both modes, contrast checked | Later |
+| Badges, emoji, polls, wiki posts, SEO, blog, invite-only | Not for a communication app | No |
+
+The rule we keep from it: one list, one thread, one API, source in the
+customer's hands, and a product that still looks finished with everything
+else switched off.
+
 ## 6. Decisions for the owner
 
 1. Tier prices per concurrent-call band, and whether source blocks ship in
