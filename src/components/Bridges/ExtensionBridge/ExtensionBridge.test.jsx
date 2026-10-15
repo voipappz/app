@@ -4,7 +4,8 @@ import { ExtensionBridge } from './ExtensionBridge';
 import { pretendPhoneScreen } from '../../../test/phoneScreen';
 
 const mockSendLogin = vi.fn();
-vi.mock('../../../services/api/extensionsApi', () => ({ extensionsApi: { sendLogin: (...a) => mockSendLogin(...a) } }));
+const mockShowPassword = vi.fn();
+vi.mock('../../../services/api/extensionsApi', () => ({ extensionsApi: { sendLogin: (...a) => mockSendLogin(...a), showPassword: (...a) => mockShowPassword(...a) } }));
 vi.mock('../../common/DynamicProfileEditor/DynamicProfileEditor', () => ({ default: () => null }));
 vi.mock('../../../hooks/useIsUserSession', () => ({ useIsUserSession: () => false }));
 
@@ -46,5 +47,23 @@ describe('the device password is never shown', () => {
     show();
     fireEvent.click(screen.getByTestId('device-email-login'));
     expect(await screen.findByText(/could not send/i)).toBeInTheDocument();
+  });
+});
+
+describe('show password asks the server', () => {
+  it('fetches the password on the eye button and shows it', async () => {
+    mockShowPassword.mockResolvedValueOnce({ uuid: 'dev-uuid-1', password: 'From-Server-1' });
+    show();
+    expect(screen.queryByDisplayValue('From-Server-1')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /show password/i }));
+    expect(mockShowPassword).toHaveBeenCalledWith('dev-uuid-1');
+    expect(await screen.findByDisplayValue('From-Server-1')).toBeInTheDocument();
+  });
+
+  it('says so when the server refuses', async () => {
+    mockShowPassword.mockRejectedValueOnce(new Error('403'));
+    show();
+    fireEvent.click(screen.getByRole('button', { name: /show password/i }));
+    expect(await screen.findByText(/could not load the password/i)).toBeInTheDocument();
   });
 });

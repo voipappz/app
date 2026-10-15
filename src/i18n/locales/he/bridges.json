@@ -405,7 +405,8 @@
     "updating": "מעדכן...",
     "emailLogin": "שלחו לי את פרטי ההתחברות במייל",
     "emailLoginSent": "נשלח אל {{to}}",
-    "emailLoginFailed": "שליחת המייל נכשלה"
+    "emailLoginFailed": "שליחת המייל נכשלה",
+    "showPasswordFailed": "טעינת הסיסמה נכשלה"
   },
   "ivrMenu": {
     "loading": "טוען את התפריט הטלפוני…",
