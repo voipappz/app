@@ -697,8 +697,11 @@ class ApiService {
           this.recordSuccess();
         }
 
-        // Cache successful GET responses
-        if (method === 'GET') {
+        // Cache successful GET responses - unless the server said not to
+        // (Cache-Control: no-store, e.g. a device read carrying its SIP
+        // password). Cache-Control is CORS-safelisted, so it is readable here.
+        const noStore = /no-store/i.test(response.headers?.get?.('Cache-Control') || '');
+        if (method === 'GET' && !noStore) {
           this.setCache(finalUrl, result);
         }
 

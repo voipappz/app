@@ -29,6 +29,8 @@ const StatChips = ({ items = [], sx }) => {
             elevation={0}
             role={clickable ? 'button' : undefined}
             tabIndex={clickable ? 0 : undefined}
+            // A clickable chip is a toggle: say which one is on.
+            aria-pressed={clickable ? Boolean(item.active) : undefined}
             onClick={item.onClick}
             onKeyDown={(e) => {
               if (clickable && (e.key === 'Enter' || e.key === ' ')) {
