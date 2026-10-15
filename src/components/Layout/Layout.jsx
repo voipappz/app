@@ -76,8 +76,8 @@ const Layout = ({ children }) => {
 
   // Sidebar state — desktop collapse + mobile drawer (shared by the hamburger).
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  // The rail has one width; the hamburger hides or shows it. A per-browser
-  // preference: it survives a reload.
+  // The hamburger switches the sidebar between open (a text-only panel) and
+  // collapsed (an icon-only rail). A per-browser preference: it survives a reload.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem(SIDEBAR_HIDDEN_KEY) === '1'; } catch { return false; }
   });

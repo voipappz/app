@@ -21,9 +21,7 @@
 }
 
 .sidebar-container.collapsed {
-  width: 0;
-  border-inline-end: none;
-  box-shadow: none;
+  width: var(--sidebar-width-collapsed);
 }
 
 /* Top of the rail: the customer tile */
@@ -473,4 +471,55 @@
   font-weight: 600;
   background-color: var(--accent-color, #65758E);
   flex-shrink: 0;
+}
+
+
+/* ===== Open: text only. Collapsed: icons only (2026-10-15). =====
+   Open, the rail is a calm list of words - no icon competing with each label,
+   the active page a soft pill. Collapsed, it keeps its place as a 64px rail of
+   icons, each named in a tooltip, instead of disappearing. */
+.sidebar-container:not(.collapsed) .sidebar-nav-list {
+  padding: 4px 8px;
+}
+.sidebar-container:not(.collapsed) .sidebar-nav-button {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 12px;
+  margin: 1px 0;
+  border-radius: 10px;
+}
+.sidebar-container:not(.collapsed) .sidebar-nav-icon {
+  display: none;
+}
+.sidebar-container:not(.collapsed) .sidebar-nav-text {
+  font-size: 14px;
+  font-weight: 500;
+  text-align: start;
+  max-width: none;
+  flex: 1;
+}
+.sidebar-container:not(.collapsed) .sidebar-nav-button:hover {
+  background-color: var(--theme-hover);
+}
+.sidebar-container:not(.collapsed) .sidebar-nav-button.active {
+  background-color: var(--accent-primary-alpha-15);
+}
+.sidebar-container.collapsed .sidebar-nav-text {
+  display: none;
+}
+.sidebar-container.collapsed .sidebar-nav-button {
+  min-height: 44px;
+}
+.sidebar-nav-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
 }
