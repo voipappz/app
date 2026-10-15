@@ -963,6 +963,13 @@ class ApiService {
     } else if (data instanceof URLSearchParams) {
       body = data.toString();
       contentType = 'application/x-www-form-urlencoded';
+    } else if (typeof data === 'string') {
+      // An already-encoded body (callers pass `params.toString()`) goes as
+      // is. JSON.stringify wrapped it in quotes, so `name=demo` arrived as
+      // `"name=demo"`: the first key became `"name` and the last value gained
+      // a trailing quote. A form body unless the caller says otherwise.
+      body = data;
+      contentType = 'application/x-www-form-urlencoded';
     } else {
       body = JSON.stringify(data);
       contentType = 'application/json';
@@ -982,6 +989,13 @@ class ApiService {
     } else if (data instanceof URLSearchParams) {
       body = data.toString();
       contentType = 'application/x-www-form-urlencoded';
+    } else if (typeof data === 'string') {
+      // An already-encoded body (callers pass `params.toString()`) goes as
+      // is. JSON.stringify wrapped it in quotes, so `name=demo` arrived as
+      // `"name=demo"`: the first key became `"name` and the last value gained
+      // a trailing quote. A form body unless the caller says otherwise.
+      body = data;
+      contentType = 'application/x-www-form-urlencoded';
     } else {
       body = JSON.stringify(data);
       contentType = 'application/json';
@@ -992,7 +1006,7 @@ class ApiService {
   }
 
   async put(url, data = null, options = {}, context = '', showMessages = true, skipCircuitBreaker = false) {
-    const body = data instanceof FormData ? data : JSON.stringify(data);
+    const body = data instanceof FormData || typeof data === 'string' ? data : JSON.stringify(data);
     return this.fetch(url, { method: 'PUT', body, ...options }, context, showMessages, 0, skipCircuitBreaker);
   }
 

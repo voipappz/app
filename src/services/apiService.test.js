@@ -260,3 +260,43 @@ describe('apiService response cache — one identity never reads another\'s', ()
     expect(apiService.pendingRequests.size).toBe(0);
   });
 });
+
+// A form body passed already encoded (`params.toString()`) must go out as is.
+// JSON.stringify used to wrap it in quotes: renaming a customer to "demo" sent
+// `"name=demo&enabled=true"`, which Rack read as a key `"name` and a value
+// ending in a quote.
+describe('apiService post/patch/put — a string body is sent as is', () => {
+  let spy;
+  beforeEach(() => {
+    spy = vi.spyOn(apiService, 'fetch').mockResolvedValue({});
+  });
+  afterEach(() => spy.mockRestore());
+
+  const encoded = new URLSearchParams({ name: 'demo', enabled: 'true' }).toString();
+
+  it.each(['post', 'patch'])('%s keeps the encoded form body and marks it a form', async (method) => {
+    await apiService[method]('/api/customers/c-1', encoded, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    const [, opts] = spy.mock.calls[0];
+    expect(opts.body).toBe('name=demo&enabled=true');
+    expect(opts.body.startsWith('"')).toBe(false);
+    expect(opts.headers['Content-Type']).toBe('application/x-www-form-urlencoded');
+    expect(Object.fromEntries(new URLSearchParams(opts.body))).toEqual({ name: 'demo', enabled: 'true' });
+  });
+
+  it.each(['post', 'patch'])('%s defaults a bare string to a form body', async (method) => {
+    await apiService[method]('/api/x', encoded);
+    expect(spy.mock.calls[0][1].headers['Content-Type']).toBe('application/x-www-form-urlencoded');
+  });
+
+  it('put sends a string body as is', async () => {
+    await apiService.put('/api/x', encoded);
+    expect(spy.mock.calls[0][1].body).toBe('name=demo&enabled=true');
+  });
+
+  it('still sends objects as JSON', async () => {
+    await apiService.patch('/api/x', { name: 'demo' });
+    const [, opts] = spy.mock.calls[0];
+    expect(opts.body).toBe('{"name":"demo"}');
+    expect(opts.headers['Content-Type']).toBe('application/json');
+  });
+});
