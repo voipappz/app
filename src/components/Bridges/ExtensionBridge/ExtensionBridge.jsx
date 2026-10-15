@@ -106,6 +106,17 @@ export const ExtensionBridge = ({
   const [internalLoading, setInternalLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  // "Email me the SIP login": the only way to see a device's current password.
+  const [loginMail, setLoginMail] = useState({ state: 'idle', to: '' });
+  const emailLogin = async () => {
+    setLoginMail({ state: 'sending', to: '' });
+    try {
+      const res = await extensionsApi.sendLogin(extension.uuid);
+      setLoginMail({ state: 'sent', to: res?.sent_to || res?.data?.sent_to || '' });
+    } catch {
+      setLoginMail({ state: 'failed', to: '' });
+    }
+  };
 
   const loading = handleApiInternally ? internalLoading : externalLoading;
 
@@ -117,7 +128,8 @@ export const ExtensionBridge = ({
         setFormData({
           name: extension.name || '',
           username: extension.username || '',
-          password: extension.password || '',
+          // The API never returns a device's password; blank keeps the current one.
+          password: '',
           notes: extension.notes || '',
           enabled: extension.enabled !== undefined ? extension.enabled : true,
           environment_uuid: extension.environment_uuid || extension.environment?.uuid || environmentUuid || '',
@@ -410,6 +422,28 @@ export const ExtensionBridge = ({
             }}
           />
         </Grid>
+
+        {isEditMode && extension?.uuid && (
+          <Grid size={12}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={emailLogin}
+                disabled={loading || loginMail.state === 'sending'}
+                data-testid="device-email-login"
+              >
+                {t('device.emailLogin')}
+              </Button>
+              {loginMail.state === 'sent' && (
+                <Typography variant="caption" color="success.main">{t('device.emailLoginSent', { to: loginMail.to })}</Typography>
+              )}
+              {loginMail.state === 'failed' && (
+                <Typography variant="caption" color="error">{t('device.emailLoginFailed')}</Typography>
+              )}
+            </Box>
+          </Grid>
+        )}
 
         {/* Enabled Toggle */}
         <Grid size={12}>

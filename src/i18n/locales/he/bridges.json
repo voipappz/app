@@ -402,7 +402,10 @@
     "numberPlaceholder": "לדוגמה: 1001",
     "numberHelp": "מספר המכשיר (לדוגמה: 1001)",
     "passwordRequiredHelp": "חובה במכשיר חדש",
-    "updating": "מעדכן..."
+    "updating": "מעדכן...",
+    "emailLogin": "שלחו לי את פרטי ההתחברות במייל",
+    "emailLoginSent": "נשלח אל {{to}}",
+    "emailLoginFailed": "שליחת המייל נכשלה"
   },
   "ivrMenu": {
     "loading": "טוען את התפריט הטלפוני…",
