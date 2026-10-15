@@ -39,8 +39,8 @@ const openSettings = () => window.dispatchEvent(new Event('openSettingsTool'));
  * account sees), then what belongs to the customer — manage it, the wizard,
  * Settings. With one customer the list is that one; the actions are the point.
  */
-const SidebarCustomerSwitcher = () => {
-  const { customers, selectedCustomer, selectCustomer, isRoot } = useCustomerEnvironment();
+const SidebarCustomerSwitcher = ({ expanded = false }) => {
+  const { customers, selectedCustomer, selectCustomer, isRoot, selectedEnvironments } = useCustomerEnvironment();
   const { accountCustomer } = useAuth();
   const triggerRef = useRef(null);
 
@@ -49,6 +49,12 @@ const SidebarCustomerSwitcher = () => {
 
   const current = selectedCustomer || accountCustomer || null;
   const currentName = current?.name || 'No customer';
+  // The open sidebar names the customer and, under it, what this console is
+  // looking at: the one application, or how many are selected.
+  const apps = Array.isArray(selectedEnvironments) ? selectedEnvironments : [];
+  const detail = apps.length === 1
+    ? (apps[0]?.name || '1 application')
+    : apps.length > 1 ? `${apps.length} applications` : 'Customer';
 
   const all = useMemo(() => (
     (customers && customers.length ? customers : (accountCustomer ? [accountCustomer] : []))
@@ -81,10 +87,10 @@ const SidebarCustomerSwitcher = () => {
 
   return (
     <>
-      <Tooltip title={open ? '' : currentName} placement="right" arrow>
+      <Tooltip title={open || expanded ? '' : currentName} placement="right" arrow>
         <Box
           ref={triggerRef}
-          className={`scs-trigger ${open ? 'open' : ''}`}
+          className={`scs-trigger ${open ? 'open' : ''} ${expanded ? 'scs-trigger--expanded' : ''}`}
           onClick={handleTrigger}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTrigger(); } }}
           role="button"
@@ -94,6 +100,12 @@ const SidebarCustomerSwitcher = () => {
           data-testid="sidebar-customer-switcher"
         >
           <Box className="scs-avatar">{initial(currentName)}</Box>
+          {expanded && (
+            <Box className="scs-trigger-meta">
+              <Typography className="scs-trigger-name" noWrap data-testid="sidebar-customer-name">{currentName}</Typography>
+              <Typography className="scs-trigger-detail" noWrap>{detail}</Typography>
+            </Box>
+          )}
         </Box>
       </Tooltip>
 
