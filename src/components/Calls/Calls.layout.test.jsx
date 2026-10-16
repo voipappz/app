@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The Calls screen rendered for real; the data hook, handlers and heavy panels
@@ -62,29 +62,32 @@ beforeEach(() => {
 });
 
 describe('Calls layout', () => {
-  it('puts the chart directly under the tabs, above the counters and the table', () => {
+  it('has Logs / Live now / Reports as the view tabs at the top', () => {
     render(<Calls />);
-    const tabs = screen.getByTestId('log-tabs');
-    const chart = screen.getByTestId('calls-chart');
-    const counters = screen.getByTestId('calls-counters');
-    expect(before(tabs, chart)).toBe(true);
-    expect(tabs.nextElementSibling).toBe(chart);
-    expect(before(chart, counters)).toBe(true);
-    expect(before(counters, screen.getByTestId('grid'))).toBe(true);
+    const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
+    expect(tabs[0]).toMatch(/logs/i);
+    expect(tabs.some((t) => /reports/i.test(t))).toBe(true);
   });
 
-  it('has Over time / Live now / Reports as tabs, and the controls on the right with the date range last', () => {
+  it('Logs: the chart (with its one flat row of period, grouping and bucket) above the counters and the table', () => {
     render(<Calls />);
     const chart = screen.getByTestId('calls-chart');
-    const tabs = within(chart).getAllByRole('tab').map((t) => t.textContent);
-    expect(tabs[0]).toMatch(/over time/i);
-    expect(tabs.some((t) => /reports/i.test(t))).toBe(true);
-    const picker = within(chart).getByTestId('date-range-picker');
-    const [groupBy, bucket] = within(chart).getAllByRole('combobox');
-    expect(before(groupBy, bucket)).toBe(true);
-    expect(before(bucket, picker)).toBe(true);
-    expect(screen.getAllByTestId('date-range-picker')).toHaveLength(1);
+    const counters = screen.getByTestId('calls-counters');
+    expect(before(chart, counters)).toBe(true);
+    expect(before(counters, screen.getByTestId('grid'))).toBe(true);
+    expect(within(chart).getByRole('button', { name: '7d' })).toBeInTheDocument();
+    expect(within(chart).getByTestId('calls-chart-date-range')).toBeInTheDocument();
+    expect(within(chart).queryAllByRole('combobox')).toHaveLength(0);
     expect(screen.getByTestId('centralized-search')).toHaveAttribute('data-hide-date-range', 'true');
+  });
+
+  it('Reports is a whole view: no chart, counters or table', () => {
+    render(<Calls />);
+    fireEvent.click(screen.getAllByRole('tab').find((t) => /reports/i.test(t.textContent)));
+    expect(screen.getByTestId('calls-reports')).toBeInTheDocument();
+    expect(screen.queryByTestId('calls-chart')).toBeNull();
+    expect(screen.queryByTestId('calls-counters')).toBeNull();
+    expect(screen.queryByTestId('grid')).toBeNull();
   });
 });
 

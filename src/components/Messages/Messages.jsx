@@ -7,7 +7,6 @@ import { config } from '../../config.js';
 
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
-import LogTabs from '../shared/LogTabs/LogTabs.jsx';
 import { stripedDataGridSx, EmptyValue } from '../shared/tableTheme.jsx';
 import CustomFooter from '../Calls/CustomFooter/CustomFooter.jsx';
 import HelpButton from '../common/HelpButton';
@@ -340,7 +339,6 @@ const Messages = () => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <LogTabs />
       {/* Header row: Title + Search */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
