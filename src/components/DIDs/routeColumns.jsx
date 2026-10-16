@@ -11,7 +11,8 @@ import MetaTagChips from '../common/MetaTagChips/MetaTagChips';
 import EntityLink from '../common/EntityLink/EntityLink.jsx';
 import Bdi from '../../i18n/Bdi';
 import { orEmpty } from '../shared/tableTheme.jsx';
-import { formatDate } from '../../utils/dateUtils';
+import DateTimeCell from '../shared/ResponsiveTable/DateTimeCell.jsx';
+import { COLUMN_WIDTHS, denseChipSx } from '../shared/ResponsiveTable/density';
 import { getEnabledChipProps, getTypeChipColor } from '../../utils/chipStyles';
 import { routeTypeLabel } from './routeTypes';
 
@@ -31,15 +32,15 @@ export function buildRouteColumns({ t, portalMode, isPhone, loading, canWriteRou
   return [
     {
       id: 'created_at', label: t('table.createdAt'), sortable: true, priority: 'desktopOnly',
-      render: (did) => <Typography variant="body2">{formatDate(did.created_at)}</Typography>,
+      render: (did) => <DateTimeCell value={did.created_at} />,
     },
     {
       id: 'updated_at', label: t('table.updatedAt'), sortable: true, priority: 'desktopOnly',
-      render: (did) => <Typography variant="body2">{formatDate(did.updated_at)}</Typography>,
+      render: (did) => <DateTimeCell value={did.updated_at} />,
     },
     {
-      id: 'enabled', label: t('table.enabled'), sortable: true, align: 'center', priority: 'meta',
-      render: (did) => <Chip {...getEnabledChipProps(did.enabled)} />,
+      id: 'enabled', label: t('table.enabled'), sortable: true, align: 'center', width: COLUMN_WIDTHS.chip, priority: 'meta',
+      render: (did) => <Chip {...getEnabledChipProps(did.enabled)} sx={denseChipSx} />,
     },
     {
       id: 'name', label: t('table.name'), sortable: true, priority: 'secondary',
@@ -62,13 +63,13 @@ export function buildRouteColumns({ t, portalMode, isPhone, loading, canWriteRou
       ),
     }]),
     {
-      id: 'type', label: t('table.type'), sortable: true, priority: 'meta',
+      id: 'type', label: t('table.type'), sortable: true, width: COLUMN_WIDTHS.typeChip, priority: 'meta',
       render: (did) => (
-        <Chip label={did.type ? routeTypeLabel(t, did.type) : 'SIP'} size="small" color={getTypeChipColor(did.type || 'sip')} />
+        <Chip label={did.type ? routeTypeLabel(t, did.type) : 'SIP'} size="small" color={getTypeChipColor(did.type || 'sip')} sx={denseChipSx} />
       ),
     },
     {
-      id: 'number', label: t('table.number'), sortable: true, priority: 'primary',
+      id: 'number', label: t('table.number'), sortable: true, width: COLUMN_WIDTHS.number, priority: 'primary',
       render: (did) => (isPhone
         ? <Bdi>{did.number}</Bdi>
         : <CallableNumber t={t} number={did.number} onCall={actions.onCall} />),
@@ -160,8 +161,8 @@ function ProviderCell({ provider, clickable, onOpen }) {
       variant="outlined"
       onClick={clickable ? (e) => { e.stopPropagation(); onOpen(provider); } : undefined}
       sx={clickable
-        ? { cursor: 'pointer', maxWidth: 120, '&:hover': { borderColor: 'primary.main' } }
-        : { maxWidth: 120 }}
+        ? { ...denseChipSx, cursor: 'pointer', maxWidth: 120, '&:hover': { borderColor: 'primary.main' } }
+        : { ...denseChipSx, maxWidth: 120 }}
     />
   );
 }
