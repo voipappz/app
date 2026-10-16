@@ -86,5 +86,8 @@
     "user": "Agent",
     "recording": "Recording",
     "listen": "Listen"
+  },
+  "dateRange": {
+    "clear": "Clear period"
   }
 }

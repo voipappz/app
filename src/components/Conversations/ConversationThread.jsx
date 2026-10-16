@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Button, CircularProgress, TextField, Typography } from '@mui/material';
 import Bdi from '../../i18n/Bdi';
+import { summaryLabelSx, summaryValueSx } from './sessionRowStyles';
 import { formatTime } from '../../utils/dateUtils';
 
 const clock = (sec) => {
@@ -26,8 +27,8 @@ function CallSummary({ s, t }) {
     <Box data-testid="call-summary" sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, px: 2, py: 1, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
       {rows.map(([label, value]) => (
         <Box key={label} sx={{ minWidth: 0 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{label}</Typography>
-          <Typography variant="body2" component="div">{value}</Typography>
+          <Typography sx={{ display: 'block', ...summaryLabelSx }}>{label}</Typography>
+          <Typography component="div" sx={summaryValueSx}>{value}</Typography>
         </Box>
       ))}
     </Box>
