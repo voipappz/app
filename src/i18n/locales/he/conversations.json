@@ -115,7 +115,7 @@
   },
   "activity": {
     "title": "שיחות בשיחה הזו",
-    "callCount_one": "שיחה אחת",
+    "callCount_one": "{{count}} שיחה",
     "callCount_two": "{{count}} שיחות",
     "callCount_other": "{{count}} שיחות",
     "hide": "הסתרת תרשים",

@@ -116,6 +116,7 @@
   "activity": {
     "title": "Calls in this conversation",
     "callCount_one": "{{count}} call",
+    "callCount_two": "{{count}} calls",
     "callCount_other": "{{count}} calls",
     "hide": "Hide chart",
     "show": "Show chart",
