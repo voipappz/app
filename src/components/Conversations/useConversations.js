@@ -25,6 +25,7 @@ export default function useConversations() {
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [view, setViewState] = useState(readView);
+  // TODO(acl): the real action name for "see everyone's conversations" comes with the ACL work.
   const canEveryone = can('call', 'environment');
   const setView = useCallback((patch) => setViewState((v) => { const next = { ...v, ...patch }; saveView(next); return next; }), []);
   // The API search is debounced; live rows filter as you type.
@@ -38,7 +39,7 @@ export default function useConversations() {
   const [sendError, setSendError] = useState(false);
 
   const liveDoc = MOCK_CONVERSATIONS ? liveRowsDoc : live.byScope('environment')[0];
-  const allLive = useMemo(() => liveSessions(liveDoc), [liveDoc]);
+  const allLive = useMemo(() => liveSessions(liveDoc, { call, users: MOCK_CONVERSATIONS ? [] : live.byScope('user') }), [liveDoc, call, live.rows]);
   const liveRows = useMemo(() => applyView(allLive, { query: search, view }), [allLive, search, view]);
 
   // History: only All / Missed come from the API.

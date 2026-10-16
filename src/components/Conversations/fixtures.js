@@ -15,13 +15,12 @@ export const conversations = [
   { call_uuid: 'c-failed', contact: null, direction: 'outgoing', remote_number: '0555550188', user_uuid: 'u-avi', started_at: at(400), answered_at: null, ended_at: at(400), outcome: 'failed', caller: '0036', callee: '0555550188', duration: 3, talk_duration: 0, user_name: 'Avi Mizrahi', disposition: 'failed', hangup_disposition: 'system', cause: 'CALL_REJECTED', recording_url: null },
 ];
 
+// The environment document as the node sends it: call uuid strings, no numbers.
 export const liveRowsDoc = {
-  live_calls_incoming: [
-    { call_uuid: 'c-ring', from_number: '+972525550199', started_at: at(0) },
-    { call_uuid: 'c-live', from_number: '0525550144', started_at: at(3), answered_at: at(3) },
-  ],
+  live_calls_incoming: ['c-ring', 'c-live'],
   live_calls_outgoing: [],
   live_calls_local: [],
+  live_calls_since: { 'c-ring': Math.floor(Date.parse(at(0)) / 1000), 'c-live': Math.floor(Date.parse(at(3)) / 1000) },
 };
 
 export const history = (tab) => conversations.filter((c) => (!c.outcome ? false : tab === 'all' || c.outcome === tab));

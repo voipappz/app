@@ -57,6 +57,8 @@ export default function ContactPanel({ phone, contactUuid }) {
   const [fields, setFields] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  // The contact API may not be there (404 / network): then there is no panel at all.
+  const [unavailable, setUnavailable] = useState(false);
   const [tag, setTag] = useState('');
   const [adding, setAdding] = useState(false);
 
@@ -68,14 +70,14 @@ export default function ContactPanel({ phone, contactUuid }) {
 
   useEffect(() => {
     let alive = true;
-    setLoaded(false); setError(false); setContact(null);
+    setLoaded(false); setError(false); setUnavailable(false); setContact(null);
     if (!phone && !contactUuid) { setLoaded(true); return undefined; }
     (async () => {
       try {
         let found = contactUuid ? { uuid: contactUuid } : unwrap(await lookupContact(phone));
         if (found?.uuid) found = unwrap(await getContact(found.uuid));
         if (alive) setContact(found || null);
-      } catch { if (alive) setError(true); }
+      } catch { if (alive) setUnavailable(true); }
       finally { if (alive) setLoaded(true); }
     })();
     return () => { alive = false; };
@@ -102,7 +104,7 @@ export default function ContactPanel({ phone, contactUuid }) {
     setTag(''); setAdding(false);
   };
 
-  if (!loaded) return null;
+  if (!loaded || unavailable || (!phone && !contactUuid)) return null;
 
   return (
     <Box data-testid="contact-panel">

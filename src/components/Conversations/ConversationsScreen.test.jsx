@@ -8,7 +8,7 @@ const h = vi.hoisted(() => ({ granted: [], call: null, apis: null }));
 vi.mock('../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: (k, a) => h.granted.includes(a && a !== 'read' ? `${k}:${a}` : k) }) }));
 vi.mock('../../context/SoftphoneContext', () => ({ useSoftphone: () => ({ call: h.call }) }));
 vi.mock('../LiveDashboard/useLiveEnvironment', () => ({ useLiveEnvironment: () => ({ uuid: 'env-1' }) }));
-vi.mock('../../hooks/useLiveEntities', () => ({ default: () => ({ connected: true, byScope: () => [liveRowsDoc] }) }));
+vi.mock('../../hooks/useLiveEntities', () => ({ default: () => ({ connected: true, byScope: (s) => (s === 'environment' ? [liveRowsDoc] : []), rows: [] }) }));
 vi.mock('../Phone/PhoneScreen.jsx', () => ({ default: () => <div data-testid="phone-screen" /> }));
 vi.mock('../../services/api/conversationsApi', () => {
   const m = { MOCK_CONVERSATIONS: false };
@@ -36,6 +36,7 @@ describe('Conversations screen (mock data)', () => {
   });
 
   it('filters live rows by typed digits (0 vs +972) and sends q to the API for All', async () => {
+    h.call = { id: 'c-ring', state: 'ringing', remote: '+972525550199' };
     render(<ConversationsScreen />);
     await screen.findAllByTestId('session-row');
     fireEvent.change(screen.getByLabelText('Search by number'), { target: { value: '052 555-0199' } });
@@ -45,6 +46,24 @@ describe('Conversations screen (mock data)', () => {
     fireEvent.change(screen.getByLabelText('Search by number'), { target: { value: '0525550177' } });
     await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ tab: 'all', q: '0525550177' })), { timeout: 2000 });
     await waitFor(() => expect(screen.getAllByTestId('session-row')).toHaveLength(1));
+  });
+
+  it('shows the call summary of a finished conversation with a recording link', async () => {
+    render(<ConversationsScreen />);
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
+    fireEvent.click(await screen.findByText('Dan Levi'));
+    const summary = await screen.findByTestId('call-summary');
+    expect(summary).toHaveTextContent('Dana Levi');
+    expect(summary).toHaveTextContent('04:25');
+    expect(summary).toHaveTextContent('04:00');
+    expect(screen.getByRole('link', { name: 'Listen' })).toHaveAttribute('href', expect.stringContaining('c-ended.mp3'));
+  });
+
+  it('shows a live row without invented numbers, as direction and elapsed time', async () => {
+    render(<ConversationsScreen />);
+    const rows = await screen.findAllByTestId('session-row');
+    expect(rows[0]).toHaveTextContent('Incoming');
+    expect(rows[0]).not.toHaveTextContent(/\d{7}/);
   });
 
   it('labels bot conversations with a Bot chip', async () => {

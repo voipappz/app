@@ -10,7 +10,7 @@
   "direction": {
     "incoming": "נכנסת",
     "outgoing": "יוצאת",
-    "local": "שלוחה",
+    "local": "פנימית",
     "inbound": "נכנסת",
     "outbound": "יוצאת"
   },
@@ -77,5 +77,14 @@
     "missed": "לא נענתה",
     "bot": "בוט",
     "failed": "נכשלה"
+  },
+  "summary": {
+    "direction": "כיוון",
+    "outcome": "תוצאה",
+    "duration": "משך",
+    "talk": "זמן שיחה",
+    "user": "נציג",
+    "recording": "הקלטה",
+    "listen": "האזנה"
   }
 }

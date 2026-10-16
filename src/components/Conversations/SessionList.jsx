@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Avatar, Box, ButtonBase, Chip, CircularProgress, IconButton, InputAdornment, ListSubheader, Menu, MenuItem, Tab, Tabs, TextField, Typography, useTheme } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
@@ -9,6 +9,10 @@ import { formatTime } from '../../utils/dateUtils';
 
 const TABS = ['live', 'all', 'missed'];
 
+const elapsed = (from, now) => {
+  const sec = from ? Math.max(0, Math.floor((now - Date.parse(from)) / 1000)) : null;
+  return sec === null ? '' : `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+};
 const isBot = (s) => s.outcome === 'bot' || s.leg_b_type === 'vml';
 const OUTCOMES = ['answered', 'missed', 'bot'];
 const DIRECTIONS = ['incoming', 'outgoing'];
@@ -46,6 +50,13 @@ const initialOf = (s) => ((s.contact?.name || '').trim()[0] || '?').toUpperCase(
 /** Left pane: Live / All / Missed. The selected row is highlighted. */
 export default function SessionList({ tab, onTab, sessions, selectedId, onSelect, loading, error, liveConnected, search, onSearch, view, onView, canEveryone }) {
   const { t } = useTranslation('conversations');
+  const [now, setNow] = useState(() => Date.now());
+  const anyLive = sessions.some((x) => x.live);
+  useEffect(() => {
+    if (!anyLive) return undefined;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [anyLive]);
   const empty = !loading && sessions.length === 0;
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
@@ -71,7 +82,7 @@ export default function SessionList({ tab, onTab, sessions, selectedId, onSelect
         )}
         {sessions.map((s) => {
           const on = s.call_uuid === selectedId;
-          const title = s.contact?.name || s.remote_number || '—';
+          const title = s.contact?.name || s.agent_name || s.remote_number || t(`direction.${s.direction || 'unknown'}`, { defaultValue: '—' });
           return (
             <ButtonBase
               key={s.call_uuid} onClick={() => onSelect(s.call_uuid)} aria-current={on ? 'true' : undefined}
@@ -92,7 +103,7 @@ export default function SessionList({ tab, onTab, sessions, selectedId, onSelect
                 {isBot(s) && <Chip size="small" label={t('outcome.bot')} sx={{ ms: 0.5, height: 16, fontSize: 10 }} />}
               </Box>
               <Typography variant="caption" sx={{ color: s.live ? 'success.main' : 'text.secondary' }}>
-                {s.live ? t('list.live') : (s.started_at ? formatTime(s.started_at) : '')}
+                {s.live ? (elapsed(s.started_at, now) || t('list.live')) : (s.started_at ? formatTime(s.started_at) : '')}
               </Typography>
             </ButtonBase>
           );

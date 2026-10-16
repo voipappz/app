@@ -54,4 +54,13 @@ describe('ContactPanel (mock data)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add contact' }));
     expect(await screen.findByText('Phone')).toBeInTheDocument();
   });
+
+  it('renders nothing when the contact API does not answer', async () => {
+    h.apis.lookupContact = () => Promise.reject(new Error('404'));
+    render(<ContactPanel phone="0525550144" />);
+    await waitFor(() => expect(h.apis.listFields).toBeDefined());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByTestId('contact-panel')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
 });
