@@ -1,43 +1,41 @@
-import { Box, Chip, Link, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
+import { Box, Link, Typography } from '@mui/material';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import { formatCallDuration } from './groupCallHistory';
 import Bdi from '../../i18n/Bdi';
 
-const clock = (sec) => {
-  const n = Math.max(0, Math.round(Number(sec) || 0));
-  return `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
-};
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : null);
 
-/** A readable call card; only show details supplied by the history API. */
-export default function CallSummary({ s, t, time }) {
+/** One compact call activity. The expandable history is supplied by the thread. */
+export default function CallSummary({ s, t, time, children }) {
   const url = safeUrl(s.recording_url || (typeof s.recording === 'string' ? s.recording : null));
-  const direction = s.direction && t(`direction.${s.direction}`, { defaultValue: '' });
   const agent = s.user_name || s.agent_name;
+  const incoming = ['incoming', 'inbound'].includes(s.direction);
+  const outgoing = ['outgoing', 'outbound'].includes(s.direction);
   const missed = s.outcome === 'missed' || s.outcome === 'failed';
-  const Icon = ['incoming', 'inbound'].includes(s.direction) ? CallReceivedIcon : ['outgoing', 'outbound'].includes(s.direction) ? CallMadeIcon : PhoneOutlinedIcon;
-  if (!direction && !s.outcome && s.duration == null && s.talk_duration == null && !agent && !url) return null;
+  const Icon = incoming ? CallReceivedIcon : outgoing ? CallMadeIcon : PhoneOutlinedIcon;
+  const title = s.outcome === 'failed' ? 'failedCall'
+    : s.outcome === 'missed' ? (outgoing ? 'unansweredCall' : 'missedCall')
+      : s.outcome === 'bot' ? 'automatedCall'
+        : incoming ? 'receivedCall' : outgoing ? 'madeCall' : 'call';
+  const duration = s.duration ?? s.talk_duration;
   return (
-    <Box data-testid="call-summary" sx={{ width: '100%', maxWidth: 460, boxSizing: 'border-box', border: 1, borderColor: 'divider', borderRadius: 3, p: 2, bgcolor: 'background.paper', boxShadow: '0 2px 6px rgba(0,0,0,0.025)' }}>
-      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-        <Box sx={(theme) => ({ display: 'grid', placeItems: 'center', flexShrink: 0, width: 40, height: 40, borderRadius: 2, color: missed ? 'error.main' : 'primary.main', bgcolor: alpha(missed ? theme.palette.error.main : theme.palette.primary.main, 0.08) })}><Icon fontSize="small" /></Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{direction ? t('summary.callDirection', { direction }) : t('summary.call')}</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
-            {s.outcome && <Chip size="small" label={t(`outcome.${s.outcome}`, { defaultValue: s.outcome })} sx={{ height: 22, fontSize: 12, bgcolor: missed ? 'error.main' : 'action.hover', color: missed ? 'error.contrastText' : 'text.secondary' }} />}
-            {time && <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>{time}</Typography>}
-          </Box>
+    <Box data-testid="call-summary" sx={{ display: 'flex', gap: 1.25, width: '100%', boxSizing: 'border-box', py: 1.25, borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ display: 'grid', placeItems: 'center', flexShrink: 0, width: 30, height: 30, borderRadius: '50%', color: missed ? 'error.main' : 'text.secondary', bgcolor: 'action.hover' }}><Icon sx={{ fontSize: 17 }} /></Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.5 }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{t(`summary.${title}`)}</Typography>
+          {time && <Typography variant="caption" color="text.secondary" sx={{ marginInlineStart: 'auto', fontVariantNumeric: 'tabular-nums' }}>{time}</Typography>}
         </Box>
+        {(agent || duration != null || url) && <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1.5, rowGap: 0.5, mt: 0.5, color: 'text.secondary', '& > *': { fontSize: 13 } }}>
+          {agent && <Typography sx={{ overflowWrap: 'anywhere' }}>{t('summary.handledBy', { name: agent })}</Typography>}
+          {duration != null && !missed && <Typography>{t('summary.duration')} <Bdi>{formatCallDuration(duration)}</Bdi></Typography>}
+          {url && <Link href={url} target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minHeight: 32 }}><PlayCircleOutlineIcon sx={{ fontSize: 18 }} />{t('summary.listen')}</Link>}
+        </Box>}
+        {children}
       </Box>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5, mt: 1.5, color: 'text.secondary', '& > *': { fontSize: 13 } }}>
-        {s.duration != null && <Typography>{t('summary.duration')} <Bdi>{clock(s.duration)}</Bdi></Typography>}
-        {s.talk_duration != null && <Typography>{t('summary.talk')} <Bdi>{clock(s.talk_duration)}</Bdi></Typography>}
-        {agent && <Typography sx={{ overflowWrap: 'anywhere' }}>{t('summary.user')} · {agent}</Typography>}
-      </Box>
-      {url && <Link href={url} target="_blank" rel="noopener noreferrer" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 13, mt: 1.5 }}><PlayCircleOutlineIcon fontSize="small" />{t('summary.listen')}</Link>}
     </Box>
   );
 }

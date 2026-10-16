@@ -20,6 +20,7 @@ vi.mock('../../context/SoftphoneContext', () => ({ useSoftphone: () => ({ ...sof
 vi.mock('../../context/PortalSidebarContext', () => ({ usePortalSidebar: () => ({ open: vi.fn() }) }));
 vi.mock('../../lib/sip/useIncomingCallAlerts.js', () => ({ requestIncomingCallNotifications: async () => {}, useIncomingCallAlerts: () => {} }));
 vi.mock('./PhoneCallsTab.jsx', () => ({ default: () => <div data-testid="calls-tab" /> }));
+vi.mock('./PhoneSessionSignOut.jsx', () => ({ default: () => <button>Sign out</button> }));
 vi.mock('./PhonePresence.jsx', () => ({ default: () => null }));
 vi.mock('./TransferControls.jsx', () => ({ default: () => null }));
 vi.mock('./CallToast.jsx', () => ({ default: () => null }));

@@ -88,7 +88,7 @@ export default function SessionList({ tab, onTab, sessions, selectedId, onSelect
               data-testid="session-row"
               sx={(theme) => ({
                 display: 'grid', gridTemplateColumns: '38px minmax(0, 1fr)', gap: 1.25, alignItems: 'center', width: '100%',
-                textAlign: 'start', px: 2, py: 2, borderBottom: 1, borderColor: 'divider',
+                textAlign: 'start', px: 2, py: 1.25, borderBottom: 1, borderColor: 'divider',
                 borderInlineStart: '3px solid', borderInlineStartColor: on ? 'primary.main' : 'transparent',
                 bgcolor: on ? alpha(theme.palette.primary.main, 0.07) : 'transparent',
                 '&:hover': { bgcolor: 'action.hover' },

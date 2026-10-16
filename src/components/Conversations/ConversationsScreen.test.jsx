@@ -53,7 +53,6 @@ describe('Conversations screen (mock data)', () => {
     const summary = await screen.findByTestId('call-summary');
     expect(summary).toHaveTextContent('Dana Levi');
     expect(summary).toHaveTextContent('04:25');
-    expect(summary).toHaveTextContent('04:00');
     expect(screen.getByRole('link', { name: 'Listen' })).toHaveAttribute('href', expect.stringContaining('c-ended.mp3'));
   });
 
@@ -100,8 +99,8 @@ describe('Conversations screen (mock data)', () => {
   it('adds a note and appends it to the thread', async () => {
     render(<ConversationsScreen />);
     fireEvent.click((await screen.findAllByTestId('session-row'))[1]);
-    fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Call back Sunday' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    fireEvent.change(await screen.findByLabelText('Note'), { target: { value: 'Call back Sunday' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
     expect(await screen.findByText('Call back Sunday')).toBeInTheDocument();
   });
 
@@ -118,7 +117,7 @@ describe('Conversations screen (mock data)', () => {
     render(<ConversationsScreen />);
     fireEvent.click((await screen.findAllByTestId('session-row'))[1]);
     await screen.findByText('Answered by Dana');
-    expect(screen.queryByLabelText('Message')).toBeNull();
+    expect(screen.queryByLabelText('Note')).toBeNull();
     expect(screen.queryByTestId('contact-panel')).toBeNull();
     expect(screen.getByTestId('phone-screen')).toBeInTheDocument();
   });
