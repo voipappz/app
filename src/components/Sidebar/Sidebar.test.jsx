@@ -70,4 +70,12 @@ describe('Sidebar: text when open, icons when collapsed', () => {
     expect(screen.getByTestId('sidebar-language')).toHaveAttribute('aria-label');
     expect(screen.getByTestId('sidebar-theme')).toHaveAttribute('aria-label');
   });
+
+  it('open: sign out sits on the account row; collapsed: it is not there', () => {
+    const { unmount } = show(false);
+    expect(screen.getByTestId('sidebar-sign-out')).toBeInTheDocument();
+    unmount();
+    show(true);
+    expect(screen.queryByTestId('sidebar-sign-out')).not.toBeInTheDocument();
+  });
 });

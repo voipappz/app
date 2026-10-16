@@ -1,3 +1,4 @@
+import { RecordingControls } from '../CallIcons';
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, IconButton, Avatar, Button, Divider, Paper
@@ -184,8 +185,9 @@ const CallDetailPanel = ({ call, onClose, onViewLogs, onViewEvents, onCallBack, 
 
       {recordingUrl && (
         <Box sx={{ px: 2, pb: 1, flexShrink: 0 }}>
-          <Box component="audio" key={recordingUrl} controls preload="metadata" src={recordingUrl}
-            aria-label="Call recording" sx={{ width: '100%', height: 40 }} />
+          {/* The same player as the list's Recording column (play/pause,
+              a seekable bar, the time; one recording plays at a time). */}
+          <RecordingControls key={recordingUrl} recordingUrl={recordingUrl} />
         </Box>
       )}
       {/* Actions */}

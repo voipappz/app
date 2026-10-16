@@ -274,8 +274,12 @@ const TimeHistogram = ({
       .text("GMT");
 
     // Y Axis
+    // Counts are whole numbers: only integer ticks, at most 4 (a max of 1
+    // drew "1 1 1 0 0 0" - fractional ticks rounded by the "d" format).
+    const yMax = yScale.domain()[1];
+    const yTicks = yScale.ticks(Math.min(4, Math.max(1, Math.floor(yMax)))).filter(Number.isInteger);
     const yAxis = d3.axisLeft(yScale)
-      .ticks(4)
+      .tickValues(yTicks)
       .tickFormat(d3.format("d"));
 
     g.append("g")
@@ -288,7 +292,7 @@ const TimeHistogram = ({
     g.append("g")
       .attr("class", "grid")
       .selectAll("line")
-      .data(yScale.ticks(4))
+      .data(yTicks)
       .enter()
       .append("line")
       .attr("x1", 0)
