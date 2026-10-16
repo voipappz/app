@@ -51,6 +51,7 @@ export default function useConversations() {
     listConversations({
       tab, q: query || undefined, orderBy: SORTS[view.sort].orderBy, orderKind: SORTS[view.sort].orderKind,
       direction: view.direction || undefined, outcome: view.outcome || undefined, scope: view.everyone ? 'environment' : undefined,
+      from: view.from || undefined, to: view.to || undefined,
     })
       .then((res) => { if (alive) setHistory(rowsOf(res)); })
       .catch(() => { if (alive) { setHistory([]); setListError(true); } })

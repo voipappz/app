@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Avatar, Box, ButtonBase, Chip, CircularProgress, IconButton, InputAdornment, ListSubheader, Menu, MenuItem, Tab, Tabs, TextField, Typography, useTheme } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
+import DateRangeControl from './DateRangeControl.jsx';
+import { rowNumberSx, rowPrimarySx, rowSecondarySx } from './sessionRowStyles';
 import { SORTS } from './viewOptions';
 import Bdi from '../../i18n/Bdi';
 import { formatTime } from '../../utils/dateUtils';
@@ -70,6 +72,7 @@ export default function SessionList({ tab, onTab, sessions, selectedId, onSelect
           inputProps={{ 'aria-label': t('search.label'), dir: 'ltr', inputMode: 'tel', style: { textAlign: 'start' } }}
           InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
         />
+        <DateRangeControl from={view.from || ''} to={view.to || ''} onChange={(range) => onView(range)} />
         <ViewMenu view={view} onView={onView} canEveryone={canEveryone} t={t} />
       </Box>
       <Box sx={{ flex: 1, overflowY: 'auto' }}>
@@ -95,14 +98,14 @@ export default function SessionList({ tab, onTab, sessions, selectedId, onSelect
             >
               <Avatar sx={{ width: 32, height: 32, fontSize: 12 }}>{initialOf(s)}</Avatar>
               <Box sx={{ minWidth: 0 }}>
-                <Typography noWrap sx={{ fontWeight: 500, fontSize: 13 }}><Bdi>{title}</Bdi></Typography>
-                <Typography noWrap variant="caption" color="text.secondary">
+                <Typography noWrap sx={rowPrimarySx}><Bdi>{title}</Bdi></Typography>
+                <Typography noWrap sx={rowSecondarySx}>
                   {t(`direction.${s.direction || 'unknown'}`, { defaultValue: '' })}
                   {s.outcome && !isBot(s) ? ` · ${t(`outcome.${s.outcome}`, { defaultValue: '' })}` : ''}
                 </Typography>
                 {isBot(s) && <Chip size="small" label={t('outcome.bot')} sx={{ ms: 0.5, height: 16, fontSize: 10 }} />}
               </Box>
-              <Typography variant="caption" sx={{ color: s.live ? 'success.main' : 'text.secondary' }}>
+              <Typography sx={{ ...rowSecondarySx, ...rowNumberSx, color: s.live ? 'success.main' : 'text.secondary' }}>
                 {s.live ? (elapsed(s.started_at, now) || t('list.live')) : (s.started_at ? formatTime(s.started_at) : '')}
               </Typography>
             </ButtonBase>

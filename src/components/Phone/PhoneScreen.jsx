@@ -45,6 +45,7 @@ const TABS = ['calls', 'dialpad'];
 // avatar circles that glow while that side speaks, round controls.
 const ROOM = '#282c34';
 const ROOM_FG = '#fdfdff';
+const ROOM_SEP = '#2c2c34';
 const LEAVE = '#d83838';
 const SPEAK = '#00ff00';
 
@@ -224,14 +225,14 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
       <Paper
         elevation={0}
         sx={{
-          overflow: 'hidden', bgcolor: PANEL, color: '#e5e7eb',
+          overflow: 'hidden', bgcolor: redesigned ? ROOM : PANEL, color: '#e5e7eb',
           display: 'flex', flexDirection: 'column',
           ...(embedded ? { flex: 1, minHeight: 0, borderRadius: 0 } : { borderRadius: 3 })
         }}
       >
         {/* Header — avatar, name / ext, ready status */}
-        <Box sx={{ bgcolor: PANEL_HEADER, px: 1.5, py: 1.25, display: 'flex', gap: 1.25, alignItems: 'flex-start' }}>
-          <Avatar sx={{ width: 44, height: 44, bgcolor: '#5b6675', fontSize: '1.1rem' }}>{initial}</Avatar>
+        <Box sx={{ bgcolor: redesigned ? ROOM_SEP : PANEL_HEADER, px: 1.5, py: 1.25, display: 'flex', gap: 1.25, alignItems: 'flex-start' }}>
+          <Avatar sx={{ width: 44, height: 44, bgcolor: redesigned ? '#40404d' : '#5b6675', fontSize: '1.1rem' }}>{initial}</Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }} noWrap>
               {name} <Box component="span" sx={{ color: MUTED, fontWeight: 400 }}>• <Bdi>{ext}</Bdi></Box>
@@ -469,7 +470,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
           <Tabs
             value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth"
             sx={{
-              borderTop: '1px solid rgba(255,255,255,0.08)', minHeight: 48, bgcolor: PANEL_HEADER,
+              borderTop: '1px solid rgba(255,255,255,0.08)', minHeight: 48, bgcolor: redesigned ? ROOM_SEP : PANEL_HEADER,
               '& .MuiTab-root': { minHeight: 48, color: MUTED, fontSize: '0.72rem', fontWeight: 700 },
               '& .Mui-selected': { color: `${ACCENT} !important` },
               '& .MuiTabs-indicator': { backgroundColor: ACCENT }
