@@ -15,6 +15,7 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import ChatIcon from '@mui/icons-material/Chat';
 import BoltIcon from '@mui/icons-material/Bolt';
 import SubjectIcon from '@mui/icons-material/Subject';
+import ForumIcon from '@mui/icons-material/Forum';
 import { canAccessScreen } from '../utils/jwt';
 
 // Sidebar — kept deliberately simple. The Studio is the landing/home and
@@ -22,6 +23,8 @@ import { canAccessScreen } from '../utils/jwt';
 // environment selector. Everything else stays reachable through the Studio and
 // ⌘K search (routes still exist), it's just off the rail.
 export const NAV_ITEMS = [
+  // The user's working screen (sessions, thread, phone, contact); a user with `calls` lands here.
+  { text: 'Conversations', labelKey: 'nav:conversations', path: '/conversations', iconComponent: ForumIcon, aclKey: 'calls', group: 'MONITOR' },
   { text: 'Routes', labelKey: 'nav:routes',          path: '/routes',          iconComponent: SchemaIcon,                aclKey: 'routes',          alwaysShow: true, group: 'MANAGE'   },
   { text: 'Services', labelKey: 'nav:services',      path: '/services',       iconComponent: MiscellaneousServicesIcon, aclKey: 'services',                       group: 'MANAGE'   },
   { text: 'Devices', labelKey: 'nav:devices',       path: '/extensions',     iconComponent: DevicesIcon,               aclKey: 'extensions',                     group: 'MANAGE'   },

@@ -32,6 +32,7 @@ import SignIn from './components/Login/SignIn.jsx';
 const Reports = lazy(() => import('./components/Reports/Reports.jsx'));
 const LiveDashboard = lazy(() => import('./components/LiveDashboard/LiveDashboard.jsx'));
 const AdminDashboard = lazy(() => import('./components/Dashboard/AdminDashboard.jsx'));
+const ConversationsScreen = lazy(() => import('./components/Conversations/ConversationsScreen.jsx'));
 const Calls = lazy(() => import('./components/Calls/Calls.jsx'));
 
 const Notifications = lazy(() => import('./components/Notifications/Notifications.jsx'));
@@ -182,6 +183,19 @@ function AppContent() {
               <Layout>
                 <Reports />
               </Layout>
+            </ProtectedRoute>
+          }
+        />
+        {/* The user's working screen: its own full-height shell, NOT inside
+            Layout (no navbar or sidebar). SoftphoneProvider is above the
+            router, so the phone it embeds works the same. */}
+        <Route
+          path="/conversations"
+          element={
+            <ProtectedRoute requiredAcl="calls">
+              <Suspense fallback={<PageLoader />}>
+                <ConversationsScreen />
+              </Suspense>
             </ProtectedRoute>
           }
         />
