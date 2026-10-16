@@ -15,10 +15,9 @@ vi.mock('../../services/api/conversationsApi', () => {
   ['listConversations', 'getConversation', 'getEvents', 'addNote', 'lookupContact', 'getContact', 'createContact', 'updateContact', 'listFields', 'createField'].forEach((n) => { m[n] = (...a) => h.apis[n](...a); });
   return m;
 });
-vi.mock('../../services/api/messagesApi', () => ({ messagesApi: { send: vi.fn(async () => ({})) } }));
 
 beforeEach(() => {
-  h.granted = ['calls', 'notes', 'messages', 'contact'];
+  h.granted = ['calls', 'notes', 'contact'];
   h.call = null;
   h.apis = createMockApis();
   try { localStorage.clear(); } catch { /* none */ }
@@ -30,7 +29,7 @@ describe('Conversations screen (mock data)', () => {
     expect(await screen.findAllByTestId('session-row')).toHaveLength(2);
     fireEvent.click(screen.getByRole('tab', { name: 'All' }));
     await screen.findByText('Dan Levi');
-    expect(screen.getAllByTestId('session-row').length).toBe(6);
+    expect(screen.getAllByTestId('session-row').length).toBe(5);
     fireEvent.click(screen.getByRole('tab', { name: 'Missed' }));
     await waitFor(() => expect(screen.getAllByTestId('session-row')).toHaveLength(1));
     expect(screen.getByText('Noa Bar')).toBeInTheDocument();
@@ -85,7 +84,6 @@ describe('Conversations screen (mock data)', () => {
     fireEvent.click((await screen.findAllByTestId('session-row'))[1]);
     expect(await screen.findByText('Answered by Dana')).toBeInTheDocument();
     expect(screen.getByTestId('event-note')).toHaveTextContent('Wants the annual plan');
-    expect(screen.getByTestId('event-sms')).toBeInTheDocument();
     expect(screen.getAllByTestId('session-row')[1]).toHaveAttribute('aria-current', 'true');
   });
 
@@ -103,7 +101,7 @@ describe('Conversations screen (mock data)', () => {
     expect(await screen.findByText('Answered by Dana')).toBeInTheDocument();
   });
 
-  it('hides the composer without notes and messages, the contact without contacts', async () => {
+  it('hides the composer without notes, the contact without contacts', async () => {
     h.granted = ['calls'];
     render(<ConversationsScreen />);
     fireEvent.click((await screen.findAllByTestId('session-row'))[1]);

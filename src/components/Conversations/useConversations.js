@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listConversations, getEvents, addNote, MOCK_CONVERSATIONS } from '../../services/api/conversationsApi';
-import { messagesApi } from '../../services/api/messagesApi';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useSoftphone } from '../../context/SoftphoneContext';
 import { useLiveEnvironment } from '../LiveDashboard/useLiveEnvironment';
@@ -91,18 +90,12 @@ export default function useConversations() {
     catch { setSendError(true); return false; }
   }, [selectedId, loadEvents]);
 
-  const sendSms = useCallback(async (text) => {
-    setSendError(false);
-    try { await messagesApi.send({ to: selected?.remote_number, text }); await loadEvents(selectedId); return true; }
-    catch { setSendError(true); return false; }
-  }, [selected, selectedId, loadEvents]);
-
   return {
     tab, setTab, sessions, listLoading, listError, liveConnected: live.connected,
     selectedId, select: setSelectedId, selected,
-    events, threadLoading, sendNote, sendSms, sendError,
+    events, threadLoading, sendNote, sendError,
     canCalls,
-    canNotes: can('notes'), canSms: can('messages'), canContacts: can('contact'),
+    canNotes: can('notes'), canContacts: can('contact'),
     search, setSearch, view, setView, canEveryone,
   };
 }

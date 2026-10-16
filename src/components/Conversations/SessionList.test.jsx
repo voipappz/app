@@ -11,7 +11,7 @@ describe('SessionList', () => {
     const onSelect = vi.fn(); const onTab = vi.fn();
     render(<SessionList {...base} onSelect={onSelect} onTab={onTab} />);
     const rows = screen.getAllByTestId('session-row');
-    expect(rows).toHaveLength(8);
+    expect(rows).toHaveLength(7);
     expect(rows[3]).toHaveAttribute('aria-current', 'true');
     fireEvent.click(rows[2]);
     expect(onSelect).toHaveBeenCalledWith('c-missed');

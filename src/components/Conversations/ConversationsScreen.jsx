@@ -80,7 +80,7 @@ export default function ConversationsScreen() {
           {c.canCalls ? (
             <ConversationThread
               selected={c.selected} events={c.events} loading={c.threadLoading}
-              canNotes={c.canNotes} canSms={c.canSms} onNote={c.sendNote} onSms={c.sendSms} sendError={c.sendError}
+              canNotes={c.canNotes} onNote={c.sendNote} sendError={c.sendError}
             />
           ) : (
             <Typography color="text.secondary" sx={{ p: 3 }}>{t('noAccess')}</Typography>

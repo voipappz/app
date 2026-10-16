@@ -31,15 +31,11 @@
     "note": "הערה"
   },
   "composer": {
-    "mode": "סוג הודעה",
     "note": "הערה",
-    "sms": "SMS",
     "input": "הודעה",
     "notePlaceholder": "כתבו הערה…",
-    "smsPlaceholder": "כתבו הודעת SMS…",
     "send": "שליחה",
-    "error": "לא ניתן לשלוח.",
-    "to": "אל"
+    "error": "לא ניתן לשלוח."
   },
   "contact": {
     "title": "איש קשר",

@@ -8,13 +8,6 @@ import { apiService } from '../apiService';
 
 export const messagesApi = {
   /**
-   * Send an SMS (form-url-encoded). Assumed contract: POST /api/messages with
-   * `to` and `text`; the message lands in the same conversation thread.
-   */
-  send: async ({ to, text }) =>
-    apiService.post('/api/messages', new URLSearchParams({ to, text }), {}, 'sending message', false),
-
-  /**
    * Get messages segments for advanced search
    * @returns {Promise<Array>} - Available search segments
    */

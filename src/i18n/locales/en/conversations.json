@@ -31,15 +31,11 @@
     "note": "Note"
   },
   "composer": {
-    "mode": "Message type",
     "note": "Note",
-    "sms": "SMS",
     "input": "Message",
     "notePlaceholder": "Write a note…",
-    "smsPlaceholder": "Write an SMS…",
     "send": "Send",
-    "error": "Could not send.",
-    "to": "To"
+    "error": "Could not send."
   },
   "contact": {
     "title": "Contact",
