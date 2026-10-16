@@ -1,59 +1,70 @@
 import { Fragment } from 'react';
 import NoteComposer from './NoteComposer.jsx';
 import { useTranslation } from 'react-i18next';
-import { Box, Button, CircularProgress, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Divider, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import NotesOutlinedIcon from '@mui/icons-material/NotesOutlined';
 import CallSummary from './CallSummary.jsx';
 import { formatOnlyDate, formatTime } from '../../utils/dateUtils';
 
 function Event({ ev, t }) {
-  const time = <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>{ev.at ? formatTime(ev.at) : ''}</Typography>;
-  let box;
+  const time = ev.at ? formatTime(ev.at) : '';
   if (ev.kind === 'call' && (ev.data?.summary === 'true' || ev.data?.summary === true)) {
-    box = <CallSummary s={ev.data} t={t} />;
-  } else if (ev.kind === 'note') {
-    box = (
-      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, p: 1, bgcolor: 'background.paper', maxWidth: 380 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{t('thread.note')}{ev.user_name || ev.agent_name ? ` · ${ev.user_name || ev.agent_name}` : ''}</Typography>
-        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{ev.text}</Typography>
+    return <Box data-testid="event-call"><CallSummary s={ev.data} t={t} time={time} /></Box>;
+  }
+  if (ev.kind === 'note') {
+    return (
+      <Box data-testid="event-note" sx={(theme) => ({ alignSelf: 'flex-end', width: 'fit-content', maxWidth: '90%', border: 1, borderColor: alpha(theme.palette.warning.main, 0.25), borderRadius: 3, p: 2, bgcolor: alpha(theme.palette.warning.main, 0.08) })}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, color: 'text.secondary' }}>
+          <NotesOutlinedIcon sx={{ fontSize: 16 }} />
+          <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{t('thread.note')}{ev.user_name || ev.agent_name ? ` · ${ev.user_name || ev.agent_name}` : ''}</Typography>
+        </Box>
+        <Typography sx={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{ev.text}</Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'end', mt: 1, fontVariantNumeric: 'tabular-nums' }}>{time}</Typography>
       </Box>
     );
-  } else {
-    const action = ev.kind === 'call' ? (ev.data?.action || ev.text) : null;
-    const label = action ? t(`events.${action}`, { defaultValue: ev.text || '' }) : ev.text;
-    box = <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{label}</Typography>;
   }
+  const action = ev.kind === 'call' ? (ev.data?.action || ev.text) : null;
+  const label = action ? t(`events.${action}`, { defaultValue: ev.text || '' }) : ev.text;
   return (
-    <Box data-testid={`event-${ev.kind}`} sx={{ display: 'grid', gridTemplateColumns: '46px 1fr', gap: 1.25, alignItems: 'baseline' }}>
-      {time}{box}
+    <Box data-testid={`event-${ev.kind}`} sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 1, px: 1, color: 'text.secondary' }}>
+      <Box aria-hidden sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'text.disabled', alignSelf: 'center', flexShrink: 0 }} />
+      <Typography sx={{ fontSize: 13, overflowWrap: 'anywhere', minWidth: 0 }}>{label}</Typography>
+      <Typography variant="caption" sx={{ fontVariantNumeric: 'tabular-nums', opacity: 0.8 }}>{time}</Typography>
     </Box>
   );
 }
 
-/** Middle pane: one flowing list, notes as cards, the composer writes notes. */
+/** Saved activity, call cards and notes share one readable conversation column. */
 export default function ConversationThread({ selected, events, loading, error, onRetry, canNotes, onNote, sendError }) {
   const { t } = useTranslation('conversations');
   if (!selected) {
-    return <Box sx={{ p: 3 }}><Typography color="text.secondary">{t('thread.select')}</Typography></Box>;
+    return <Box sx={{ p: 4, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1.5, textAlign: 'center' }}>
+      <ChatBubbleOutlineIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
+      <Typography sx={{ fontSize: 16, fontWeight: 600 }}>{t('thread.select')}</Typography>
+      <Typography variant="body2" color="text.secondary">{t('thread.selectHint')}</Typography>
+    </Box>;
   }
-
   const summary = events.find((ev) => ev.kind === 'call' && ev.data?.call_uuid === selected.call_uuid && (ev.data?.summary === 'true' || ev.data?.summary === true));
   const ordered = [...events].sort((a, b) => (Date.parse(a.at) || 0) - (Date.parse(b.at) || 0));
-
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
-      {!summary && <CallSummary s={selected} t={t} />}
-      <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        {loading && <CircularProgress size={22} sx={{ alignSelf: 'center' }} />}
-        {!loading && !error && events.length === 0 && <Typography variant="body2" color="text.secondary">{t('thread.empty')}</Typography>}
-        {error && <Box role="alert"><Typography color="error">{t('thread.error')}</Typography><Button onClick={onRetry}>{t('thread.retry')}</Button></Box>}
-        {!loading && !error && ordered.map((ev, index) => {
-          const day = ev.at ? formatOnlyDate(ev.at) : '';
-          const previous = index > 0 && ordered[index - 1].at ? formatOnlyDate(ordered[index - 1].at) : '';
-          return <Fragment key={ev.id}>
-            {day && day !== previous && <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 1 }}>{day}</Typography>}
-            <Event ev={ev} t={t} />
-          </Fragment>;
-        })}
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: { xs: 2, md: 3 }, py: 3 }}>
+        <Box sx={{ width: '100%', maxWidth: 720, mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {!summary && <CallSummary s={selected} t={t} />}
+          {loading && <CircularProgress size={22} sx={{ alignSelf: 'center' }} />}
+          {!loading && !error && events.length === 0 && <Typography variant="body2" color="text.secondary">{t('thread.empty')}</Typography>}
+          {error && <Box role="alert"><Typography color="error">{t('thread.error')}</Typography><Button onClick={onRetry}>{t('thread.retry')}</Button></Box>}
+          {!loading && !error && ordered.map((ev, index) => {
+            const day = ev.at ? formatOnlyDate(ev.at) : '';
+            const previous = index > 0 && ordered[index - 1].at ? formatOnlyDate(ordered[index - 1].at) : '';
+            return <Fragment key={ev.id}>
+              {day && day !== previous && <Divider sx={{ my: 1, '&::before, &::after': { borderColor: 'divider' } }}><Typography variant="caption" color="text.secondary" sx={{ px: 1 }}>{day}</Typography></Divider>}
+              <Event ev={ev} t={t} />
+            </Fragment>;
+          })}
+        </Box>
       </Box>
       {canNotes && <NoteComposer key={selected.call_uuid} onNote={onNote} sendError={sendError} />}
     </Box>

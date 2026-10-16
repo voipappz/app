@@ -30,7 +30,10 @@
     "empty": "Nothing here yet.",
     "note": "Note",
     "error": "Could not load conversation history.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "selectHint": "Choose a conversation from history to read its activity and notes.",
+    "history": "Conversation history",
+    "outsideFilter": "This conversation is open, but is outside the current history filter."
   },
   "composer": {
     "note": "Note",
@@ -87,7 +90,9 @@
     "talk": "Talk time",
     "user": "Agent",
     "recording": "Recording",
-    "listen": "Listen"
+    "listen": "Listen",
+    "call": "Call",
+    "callDirection": "{{direction}} call"
   },
   "dateRange": {
     "clear": "Clear period"

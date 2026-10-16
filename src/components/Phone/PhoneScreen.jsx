@@ -438,7 +438,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                   </Box>
                 ))}
               </Box>
-              <Box sx={{ flex: 1 }} />
+              {!redesigned && <Box sx={{ flex: 1 }} />}
               <Button
                 fullWidth variant="contained" onClick={() => startCall()} disabled={!connected || !number.trim()}
                 startIcon={redesigned ? <CallIcon /> : undefined}

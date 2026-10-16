@@ -36,3 +36,19 @@ WebSocket service is required.
 
 Local verification is limited to `npm run lint`. Regression tests for stale
 responses, note drafts and save/refresh failures are supplied for CI.
+
+## Conversation UX
+
+History search occupies its own row above the date and view filters. The wider
+list uses contact avatars, a visible selection edge, and separate activity/time
+lines. Below 1060px it folds away to leave room for the thread and phone.
+
+The thread has a bounded reading width, day separators, compact call cards,
+subtle activity entries and tinted note bubbles. Call outcome, duration, agent
+and recording remain visible without table headings. A note composer stays
+below the scrolling history. A small notice explains when the open conversation
+is outside the current list filter, preserving the selection and draft.
+The user phone's Call button sits directly below the dialpad.
+
+This is a presentation change: existing history events are still shown as
+provided; repeated events are not silently removed or regrouped.
