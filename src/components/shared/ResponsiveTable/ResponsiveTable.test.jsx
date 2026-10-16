@@ -52,7 +52,7 @@ describe('ResponsiveTable on a desktop', () => {
 describe('ResponsiveTable density', () => {
   it('is a small, dense table by default: tight cells, 40px rows, auto layout over the full width', () => {
     render(table());
-    expect(screen.getByRole('table')).toHaveClass('MuiTable-sizeSmall');
+    expect(screen.getByRole('columnheader', { name: 'Status' })).toHaveClass('MuiTableCell-sizeSmall');
     const css = styledCss();
     expect(css).toContain(`padding:${DENSITY.cellPadding}`);
     expect(css).toContain(`height:${DENSITY.rowHeight}px`);
@@ -67,7 +67,7 @@ describe('ResponsiveTable density', () => {
 
   it('lets a caller opt out with dense={false}', () => {
     render(table({ dense: false }));
-    expect(screen.getByRole('table')).not.toHaveClass('MuiTable-sizeSmall');
+    expect(screen.getByRole('columnheader', { name: 'Status' })).toHaveClass('MuiTableCell-sizeMedium');
   });
 });
 
