@@ -1,4 +1,17 @@
-import { describe, it, expect, vi, let update;
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '../../i18n';
+import ContactPanel from './ContactPanel.jsx';
+import { createMockApis, CONTACT_UUID } from './fixtures';
+
+const h = vi.hoisted(() => ({ apis: null }));
+vi.mock('../../services/api/conversationsApi', () => {
+  const m = { MOCK_CONVERSATIONS: false };
+  ['listConversations', 'getConversation', 'getEvents', 'addNote', 'lookupContact', 'getContact', 'createContact', 'updateContact', 'listFields', 'createField'].forEach((n) => { m[n] = (...a) => h.apis[n](...a); });
+  return m;
+});
+
+let update;
 beforeEach(() => { h.apis = createMockApis(); update = vi.spyOn(h.apis, 'updateContact'); });
 
 describe('ContactPanel (mock data)', () => {
