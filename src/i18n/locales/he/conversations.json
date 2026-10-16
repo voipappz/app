@@ -1,0 +1,60 @@
+{
+  "title": "שיחות",
+  "toggleList": "הצג או הסתר שיחות",
+  "noAccess": "ההרשאות שלך אינן כוללות שיחות.",
+  "tabs": {
+    "live": "חי",
+    "all": "הכל",
+    "missed": "שלא נענו"
+  },
+  "direction": {
+    "incoming": "נכנסת",
+    "outgoing": "יוצאת",
+    "local": "שלוחה",
+    "inbound": "נכנסת",
+    "outbound": "יוצאת",
+    "unknown": ""
+  },
+  "list": {
+    "title": "שיחות",
+    "live": "חי",
+    "error": "לא ניתן לטעון את השיחות.",
+    "notLive": "העדכון החי אינו מחובר.",
+    "empty": {
+      "live": "אין שיחות חיות.",
+      "all": "אין שיחות עדיין.",
+      "missed": "אין שיחות שלא נענו."
+    }
+  },
+  "thread": {
+    "select": "בחרו שיחה.",
+    "empty": "עדיין אין כאן דבר.",
+    "note": "הערה"
+  },
+  "composer": {
+    "mode": "סוג הודעה",
+    "note": "הערה",
+    "sms": "SMS",
+    "input": "הודעה",
+    "notePlaceholder": "כתבו הערה…",
+    "smsPlaceholder": "כתבו הודעת SMS…",
+    "send": "שליחה",
+    "error": "לא ניתן לשלוח.",
+    "to": "אל"
+  },
+  "contact": {
+    "title": "איש קשר",
+    "none": "אין איש קשר למספר זה.",
+    "create": "הוספת איש קשר",
+    "name": "שם",
+    "phone": "טלפון",
+    "email": "אימייל",
+    "tags": "תגיות",
+    "addTag": "הוספת תגית",
+    "tagPlaceholder": "מפתח: ערך",
+    "removeTag": "הסרת התגית {{tag}}",
+    "previous": "שיחות קודמות",
+    "noPrevious": "אין עדיין.",
+    "error": "לא ניתן לשמור."
+  }
+}
