@@ -52,21 +52,22 @@ test.describe('Conversations: screen and menus', () => {
     await signInAsUser(page);
     await expect(page.locator('[data-testid="authenticated-layout"]')).toHaveCount(0);
     await expect(page.locator('[data-testid="layout-container"] [data-testid="main-content"]')).toHaveCount(0);
-    await expect(page.getByRole('tab', { name: 'Live' })).toBeVisible();      // list
+    await expect(page.getByRole('tab', { name: 'All' })).toBeVisible();      // list
     await expect(page.getByRole('main')).toBeVisible();                       // thread
     await expect(page.locator('[data-testid="phone-screen"]')).toBeVisible(); // phone
   });
 
   test('the menu button hides and shows the list; tabs switch; search takes digits', async ({ page }) => {
     await signInAsUser(page);
-    const live = page.getByRole('tab', { name: 'Live' });
+    const all = page.getByRole('tab', { name: 'All' });
     const toggle = () => page.getByRole('button', { name: 'Show or hide sessions' }).first();
 
     await toggle().click();
-    await expect(live).toHaveCount(0);
+    await expect(all).toHaveCount(0);
     await toggle().click();
-    await expect(live).toBeVisible();
+    await expect(all).toBeVisible();
 
+    await page.getByRole('tab', { name: 'Missed' }).click();
     const allResponse = page.waitForResponse((r) => conversationsUrl(r.url()) && r.url().includes('tab=all'), { timeout: 30000 });
     await page.getByRole('tab', { name: 'All' }).click();
     const status = (await allResponse).status();
@@ -77,8 +78,8 @@ test.describe('Conversations: screen and menus', () => {
     await expect(page.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
     await page.getByRole('tab', { name: 'Missed' }).click();
     await expect(page.getByRole('tab', { name: 'Missed' })).toHaveAttribute('aria-selected', 'true');
-    await page.getByRole('tab', { name: 'Live' }).click();
-    await expect(live).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('tab', { name: 'All' }).click();
+    await expect(all).toHaveAttribute('aria-selected', 'true');
 
     const search = page.getByLabel('Search by number');
     await search.fill('052 555-0144');

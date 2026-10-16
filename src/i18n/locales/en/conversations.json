@@ -15,7 +15,7 @@
     "outbound": "Outgoing"
   },
   "list": {
-    "title": "Sessions",
+    "title": "History",
     "live": "Live",
     "error": "Could not load conversations.",
     "notLive": "Live updates are not connected.",
@@ -28,7 +28,9 @@
   "thread": {
     "select": "Select a conversation.",
     "empty": "Nothing here yet.",
-    "note": "Note"
+    "note": "Note",
+    "error": "Could not load conversation history.",
+    "retry": "Retry"
   },
   "composer": {
     "note": "Note",
@@ -89,5 +91,24 @@
   },
   "dateRange": {
     "clear": "Clear period"
+  },
+  "events": {
+    "number": {
+      "ringing": "Call ringing",
+      "answer": "Call answered",
+      "hangup": "Call ended"
+    },
+    "user": {
+      "ringing": "Ringing agent",
+      "answer": "Agent answered",
+      "hangup": "Agent left the call"
+    },
+    "queue": {
+      "start": "Entered queue",
+      "end": "Left queue"
+    },
+    "cdr": {
+      "end": "Call completed"
+    }
   }
 }

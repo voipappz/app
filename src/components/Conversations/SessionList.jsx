@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Avatar, Box, ButtonBase, Chip, CircularProgress, IconButton, InputAdornment, ListSubheader, Menu, MenuItem, Tab, Tabs, TextField, Typography, useTheme } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
@@ -7,14 +7,10 @@ import DateRangeControl from './DateRangeControl.jsx';
 import { rowNumberSx, rowPrimarySx, rowSecondarySx } from './sessionRowStyles';
 import { SORTS } from './viewOptions';
 import Bdi from '../../i18n/Bdi';
-import { formatTime } from '../../utils/dateUtils';
+import { formatOnlyDate, formatTime } from '../../utils/dateUtils';
 
-const TABS = ['live', 'all', 'missed'];
+const TABS = ['all', 'missed'];
 
-const elapsed = (from, now) => {
-  const sec = from ? Math.max(0, Math.floor((now - Date.parse(from)) / 1000)) : null;
-  return sec === null ? '' : `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-};
 const isBot = (s) => s.outcome === 'bot' || s.leg_b_type === 'vml';
 const OUTCOMES = ['answered', 'missed', 'bot'];
 const DIRECTIONS = ['incoming', 'outgoing'];
@@ -49,16 +45,9 @@ function ViewMenu({ view, onView, canEveryone, t }) {
 
 const initialOf = (s) => ((s.contact?.name || '').trim()[0] || '?').toUpperCase();
 
-/** Left pane: Live / All / Missed. The selected row is highlighted. */
-export default function SessionList({ tab, onTab, sessions, selectedId, onSelect, loading, error, liveConnected, search, onSearch, view, onView, canEveryone }) {
+/** Left pane: Saved history: All / Missed. The selected row is highlighted. */
+export default function SessionList({ tab, onTab, sessions, selectedId, onSelect, loading, error, search, onSearch, view, onView, canEveryone }) {
   const { t } = useTranslation('conversations');
-  const [now, setNow] = useState(() => Date.now());
-  const anyLive = sessions.some((x) => x.live);
-  useEffect(() => {
-    if (!anyLive) return undefined;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [anyLive]);
   const empty = !loading && sessions.length === 0;
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
@@ -80,7 +69,7 @@ export default function SessionList({ tab, onTab, sessions, selectedId, onSelect
         {error && <Typography role="alert" variant="body2" color="error" sx={{ p: 2 }}>{t('list.error')}</Typography>}
         {empty && !error && (
           <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-            {tab === 'live' && !liveConnected ? t('list.notLive') : t(`list.empty.${tab}`)}
+            {t(`list.empty.${tab}`)}
           </Typography>
         )}
         {sessions.map((s) => {
@@ -105,8 +94,8 @@ export default function SessionList({ tab, onTab, sessions, selectedId, onSelect
                 </Typography>
                 {isBot(s) && <Chip size="small" label={t('outcome.bot')} sx={{ ms: 0.5, height: 16, fontSize: 10 }} />}
               </Box>
-              <Typography sx={{ ...rowSecondarySx, ...rowNumberSx, color: s.live ? 'success.main' : 'text.secondary' }}>
-                {s.live ? (elapsed(s.started_at, now) || t('list.live')) : (s.started_at ? formatTime(s.started_at) : '')}
+              <Typography sx={{ ...rowSecondarySx, ...rowNumberSx, color: 'text.secondary' }}>
+                {s.started_at ? <><Bdi>{formatOnlyDate(s.started_at)}</Bdi><br /><Bdi>{formatTime(s.started_at)}</Bdi></> : ''}
               </Typography>
             </ButtonBase>
           );
