@@ -1,0 +1,90 @@
+{
+  "title": "Conversations",
+  "toggleList": "Show or hide sessions",
+  "noAccess": "Your access does not include conversations.",
+  "tabs": {
+    "live": "Live",
+    "all": "All",
+    "missed": "Missed"
+  },
+  "direction": {
+    "incoming": "Incoming",
+    "outgoing": "Outgoing",
+    "local": "Internal",
+    "inbound": "Incoming",
+    "outbound": "Outgoing"
+  },
+  "list": {
+    "title": "Sessions",
+    "live": "Live",
+    "error": "Could not load conversations.",
+    "notLive": "Live updates are not connected.",
+    "empty": {
+      "live": "No live calls.",
+      "all": "No conversations yet.",
+      "missed": "No missed calls."
+    }
+  },
+  "thread": {
+    "select": "Select a conversation.",
+    "empty": "Nothing here yet.",
+    "note": "Note"
+  },
+  "composer": {
+    "note": "Note",
+    "input": "Message",
+    "notePlaceholder": "Write a note…",
+    "send": "Send",
+    "error": "Could not send."
+  },
+  "contact": {
+    "title": "Contact",
+    "none": "No contact for this number.",
+    "create": "Add contact",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "tags": "Tags",
+    "addTag": "Add tag",
+    "tagPlaceholder": "key: value",
+    "removeTag": "Remove tag {{tag}}",
+    "previous": "Previous conversations",
+    "noPrevious": "None yet.",
+    "error": "Could not save."
+  },
+  "search": {
+    "placeholder": "Search by number",
+    "label": "Search by number"
+  },
+  "view": {
+    "menu": "Sort and filter",
+    "sortBy": "Sort by",
+    "sort": {
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "longest": "Longest duration",
+      "shortest": "Shortest duration"
+    },
+    "direction": "Direction",
+    "outcome": "Outcome",
+    "all": "All",
+    "scope": "Show",
+    "mine": "Mine",
+    "everyone": "Everyone"
+  },
+  "outcome": {
+    "answered": "Answered",
+    "missed": "Missed",
+    "bot": "Bot",
+    "failed": "Failed"
+  },
+  "summary": {
+    "direction": "Direction",
+    "outcome": "Outcome",
+    "duration": "Duration",
+    "talk": "Talk time",
+    "user": "Agent",
+    "recording": "Recording",
+    "listen": "Listen"
+  }
+}

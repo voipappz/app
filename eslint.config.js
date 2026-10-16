@@ -39,6 +39,11 @@ const PHYSICAL_SIDES_IN_SX = [
 const CONVERTED = [
   'src/i18n/**',
   'src/components/Extensions/**',
+  // MessageInput.jsx is an unused leftover with physical sides; not converted.
+  'src/components/Conversations/Conversation*.{js,jsx}',
+  'src/components/Conversations/ContactPanel.jsx',
+  'src/components/Conversations/SessionList.jsx',
+  'src/components/Conversations/useConversations.js',
   'src/components/Bridges/CallConditionBridge/**',
   // Routes (not the folder: DIDsList.jsx and DIDPanel.jsx are unused leftovers)
   'src/components/DIDs/DIDs.jsx',
