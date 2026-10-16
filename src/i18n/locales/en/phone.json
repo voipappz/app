@@ -36,14 +36,27 @@
     "hold": "Hold",
     "transfer": "Transfer",
     "hangUp": "Hang up",
-    "incomingTitle": "Incoming call"
+    "incomingTitle": "Incoming call",
+    "outgoing": "Outgoing",
+    "connected": "Connected",
+    "onHold": "On hold",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "keypad": "Keypad",
+    "answer": "Answer",
+    "decline": "Decline",
+    "duration": "Call duration",
+    "you": "You",
+    "muted": "Muted"
   },
   "dialpad": {
     "enterNumber": "Enter number",
     "enterNumberToCall": "Enter a number to call",
     "notRegistered": "Phone is not registered",
     "couldNotStart": "Call could not be started",
-    "notConnected": "Not connected — see Settings"
+    "notConnected": "Not connected — see Settings",
+    "call": "Call",
+    "backspace": "Delete last digit"
   },
   "tabs": {
     "calls": "Calls",

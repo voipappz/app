@@ -36,14 +36,27 @@
     "hold": "המתנה",
     "transfer": "העברה",
     "hangUp": "סיום שיחה",
-    "incomingTitle": "שיחה נכנסת"
+    "incomingTitle": "שיחה נכנסת",
+    "outgoing": "יוצאת",
+    "connected": "מחובר",
+    "onHold": "בהמתנה",
+    "mute": "השתק",
+    "unmute": "בטל השתקה",
+    "keypad": "מקלדת",
+    "answer": "מענה",
+    "decline": "דחייה",
+    "duration": "משך השיחה",
+    "you": "אני",
+    "muted": "מושתק"
   },
   "dialpad": {
     "enterNumber": "הזינו מספר",
     "enterNumberToCall": "הזינו מספר לחיוג",
     "notRegistered": "הטלפון אינו רשום",
     "couldNotStart": "לא ניתן היה להתחיל את השיחה",
-    "notConnected": "לא מחובר — ראו הגדרות"
+    "notConnected": "לא מחובר — ראו הגדרות",
+    "call": "חיוג",
+    "backspace": "מחק ספרה אחרונה"
   },
   "tabs": {
     "calls": "שיחות",
