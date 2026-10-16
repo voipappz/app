@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import ResponsiveTable from './ResponsiveTable';
+import { DENSITY } from './density';
 import { pretendPhoneScreen } from '../../../test/phoneScreen';
+import { styledCss } from '../../../test/styledCss';
 
 const columns = [
   { id: 'name', label: 'Name', sortable: true, priority: 'primary' },
-  { id: 'extension', label: 'Extension', priority: 'secondary' },
+  { id: 'extension', label: 'Extension', priority: 'secondary', width: 90 },
   { id: 'status', label: 'Status', priority: 'meta' },
   { id: 'created', label: 'Created', priority: 'desktopOnly' },
   { id: 'actions', label: 'Actions', align: 'center', priority: 'action', render: (row) => <button type="button">Edit {row.name}</button> },
@@ -44,6 +46,28 @@ describe('ResponsiveTable on a desktop', () => {
     rerender(table({ rows: [], loading: true, skeletonRows: 3 }));
     expect(screen.queryByText('Nothing here')).toBeNull();
     expect(screen.getAllByRole('row')).toHaveLength(4); // header + 3 placeholders
+  });
+});
+
+describe('ResponsiveTable density', () => {
+  it('is a small, dense table by default: tight cells, 40px rows, auto layout over the full width', () => {
+    render(table());
+    expect(screen.getByRole('columnheader', { name: 'Status' })).toHaveClass('MuiTableCell-sizeSmall');
+    const css = styledCss();
+    expect(css).toContain(`padding:${DENSITY.cellPadding}`);
+    expect(css).toContain(`height:${DENSITY.rowHeight}px`);
+    expect(css).toContain('table-layout:auto');
+    expect(css).toContain('white-space:nowrap');
+  });
+
+  it('keeps a column\'s fixed width on its header', () => {
+    render(table());
+    expect(styledCss()).toContain('width:90px');
+  });
+
+  it('lets a caller opt out with dense={false}', () => {
+    render(table({ dense: false }));
+    expect(screen.getByRole('columnheader', { name: 'Status' })).toHaveClass('MuiTableCell-sizeMedium');
   });
 });
 
