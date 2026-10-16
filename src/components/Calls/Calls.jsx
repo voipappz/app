@@ -875,11 +875,10 @@ const Calls = () => {
           vanishing is not. A null value renders "—", never a confident 0. */}
       {!isMobile && chartMode === 'timeline' && (
         <Box data-testid="calls-counters" sx={{ mb: 1.25 }}>
-          {/* Four numbers, large: how many calls, how many were answered (and
+          {/* Four numbers, as small chips like Devices: how many calls, how many were answered (and
               the rate), how many were missed, how long they last. The first
               three filter the list; direction lives in the chart's split. */}
           <StatChips
-            size="large"
             items={[
               { key: 'total', label: t('stats.total'), hint: t('stats.totalHint'), value: summaryCounts.total, icon: <PhoneIcon />, colorVar: '--counter-total', filterKey: null },
               {
