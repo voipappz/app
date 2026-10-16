@@ -33,14 +33,16 @@
     "retry": "Retry",
     "selectHint": "Choose a conversation from history to read its activity and notes.",
     "history": "Conversation history",
-    "outsideFilter": "This conversation is open, but is outside the current history filter."
+    "outsideFilter": "This conversation is open, but is outside the current history filter.",
+    "showDetails": "Call details",
+    "hideDetails": "Hide details"
   },
   "composer": {
     "note": "Note",
     "input": "Message",
     "notePlaceholder": "Write a note…",
-    "send": "Send",
-    "error": "Could not send."
+    "send": "Save note",
+    "error": "Your note was not saved. Try again."
   },
   "contact": {
     "title": "Contact",
@@ -87,15 +89,42 @@
     "direction": "Direction",
     "outcome": "Outcome",
     "duration": "Duration",
-    "talk": "Talk time",
+    "talk": "Time talking",
     "user": "Agent",
     "recording": "Recording",
     "listen": "Listen",
     "call": "Call",
-    "callDirection": "{{direction}} call"
+    "callDirection": "{{direction}} call",
+    "receivedCall": "Incoming call",
+    "madeCall": "Outgoing call",
+    "missedCall": "Missed call",
+    "unansweredCall": "Call not answered",
+    "failedCall": "Call did not connect",
+    "automatedCall": "Automated call",
+    "handledBy": "Handled by {{name}}",
+    "totalTime": "Total time"
   },
   "dateRange": {
     "clear": "Clear period"
+  },
+  "period": {
+    "label": "History period",
+    "today": "Today",
+    "days7": "7 days",
+    "days30": "30 days"
+  },
+  "activity": {
+    "title": "Calls in this conversation",
+    "callCount_one": "{{count}} call",
+    "callCount_other": "{{count}} calls",
+    "hide": "Hide chart",
+    "show": "Show chart",
+    "answered": "Answered",
+    "missed": "Missed",
+    "other": "Other",
+    "empty": "No calls in this period.",
+    "hint": "Based on the history shown here. Select a bar to view that period.",
+    "bucket": "{{from}} to {{to}}: {{count}} calls, {{answered}} answered, {{missed}} missed, {{other}} other"
   },
   "events": {
     "number": {

@@ -26,6 +26,7 @@ export default function ConversationsScreen() {
   const phoneWidth = useMediaQuery('(max-width:620px)');
   const [hidden, setHidden] = useState(readHidden);
   const [overlay, setOverlay] = useState(false);
+  const [threadRange, setThreadRange] = useState({ from: '', to: '' });
 
   useEffect(() => { try { localStorage.setItem(LIST_KEY, hidden ? '1' : '0'); } catch { /* storage off */ } }, [hidden]);
   useEffect(() => { document.title = t('title'); }, [t]);
@@ -90,6 +91,7 @@ export default function ConversationsScreen() {
             <ConversationThread
               selected={c.selected} events={c.events} loading={c.threadLoading} error={c.threadError} onRetry={c.reloadThread}
               canNotes={c.canNotes} onNote={c.sendNote} sendError={c.sendError}
+              range={threadRange} onRangeChange={setThreadRange}
             />
           ) : (
             <Typography color="text.secondary" sx={{ p: 3 }}>{t('noAccess')}</Typography>

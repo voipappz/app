@@ -33,14 +33,16 @@
     "retry": "נסה שוב",
     "selectHint": "בחרו שיחה מההיסטוריה כדי לראות את הפעילות וההערות שלה.",
     "history": "היסטוריית שיחה",
-    "outsideFilter": "השיחה הזו פתוחה, אך אינה מופיעה בסינון ההיסטוריה הנוכחי."
+    "outsideFilter": "השיחה הזו פתוחה, אך אינה מופיעה בסינון ההיסטוריה הנוכחי.",
+    "showDetails": "פרטי השיחה",
+    "hideDetails": "הסתרת פרטים"
   },
   "composer": {
     "note": "הערה",
     "input": "הודעה",
     "notePlaceholder": "כתבו הערה…",
-    "send": "שליחה",
-    "error": "לא ניתן לשלוח."
+    "send": "שמירת הערה",
+    "error": "ההערה לא נשמרה. נסו שוב."
   },
   "contact": {
     "title": "איש קשר",
@@ -87,15 +89,43 @@
     "direction": "כיוון",
     "outcome": "תוצאה",
     "duration": "משך",
-    "talk": "זמן שיחה",
+    "talk": "זמן דיבור",
     "user": "נציג",
     "recording": "הקלטה",
     "listen": "האזנה",
     "call": "שיחה",
-    "callDirection": "שיחה · {{direction}}"
+    "callDirection": "שיחה · {{direction}}",
+    "receivedCall": "שיחה נכנסת",
+    "madeCall": "שיחה יוצאת",
+    "missedCall": "שיחה שלא נענתה",
+    "unansweredCall": "השיחה לא נענתה",
+    "failedCall": "השיחה לא התחברה",
+    "automatedCall": "שיחה אוטומטית",
+    "handledBy": "טופלה על ידי {{name}}",
+    "totalTime": "משך כולל"
   },
   "dateRange": {
     "clear": "נקה תקופה"
+  },
+  "period": {
+    "label": "תקופת ההיסטוריה",
+    "today": "היום",
+    "days7": "7 ימים",
+    "days30": "30 ימים"
+  },
+  "activity": {
+    "title": "שיחות בשיחה הזו",
+    "callCount_one": "שיחה אחת",
+    "callCount_two": "{{count}} שיחות",
+    "callCount_other": "{{count}} שיחות",
+    "hide": "הסתרת תרשים",
+    "show": "הצגת תרשים",
+    "answered": "נענו",
+    "missed": "לא נענו",
+    "other": "אחרות",
+    "empty": "אין שיחות בתקופה הזו.",
+    "hint": "מבוסס על ההיסטוריה המוצגת כאן. בחרו עמודה להצגת התקופה.",
+    "bucket": "{{from}} עד {{to}}: {{count}} שיחות, {{answered}} נענו, {{missed}} לא נענו, {{other}} אחרות"
   },
   "events": {
     "number": {

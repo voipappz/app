@@ -34,6 +34,7 @@ import PhoneSignIn from './PhoneSignIn.jsx';
 import CallToast from './CallToast.jsx';
 import TransferControls from './TransferControls.jsx';
 import PhoneCallsTab from './PhoneCallsTab.jsx';
+import PhoneSessionSignOut from './PhoneSessionSignOut.jsx';
 import PhonePresence from './PhonePresence.jsx';
 import { formatTime } from '../../utils/dateUtils';
 import { ACCENT, GREEN, MUTED, PANEL, PANEL_HEADER } from './panelTheme.js';
@@ -244,7 +245,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
             />
             <Typography sx={{ mt: 0.5, fontSize: '0.68rem', color: MUTED, display: 'flex', alignItems: 'center', gap: 0.5 }} noWrap>
               <Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: DOT[status] || '#94a3b8', display: 'inline-block' }} />
-              {statusText}{settings?.domain ? <> • <Bdi>{settings.domain}</Bdi></> : ''}
+              {statusText}{!redesigned && settings?.domain ? <> • <Bdi>{settings.domain}</Bdi></> : ''}
             </Typography>
             {lastError && (
               <Typography
@@ -265,10 +266,14 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
               <SettingsIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title={t('header.logs')}>
-            <IconButton size="small" aria-label={t('header.logs')} aria-pressed={logsOpen} sx={{ color: logsOpen ? ACCENT : MUTED }} onClick={() => setLogsOpen((v) => !v)}><TerminalIcon fontSize="small" /></IconButton>
-          </Tooltip>
+          {(!redesigned || settingsOpen || logsOpen) && <Tooltip title={t('header.logs')}>
+            <IconButton size="small" aria-label={t('header.logs')} aria-pressed={logsOpen} sx={{ color: logsOpen ? ACCENT : MUTED }} onClick={() => { setSettingsOpen(false); setLogsOpen((v) => !v); }}><TerminalIcon fontSize="small" /></IconButton>
+          </Tooltip>}
         </Box>
+
+        {redesigned && <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1.5, bgcolor: ROOM_SEP }}>
+          <PhoneSessionSignOut inCall={Boolean(inCall)} />
+        </Box>}
 
         {/* Body */}
         <Box sx={{ display: 'flex', flexDirection: 'column', ...(embedded ? { flex: 1, minHeight: 0, overflowY: 'auto' } : { minHeight: 360 }) }}>
