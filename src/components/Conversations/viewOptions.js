@@ -6,13 +6,14 @@ export const SORTS = {
   longest: { orderBy: 'duration', orderKind: 'desc' },
   shortest: { orderBy: 'duration', orderKind: 'asc' },
 };
-export const DEFAULT_VIEW = { sort: 'newest', direction: '', outcome: '', everyone: false };
+export const DEFAULT_VIEW = { sort: 'newest', direction: '', outcome: '', everyone: false, from: '', to: '' };
+const isDay = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
 const KEY = 'conversations-view';
 
 export function readView() {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '{}');
-    return { ...DEFAULT_VIEW, ...(SORTS[v.sort] ? { sort: v.sort } : {}), direction: ['incoming', 'outgoing'].includes(v.direction) ? v.direction : '', outcome: ['answered', 'missed', 'bot'].includes(v.outcome) ? v.outcome : '', everyone: v.everyone === true };
+    return { ...DEFAULT_VIEW, ...(SORTS[v.sort] ? { sort: v.sort } : {}), direction: ['incoming', 'outgoing'].includes(v.direction) ? v.direction : '', outcome: ['answered', 'missed', 'bot'].includes(v.outcome) ? v.outcome : '', everyone: v.everyone === true, from: isDay(v.from) ? v.from : '', to: isDay(v.to) ? v.to : '' };
   } catch { return DEFAULT_VIEW; }
 }
 export function saveView(view) {
