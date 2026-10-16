@@ -106,6 +106,40 @@ export const ExtensionBridge = ({
   const [internalLoading, setInternalLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  // The password as the server returned it on "show": saving it back
+  // unchanged is not a password change.
+  const [fetchedPassword, setFetchedPassword] = useState(null);
+  const [revealError, setRevealError] = useState('');
+  // The eye button. In edit mode the field starts blank (no device response
+  // carries the password), so the first reveal asks the server for it:
+  // GET /api/devices/:id?action=show_password, logged on the server.
+  const togglePassword = async () => {
+    if (showPassword) { setShowPassword(false); return; }
+    if (isEditMode && extension?.uuid && !formData.password) {
+      setRevealError('');
+      try {
+        const res = await extensionsApi.showPassword(extension.uuid);
+        const password = res?.password ?? res?.data?.password ?? '';
+        setFetchedPassword(password);
+        setFormData((prev) => ({ ...prev, password }));
+      } catch {
+        setRevealError(t('device.showPasswordFailed'));
+        return;
+      }
+    }
+    setShowPassword(true);
+  };
+  // "Email me the SIP login": the only way to see a device's current password.
+  const [loginMail, setLoginMail] = useState({ state: 'idle', to: '' });
+  const emailLogin = async () => {
+    setLoginMail({ state: 'sending', to: '' });
+    try {
+      const res = await extensionsApi.sendLogin(extension.uuid);
+      setLoginMail({ state: 'sent', to: res?.sent_to || res?.data?.sent_to || '' });
+    } catch {
+      setLoginMail({ state: 'failed', to: '' });
+    }
+  };
 
   const loading = handleApiInternally ? internalLoading : externalLoading;
 
@@ -117,6 +151,8 @@ export const ExtensionBridge = ({
         setFormData({
           name: extension.name || '',
           username: extension.username || '',
+          // GET /api/devices/:id (the edit load) carries the password; the
+          // list does not, so a device opened from list data stays blank.
           password: extension.password || '',
           notes: extension.notes || '',
           enabled: extension.enabled !== undefined ? extension.enabled : true,
@@ -143,6 +179,10 @@ export const ExtensionBridge = ({
       setFormErrors({});
       setError(null);
       setShowPassword(false);
+      // The password the edit load carried: saving it back unchanged is not
+      // a password change.
+      setFetchedPassword(extension?.password || null);
+      setRevealError('');
     }
   }, [open, extension, environmentUuid, environments]);
 
@@ -226,7 +266,7 @@ export const ExtensionBridge = ({
     };
 
     // Include password if provided
-    if (formData.password) {
+    if (formData.password && formData.password !== fetchedPassword) {
       submitData.password = formData.password;
     }
 
@@ -370,7 +410,7 @@ export const ExtensionBridge = ({
             required={!isEditMode}
             revealed={showPassword}
             error={!!formErrors.password}
-            helperText={formErrors.password || (isEditMode ? t('device.passwordKeepHelp') : t('device.passwordRequiredHelp'))}
+            helperText={formErrors.password || revealError || (isEditMode ? t('device.passwordKeepHelp') : t('device.passwordRequiredHelp'))}
             placeholder={isEditMode ? t('device.passwordKeepPlaceholder') : t('device.passwordPlaceholder')}
             disabled={loading}
             InputProps={{
@@ -378,7 +418,8 @@ export const ExtensionBridge = ({
                 <InputAdornment position="end">
                   <Tooltip title={showPassword ? t('device.hidePassword') : t('device.showPassword')}>
                     <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={togglePassword}
+                      aria-label={showPassword ? t('device.hidePassword') : t('device.showPassword')}
                       edge="end"
                       size="small"
                     >
@@ -410,6 +451,28 @@ export const ExtensionBridge = ({
             }}
           />
         </Grid>
+
+        {isEditMode && extension?.uuid && (
+          <Grid size={12}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={emailLogin}
+                disabled={loading || loginMail.state === 'sending'}
+                data-testid="device-email-login"
+              >
+                {t('device.emailLogin')}
+              </Button>
+              {loginMail.state === 'sent' && (
+                <Typography variant="caption" color="success.main">{t('device.emailLoginSent', { to: loginMail.to })}</Typography>
+              )}
+              {loginMail.state === 'failed' && (
+                <Typography variant="caption" color="error">{t('device.emailLoginFailed')}</Typography>
+              )}
+            </Box>
+          </Grid>
+        )}
 
         {/* Enabled Toggle */}
         <Grid size={12}>

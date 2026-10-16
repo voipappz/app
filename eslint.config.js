@@ -39,6 +39,11 @@ const PHYSICAL_SIDES_IN_SX = [
 const CONVERTED = [
   'src/i18n/**',
   'src/components/Extensions/**',
+  // MessageInput.jsx is an unused leftover with physical sides; not converted.
+  'src/components/Conversations/Conversation*.{js,jsx}',
+  'src/components/Conversations/ContactPanel.jsx',
+  'src/components/Conversations/SessionList.jsx',
+  'src/components/Conversations/useConversations.js',
   'src/components/Bridges/CallConditionBridge/**',
   // Routes (not the folder: DIDsList.jsx and DIDPanel.jsx are unused leftovers)
   'src/components/DIDs/DIDs.jsx',
@@ -60,6 +65,18 @@ const CONVERTED = [
   'src/components/Bridges/shared/**',
   'src/components/common/DynamicProfileEditor/**',
   'src/components/common/AudioPreview/**',
+  // The phone drawer
+  'src/components/Phone/**',
+  'src/components/TopBar/TopBarPhoneButton.jsx',
+  'src/components/Portal/PortalSidebar.jsx',
+  // The phone call log
+  'src/components/Calls/CallLogRow/**',
+  'src/components/Calls/CallLogFilter/**',
+  'src/components/Calls/CallDetailsScreen/**',
+  'src/components/Calls/CallMobileView/**',
+  'src/components/Calls/CallHistory/**',
+  // The phone menu (IVR) for users
+  'src/components/Bridges/IvrMenu/**',
   'src/components/Login/**',
   'src/components/shared/ResponsiveTable/**',
   'src/components/ui/**',

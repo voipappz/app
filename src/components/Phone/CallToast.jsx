@@ -1,9 +1,11 @@
 // CallToast — incoming-call toast (green slide-in card with Answer / Reject),
 // non-blocking rather than a modal dialog. Ported from app verbatim.
-import { Box, Slide, Typography, Button, IconButton } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import { Box, Slide, Typography, Button, IconButton, useTheme } from '@mui/material';
 import CallIcon from '@mui/icons-material/Call';
 import CallEndIcon from '@mui/icons-material/CallEnd';
 import CloseIcon from '@mui/icons-material/Close';
+import Bdi from '../../i18n/Bdi';
 
 const GREEN = '#367823';
 const PINK_BTN = {
@@ -12,12 +14,14 @@ const PINK_BTN = {
 };
 
 export default function CallToast({ open, title, number, onAnswer, onReject, onClose }) {
+  const { t } = useTranslation('phone');
+  const isRtl = useTheme().direction === 'rtl';
   return (
-    <Slide direction="left" in={open} mountOnEnter unmountOnExit>
+    <Slide direction={isRtl ? 'right' : 'left'} in={open} mountOnEnter unmountOnExit>
       <Box
         role="alert"
         sx={{
-          position: 'fixed', top: 76, right: 16, zIndex: 1400, width: 300, maxWidth: '92vw',
+          position: 'fixed', top: 76, insetInlineEnd: 16, zIndex: 1400, width: 300, maxWidth: '92vw',
           bgcolor: GREEN, color: '#fff', borderRadius: '3px', p: 1.25,
           boxShadow: '0 6px 20px rgba(0,0,0,0.3)', pointerEvents: 'all'
         }}
@@ -26,11 +30,11 @@ export default function CallToast({ open, title, number, onAnswer, onReject, onC
         <IconButton size="small" onClick={onClose} sx={{ position: 'absolute', top: 2, insetInlineEnd: 2, color: '#fff', opacity: 0.85 }}>
           <CloseIcon fontSize="small" />
         </IconButton>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', pr: 3 }}>{title}</Typography>
-        <Typography sx={{ direction: 'ltr', fontSize: '1.1rem', mb: 1.25, mt: 0.25 }}>{number}</Typography>
+        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', pe: 3 }}>{title}</Typography>
+        <Typography sx={{ fontSize: '1.1rem', mb: 1.25, mt: 0.25 }}><Bdi>{number}</Bdi></Typography>
         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-          <Button size="small" startIcon={<CallEndIcon />} onClick={onReject} sx={PINK_BTN}>Reject</Button>
-          <Button size="small" startIcon={<CallIcon />} onClick={onAnswer} sx={{ ...PINK_BTN, bgcolor: 'rgba(255,255,255,0.15)' }}>Answer</Button>
+          <Button size="small" startIcon={<CallEndIcon />} onClick={onReject} sx={PINK_BTN}>{t('toast.reject')}</Button>
+          <Button size="small" startIcon={<CallIcon />} onClick={onAnswer} sx={{ ...PINK_BTN, bgcolor: 'rgba(255,255,255,0.15)' }}>{t('toast.answer')}</Button>
         </Box>
       </Box>
     </Slide>

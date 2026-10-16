@@ -57,6 +57,8 @@ const renderPage = (props = {}) => {
 };
 
 describe('creating a call condition', () => {
+  // The whole form in one go, and the file's first test (it loads MUI): near
+  // the 15s default on a busy machine, so it gets 30s.
   it('builds business hours and saves them as one rule plus the fallback', async () => {
     const { onSave, onClose } = renderPage();
 
@@ -86,7 +88,7 @@ describe('creating a call condition', () => {
       fallback_bridge_uuid: 'v-1',
       resources: [{ name: 'open_1', bridge_type: 'queue', bridge_uuid: 'q-1', segment_uuids: ['seg-time.hour'] }],
     }));
-  });
+  }, 30000);
 
   it('says what is missing instead of saving', async () => {
     renderPage();

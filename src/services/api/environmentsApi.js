@@ -265,7 +265,7 @@ export const environmentsApi = {
       params.set('page', String(page));
       params.set('per_page', String(perPage));
       params.set('order_by', orderBy);
-      params.set('order_kind', orderKind);
+      params.set('order_type', orderKind); // the API reads order_type; order_kind was ignored
       if (enabled === true) params.set('search[enabled]', 'true');
       if (enabled === false) params.set('search[enabled]', 'false');
       // NOTE: search[meta][k]=v currently 500s on the backend

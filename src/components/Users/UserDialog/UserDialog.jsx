@@ -38,6 +38,7 @@ import { useOpenPhoneAs } from '../../../hooks/useCallNumber';
 import { liveApi } from '../../../services/api/liveApi';
 import { queuesApi } from '../../../services/api/queuesApi';
 import SecretField from '../../common/SecretField.jsx';
+import SoftphoneDownloadLinks from '../../shared/SoftphoneDownloadLinks/SoftphoneDownloadLinks.jsx';
 
 /**
  * UserDialog Component
@@ -1023,6 +1024,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                   Failed to load QR code
                 </Typography>
               </Box>
+              <SoftphoneDownloadLinks />
             </>
           )}
         </DialogContent>

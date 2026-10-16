@@ -15,6 +15,7 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import ChatIcon from '@mui/icons-material/Chat';
 import BoltIcon from '@mui/icons-material/Bolt';
 import SubjectIcon from '@mui/icons-material/Subject';
+import ForumIcon from '@mui/icons-material/Forum';
 import { canAccessScreen } from '../utils/jwt';
 
 // Sidebar — kept deliberately simple. The Studio is the landing/home and
@@ -22,6 +23,8 @@ import { canAccessScreen } from '../utils/jwt';
 // environment selector. Everything else stays reachable through the Studio and
 // ⌘K search (routes still exist), it's just off the rail.
 export const NAV_ITEMS = [
+  // The user's working screen (sessions, thread, phone, contact); a user with `calls` lands here.
+  { text: 'Conversations', labelKey: 'nav:conversations', path: '/conversations', iconComponent: ForumIcon, aclKey: 'calls', group: 'MONITOR' },
   { text: 'Routes', labelKey: 'nav:routes',          path: '/routes',          iconComponent: SchemaIcon,                aclKey: 'routes',          alwaysShow: true, group: 'MANAGE'   },
   { text: 'Services', labelKey: 'nav:services',      path: '/services',       iconComponent: MiscellaneousServicesIcon, aclKey: 'services',                       group: 'MANAGE'   },
   { text: 'Devices', labelKey: 'nav:devices',       path: '/extensions',     iconComponent: DevicesIcon,               aclKey: 'extensions',                     group: 'MANAGE'   },
@@ -30,6 +33,9 @@ export const NAV_ITEMS = [
   // bill against, and were previously only reachable through the picker
   // embedded in other dialogs.
   { text: 'Tariffs', labelKey: 'nav:tariffs',       path: '/tariffs',        iconComponent: RequestQuoteIcon,          aclKey: 'tariffs',                        group: 'MANAGE'   },
+  // Providers (the SIP trunks routes dial out through) were reachable only
+  // from Routes; a screen people manage on its own gets its own entry.
+  { text: 'Providers', labelKey: 'nav:providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'MANAGE'   },
   // The live-calls dashboard (pilot): the portal's landing screen, in the
   // console, scoped to the selected customer/environment. Gated on `calls`,
   // the data it shows.
@@ -38,9 +44,10 @@ export const NAV_ITEMS = [
   // same thing, so Live sits above it. Reachable from both surfaces: LiveRoute
   // in App.jsx checks each session against its own ACL vocabulary.
   { text: 'Live', labelKey: 'nav:live',          path: '/live',           iconComponent: SensorsIcon,               aclKey: 'reports',                        group: 'MONITOR'  },
-  // Logs is Calls and Messages as one screen: it opens on Calls, and the
-  // tabs at the top of the screen (LogTabs) switch between the two.
-  { text: 'Logs', labelKey: 'nav:logs',          path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR',  alsoPaths: ['/messages'] },
+  // Calls and Messages are two menu items again (they were one "Logs" entry
+  // with tabs on each screen).
+  { text: 'Calls', labelKey: 'nav:calls',         path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
+  { text: 'Messages', labelKey: 'nav:messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'messages',                       group: 'MONITOR'  },
   { text: 'Reports', labelKey: 'nav:reports',       path: '/reports',        iconComponent: AssessmentIcon,            aclKey: 'reports',                        group: 'MONITOR'  },
   { text: 'Users', labelKey: 'nav:users',         path: '/users',          iconComponent: PeopleIcon,                aclKey: 'users',                          group: 'MANAGE'   },
   { text: 'Accounts', labelKey: 'nav:accounts',      path: '/accounts',       iconComponent: BadgeIcon,                 aclKey: 'accounts',                       group: 'MANAGE'   },
@@ -59,13 +66,10 @@ export const TOPBAR_NAV_ITEMS = [
 ];
 
 // Screens with a route but no menu entry: they open from the screen they
-// belong to (Providers from Routes, Messages from the Logs tabs). Listed so a visit still has a name and
+// belong to. Listed so a visit still has a name and
 // icon in breadcrumbs and recent pages. Nodes has no route at all: it is
 // managed from the customer dialog.
-export const OFF_MENU_NAV_ITEMS = [
-  { text: 'Providers', labelKey: 'nav:providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'ADMIN'    },
-  { text: 'Messages', labelKey: 'nav:messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'messages',                       group: 'MONITOR'  },
-];
+export const OFF_MENU_NAV_ITEMS = [];
 
 // A menu item's name in the active language (nav.json), e.g. "Calls" / "שיחות".
 export const navLabel = (t, item) => t(item.labelKey, { defaultValue: item.text });

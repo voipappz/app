@@ -1,0 +1,90 @@
+{
+  "title": "שיחות",
+  "toggleList": "הצג או הסתר שיחות",
+  "noAccess": "ההרשאות שלך אינן כוללות שיחות.",
+  "tabs": {
+    "live": "חי",
+    "all": "הכל",
+    "missed": "שלא נענו"
+  },
+  "direction": {
+    "incoming": "נכנסת",
+    "outgoing": "יוצאת",
+    "local": "פנימית",
+    "inbound": "נכנסת",
+    "outbound": "יוצאת"
+  },
+  "list": {
+    "title": "שיחות",
+    "live": "חי",
+    "error": "לא ניתן לטעון את השיחות.",
+    "notLive": "העדכון החי אינו מחובר.",
+    "empty": {
+      "live": "אין שיחות חיות.",
+      "all": "אין שיחות עדיין.",
+      "missed": "אין שיחות שלא נענו."
+    }
+  },
+  "thread": {
+    "select": "בחרו שיחה.",
+    "empty": "עדיין אין כאן דבר.",
+    "note": "הערה"
+  },
+  "composer": {
+    "note": "הערה",
+    "input": "הודעה",
+    "notePlaceholder": "כתבו הערה…",
+    "send": "שליחה",
+    "error": "לא ניתן לשלוח."
+  },
+  "contact": {
+    "title": "איש קשר",
+    "none": "אין איש קשר למספר זה.",
+    "create": "הוספת איש קשר",
+    "name": "שם",
+    "phone": "טלפון",
+    "email": "אימייל",
+    "tags": "תגיות",
+    "addTag": "הוספת תגית",
+    "tagPlaceholder": "מפתח: ערך",
+    "removeTag": "הסרת התגית {{tag}}",
+    "previous": "שיחות קודמות",
+    "noPrevious": "אין עדיין.",
+    "error": "לא ניתן לשמור."
+  },
+  "search": {
+    "placeholder": "חיפוש לפי מספר",
+    "label": "חיפוש לפי מספר"
+  },
+  "view": {
+    "menu": "מיון וסינון",
+    "sortBy": "מיון לפי",
+    "sort": {
+      "newest": "החדשות ראשונות",
+      "oldest": "הישנות ראשונות",
+      "longest": "המשך הארוך ביותר",
+      "shortest": "המשך הקצר ביותר"
+    },
+    "direction": "כיוון",
+    "outcome": "תוצאה",
+    "all": "הכל",
+    "scope": "הצגה",
+    "mine": "שלי",
+    "everyone": "כולם"
+  },
+  "outcome": {
+    "answered": "נענתה",
+    "missed": "לא נענתה",
+    "bot": "בוט",
+    "failed": "נכשלה"
+  },
+  "summary": {
+    "direction": "כיוון",
+    "outcome": "תוצאה",
+    "duration": "משך",
+    "talk": "זמן שיחה",
+    "user": "נציג",
+    "recording": "הקלטה",
+    "listen": "האזנה"
+  }
+}

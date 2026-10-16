@@ -1,4 +1,5 @@
-import { Box, Drawer, IconButton, Tooltip } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import { Box, Drawer, IconButton, Tooltip, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { usePortalSidebar } from '../../context/PortalSidebarContext';
 import PhoneScreen from '../Phone/PhoneScreen.jsx';
@@ -17,6 +18,8 @@ import CallDetailPanel from '../Calls/CallDetailPanel/CallDetailPanel.jsx';
 export const SIDEBAR_WIDTH = 380;
 
 export default function PortalSidebar() {
+  const { t } = useTranslation('phone');
+  const isRtl = useTheme().direction === 'rtl';
   const { view, params, close } = usePortalSidebar();
   const showingCall = view === 'call';
 
@@ -26,7 +29,7 @@ export default function PortalSidebar() {
 
   return (
     <Drawer
-      anchor="right" open={Boolean(view)} onClose={close} data-testid="portal-sidebar" keepMounted
+      anchor={isRtl ? 'left' : 'right'} open={Boolean(view)} onClose={close} data-testid="portal-sidebar" keepMounted
       PaperProps={{ sx: { width: { xs: '100vw', sm: SIDEBAR_WIDTH }, maxWidth: '100vw', border: 'none', display: 'flex', flexDirection: 'column' } }}
     >
       {/* The phone stays MOUNTED while a call's details are showing, and is
@@ -37,7 +40,7 @@ export default function PortalSidebar() {
           its own close button, so only the phone needs the strip above it. */}
       <Box sx={{ display: showingCall ? 'none' : 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 0.5, py: 0.5, bgcolor: '#2f3640' }}>
-          <Tooltip title="Close">
+          <Tooltip title={t('action.close')}>
             <IconButton size="small" onClick={close} data-testid="sidebar-close" sx={{ color: '#9aa6b6' }}>
               <CloseIcon fontSize="small" />
             </IconButton>

@@ -1,0 +1,132 @@
+{
+  "action": {
+    "close": "Close"
+  },
+  "topBar": {
+    "close": "Close phone",
+    "status": "Phone — {{status}}",
+    "notSignedIn": "not signed in"
+  },
+  "header": {
+    "guest": "guest",
+    "networkOffline": "Network offline",
+    "ready": "Ready",
+    "connecting": "Connecting…",
+    "unavailable": "Unavailable",
+    "offline": "Offline",
+    "back": "Back",
+    "settings": "Settings",
+    "closeSettings": "Close settings",
+    "logs": "Logs"
+  },
+  "settingsTab": {
+    "signOut": "Sign the phone out"
+  },
+  "logs": {
+    "title": "SIP.js logs ({{total}})",
+    "clear": "Clear",
+    "empty": "No logs yet — connect or place a call."
+  },
+  "call": {
+    "incoming": "Incoming",
+    "calling": "Calling",
+    "ringing": "Ringing…",
+    "connecting": "Connecting…",
+    "resume": "Resume",
+    "hold": "Hold",
+    "transfer": "Transfer",
+    "hangUp": "Hang up",
+    "incomingTitle": "Incoming call",
+    "outgoing": "Outgoing",
+    "connected": "Connected",
+    "onHold": "On hold",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "keypad": "Keypad",
+    "answer": "Answer",
+    "decline": "Decline",
+    "duration": "Call duration",
+    "you": "You",
+    "muted": "Muted"
+  },
+  "dialpad": {
+    "enterNumber": "Enter number",
+    "enterNumberToCall": "Enter a number to call",
+    "notRegistered": "Phone is not registered",
+    "couldNotStart": "Call could not be started",
+    "notConnected": "Not connected — see Settings",
+    "call": "Call",
+    "backspace": "Delete last digit"
+  },
+  "tabs": {
+    "calls": "Calls",
+    "dialpad": "Dialpad"
+  },
+  "toast": {
+    "reject": "Reject",
+    "answer": "Answer"
+  },
+  "transfer": {
+    "to": "Transfer to",
+    "consulting": "Consulting {{remote}}",
+    "connectedAnnounce": "Connected — announce the call",
+    "ringing": "Ringing…",
+    "complete": "Complete transfer",
+    "cancel": "Cancel",
+    "target": "Extension or number",
+    "now": "Transfer now",
+    "consult": "Consult",
+    "referring": "Transferring…",
+    "completed": "Call transferred",
+    "failed": "Transfer failed: {{reason}}"
+  },
+  "recent": {
+    "noPermission": "Your role does not include Calls.",
+    "empty": "No recent calls.",
+    "couldNotLoad": "Could not load calls",
+    "callNumber": "Call {{number}}",
+    "noNumber": "No number"
+  },
+  "presence": {
+    "doNotDisturb": "Do not disturb",
+    "couldNotChange": "Could not change status"
+  },
+  "sip": {
+    "ready": "Ready",
+    "connecting": "Connecting…",
+    "failed": "Connection failed",
+    "offline": "Offline",
+    "extension": "Extension",
+    "password": "Password",
+    "domain": "SIP domain",
+    "wssUrl": "WebSocket server",
+    "displayName": "Display name",
+    "autoConnect": "Connect automatically",
+    "reconnect": "Reconnect",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "device": "Device",
+    "renewsAt": "Sign-in renews at"
+  },
+  "signIn": {
+    "tabDevice": "Device",
+    "tabUser": "User login",
+    "findDevice": "Find a device",
+    "signingInAs": "Signing in as {{name}}…",
+    "phoneFor": "Phone for {{name}}",
+    "enterCode": "Enter the code sent to {{email}}.",
+    "verificationCode": "Verification code",
+    "verify": "Verify",
+    "emailOrExtension": "Email or extension",
+    "password": "Password",
+    "submit": "Sign in",
+    "error": {
+      "deviceFailed": "Could not sign the phone in as this device.",
+      "devicesNotLoaded": "Could not load the account’s devices.",
+      "credentialsRequired": "Email and password are required",
+      "loginFailed": "Login failed. Please try again.",
+      "codeLength": "Please enter the 6-digit code",
+      "codeInvalid": "Invalid or expired code. Please try again."
+    }
+  }
+}

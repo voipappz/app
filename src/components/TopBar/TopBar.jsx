@@ -863,7 +863,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
   const ActiveToolScreen = TOOL_SCREENS[activeTool];
   const activeToolItem = TOPBAR_NAV_ITEMS.find(item => item.path === activeTool && canAccess(item.aclKey))
     || (!userSession && ACCOUNT_TOOLS.find(item => item.path === activeTool));
-  // Appearance (theme, language) lives in the sidebar's bottom tools.
+  // Appearance (theme, language) lives in the sidebar, beside the account.
   const overflowTools = professionalTools.filter((tool) => allow(tool.aclKey));
 
   return (
@@ -1021,7 +1021,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           </Button>
           )}
 
-          {/* Appearance controls live in the sidebar. */}
+          {/* Language and light/dark mode live in the sidebar, beside the account. */}
 
           {/* Divider between admin and utility icons */}
           <Box sx={{ width: '1px', height: 24, backgroundColor: 'var(--border-light, #e5e7eb)', mx: 0.5, flexShrink: 0 }} />

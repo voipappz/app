@@ -14,7 +14,12 @@
     "show": "Show chart",
     "hide": "Hide chart",
     "openList": "Open list",
-    "empty": "No calls in the selected period."
+    "empty": "No calls in the selected period.",
+    "emptyTitle": "No calls yet",
+    "emptyHint": "Calls in the selected period will appear here.",
+    "emptyFiltered": "No calls match these filters in the selected period.",
+    "emptyLast7": "Show the last 7 days",
+    "emptyClear": "Clear filters"
   },
   "bucket": {
     "auto": "Auto",
@@ -48,7 +53,64 @@
     "status": "Status:",
     "unknown": "Unknown",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "filter": {
+      "incoming": "Incoming",
+      "missed": "Not answered",
+      "all": "All calls",
+      "label": "Show",
+      "outgoing": "Outgoing"
+    },
+    "kind": {
+      "incoming": "Incoming",
+      "missedOutgoing": "Not answered",
+      "unknown": "Call",
+      "outgoing": "Outgoing",
+      "missedIncoming": "Missed"
+    },
+    "row": {
+      "incoming": "Incoming call from {{number}}, {{time}}",
+      "missedOutgoing": "Unanswered call to {{number}}, {{time}}",
+      "outgoing": "Outgoing call to {{number}}, {{time}}",
+      "missedIncoming": "Missed call from {{number}}, {{time}}"
+    },
+    "actions": {
+      "copy": "Copy number",
+      "details": "Details",
+      "copied": "Copied",
+      "call": "Call",
+      "play": "Play recording"
+    },
+    "details": {
+      "device": "Device",
+      "notAnswered": "Not answered",
+      "queue": "Queue",
+      "close": "Back",
+      "status": "Status",
+      "duration": "Duration",
+      "transcript": "Transcription",
+      "recording": "Recording",
+      "noTranscript": "No transcription for this call",
+      "to": "To",
+      "contact": "Contact",
+      "date": "Date",
+      "answered": "Answered",
+      "hangup": "Hangup",
+      "info": "Details",
+      "provider": "Provider",
+      "from": "From",
+      "agent": "Agent",
+      "download": "Download",
+      "title": "Call details",
+      "events": "Events",
+      "route": "Route",
+      "summary": "Summary",
+      "country": "Country",
+      "historyError": "Couldn't load the history",
+      "history": "History with this number",
+      "transcriptError": "Couldn't load the transcription",
+      "noHistory": "No other calls with this number"
+    }
   },
   "stats": {
     "total": "Total",
@@ -60,6 +122,47 @@
     "answeredHint": "Show only answered calls",
     "noAnswerHint": "Show only unanswered calls",
     "outgoingHint": "Show only outgoing calls",
-    "incomingHint": "Show only incoming calls"
+    "incomingHint": "Show only incoming calls",
+    "answerRate": "Answer rate",
+    "answerRateHint": "Answered calls out of all calls in the period",
+    "avgDuration": "Avg duration",
+    "avgDurationHint": "Average duration of an answered call",
+    "totalDuration": "Total duration",
+    "totalDurationHint": "Summed duration of every call in the period"
+  },
+  "profile": {
+    "title": "Call profile",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyField": "Copy {{field}}",
+    "fields": {
+      "state": "State",
+      "disposition": "Disposition",
+      "duration": "Duration",
+      "caller": "Caller",
+      "callee": "Callee",
+      "caller_id_number": "Caller ID",
+      "contact_name": "Contact",
+      "user_name": "User",
+      "extension_name": "Device",
+      "did_name": "Route",
+      "queue_name": "Queue",
+      "campaign_name": "Campaign",
+      "environment_name": "Application",
+      "provider_name": "Provider",
+      "provider_status": "Provider status",
+      "tariff_name": "Tariff",
+      "sip_call_id": "SIP Call-ID",
+      "sip_user_agent": "User agent",
+      "sip_network_ip": "SIP address",
+      "remote_media_ip": "Media address",
+      "codecs": "Codecs",
+      "read_codec": "Codec in",
+      "write_codec": "Codec out",
+      "rtp_audio_in_mos": "MOS",
+      "rtp_audio_in_quality_percentage": "Audio quality %",
+      "timezone": "Time zone",
+      "domain": "Domain"
+    }
   }
 }

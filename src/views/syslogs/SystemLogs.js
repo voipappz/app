@@ -2,6 +2,39 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import syslogsApi from '../../services/api/syslogsApi';
 import { computePeriodRange } from '../../utils/logFormatting';
 
+// What the server can count by (a tag): the list's grouping when it is one,
+// else the level. Sessions are a field, not a tag, so a call grouping charts
+// by level.
+const CHART_GROUP = { severity: 'severity', app: 'app', source: 'app', host: 'host', action: 'action' };
+export const chartGroupFor = (groupBy) => CHART_GROUP[groupBy] || 'severity';
+
+// The facets down the side of the explorer: each a server tag, the request
+// parameter that filters by it, and how it reads.
+export const FACETS = [
+  { key: 'severity', param: 'severity', label: 'Level' },
+  { key: 'app', param: 'app', label: 'Source' },
+  { key: 'host', param: 'host', label: 'Server' },
+  { key: 'action', param: 'action', label: 'Type' },
+];
+
+// /api/logs/aggregate rows ({ time, <value>: count }) -> [{ value, count }],
+// largest first, summed over every bucket.
+export const sumAggregate = (rows = []) => {
+  const totals = {};
+  rows.forEach((row) => Object.entries(row || {}).forEach(([k, v]) => {
+    if (k !== 'time' && typeof v === 'number') totals[k] = (totals[k] || 0) + v;
+  }));
+  return Object.entries(totals).map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count);
+};
+
+// Bucket size for the window: minutes up to 6h, hours up to 3 days, else days.
+export const chartInterval = (start, end) => {
+  const hours = (new Date(end) - new Date(start)) / 3.6e6;
+  if (hours <= 6) return 'minute';
+  if (hours <= 72) return 'hour';
+  return 'day';
+};
+
 export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
   // Log data
   const [logs, setLogs] = useState([]);
@@ -11,6 +44,8 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
   // Dropdown data
   const [apps, setApps] = useState([]);
   const [nodes, setNodes] = useState([]);
+  // Message types ({ action, count }) seen in the window: the Type filter.
+  const [actions, setActions] = useState([]);
 
   // Pagination
   const [pagination, setPagination] = useState({
@@ -29,8 +64,12 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     // page's query string and silently inherit its ?search=, turning the
     // whole-stream view into a filtered one.
     const q = new URLSearchParams(initialParams != null ? initialParams : window.location.search);
+    // A call is one `session=<id>` across the node's lines and this API's, so
+    // ?session=<id> is the link a dialplan refusal or a CDR can carry.
+    const session = q.get('session') || '';
     return {
-      search: q.get('search') || q.get('inline') || '',
+      search: q.get('search') || q.get('inline') || (session ? `session=${session}` : ''),
+      action: q.get('action') || q.get('type') || '',
       app: q.get('app') || '',
       host: q.get('host') || '',
       severity: ({ error: 'err', warn: 'warning' })[q.get('severity')] || q.get('severity') || '',
@@ -42,6 +81,7 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
   const [selectedApp, setSelectedApp] = useState(initial.app);
   const [selectedHost, setSelectedHost] = useState(initial.host);
   const [selectedSeverity, setSelectedSeverity] = useState(initial.severity);
+  const [selectedAction, setSelectedAction] = useState(initial.action);
   const filterText = useMemo(() => ({
     customerUuid: customerUuid || '',
   }), [customerUuid]);
@@ -49,10 +89,12 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     app: selectedApp,
     host: selectedHost,
     severity: selectedSeverity,
+    action: selectedAction,
     customer_uuid: filterText.customerUuid,
     inline: searchQuery,
-  }).filter(([, value]) => value)), [selectedApp, selectedHost, selectedSeverity, filterText, searchQuery]);
-  const [groupBy, setGroupBy] = useState('source');
+  }).filter(([, value]) => value)), [selectedApp, selectedHost, selectedSeverity, selectedAction, filterText, searchQuery]);
+  // What the volume chart is split by: a facet key (severity, app, host, action).
+  const [groupBy, setGroupBy] = useState('severity');
 
   // Date range with period tracking (Events-style shape)
   const [dateRange, setDateRange] = useState(() => computePeriodRange(initial.period));
@@ -82,16 +124,37 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     }
   }, []);
 
-  // Load syslogs from the InfluxDB-backed /api/logs endpoint. Page 1 replaces
-  // the list; every later page (scrolling down) is appended to it. Only the
-  // newest request may land, so a slow page from before a filter change
-  // cannot append to the new list.
+  // The types offered follow the window: a type nobody logged in it is not
+  // offered, and one that stops appearing drops out.
+  // Only the newest request may land: a slow answer for the previous window or
+  // customer must not replace the current list.
+  const actionsSeq = useRef(0);
+  const loadActions = useCallback(async () => {
+    const seq = ++actionsSeq.current;
+    try {
+      const params = { customer_uuid: customerUuid || undefined };
+      if (dateRange?.start && dateRange?.end) {
+        params.from = Math.floor(dateRange.start.getTime() / 1000);
+        params.to = Math.floor(dateRange.end.getTime() / 1000);
+      }
+      const response = await syslogsApi.fetchActions(params);
+      if (seq !== actionsSeq.current) return;
+      const rows = Array.isArray(response) ? response : response?.data || [];
+      setActions(rows.filter((row) => row && row.action));
+    } catch (error) {
+      if (seq !== actionsSeq.current) return;
+      console.error('Failed to load log message types:', error);
+      setActions([]);
+    }
+  }, [customerUuid, dateRange]);
+
+  // Load ONE page of syslogs from the InfluxDB-backed /api/logs endpoint: the
+  // server filters, the server counts (`total`), and each page replaces the
+  // list. Only the newest request may land, so a slow page from before a
+  // filter or page change cannot overwrite the new one.
   const requestSeq = useRef(0);
-  // A short page means there is nothing older, whatever the total says.
-  const [reachedEnd, setReachedEnd] = useState(false);
   const loadLogs = useCallback(async () => {
     const seq = ++requestSeq.current;
-    const append = pagination.page > 0;
     try {
       setLoading(true);
 
@@ -118,32 +181,93 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
         rows = response.data;
         total = response.total || response.total_records || response.data.length;
       }
-      setLogs((current) => (append ? [...current, ...rows] : rows));
-      setTotalCount(total);
-      setReachedEnd(rows.length < pagination.limit);
+      setLogs(rows);
+      // The server's total, but never fewer than the lines already paged past.
+      setTotalCount(Math.max(total, pagination.page * pagination.limit + rows.length));
     } catch (error) {
       if (seq !== requestSeq.current) return;
       console.error('Failed to load logs:', error);
-      if (!append) {
-        setLogs([]);
-        setTotalCount(0);
-      }
-      setReachedEnd(true);
+      setLogs([]);
+      setTotalCount(0);
     } finally {
       if (seq === requestSeq.current) setLoading(false);
     }
   }, [pagination, dateRange, requestFilters]);
 
-  // Scrolling to the bottom asks for the next page.
-  const hasMore = !reachedEnd && logs.length < totalCount;
-  const loadMore = useCallback(() => {
-    if (loading || !hasMore) return;
-    setPagination((current) => ({ ...current, page: current.page + 1 }));
-  }, [loading, hasMore]);
+  // The volume chart: message counts per time bucket over the WHOLE window
+  // (not the page), with the same filters, split by what the list is grouped
+  // by when the server can count it.
+  const [volume, setVolume] = useState([]);
+  const [volumeLoading, setVolumeLoading] = useState(false);
+  const volumeSeq = useRef(0);
+  const loadVolume = useCallback(async () => {
+    const seq = ++volumeSeq.current;
+    const params = { ...requestFilters, group_by: chartGroupFor(groupBy) };
+    if (dateRange?.start && dateRange?.end) {
+      params.from = Math.floor(dateRange.start.getTime() / 1000);
+      params.to = Math.floor(dateRange.end.getTime() / 1000);
+      params.interval = chartInterval(dateRange.start, dateRange.end);
+    }
+    setVolumeLoading(true);
+    try {
+      const response = await syslogsApi.fetchAggregate(params);
+      if (seq !== volumeSeq.current) return;
+      setVolume(Array.isArray(response) ? response : response?.data || []);
+    } catch (error) {
+      if (seq !== volumeSeq.current) return;
+      console.error('Failed to load log volume:', error);
+      setVolume([]);
+    } finally {
+      if (seq === volumeSeq.current) setVolumeLoading(false);
+    }
+  }, [requestFilters, dateRange, groupBy]);
+
+  useEffect(() => {
+    loadVolume();
+  }, [loadVolume]);
+
+  // Facet counts, from the server over the whole window. Each facet is counted
+  // with every OTHER filter applied but not its own, so picking one level still
+  // shows how many lines the other levels have (and lets you switch).
+  const [facets, setFacets] = useState({});
+  const [facetsLoading, setFacetsLoading] = useState(false);
+  const facetSeq = useRef(0);
+  const loadFacets = useCallback(async () => {
+    const seq = ++facetSeq.current;
+    const range = {};
+    if (dateRange?.start && dateRange?.end) {
+      range.from = Math.floor(dateRange.start.getTime() / 1000);
+      range.to = Math.floor(dateRange.end.getTime() / 1000);
+    }
+    setFacetsLoading(true);
+    const entries = await Promise.all(FACETS.map(async (facet) => {
+      const { [facet.param]: _own, ...others } = requestFilters;
+      try {
+        const response = await syslogsApi.fetchAggregate({ ...others, ...range, group_by: facet.key, interval: 'day' });
+        return [facet.key, sumAggregate(Array.isArray(response) ? response : response?.data || [])];
+      } catch (error) {
+        console.error(`Failed to load the ${facet.label} facet:`, error);
+        return [facet.key, []];
+      }
+    }));
+    if (seq !== facetSeq.current) return;
+    setFacets(Object.fromEntries(entries));
+    setFacetsLoading(false);
+  }, [requestFilters, dateRange]);
+
+  useEffect(() => {
+    loadFacets();
+  }, [loadFacets]);
+
+  // Page controls: a page number (0-based) and a page size.
+  const setPage = useCallback((page) => {
+    setPagination((current) => (current.page === page ? current : { ...current, page }));
+  }, []);
+  const setPageSize = useCallback((limit) => setPagination({ page: 0, limit }), []);
 
   useEffect(() => {
     setPagination((current) => current.page === 0 ? current : { ...current, page: 0 });
-  }, [dateRange, selectedApp, selectedHost, selectedSeverity, filterText, searchQuery, pagination.limit]);
+  }, [dateRange, selectedApp, selectedHost, selectedSeverity, selectedAction, filterText, searchQuery, pagination.limit]);
 
   // Period quick-select handler
   const handlePeriodSelect = useCallback((period) => {
@@ -160,7 +284,8 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     } else {
       loadLogs();
     }
-  }, [dateRange?.period, loadLogs, pagination.page]);
+    if (!(dateRange?.period && dateRange.period !== 'custom')) { loadVolume(); loadFacets(); }
+  }, [dateRange?.period, loadLogs, loadVolume, loadFacets, pagination.page]);
 
   // Derived filter state
   const hasActiveFilters = useMemo(
@@ -168,8 +293,9 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
       (searchQuery && searchQuery.trim() !== '') ||
       selectedApp !== '' ||
       selectedHost !== '' ||
-      selectedSeverity !== '',
-    [searchQuery, selectedApp, selectedHost, selectedSeverity]
+      selectedSeverity !== '' ||
+      selectedAction !== '',
+    [searchQuery, selectedApp, selectedHost, selectedSeverity, selectedAction]
   );
 
   const clearFilters = useCallback(() => {
@@ -177,6 +303,7 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     setSelectedApp('');
     setSelectedHost('');
     setSelectedSeverity('');
+    setSelectedAction('');
   }, []);
 
   // Enable trace (for live syslog streaming)
@@ -249,6 +376,10 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     loadNodes();
   }, [loadApps, loadNodes]);
 
+  useEffect(() => {
+    loadActions();
+  }, [loadActions]);
+
   // A source only has meaning inside its customer scope. Do not retain a
   // source selected under the previous customer while the new source list is
   // loading; that produced an empty, confusing log table after a scope switch.
@@ -260,6 +391,7 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
   useEffect(() => {
     loadLogs();
   }, [loadLogs]);
+
 
   // Auto-refresh interval (independent from Trace)
   const autoRefreshRef = useRef(null);
@@ -287,12 +419,17 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     totalCount,
     pagination,
     setPagination,
-    hasMore,
-    loadMore,
+    setPage,
+    setPageSize,
+    volume,
+    volumeLoading,
+    facets,
+    facetsLoading,
 
     // Dropdown data
     apps,
     nodes,
+    actions,
 
     // Filters
     searchQuery,
@@ -303,6 +440,8 @@ export const useSystemLogs = ({ customerUuid, initialParams } = {}) => {
     setSelectedHost,
     selectedSeverity,
     setSelectedSeverity,
+    selectedAction,
+    setSelectedAction,
     groupBy,
     setGroupBy,
 

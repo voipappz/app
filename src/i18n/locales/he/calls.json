@@ -14,7 +14,12 @@
     "show": "הצגת הגרף",
     "hide": "הסתרת הגרף",
     "openList": "פתיחת הרשימה",
-    "empty": "אין שיחות בתקופה שנבחרה."
+    "empty": "אין שיחות בתקופה שנבחרה.",
+    "emptyTitle": "עדיין אין שיחות",
+    "emptyHint": "שיחות בתקופה שנבחרה יופיעו כאן.",
+    "emptyFiltered": "אין שיחות שמתאימות לסינון בתקופה שנבחרה.",
+    "emptyLast7": "הצגת 7 הימים האחרונים",
+    "emptyClear": "ניקוי הסינון"
   },
   "bucket": {
     "auto": "אוטומטי",
@@ -48,7 +53,64 @@
     "status": "סטטוס:",
     "unknown": "לא ידוע",
     "today": "היום",
-    "yesterday": "אתמול"
+    "yesterday": "אתמול",
+    "filter": {
+      "incoming": "נכנסות",
+      "missed": "שלא נענו",
+      "all": "כל השיחות",
+      "label": "הצג",
+      "outgoing": "יוצאות"
+    },
+    "kind": {
+      "incoming": "נכנסת",
+      "missedOutgoing": "לא נענתה",
+      "unknown": "שיחה",
+      "outgoing": "יוצאת",
+      "missedIncoming": "לא נענתה"
+    },
+    "row": {
+      "incoming": "שיחה נכנסת מ־{{number}}, {{time}}",
+      "missedOutgoing": "שיחה יוצאת שלא נענתה אל {{number}}, {{time}}",
+      "outgoing": "שיחה יוצאת אל {{number}}, {{time}}",
+      "missedIncoming": "שיחה שלא נענתה מ־{{number}}, {{time}}"
+    },
+    "actions": {
+      "copy": "העתק מספר",
+      "details": "פרטים",
+      "copied": "הועתק",
+      "call": "התקשר",
+      "play": "נגן הקלטה"
+    },
+    "details": {
+      "device": "מכשיר",
+      "notAnswered": "לא נענתה",
+      "queue": "תור",
+      "close": "חזרה",
+      "status": "סטטוס",
+      "duration": "משך",
+      "transcript": "תמלול",
+      "recording": "הקלטה",
+      "noTranscript": "אין תמלול לשיחה זו",
+      "to": "אל",
+      "contact": "איש קשר",
+      "date": "תאריך",
+      "answered": "נענתה",
+      "hangup": "ניתוק",
+      "info": "פרטים",
+      "provider": "ספק",
+      "from": "מ־",
+      "agent": "נציג",
+      "download": "הורדה",
+      "title": "פרטי שיחה",
+      "events": "אירועים",
+      "route": "ניתוב",
+      "summary": "סיכום",
+      "country": "מדינה",
+      "historyError": "לא ניתן לטעון את ההיסטוריה",
+      "history": "היסטוריה עם מספר זה",
+      "transcriptError": "לא ניתן לטעון את התמלול",
+      "noHistory": "אין שיחות נוספות עם מספר זה"
+    }
   },
   "stats": {
     "total": "סה״כ",
@@ -60,6 +122,47 @@
     "answeredHint": "הצגת שיחות שנענו בלבד",
     "noAnswerHint": "הצגת שיחות שלא נענו בלבד",
     "outgoingHint": "הצגת שיחות יוצאות בלבד",
-    "incomingHint": "הצגת שיחות נכנסות בלבד"
+    "incomingHint": "הצגת שיחות נכנסות בלבד",
+    "answerRate": "שיעור מענה",
+    "answerRateHint": "שיחות שנענו מתוך כל השיחות בתקופה",
+    "avgDuration": "משך ממוצע",
+    "avgDurationHint": "משך ממוצע של שיחה שנענתה",
+    "totalDuration": "משך כולל",
+    "totalDurationHint": "סך משך כל השיחות בתקופה"
+  },
+  "profile": {
+    "title": "פרופיל השיחה",
+    "copy": "העתקה",
+    "copied": "הועתק",
+    "copyField": "העתקת {{field}}",
+    "fields": {
+      "state": "מצב",
+      "disposition": "סיום",
+      "duration": "משך",
+      "caller": "מתקשר",
+      "callee": "נמען",
+      "caller_id_number": "זיהוי מתקשר",
+      "contact_name": "איש קשר",
+      "user_name": "משתמש",
+      "extension_name": "מכשיר",
+      "did_name": "ניתוב",
+      "queue_name": "תור",
+      "campaign_name": "קמפיין",
+      "environment_name": "אפליקציה",
+      "provider_name": "ספק",
+      "provider_status": "מצב ספק",
+      "tariff_name": "תעריף",
+      "sip_call_id": "SIP Call-ID",
+      "sip_user_agent": "User agent",
+      "sip_network_ip": "כתובת SIP",
+      "remote_media_ip": "כתובת מדיה",
+      "codecs": "קודקים",
+      "read_codec": "קודק נכנס",
+      "write_codec": "קודק יוצא",
+      "rtp_audio_in_mos": "MOS",
+      "rtp_audio_in_quality_percentage": "איכות שמע %",
+      "timezone": "אזור זמן",
+      "domain": "דומיין"
+    }
   }
 }

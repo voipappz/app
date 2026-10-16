@@ -1,4 +1,5 @@
 import { apiService, toFormData } from '../apiService';
+import { hasAdminSession } from '../sessionIsolation';
 
 /**
  * Bridge API Service
@@ -71,6 +72,26 @@ export const getBridgeTypes = async () => {
 };
 
 /**
+ * The `search[...]` query parts for a list of an environment's things
+ * (announcements, queues, IVRs, devices…), unencoded brackets as the API reads
+ * them.
+ *
+ * Only an account sends them: it picks among its environments. A portal user
+ * sees only their own environment, which the API's list requests apply by
+ * themselves; a user's search[...] is read as a name search instead (an
+ * announcement, queue or IVR list then came back empty). So a user sends none.
+ *
+ * `enabled`: true / false (or 'true' / 'false') to filter; undefined or '' for all.
+ */
+export function listFilters({ environmentUuid, enabled } = {}) {
+  if (!hasAdminSession()) return [];
+  const parts = [];
+  if (environmentUuid) parts.push(`search[environment_uuid]=${encodeURIComponent(environmentUuid)}`);
+  if (enabled !== undefined && enabled !== null && enabled !== '') parts.push(`search[enabled]=${enabled}`);
+  return parts;
+}
+
+/**
  * Get bridge resources by type
  * @param {string} bridgeType - Bridge type (extension, queue, ivr, etc.)
  * @param {string} environmentUuid - Optional environment UUID for filtering
@@ -97,18 +118,8 @@ export const getBridgeResources = async (bridgeType, environmentUuid = null, opt
   queryParts.push(`per_page=${options.perPage || 9999}`);
   queryParts.push(`page=${options.page || 1}`);
 
-  if (environmentUuid) {
-    queryParts.push(`search[environment_uuid]=${encodeURIComponent(environmentUuid)}`);
-  }
-
-  // Only add enabled filter if explicitly specified (true or false)
-  // Don't filter by enabled by default - show all resources
-  if (options.enabled === true) {
-    queryParts.push(`search[enabled]=true`);
-  } else if (options.enabled === false) {
-    queryParts.push(`search[enabled]=false`);
-  }
-  // If options.enabled is undefined, don't add the filter - show all
+  // Environment and enabled, for an account only (see listFilters).
+  queryParts.push(...listFilters({ environmentUuid, enabled: options.enabled }));
 
   const url = `${endpoint}?${queryParts.join('&')}`;
   console.log(`Bridge API Request: ${url}`);

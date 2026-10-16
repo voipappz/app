@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Badge, Box, IconButton, Tooltip } from '@mui/material';
 import CallIcon from '@mui/icons-material/Call';
 import { useSoftphone } from '../../context/SoftphoneContext';
@@ -9,10 +10,11 @@ import { usePortalSidebar } from '../../context/PortalSidebarContext';
 const DOT = { registered: '#22c55e', registering: '#f59e0b', connecting: '#f59e0b', failed: '#ef4444', unregistered: '#94a3b8' };
 
 export default function TopBarPhoneButton() {
+  const { t } = useTranslation('phone');
   const { status } = useSoftphone();
   const { view, toggle } = usePortalSidebar();
   const open = view === 'phone';
-  const label = open ? 'Close phone' : `Phone — ${status ? String(status).replace(/_/g, ' ') : 'not signed in'}`;
+  const label = open ? t('topBar.close') : t('topBar.status', { status: status ? String(status).replace(/_/g, ' ') : t('topBar.notSignedIn') });
 
   return (
     <Tooltip title={label}>

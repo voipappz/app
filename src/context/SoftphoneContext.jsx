@@ -17,7 +17,8 @@
 // working and only the softphone is disabled.
 import { Component, createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSipPhone } from '../lib/sip/useSipPhone';
-import { loadSipSettings, saveSipSettings, clearSipSettings, defaultSipSettings, sipSettingsReady, sipSettingsFromUser } from '../lib/sip/sipSettings';
+import { loadSipSettings, saveSipSettings, clearSipSettings, defaultSipSettings } from '../lib/sip/sipSettings';
+import { fetchPhoneToken, sipSettingsFromPhoneToken, refreshDelayMs, withRetry, isPermanentTokenError } from '../lib/sip/phoneToken';
 import { useAuth } from './AuthContext';
 import { useUserAuth } from './UserAuthContext';
 
@@ -64,7 +65,8 @@ function degradedValue(settings, updateSettings) {
     cancelAttendedTransfer: noopAsync,
     clearLogs: noop,
     connect: noopAsync,
-    disconnect: noopAsync
+    disconnect: noopAsync,
+    signInDevice: noopAsync
   };
 }
 
@@ -89,80 +91,165 @@ class SoftphoneErrorBoundary extends Component {
 
 // The live softphone. Isolated so a throw here is caught by the boundary above
 // instead of crashing the whole React tree.
-function SoftphoneLive({ settings, setSettings, updateSettings, children }) {
+//
+// CREDENTIALS. The phone registers ONLY from the short-lived JWT the API
+// issues for a device (GET /api/devices/:uuid/phone, lib/sip/phoneToken.js).
+// What is remembered across a page reload is the device uuid, never the
+// password: on reload the phone asks for a fresh token with it. A token is
+// renewed REFRESH_BEFORE_S before it expires; a failed fetch is retried with
+// backoff, and a refused one (401/403/404) stops and says why.
+function SoftphoneLive({ settings, setSettings, children }) {
   const phone = useSipPhone();
   const admin = useAuth();
   const user = useUserAuth();
   // Either session counts as "signed in" for the softphone's purposes — it's a
   // shared screen (see App.jsx's DualProtectedRoute), reachable from both surfaces.
   const isAuthenticated = admin.isAuthenticated || user.isAuthenticated;
+  const [tokenError, setTokenError] = useState('');
 
-  // `persist: false` registers without writing the creds to localStorage (and
-  // drops any that were): an account signing the phone in as someone else's
-  // device holds that device's SIP secret for this page only.
-  const connect = useCallback(async (next, { persist = true } = {}) => {
-    const s = next ?? settings;
-    if (next) {
-      setSettings(next);
-      if (persist) saveSipSettings(next); else clearSipSettings();
-    }
-    if (!sipSettingsReady(s)) return;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const authedRef = useRef(isAuthenticated);
+  authedRef.current = isAuthenticated;
+  // Bumped by every sign-in and by sign-out: a fetch or refresh that belongs
+  // to an older generation drops its result.
+  const genRef = useRef(0);
+  const refreshTimer = useRef(null);
+  const inFlight = useRef(false);
+  const failedFor = useRef(null);
+  // Set by Disconnect: the phone went idle because someone asked it to, so
+  // auto sign-in must not undo that. Cleared by the next sign-in.
+  const heldOff = useRef(false);
+
+  const stopRefresh = useCallback(() => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = null;
+  }, []);
+
+  const register = useCallback(async (s) => {
     await phone.register(
       { username: s.username, password: s.password, domain: s.domain, displayName: s.displayName || s.username },
       { wssUrl: s.wssUrl, domain: s.domain }
     );
-  }, [phone, settings, setSettings]);
+  }, [phone]);
 
-  const disconnect = useCallback(async () => { await phone.unregister(); }, [phone]);
+  const scheduleRefresh = useCallback((gen, deviceUuid, exp, persist) => {
+    stopRefresh();
+    const run = async () => {
+      if (gen !== genRef.current || !authedRef.current) return;
+      try {
+        const token = await withRetry(() => fetchPhoneToken(deviceUuid), {
+          shouldStop: () => gen !== genRef.current || !authedRef.current
+        });
+        if (gen !== genRef.current) return;
+        const prev = settingsRef.current;
+        const next = sipSettingsFromPhoneToken(token, prev);
+        setSettings(next);
+        if (persist) saveSipSettings(next);
+        setTokenError('');
+        // Same account on the same server: the registration carries on. A
+        // rotated password or a moved server needs a new registration.
+        const changed = ['username', 'password', 'domain', 'wssUrl'].some((k) => next[k] !== prev[k]);
+        if (changed) await register(next);
+        scheduleRefresh(gen, deviceUuid, next.tokenExp, persist);
+      } catch (err) {
+        if (gen !== genRef.current) return;
+        setTokenError(err?.message || 'Could not renew the phone sign-in');
+        // A refused renewal is final; anything else is tried again shortly.
+        if (!isPermanentTokenError(err)) {
+          refreshTimer.current = setTimeout(run, 30000);
+        }
+      }
+    };
+    refreshTimer.current = setTimeout(run, refreshDelayMs(exp));
+  }, [register, setSettings, stopRefresh]);
+
+  // Sign the phone in as a device. `persist: false` keeps even the device uuid
+  // out of localStorage (an account signing in as someone else's device holds
+  // it for this page only). `authorization` fetches the first token with a
+  // different credential (a user's login the account just made); renewals use
+  // the session's own.
+  const signInDevice = useCallback(async (deviceUuid, { persist = true, authorization } = {}) => {
+    const gen = ++genRef.current;
+    stopRefresh();
+    heldOff.current = false;
+    inFlight.current = true;
+    setTokenError('');
+    try {
+      const token = await withRetry(() => fetchPhoneToken(deviceUuid, { authorization }), {
+        shouldStop: () => gen !== genRef.current
+      });
+      if (gen !== genRef.current) return;
+      const next = sipSettingsFromPhoneToken(token, settingsRef.current);
+      setSettings(next);
+      if (persist) saveSipSettings(next); else clearSipSettings();
+      failedFor.current = null;
+      await register(next);
+      scheduleRefresh(gen, next.deviceUuid || deviceUuid, next.tokenExp, persist);
+    } catch (err) {
+      if (gen === genRef.current) {
+        failedFor.current = deviceUuid;
+        setTokenError(err?.message || 'Could not sign the phone in');
+      }
+      throw err;
+    } finally {
+      if (gen === genRef.current) inFlight.current = false;
+    }
+  }, [register, scheduleRefresh, setSettings, stopRefresh]);
+
+  // Reconnect as the device the phone already holds.
+  const connect = useCallback(async () => {
+    const uuid = settingsRef.current.deviceUuid;
+    if (!uuid) { setTokenError('Pick a device to sign the phone in as'); return; }
+    await signInDevice(uuid);
+  }, [signInDevice]);
+
+  const disconnect = useCallback(async () => {
+    heldOff.current = true;
+    genRef.current += 1;
+    stopRefresh();
+    await phone.unregister();
+  }, [phone, stopRefresh]);
 
   // On logout (either surface): unregister the softphone and FORGET the
-  // account's SIP creds, so the next signed-in user doesn't inherit them.
+  // device, so the next signed-in user doesn't inherit it.
   const wasAuthed = useRef(isAuthenticated);
   useEffect(() => {
     if (wasAuthed.current && !isAuthenticated) {
+      genRef.current += 1;
+      stopRefresh();
+      failedFor.current = null;
+      heldOff.current = false;
       clearSipSettings();
       setSettings(defaultSipSettings());
       phone.unregister().catch(() => { /* ignore */ });
     }
     wasAuthed.current = isAuthenticated;
-  }, [isAuthenticated, phone, setSettings]);
+  }, [isAuthenticated, phone, setSettings, stopRefresh]);
 
-  // Auto-connect when opted-in + creds present. Registers whenever the phone is
-  // idle (not while connecting/registered/reconnecting). This is StrictMode-safe:
-  // React's dev double-mount disposes the UA (status -> idle), and this re-fires
-  // to rebuild it — unlike a one-shot guard, which would leave it disconnected.
-  // On a real registration failure status is 'failed' (not 'idle'), so it won't
-  // storm.
-  //
-  // NEVER while logged out. Without this guard a logged-out browser kept taking
-  // calls, by two separate routes:
-  //   1. defaultSipSettings() spreads envSipOverrides() LAST, so on a build with
-  //      VITE_SIP_* creds baked in the "cleared" settings are still registerable.
-  //   2. unregister() finishes with status 'idle' — the exact trigger below — so
-  //      the teardown re-armed the very effect that undid it.
-  // Registration is a property of being signed in; gate it on that, not on the
-  // settings happening to be empty.
+  useEffect(() => () => stopRefresh(), [stopRefresh]);
+
+  // Auto sign-in while idle. NEVER while logged out: registration is a
+  // property of being signed in. Re-fires when the phone returns to idle
+  // (StrictMode's double mount disposes the UA), but not for a device whose
+  // sign-in just failed, so a refused token cannot storm the API.
+  //   - a portal user signs in as their own extension;
+  //   - otherwise the device remembered from before a page reload.
+  const portalExtUuid = user.isAuthenticated ? user.user?.extension?.uuid : null;
   useEffect(() => {
-    if (!isAuthenticated) return;
-    // A signed-in portal user owns an extension. Register the phone from the
-    // same user/environment returned by login so the phone is assigned to the
-    // person who opened the session, rather than asking them to sign in again.
-    if (user.isAuthenticated && user.user?.extension && phone.status === 'idle') {
-      const userSettings = sipSettingsFromUser(user.user, '', settings);
-      if (sipSettingsReady(userSettings)) {
-        connect(userSettings).catch(() => { /* surfaced via status */ });
-        return;
-      }
-    }
-    if (!settings.autoConnect || !sipSettingsReady(settings)) return;
-    if (phone.status !== 'idle') return;
-    connect(settings).catch(() => { /* surfaced via status */ });
-  }, [isAuthenticated, settings, connect, phone.status]);
+    if (!isAuthenticated || phone.status !== 'idle' || inFlight.current || heldOff.current) return;
+    const uuid = portalExtUuid || (settings.autoConnect ? settings.deviceUuid : null);
+    if (!uuid || failedFor.current === uuid) return;
+    signInDevice(uuid).catch(() => { /* surfaced via lastError */ });
+  }, [isAuthenticated, portalExtUuid, settings.autoConnect, settings.deviceUuid, phone.status, signInDevice]);
+
+  const updateSettings = useCallback((next) => { setSettings(next); saveSipSettings(next); }, [setSettings]);
 
   const value = {
     ...phone,                       // status, call, muted, dial, answer, hangup, sendDtmf, setMuted
+    lastError: tokenError || phone.lastError,
     connected: phone.status === 'registered',
-    settings, updateSettings, connect, disconnect
+    settings, updateSettings, connect, disconnect, signInDevice
   };
   return <SoftphoneContext.Provider value={value}>{children}</SoftphoneContext.Provider>;
 }
@@ -177,7 +264,7 @@ export function SoftphoneProvider({ children }) {
     <SoftphoneErrorBoundary fallback={() => (
       <SoftphoneContext.Provider value={degraded}>{children}</SoftphoneContext.Provider>
     )}>
-      <SoftphoneLive settings={settings} setSettings={setSettings} updateSettings={updateSettings}>
+      <SoftphoneLive settings={settings} setSettings={setSettings}>
         {children}
       </SoftphoneLive>
     </SoftphoneErrorBoundary>

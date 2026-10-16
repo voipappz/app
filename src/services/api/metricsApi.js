@@ -24,15 +24,28 @@ export const metricsApi = {
    *
    * Uses fetch directly rather than apiService: a failing backend must surface
    * here, not be swallowed the way a data call is.
+   *
+   * /api/health/detailed, NOT /health/detailed: at the mothership's Kong
+   * /health is GATUS and the API's health is under /api/health (mothership
+   * f12d37a, 2026-09-15). /health/detailed reached Gatus, which answered
+   * "Cannot GET …", and the panel showed a JSON parse error.
    */
   getDetailedHealth: async () => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    const url = baseUrl ? `${baseUrl}/health/detailed` : '/health/detailed';
+    const url = `${baseUrl}/api/health/detailed`;
     const auth = JSON.parse(localStorage.getItem('auth') || '{}');
     const headers = { 'Accept': 'application/json' };
     if (auth.access) headers['Authorization'] = `Bearer ${auth.access}`;
     const resp = await fetch(url, { method: 'GET', headers });
-    const data = await resp.json();
+    const text = await resp.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      const error = new Error(`/api/health/detailed answered HTTP ${resp.status} without JSON: ${text.slice(0, 80)}`);
+      error.status = resp.status;
+      throw error;
+    }
     const normalized = {
       ...data,
       http_status: resp.status,

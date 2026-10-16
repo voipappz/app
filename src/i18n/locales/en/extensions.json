@@ -83,7 +83,10 @@
     "noEnvironment": "No environment",
     "copyUrl": "Copy URL",
     "copied": "Copied!",
-    "download": "Download"
+    "download": "Download",
+    "getApp": "Scan it with Cloud Softphone. Get the app:",
+    "googlePlay": "Google Play",
+    "appStore": "App Store"
   },
   "live": {
     "title": "SIP Registrations"

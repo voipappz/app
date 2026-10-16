@@ -260,3 +260,152 @@ describe('apiService response cache — one identity never reads another\'s', ()
     expect(apiService.pendingRequests.size).toBe(0);
   });
 });
+
+// A form body passed already encoded (`params.toString()`) must go out as is.
+// JSON.stringify used to wrap it in quotes: renaming a customer to "demo" sent
+// `"name=demo&enabled=true"`, which Rack read as a key `"name` and a value
+// ending in a quote.
+describe('apiService post/patch/put — a string body is sent as is', () => {
+  let spy;
+  beforeEach(() => {
+    spy = vi.spyOn(apiService, 'fetch').mockResolvedValue({});
+  });
+  afterEach(() => spy.mockRestore());
+
+  const encoded = new URLSearchParams({ name: 'demo', enabled: 'true' }).toString();
+
+  it.each(['post', 'patch'])('%s keeps the encoded form body and marks it a form', async (method) => {
+    await apiService[method]('/api/customers/c-1', encoded, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    const [, opts] = spy.mock.calls[0];
+    expect(opts.body).toBe('name=demo&enabled=true');
+    expect(opts.body.startsWith('"')).toBe(false);
+    expect(opts.headers['Content-Type']).toBe('application/x-www-form-urlencoded');
+    expect(Object.fromEntries(new URLSearchParams(opts.body))).toEqual({ name: 'demo', enabled: 'true' });
+  });
+
+  it.each(['post', 'patch'])('%s defaults a bare string to a form body', async (method) => {
+    await apiService[method]('/api/x', encoded);
+    expect(spy.mock.calls[0][1].headers['Content-Type']).toBe('application/x-www-form-urlencoded');
+  });
+
+  it('put sends a string body as is', async () => {
+    await apiService.put('/api/x', encoded);
+    expect(spy.mock.calls[0][1].body).toBe('name=demo&enabled=true');
+  });
+
+  it('still sends objects as JSON', async () => {
+    await apiService.patch('/api/x', { name: 'demo' });
+    const [, opts] = spy.mock.calls[0];
+    expect(opts.body).toBe('{"name":"demo"}');
+    expect(opts.headers['Content-Type']).toBe('application/json');
+  });
+});
+
+// "✅ Successfully completed: fetching tariffs" on every page load: loading data
+// must never toast. A success toast is for a change the user made; errors are
+// always reported.
+describe('apiService success toasts — never for a load', () => {
+  let success;
+  let failure;
+
+  const respond = (status, body = {}) => ({
+    status,
+    headers: { get: () => null },
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  });
+
+  beforeEach(() => {
+    success = vi.fn();
+    failure = vi.fn();
+    apiService.setMessageHandlers(success, failure);
+    apiService.authInitializing = false;
+    apiService.authContextLogout = vi.fn();
+    apiService.pendingRequests.clear();
+    apiService.clearCache?.();
+    apiService.rateLimitConfig.minRequestInterval = 0;
+    vi.spyOn(apiService, 'getToken').mockReturnValue('tok');
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    apiService.setMessageHandlers(null, null);
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('a GET with showMessages=true shows no success toast', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => respond(200, [{ id: 1 }])));
+
+    await apiService.get('/api/tariffs', {}, 'fetching tariffs', true, true);
+
+    expect(success).not.toHaveBeenCalled();
+  });
+
+  it('a failing GET still reports its error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => respond(422, { error: 'bad filter' })));
+
+    await expect(apiService.get('/api/tariffs?x', {}, 'fetching tariffs', true, true)).rejects.toThrow();
+
+    expect(success).not.toHaveBeenCalled();
+    expect(failure).toHaveBeenCalled();
+  });
+
+  it('a POST still announces its success', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => respond(201, { id: 2 })));
+
+    await apiService.post('/api/tariffs', { name: 't' }, {}, 'creating tariff', true, true);
+
+    expect(success).toHaveBeenCalledWith(expect.stringContaining('creating tariff'));
+  });
+
+  it('a write whose context says it is loading stays quiet too', () => {
+    expect(apiService.constructor.announcesSuccess('POST', 'fetching report rows')).toBe(false);
+    expect(apiService.constructor.announcesSuccess('DELETE', 'deleting tariff')).toBe(true);
+    expect(apiService.constructor.announcesSuccess('HEAD', 'ping')).toBe(false);
+  });
+});
+
+// Codex review 2026-10-15: GET /api/devices/:id carries the SIP password with
+// Cache-Control: no-store, and the GET cache kept it anyway.
+describe('apiService GET cache — Cache-Control: no-store', () => {
+  const respond = (cacheControl) => ({
+    status: 200,
+    ok: true,
+    headers: { get: (h) => (h.toLowerCase() === 'cache-control' ? cacheControl : null) },
+    json: async () => ({ uuid: 'd1', password: 'Sip-Secret' }),
+    text: async () => JSON.stringify({ uuid: 'd1', password: 'Sip-Secret' }),
+  });
+
+  beforeEach(() => {
+    apiService.authInitializing = false;
+    apiService.pendingRequests.clear();
+    apiService.clearCache?.();
+    apiService.rateLimitConfig.minRequestInterval = 0;
+    vi.spyOn(apiService, 'getToken').mockReturnValue('tok');
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('does not keep a no-store response: the next read asks the server again', async () => {
+    const fetchSpy = vi.fn(async () => respond('no-store'));
+    vi.stubGlobal('fetch', fetchSpy);
+    await apiService.get('/api/devices/d1', {}, 'device', false);
+    await apiService.get('/api/devices/d1', {}, 'device', false);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('still caches an ordinary GET', async () => {
+    const fetchSpy = vi.fn(async () => respond(null));
+    vi.stubGlobal('fetch', fetchSpy);
+    await apiService.get('/api/devices/d2', {}, 'device', false);
+    await apiService.get('/api/devices/d2', {}, 'device', false);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+});

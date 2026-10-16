@@ -1,20 +1,40 @@
 import { describe, it, expect } from 'vitest';
 import { getPermittedNavItems, getPermittedTopbarItems, findNavItemByPath, TOPBAR_NAV_ITEMS } from './navConfig';
 
-// Nodes and Providers left the top-right tools: nodes are managed from the
-// customer dialog, providers open from Routes.
-describe('navConfig Nodes and Providers', () => {
-  const acl = { data: { nodes: { main: ['read', 'write'] }, providers: { main: ['read', 'write'] } } };
+// Nodes are managed from the customer dialog and have no route. Providers,
+// Tariffs and Subscriptions (where plans are managed) are sidebar entries.
+describe('navConfig Nodes', () => {
+  const acl = { data: { nodes: { main: ['read', 'write'] } } };
 
-  it('lists neither in the top-right tools nor in the sidebar', () => {
+  it('lists Nodes neither in the top-right tools nor in the sidebar', () => {
     const paths = [...getPermittedTopbarItems(acl), ...getPermittedNavItems(acl)].map((item) => item.path);
     expect(paths).not.toContain('/nodes');
-    expect(paths).not.toContain('/providers');
+    expect(findNavItemByPath('/nodes')).toBeNull();
+  });
+});
+
+describe('navConfig billing and carrier screens', () => {
+  const acl = { data: {
+    providers: { main: ['read'] }, tariffs: { main: ['read'] }, subscriptions: { main: ['read'] },
+  } };
+
+  it('lists Providers, Tariffs and Subscriptions in the sidebar for an account with their ACL', () => {
+    const items = getPermittedNavItems(acl);
+    const paths = items.map((item) => item.path);
+    expect(paths).toEqual(expect.arrayContaining(['/providers', '/tariffs', '/subscriptions']));
+    expect(items.find((item) => item.path === '/providers')).toMatchObject({ text: 'Providers', aclKey: 'providers', labelKey: 'nav:providers' });
+    expect(items.find((item) => item.path === '/tariffs')).toMatchObject({ text: 'Tariffs', aclKey: 'tariffs', labelKey: 'nav:tariffs' });
   });
 
-  it('still names the Providers route for breadcrumbs and recent pages', () => {
-    expect(findNavItemByPath('/providers')).toMatchObject({ text: 'Providers', aclKey: 'providers' });
-    expect(findNavItemByPath('/nodes')).toBeNull();
+  it('hides each from an account whose ACL does not grant it', () => {
+    const paths = getPermittedNavItems({ data: { calls: { main: ['read'] } } }).map((item) => item.path);
+    expect(paths).not.toContain('/providers');
+    expect(paths).not.toContain('/tariffs');
+    expect(paths).not.toContain('/subscriptions');
+  });
+
+  it('keeps Providers out of the top-right tools', () => {
+    expect(getPermittedTopbarItems(acl).map((item) => item.path)).not.toContain('/providers');
   });
 });
 // The top bar keeps no tool icons: Events opens from a list row, Monitoring
@@ -67,16 +87,12 @@ describe('navConfig for a user session (strict)', () => {
   });
 });
 // Calls and Messages are one menu entry, Logs; the screen's tabs switch kind.
-describe('navConfig Logs entry', () => {
+describe('navConfig Calls and Messages', () => {
   const acl = { data: { calls: { main: ['read'] }, messages: { main: ['read'] } } };
 
-  it('lists one entry, at /calls, and no separate Messages', () => {
+  it('lists Calls and Messages as two menu items', () => {
     const items = getPermittedNavItems(acl);
-    expect(items.find((item) => item.path === '/calls')).toMatchObject({ text: 'Logs' });
-    expect(items.map((item) => item.path)).not.toContain('/messages');
-  });
-
-  it('still names the Messages route for breadcrumbs and recent pages', () => {
-    expect(findNavItemByPath('/messages')).toMatchObject({ text: 'Messages', aclKey: 'messages' });
+    expect(items.find((item) => item.path === '/calls')).toMatchObject({ text: 'Calls' });
+    expect(items.find((item) => item.path === '/messages')).toMatchObject({ text: 'Messages', aclKey: 'messages' });
   });
 });

@@ -3,7 +3,7 @@ import { usePortalSidebar } from '../context/PortalSidebarContext';
 import { useIsUserSession } from './useIsUserSession';
 
 // Only what a dialpad accepts: "+972 (3) 555-1234" -> "+97235551234".
-const dialable = (number) => String(number ?? '').replace(/[^\d+*#]/g, '');
+export const dialable = (number) => String(number ?? '').replace(/[^\d+*#]/g, '');
 
 /**
  * Clicking a number anywhere opens the phone in the right-hand sidebar with

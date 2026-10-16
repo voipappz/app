@@ -1,9 +1,7 @@
 .call-detail-panel {
-  width: 400px;
-  /* Beside the grid: keeps its width, but never more than half the row on a
-     narrow window (e.g. with DevTools docked). */
+  /* Fills what holds it: the Calls drawer or the phone sidebar set the width. */
+  width: 100%;
   flex-shrink: 0;
-  max-width: 50%;
   display: flex;
   flex-direction: column;
   height: 100%;

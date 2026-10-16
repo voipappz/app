@@ -22,6 +22,18 @@ describe('the sidebar customer switcher', () => {
   });
   afterEach(() => window.removeEventListener('openCustomerEdit', onOpen));
 
+  it('open sidebar: names the customer and the application in view; collapsed: the avatar only', () => {
+    ctx = { customers: [mtn, yello], selectedCustomer: mtn, selectCustomer, isRoot: true,
+            selectedEnvironments: [{ uuid: 'e-1', name: 'Sales' }] };
+    auth = { accountCustomer: mtn };
+    const { rerender } = render(<SidebarCustomerSwitcher expanded />);
+    expect(screen.getByTestId('sidebar-customer-name')).toHaveTextContent('MTN Business Unicom');
+    expect(screen.getByText('Sales')).toBeInTheDocument();
+
+    rerender(<SidebarCustomerSwitcher />);
+    expect(screen.queryByTestId('sidebar-customer-name')).not.toBeInTheDocument();
+  });
+
   it('lists every customer an account can see and switches on one click', () => {
     ctx = { customers: [mtn, yello], selectedCustomer: mtn, selectCustomer, isRoot: true };
     auth = { accountCustomer: mtn };

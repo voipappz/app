@@ -2,12 +2,13 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Box, Typography, Chip, IconButton, Tooltip, Switch, FormControlLabel,
-  Paper, Select, MenuItem, FormControl, Dialog, DialogTitle, DialogContent, DialogActions, Button,
-  Accordion, AccordionSummary, AccordionDetails,
+  Paper, Select, MenuItem, FormControl,
+  Accordion, AccordionSummary, AccordionDetails, Tab,
 } from '@mui/material';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import SectionTabs from '../shared/SectionTabs.jsx';
 import { DataGrid } from '@mui/x-data-grid';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import FavoriteIcon from '@mui/icons-material/Favorite';
 import DnsIcon from '@mui/icons-material/Dns';
 import StorageIcon from '@mui/icons-material/Storage';
 import MemoryIcon from '@mui/icons-material/Memory';
@@ -22,9 +23,6 @@ import YabedaMetricViewer from './YabedaMetricViewer.jsx';
 import GatusHealthPanel from './GatusHealthPanel.jsx';
 import MonitoringNodes from './MonitoringNodes.jsx';
 import useGatusHealth from '../../hooks/useGatusHealth';
-import useApiHealth from '../../hooks/useApiHealth';
-import ApiHealthPanel from './ApiHealthPanel.jsx';
-import HealthList from './HealthList.jsx';
 import IntegrationCard from './IntegrationCard.jsx';
 import { usePermissions } from '../../hooks/usePermissions';
 
@@ -129,7 +127,6 @@ const Monitoring = () => {
     currentValue, chartRows, thresholds, alertConfig,
     fetchData,
   } = useMonitoring();
-  const apiHealth = useApiHealth();
 
   const { canAccess } = usePermissions();
   const canReadLogs = canAccess('logs');
@@ -137,14 +134,10 @@ const Monitoring = () => {
   const [view, setView] = useState('status');
   const showLogs = view === 'logs' && canReadLogs;
 
-  // The service whose verbose health is open (null: closed).
-  const [healthFocus, setHealthFocus] = useState(null);
-
   // The MOTHERSHIP's Gatus: what this box watches (data layer, API, gateway,
-  // SBC, and the voip node's own /health/node). It does not change with the
-  // host selector — a node's own checks are on the Nodes screen, asked over
-  // NATS. This panel used to switch to /custom/nodes/:uuid/health for a picked
-  // node, which answered with this same board under the node's name.
+  // SBC, and the voip node's own /health/node). Its summary feeds the Health
+  // list; its tiles are in the Health section, under that list. A node's own checks
+  // are on the Nodes screen, asked over NATS.
   const fleetHealth = useGatusHealth();
 
   const gridSx = useMemo(() => ({
@@ -163,17 +156,15 @@ const Monitoring = () => {
         {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="h5" sx={{ fontWeight: 600, color: 'var(--theme-text-primary)' }}>{showLogs ? 'Logs' : 'Status'}</Typography>
-            {canReadLogs && (
-              <Box sx={{ display: 'flex', gap: 0.5 }} role="tablist" aria-label="Monitoring view">
-                {[['status', 'Status'], ['logs', 'Logs']].map(([key, label]) => (
-                  <Chip key={key} label={label} size="small" role="tab" aria-selected={view === key}
-                    variant={view === key ? 'filled' : 'outlined'}
-                    color={view === key ? 'primary' : 'default'}
-                    onClick={() => setView(key)}
-                    sx={{ fontSize: '0.75rem', cursor: 'pointer' }} />
-                ))}
-              </Box>
+            {canReadLogs ? (
+              <Paper sx={{ flexShrink: 0, backgroundColor: 'var(--mui-palette-background-paper)', border: '1px solid var(--mui-palette-divider)', borderRadius: 2 }}>
+                <SectionTabs value={view} onChange={(_, v) => setView(v)} aria-label="Monitoring view" sx={{ borderBottom: 'none' }}>
+                  <Tab value="status" label="Status" icon={<MonitorHeartIcon />} iconPosition="start" />
+                  <Tab value="logs" label="Logs" icon={<ArticleIcon />} iconPosition="start" />
+                </SectionTabs>
+              </Paper>
+            ) : (
+              <Typography variant="h5" sx={{ fontWeight: 600, color: 'var(--theme-text-primary)' }}>Status</Typography>
             )}
             {!showLogs && <HostSelector hosts={hosts} value={selectedHost} onChange={setSelectedHost} />}
           </Box>
@@ -207,34 +198,21 @@ const Monitoring = () => {
           </Suspense>
         ) : (
         <>
-            {/* Gatus is the first operational surface: choose a node and see
-                its live relay status before drilling into historical metrics. */}
-            <Paper elevation={0} sx={{
-              border: '1px solid var(--theme-border)', borderRadius: '12px',
-              backgroundColor: 'var(--theme-bg-primary)', overflow: 'hidden',
-            }}>
-              <Box sx={{ p: 2, borderBottom: '1px solid var(--theme-border)', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FavoriteIcon fontSize="small" sx={{ color: fleetHealth.summary.down === 0 && fleetHealth.summary.total > 0 ? '#10b981' : '#f59e0b' }} />
-                <Typography sx={{ fontWeight: 600 }}>Live service health</Typography>
-                <Typography variant="caption" sx={{ ml: 'auto', color: 'var(--theme-text-secondary)' }}>Gatus · mothership checks</Typography>
-              </Box>
-              <Box sx={{ p: 2 }}>
+            <Box>
+              {/* Health is Gatus, and only Gatus: it probes the API's own
+                  /health along with the data layer, gateway, SBC and the voip
+                  node, so a second list of the API's checks here repeated it.
+                  Click a tile for its checks, conditions and errors. */}
+              <Box data-testid="health-gatus">
                 <GatusHealthPanel
                   endpoints={fleetHealth.endpoints}
                   summary={fleetHealth.summary}
                   loading={fleetHealth.loading}
                   error={fleetHealth.error || fleetHealth.response?.error}
-                  title="Mothership · Gatus"
+                  title="Health · Gatus"
                 />
               </Box>
-            </Paper>
-
-            <Paper elevation={0} sx={{
-              px: 2, py: 1, border: '1px solid var(--theme-border)',
-              borderRadius: '8px', backgroundColor: 'var(--theme-bg-primary)',
-            }}>
-              <HealthList health={apiHealth} gatusSummary={fleetHealth.summary} onOpen={setHealthFocus} />
-            </Paper>
+            </Box>
 
             {/* Host metrics — Influxer models, thresholds from config/alerts.yaml */}
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -367,11 +345,6 @@ const Monitoring = () => {
         )}
       </Box>
 
-      <Dialog open={Boolean(healthFocus)} onClose={() => setHealthFocus(null)} maxWidth="md" fullWidth>
-        <DialogTitle>Health — verbose</DialogTitle>
-        <DialogContent><ApiHealthPanel focus={healthFocus} summary={apiHealth.response} /></DialogContent>
-        <DialogActions><Button onClick={() => setHealthFocus(null)}>Close</Button></DialogActions>
-      </Dialog>
     </Box>
   );
 };

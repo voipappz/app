@@ -7,8 +7,10 @@ import { Box, Typography, Tooltip } from '@mui/material';
  * `variant`:
  *  - 'card'    a bordered tile (dashboard): the number large, in its colour.
  *  - 'compact' a single-line number and label with a selected outline (Calls).
- *  - 'minimal' no box (Calls, above the list): a colour underline marks the
- *              active one, so the row reads as a line of numbers, not buttons.
+ *  - 'minimal' no box: a colour underline marks the active one.
+ *  - 'tile'    a rounded card with a soft shadow, a tinted icon, the number
+ *              large and the label under it (Calls, above the list). A zero
+ *              is muted: "nothing" should not shout in red or green.
  *
  * Clickable when `onClick` is given (Calls toggles the matching filter — the
  * same `search[call.*]` param the filter pills read).
@@ -18,8 +20,9 @@ import { Box, Typography, Tooltip } from '@mui/material';
  * once showed a confident "0 Total" next to a chart with 16 calls because a
  * failure degraded silently into a number.
  */
-const StatCounter = ({ label, value, color = 'var(--counter-total)', active = false, onClick, tooltip, variant = 'card' }) => {
+const StatCounter = ({ label, value, color = 'var(--counter-total)', active = false, onClick, tooltip, variant = 'card', icon = null }) => {
   const known = value != null && value !== '';
+  if (variant === 'tile') return <Tile {...{ label, value, color, active, onClick, tooltip, icon, known }} />;
   const minimal = variant === 'minimal';
   const compact = variant === 'compact';
 
@@ -84,5 +87,57 @@ const StatCounter = ({ label, value, color = 'var(--counter-total)', active = fa
   const title = known ? tooltip : 'No data for the current selection';
   return title ? <Tooltip title={title}>{card}</Tooltip> : card;
 };
+
+function Tile({ label, value, color, active, onClick, tooltip, icon, known }) {
+  const zero = known && Number(value) === 0;
+  const tile = (
+    <Box
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-pressed={onClick ? active : undefined}
+      aria-label={`${label}: ${known ? value : 'no data'}`}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e); }
+      } : undefined}
+      sx={{
+        display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.5, minWidth: 0,
+        borderRadius: '16px', cursor: onClick ? 'pointer' : 'default', userSelect: 'none',
+        bgcolor: 'var(--theme-bg-primary)',
+        border: '1px solid', borderColor: active ? color : 'var(--theme-border)',
+        boxShadow: active ? '0 4px 14px rgba(0,0,0,0.10)' : '0 1px 3px rgba(0,0,0,0.06)',
+        transition: 'box-shadow .15s, border-color .15s, transform .15s',
+        '&:hover': onClick ? { boxShadow: '0 4px 14px rgba(0,0,0,0.10)', transform: 'translateY(-1px)' } : undefined,
+        '&:focus-visible': { outline: `2px solid ${color}`, outlineOffset: 2 },
+      }}
+    >
+      {icon && (
+        <Box sx={{
+          position: 'relative', width: 40, height: 40, flexShrink: 0, borderRadius: '12px',
+          display: 'grid', placeItems: 'center', color, overflow: 'hidden',
+          // The tint is the colour itself at low opacity; `color` is a CSS var,
+          // so it cannot be alpha-concatenated.
+          '&::before': { content: '""', position: 'absolute', inset: 0, bgcolor: color, opacity: 0.12 },
+          '& svg': { position: 'relative', fontSize: 22 },
+        }}>
+          {icon}
+        </Box>
+      )}
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{
+          fontSize: '1.6rem', fontWeight: 650, lineHeight: 1.1,
+          color: known && !zero ? 'var(--theme-text-primary)' : 'var(--theme-text-secondary)',
+        }}>
+          {known ? value : '—'}
+        </Typography>
+        <Typography noWrap sx={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--theme-text-secondary)' }}>
+          {label}
+        </Typography>
+      </Box>
+    </Box>
+  );
+  const title = known ? tooltip : 'No data for the current selection';
+  return title ? <Tooltip title={title}>{tile}</Tooltip> : tile;
+}
 
 export default StatCounter;

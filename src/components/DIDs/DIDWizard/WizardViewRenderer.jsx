@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import DIDForm from '../DIDDialog/DIDForm';
 import { IVRBridge } from '../../Bridges/IVRBridge/IVRBridge';
+import IvrMenuEditor from '../../Bridges/IvrMenu/IvrMenuEditor';
+import { useIsUserSession } from '../../../hooks/useIsUserSession';
 import { QueueBridge } from '../../Bridges/QueueBridge/QueueBridge';
 import { AnnouncementBridge } from '../../Bridges/AnnouncementBridge/AnnouncementBridge.jsx';
 import { VMLBridge } from '../../Bridges/VMLBridge/VMLBridge.jsx';
@@ -26,6 +28,8 @@ const WizardViewRenderer = ({
   onDrillDown,
   loading,
 }) => {
+  const userSession = useIsUserSession();
+
   // Every bridge editor, on saving, calls onSave and then onClose. Each would
   // go back one view, so saving went back two: past the editor that opened
   // this one (e.g. a new announcement made from a call condition landed on the
@@ -59,6 +63,20 @@ const WizardViewRenderer = ({
       );
 
     case 'ivr':
+      // A portal user gets the phone-menu editor built for them; an account
+      // keeps the full IVR form.
+      if (userSession) {
+        return (
+          <IvrMenuEditor
+            ivr={data}
+            mode={mode}
+            environmentUuid={environmentUuid}
+            onSave={save}
+            onClose={close}
+            onDrillDown={onDrillDown}
+          />
+        );
+      }
       return (
         <IVRBridge
           open={true}

@@ -18,6 +18,17 @@
 .scs-trigger:focus-visible{ outline:none;border-color:var(--scs-accent); }
 .scs-trigger.open{ border-color:var(--scs-accent);box-shadow:0 0 0 3px var(--scs-accent-soft); }
 
+/* Open sidebar: the tile becomes a row - avatar, customer name, and under it
+   the application(s) in view. */
+.scs-trigger--expanded{
+  display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;
+  padding:6px 8px;justify-items:initial;
+}
+.scs-trigger--expanded .scs-avatar{ flex:0 0 auto; }
+.scs-trigger-meta{ display:flex;flex-direction:column;min-width:0;flex:1; }
+.scs-trigger-name{ font-size:14px !important;font-weight:600 !important;line-height:1.25 !important;color:var(--scs-ink); }
+.scs-trigger-detail{ font-size:12px !important;line-height:1.25 !important;color:var(--scs-muted); }
+
 .scs-avatar{
   width:32px;height:32px;border-radius:9px;background:var(--scs-accent);
   display:grid;place-items:center;color:#fff;font-weight:600;font-size:14px;letter-spacing:.01em;

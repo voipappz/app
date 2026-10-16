@@ -270,6 +270,7 @@ export const useTickets = ({ enabled = true } = {}) => {
       setSortBy(field);
       setSortOrder('desc');
     }
+    setPage(0);
   }, [sortBy, sortOrder]);
 
   /**

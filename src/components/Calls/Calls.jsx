@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import LtrIsland from '../../i18n/LtrIsland';
 import './Calls.css'; // Styles
 import './CellWithHover/CellWithHover.css'; // Cell hover styles
-import useCalls, { allTimeRange, todayRange } from './Calls.js'; // Custom hook
+import useCalls, { allTimeRange, todayRange, NOT_ANSWERED_CAUSES } from './Calls.js'; // Custom hook
 import useRecordingHandlers from './RecordingHandlers/useRecordingHandlers.js';
 import useColumnHandlers from './ColumnHandlers/useColumnHandlers.jsx';
 import useFilterHandlers from './FilterHandlers/FilterHandlers.js';
@@ -26,19 +26,30 @@ import CustomFooter from './CustomFooter/CustomFooter.jsx';
 import ColumnSelector from './ColumnSelector/ColumnSelector.jsx';
 import FilterEditDialog from './FilterEditDialog/FilterEditDialog.jsx';
 import CallActions from './CallActions/CallActions.jsx';
+import CallLogFilter from './CallLogFilter/CallLogFilter';
+import { activeCallFilter, withCallFilter } from './CallLogRow/callDirection';
 import CallMobileView from './CallMobileView/CallMobileView.jsx';
 import CallDetailPanel from './CallDetailPanel/CallDetailPanel.jsx';
 import CallConversationPanel from './CallDetailPanel/CallConversationPanel.jsx';
 import CallLogsPanel from './CallDetailPanel/CallLogsPanel.jsx';
-import StatCounter from '../common/StatCounter/StatCounter.jsx';
+import StatChips from '../shared/StatChips/StatChips.jsx';
 import { DirectionIcon, CauseIcon, RecordingControls } from './CallIcons.jsx';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
+import EnhancedDateRangePicker from '../shared/EnhancedDateRangePicker/EnhancedDateRangePicker.jsx';
 import LiveDrawer from '../Live/LiveDrawer.jsx';
 import LiveCallsPanel from '../Live/panels/LiveCallsPanel.jsx';
 import TimeHistogram from '../../views/syslogs/TimeHistogram';
 import { convertAggregateToHistogramFormat } from '../../utils/logFormatting';
-import LogTabs from '../shared/LogTabs/LogTabs.jsx';
+import PhoneIcon from '@mui/icons-material/Phone';
+import PhoneMissedIcon from '@mui/icons-material/PhoneMissed';
+import CallMadeIcon from '@mui/icons-material/CallMade';
+import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import ReportsPanel from '../Reports/ReportsPanel/ReportsPanel.jsx';
+import SectionTabs from '../shared/SectionTabs.jsx';
+import DateLocalizationProvider from '../../i18n/DateLocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import SensorsIcon from '@mui/icons-material/Sensors';
 import LiveChartStrip from '../Live/LiveChartStrip.jsx';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -46,11 +57,15 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import { useLiveCalls } from '../Live/useLiveCalls';
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
+import PercentIcon from '@mui/icons-material/Percent';
+import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { formatClock, formatPercent } from './callFormat';
 
 // MUI Components
 import {
   Box, Typography, IconButton, TextField, InputAdornment, Paper, useTheme, useMediaQuery,
-  Chip, CircularProgress, Select, MenuItem, Tooltip, Button, ButtonGroup, Drawer,
+  Chip, CircularProgress, Select, MenuItem, Tooltip, Button, ButtonGroup, Drawer, Tabs, Tab,
 } from '@mui/material';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -260,7 +275,10 @@ const Calls = () => {
   const handleQuickSearch = (e) => {
     if (e.key === 'Enter') {
       if (quickSearchText.trim()) {
-        const searchParams = { 'search[inline]': quickSearchText.trim() };
+        // On a phone the call filter stays on while searching.
+        const searchParams = isMobile
+          ? withCallFilter({ 'search[inline]': quickSearchText.trim() }, activeCallFilter(currentSearchParams))
+          : { 'search[inline]': quickSearchText.trim() };
         handleSearch(searchParams, false);
       } else {
         // Clear search when text is empty
@@ -506,7 +524,9 @@ const Calls = () => {
   // re-runs the search, so it also shows as a filter chip in the search bar.
   const QUICK_FILTERS = useMemo(() => ({
     answered: { key: 'search[call.cause][IS]',     value: ['answer'],   field: 'cause' },
-    noAnswer: { key: 'search[call.cause][NOT]',    value: ['answer'],   field: 'cause' },
+    // The same causes the No Answer counter sums — a call with no cause is
+    // not "no answer", so the filter does not use NOT answer.
+    noAnswer: { key: 'search[call.cause][IS]',     value: NOT_ANSWERED_CAUSES, field: 'cause' },
     outgoing: { key: 'search[call.direction][IS]', value: ['outgoing'], field: 'direction' },
     incoming: { key: 'search[call.direction][IS]', value: ['incoming'], field: 'direction' },
   }), []);
@@ -581,7 +601,38 @@ const Calls = () => {
     try { localStorage.setItem('reportsStrip:calls:collapsed', c ? '0' : '1'); } catch { /* storage unavailable */ }
     return !c;
   });
-  const [reportsDrawerOpen, setReportsDrawerOpen] = useState(false);
+  // Legend names in plain words; an unknown key is shown humanised.
+  const seriesLabel = useCallback((key) => {
+    const known = {
+      answer: t('series.answer', { defaultValue: 'Answered' }),
+      no_answer: t('series.no_answer', { defaultValue: 'No answer' }),
+      busy: t('series.busy', { defaultValue: 'Busy' }),
+      error: t('series.error', { defaultValue: 'Failed' }),
+      none: t('series.none', { defaultValue: 'No result' }),
+      unknown: t('series.unknown', { defaultValue: 'Unknown' }),
+      incoming: t('stats.incoming'),
+      outgoing: t('stats.outgoing'),
+    };
+    return known[key] || String(key).replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+  }, [t]);
+
+  // Quick periods, like the Logs screen. A picked from/to makes it 'custom'.
+  const [period, setPeriod] = useState('today');
+  const handlePeriod = useCallback((key) => {
+    const now = new Date();
+    let start;
+    let end = now;
+    if (key === 'today') {
+      start = new Date(now); start.setHours(0, 0, 0, 0);
+      end = new Date(now); end.setHours(23, 59, 59, 999);
+    } else {
+      const hours = { '24h': 24, '7d': 24 * 7, '30d': 24 * 30 }[key];
+      start = new Date(now.getTime() - hours * 3600 * 1000);
+    }
+    setPeriod(key);
+    handleDateRangeChange([start, end]);
+  }, [handleDateRangeChange]);
+
   const histogramData = useMemo(
     () => convertAggregateToHistogramFormat(aggregate[groupBy] || []),
     [aggregate, groupBy]
@@ -615,31 +666,6 @@ const Calls = () => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <LogTabs />
-      {/* Search + the four filters worth keeping on screen. The other nine
-          segments stay behind the ⚙ panel, which is where a 13-field grid
-          belongs. */}
-      {!isMobile && (
-        <CentralizedSearch
-          inlineFilters={INLINE_FILTER_FIELDS}
-          segments={segments}
-          currentSearchParams={currentSearchParams}
-          onFilterChange={handleSearch}
-          onQuickSearch={handleQuickSearch}
-          onClearAllFilters={() => handleClearAllFilters(setCurrentSearchParams)}
-          dateRange={dateRange}
-          onDateRangeChange={handleDateRangeChange}
-          onRefresh={handleRefresh}
-          onExport={handleExport}
-          onColumnSelectorOpen={handleColumnSelectorOpen}
-          quickSearchText={quickSearchText}
-          onQuickSearchChange={handleQuickSearchChange}
-          placeholder={t('search.placeholder')}
-          textParam="search[inline]"
-          showExclude={true}
-        />
-      )}
-
       {/* Mobile Search Bar (fallback) */}
       {isMobile && (
         <Box sx={{
@@ -648,6 +674,10 @@ const Calls = () => {
           gap: 1,
           mb: 0.5,
         }}>
+          <CallLogFilter
+            value={activeCallFilter(currentSearchParams)}
+            onChange={(choice) => handleSearch(withCallFilter(currentSearchParams, choice), false)}
+          />
           <TextField
             placeholder={t('search.quick')}
             value={quickSearchText}
@@ -696,175 +726,124 @@ const Calls = () => {
           />
         </Box>
       )}
-      {/* The headline of the screen: the numbers you came for, at the size that
-          says so. Clicking one writes the same search[call.*] param the filter
-          pills read, so a card and its pill are one piece of state.
-          Rendered even with an empty grid — "0 calls" is an answer; the row
-          vanishing is not. A null value renders "—", never a confident 0. */}
-      {!isMobile && (
-        <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0.5, mb: 1, mt: 0.25, flexWrap: 'wrap' }}>
-          {[
-            { label: t('stats.total'), value: summaryCounts.total, color: 'var(--counter-total)', filterKey: null, tooltip: t('stats.totalHint') },
-            { label: t('stats.answered'), value: summaryCounts.answered, color: 'var(--counter-answered)', filterKey: 'answered', tooltip: t('stats.answeredHint') },
-            { label: t('stats.noAnswer'), value: summaryCounts.noAnswer, color: 'var(--counter-no-answer)', filterKey: 'noAnswer', tooltip: t('stats.noAnswerHint') },
-            { label: t('stats.outgoing'), value: summaryCounts.outgoing, color: 'var(--counter-outgoing)', filterKey: 'outgoing', tooltip: t('stats.outgoingHint') },
-            { label: t('stats.incoming'), value: summaryCounts.incoming, color: 'var(--counter-incoming)', filterKey: 'incoming', tooltip: t('stats.incomingHint') },
-          ].map((item) => (
-            <StatCounter
-              variant="minimal"
-              key={item.label}
-              label={item.label}
-              value={item.value}
-              color={item.color}
-              tooltip={item.filterKey === null ? item.tooltip : `${item.tooltip} — click again to clear`}
-              active={item.filterKey === null ? !anyQuickActive : isQuickActive(item.filterKey)}
-              onClick={() => {
-                if (item.filterKey === null) clearQuickFilters();
-                else handleQuickFilterToggle(item.filterKey);
-              }}
-            />
-          ))}
-        </Box>
-      )}
       {/* THE chart of the screen. "Live now" swaps the timeline for the live
           monitor; group-by + date-bucket appear only for the timeline, since
           neither means anything to it. Collapse chevron is remembered per
           screen; expand opens the full reports drawer. Filters drive it;
           brushing the histogram filters the table. */}
-      {!isMobile && (
+      {/* The screen's three jobs, one at a time: Logs (history), Live now,
+          Reports - in the card the Calls / Messages tabs used. */}
+      <Paper elevation={0} sx={{ mb: 1.5, flexShrink: 0, borderRadius: 2, bgcolor: 'var(--mui-palette-background-paper)' }}>
+        <SectionTabs
+          value={chartMode}
+          onChange={(_, v) => setChartMode(v)}
+          aria-label={t('nav:calls')}
+          sx={{ borderBottom: 'none', '& .MuiTab-root': { minHeight: 52, fontSize: '0.95rem', fontWeight: 500 } }}
+        >
+          <Tab value="timeline" label={t('view.logs', { defaultValue: 'Logs' })} icon={<ListAltIcon />} iconPosition="start" />
+          {!userSession && (
+            <Tab
+              value="live"
+              label={liveCallsTotal != null ? t('chart.liveNowCount', { count: liveCallsTotal }) : t('chart.liveNow')}
+              icon={<SensorsIcon />}
+              iconPosition="start"
+            />
+          )}
+          <Tab value="reports" label={t('drawer.reports')} icon={<AssessmentIcon />} iconPosition="start" />
+        </SectionTabs>
+      </Paper>
+
+      {!isMobile && chartMode === 'timeline' && (
         <Paper
           elevation={0}
+          data-testid="calls-chart"
           sx={{
             flexShrink: 0, border: '1px solid var(--theme-border)', borderRadius: '8px',
             backgroundColor: 'var(--theme-bg-secondary)', px: 1.5, pt: 0.75, pb: stripCollapsed ? 0.75 : 0.25, mb: 1,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-            <BarChartIcon sx={{ fontSize: 16, color: 'var(--theme-text-secondary)' }} />
-            {/* The list's own chart — calls over time. Not tied to reports
-                (reports live in the full reports drawer); grouped by a field. */}
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--theme-text-primary)' }}>
-              {chartMode === 'live' ? t('chart.liveCalls') : t('chart.overTime')}
-            </Typography>
+          {/* One row, one control height (32px). Over time | Live now are TABS
+              of this panel - Live swaps what it shows. Then, for the timeline,
+              the three controls read together: the period, what to split by,
+              and the bucket size. */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', minHeight: 40 }}>
 
-            {/* Group-by belongs to the timeline only — in live mode it styled a
-                chart that isn't on screen. */}
-            {chartMode !== 'live' && (
-              <>
-                <Typography variant="caption" sx={{ color: 'var(--theme-text-secondary)', fontWeight: 600, ml: 0.5 }}>{t('chart.by')}</Typography>
-                <Select
-                  value={groupByOptions.some((o) => o.key === groupBy) ? groupBy : 'cause'}
-                  onChange={(e) => handleGroupByChange(e.target.value)}
-                  size="small"
-                  sx={{ height: 24, fontSize: '0.72rem', minWidth: 100, '& .MuiSelect-select': { py: 0.25 } }}
+            {/* One flat row, like the Logs screen: the period (quick ranges,
+                then from / to), what the chart is split by, and the bucket.
+                Buttons, not dropdowns: every choice is visible. */}
+            <ButtonGroup size="small" variant="outlined" aria-label={t('period.label', { defaultValue: 'Period' })}>
+              {[
+                { key: 'today', label: t('period.today', { defaultValue: 'Today' }) },
+                { key: '24h', label: '24h' },
+                { key: '7d', label: '7d' },
+                { key: '30d', label: '30d' },
+              ].map((p) => (
+                <Button
+                  key={p.key}
+                  onClick={() => handlePeriod(p.key)}
+                  variant={period === p.key ? 'contained' : 'outlined'}
+                  sx={{ minWidth: 44, px: 1, textTransform: 'none' }}
                 >
-                  {groupByOptions.map((o) => (
-                    <MenuItem key={o.key} value={o.key} sx={{ fontSize: '0.78rem' }}>{o.label}</MenuItem>
-                  ))}
-                </Select>
-              </>
-            )}
+                  {p.label}
+                </Button>
+              ))}
+            </ButtonGroup>
+
+            <DateLocalizationProvider>
+              <Box data-testid="calls-chart-date-range" sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <DateTimePicker
+                  value={dateRange?.[0] ? new Date(dateRange[0]) : null}
+                  onChange={(d) => { if (d) { setPeriod('custom'); handleDateRangeChange([d, dateRange?.[1] ? new Date(dateRange[1]) : new Date()]); } }}
+                  ampm={false}
+                  slotProps={{ textField: { size: 'small', sx: { width: 180 } } }}
+                />
+                <Typography variant="body2" color="text.secondary">{t('period.to', { defaultValue: 'to' })}</Typography>
+                <DateTimePicker
+                  value={dateRange?.[1] ? new Date(dateRange[1]) : null}
+                  onChange={(d) => { if (d) { setPeriod('custom'); handleDateRangeChange([dateRange?.[0] ? new Date(dateRange[0]) : new Date(), d]); } }}
+                  ampm={false}
+                  slotProps={{ textField: { size: 'small', sx: { width: 180 } } }}
+                />
+              </Box>
+            </DateLocalizationProvider>
 
             <Box sx={{ flexGrow: 1 }} />
 
-            {/* Live is a view toggle, not a filter — it swaps what this chart
-                shows. It used to sit in the counter row, where it read as a
-                sixth statistic you could filter by. */}
-            {!userSession && <Tooltip title={t('chart.liveToggleHint')}>
-              <Chip
-                size="small"
-                onClick={() => setChartMode((mode) => (mode === 'live' ? 'timeline' : 'live'))}
-                variant={chartMode === 'live' ? 'filled' : 'outlined'}
-                icon={(
-                  <Box
-                    component="span"
-                    sx={{
-                      width: 7, height: 7, borderRadius: '50%', ml: 0.75,
-                      bgcolor: chartMode === 'live' ? '#fff' : 'var(--accent-primary)',
-                      animation: chartMode === 'live' ? 'calls-live-pulse 1.6s ease-in-out infinite' : 'none',
-                      '@keyframes calls-live-pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.25 } },
-                    }}
-                  />
-                )}
-                label={liveCallsTotal != null ? t('chart.liveNowCount', { count: liveCallsTotal }) : t('chart.liveNow')}
-                sx={{
-                  height: 24, borderRadius: 1.5, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
-                  color: chartMode === 'live' ? '#fff' : 'var(--accent-primary)',
-                  bgcolor: chartMode === 'live' ? 'var(--accent-primary)' : undefined,
-                  borderColor: 'var(--accent-primary)',
-                  '&:hover': { bgcolor: chartMode === 'live' ? 'var(--accent-primary-hover)' : 'var(--accent-primary-alpha-8)' },
-                }}
-              />
-            </Tooltip>}
-
-            {/* Date bucket — top-right of the chart bar, purple button group.
-                Timeline-only: live mode has no buckets to size. */}
-            {chartMode !== 'live' && (
-            <ButtonGroup size="small" variant="outlined">
-              {[
-                { key: 'auto', label: t('bucket.auto') },
-                { key: 'hour', label: t('bucket.hour') },
-                { key: 'day', label: t('bucket.day') },
-                { key: 'week', label: t('bucket.week') },
-              ].map((b) => {
-                const active = (aggGrouping || 'auto') === b.key;
-                // Same button as the footer's page numbers. The colours set
-                // here before painted the active label in its own background
-                // colour, so the selected bucket read as a blank block.
-                return (
-                  <Button
-                    key={b.key}
-                    onClick={() => handleGroupingChange(b.key === 'auto' ? null : b.key)}
-                    variant={active ? 'contained' : 'outlined'}
-                    sx={{ minWidth: 34, px: 0.75, fontSize: '11px', py: 0.1 }}
-                  >
-                    {b.label}
-                  </Button>
-                );
-              })}
+            <Typography variant="body2" color="text.secondary">{t('chart.by')}</Typography>
+            <ButtonGroup size="small" variant="outlined" aria-label={t('chart.by')}>
+              {groupByOptions.map((o) => (
+                <Button
+                  key={o.key}
+                  onClick={() => handleGroupByChange(o.key)}
+                  variant={groupBy === o.key ? 'contained' : 'outlined'}
+                  sx={{ textTransform: 'none', px: 1.25 }}
+                >
+                  {o.label}
+                </Button>
+              ))}
             </ButtonGroup>
-            )}
 
-            {/* Single date selector for the screen lives in the search bar —
-                the duplicate quick-range buttons that used to sit here were
-                removed. */}
-            <Tooltip title={t('chart.openReports')}>
-              <IconButton size="small" onClick={() => setReportsDrawerOpen(true)} sx={{ color: 'var(--theme-text-primary)', p: 0.25 }}>
-                <OpenInFullIcon sx={{ fontSize: 15 }} />
-              </IconButton>
-            </Tooltip>
+            <ButtonGroup size="small" variant="outlined" aria-label={t('bucket.auto')}>
+              {['auto', 'hour', 'day', 'week'].map((k) => (
+                <Button
+                  key={k}
+                  onClick={() => handleGroupingChange(k === 'auto' ? null : k)}
+                  variant={(aggGrouping || 'auto') === k ? 'contained' : 'outlined'}
+                  sx={{ textTransform: 'none', px: 1.25 }}
+                >
+                  {t(`bucket.${k}`)}
+                </Button>
+              ))}
+            </ButtonGroup>
+
             <Tooltip title={stripCollapsed ? t('chart.show') : t('chart.hide')}>
-              <IconButton size="small" onClick={toggleStripCollapsed} sx={{ color: 'var(--theme-text-primary)', p: 0.25 }}>
-                {stripCollapsed ? <ExpandMoreIcon sx={{ fontSize: 17 }} /> : <ExpandLessIcon sx={{ fontSize: 17 }} />}
+              <IconButton onClick={toggleStripCollapsed} aria-label={stripCollapsed ? t('chart.show') : t('chart.hide')} sx={{ color: 'var(--theme-text-secondary)' }}>
+                {stripCollapsed ? <ExpandMoreIcon sx={{ fontSize: 22 }} /> : <ExpandLessIcon sx={{ fontSize: 22 }} />}
               </IconButton>
             </Tooltip>
           </Box>
 
-          {!stripCollapsed && (chartMode === 'live' ? (
-            // Live replaces the chart — live calls monitor in the chart area.
-            <Box sx={{ maxHeight: 260, overflow: 'auto', py: 0.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Chip
-                  label={t('chart.openList')}
-                  size="small"
-                  variant="outlined"
-                  onClick={() => setLiveDrawerOpen(true)}
-                  sx={{ cursor: 'pointer', fontSize: 11, height: 22 }}
-                />
-              </Box>
-              {/* live_calls is InfluxDB-backed and actually served by
-                  /api/monitoring/charts. EnvironmentChartsPanel asked for
-                  environment_stats, whose mount was deleted from the
-                  mothership — the fetcher registry deliberately omits it, so
-                  pressing Live surfaced "Unknown chart type: environment_stats"
-                  instead of a chart. Live statistics on a list screen come
-                  from Influx; Postgres-backed reporting lives on Reports. */}
-              {/* Time runs left to right in every language. */}
-              <LtrIsland>
-                <LiveChartStrip chartType="live_calls" title={t('chart.liveCalls')} autoSeries />
-              </LtrIsland>
-            </Box>
-          ) : aggregateLoading ? (
+          {!stripCollapsed && (aggregateLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 100 }}>
               <CircularProgress size={22} />
             </Box>
@@ -873,7 +852,10 @@ const Calls = () => {
               <TimeHistogram
                 logs={[]}
                 aggregateData={histogramData}
-                height={100}
+                height={180}
+                showLegend
+                labelFor={seriesLabel}
+                onLegendClick={handleChartBarClick}
                 onBrushSelection={(start, end) => {
                   // Drag across a spike -> filter the table to exactly that window
                   const from = Math.floor(start.getTime() / 1000);
@@ -883,22 +865,93 @@ const Calls = () => {
                 onBarClick={handleChartBarClick}
               />
             </LtrIsland>
-          ) : (
-            <Typography variant="body2" sx={{ color: 'var(--mui-palette-text-secondary)', textAlign: 'center', py: 3 }}>
-              {t('chart.empty')}
-            </Typography>
-          ))}
+          ) : null)}
         </Paper>
       )}
-      {isMobile ? (
+      {/* The headline of the screen: the numbers you came for, at the size that
+          says so. Clicking one writes the same search[call.*] param the filter
+          pills read, so a card and its pill are one piece of state.
+          Rendered even with an empty grid — "0 calls" is an answer; the row
+          vanishing is not. A null value renders "—", never a confident 0. */}
+      {!isMobile && chartMode === 'timeline' && (
+        <Box data-testid="calls-counters" sx={{ mb: 1.25 }}>
+          {/* Four numbers, as small chips like Devices: how many calls, how many were answered (and
+              the rate), how many were missed, how long they last. The first
+              three filter the list; direction lives in the chart's split. */}
+          <StatChips
+            items={[
+              { key: 'total', label: t('stats.total'), hint: t('stats.totalHint'), value: summaryCounts.total, icon: <PhoneIcon />, colorVar: '--counter-total', filterKey: null },
+              {
+                key: 'answered',
+                label: summaryCounts.answerRate == null ? t('stats.answered') : `${t('stats.answered')} · ${formatPercent(summaryCounts.answerRate)}`,
+                hint: t('stats.answeredHint'), value: summaryCounts.answered, icon: <PhoneInTalkIcon />, colorVar: '--counter-answered', filterKey: 'answered',
+              },
+              { key: 'noAnswer', label: t('stats.noAnswer'), hint: t('stats.noAnswerHint'), value: summaryCounts.noAnswer, icon: <PhoneMissedIcon />, colorVar: '--counter-no-answer', filterKey: 'noAnswer' },
+            ].map(({ filterKey, value, ...item }) => ({
+              ...item,
+              // null is "unknown", never a confident 0.
+              value: value == null ? '—' : value,
+              active: filterKey === null ? !anyQuickActive : isQuickActive(filterKey),
+              onClick: () => (filterKey === null ? clearQuickFilters() : handleQuickFilterToggle(filterKey)),
+            })).concat([
+              { key: 'avgDuration', label: t('stats.avgDuration'), hint: t('stats.avgDurationHint'), value: formatClock(summaryCounts.avgDuration), icon: <TimerOutlinedIcon /> },
+            ])}
+          />
+        </Box>
+      )}
+      {/* Search + the four filters worth keeping on screen. The other nine
+          segments stay behind the ⚙ panel, which is where a 13-field grid
+          belongs. */}
+      {!isMobile && chartMode === 'timeline' && (
+        <CentralizedSearch
+          inlineFilters={INLINE_FILTER_FIELDS}
+          segments={segments}
+          currentSearchParams={currentSearchParams}
+          onFilterChange={handleSearch}
+          onQuickSearch={handleQuickSearch}
+          onClearAllFilters={() => handleClearAllFilters(setCurrentSearchParams)}
+          dateRange={dateRange}
+          onDateRangeChange={handleDateRangeChange}
+          onRefresh={handleRefresh}
+          onExport={handleExport}
+          onColumnSelectorOpen={handleColumnSelectorOpen}
+          quickSearchText={quickSearchText}
+          onQuickSearchChange={handleQuickSearchChange}
+          placeholder={t('search.placeholder')}
+          textParam="search[inline]"
+          showExclude={true}
+          // The period is chosen in the chart's toolbar, beside the grouping.
+          hideDateRange
+        />
+      )}
+
+      {/* Live now and Reports are whole views: no chart, counters or
+          history table around them. */}
+      {chartMode === 'live' && (
+        <Paper elevation={0} data-testid="calls-live-view" sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: 2, borderRadius: 2, bgcolor: 'var(--mui-palette-background-paper)' }}>
+          <LtrIsland>
+            <LiveChartStrip chartType="live_calls" title={t('chart.liveCalls')} autoSeries />
+          </LtrIsland>
+          <Box sx={{ mt: 2 }}>
+            <LiveCallsPanel open />
+          </Box>
+        </Paper>
+      )}
+      {chartMode === 'reports' && (
+        <Paper elevation={0} data-testid="calls-reports" sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: 2, borderRadius: 2, bgcolor: 'var(--mui-palette-background-paper)' }}>
+          <ReportsPanel category="calls" open />
+        </Paper>
+      )}
+
+      {chartMode === 'timeline' && (isMobile ? (
         (
           <CallMobileView
             rows={displayRows}
-            onOpenRecording={handleOpenRecording}
-            onRowClick={(call) => setSelectedCall(call)}
             hasNextPage={hasNextPage}
             loadingMore={loadingMore}
             onLoadMore={() => loadMoreCalls(dateRange)}
+            canViewEvents={canViewEvents}
+            onViewEvents={(call) => goToEvents('call', call.uuid || call.id)}
           />
         )
       ) : (
@@ -925,7 +978,9 @@ const Calls = () => {
               hideFooterPagination
               disableSelectionOnClick
               autoHeight={false}
-              rowHeight={44}
+              // Dense, like the Logs screen: more calls on screen, less chrome.
+              rowHeight={34}
+              columnHeaderHeight={36}
               sx={{
                 height: '100%',
                 border: '1px solid var(--theme-border)',
@@ -956,6 +1011,9 @@ const Calls = () => {
                 '& .MuiDataGrid-cell': {
                   borderBottom: '1px solid var(--theme-border)',
                   color: 'var(--theme-text-primary)',
+                  // One baseline per row: the recording player sat above the text.
+                  display: 'flex',
+                  alignItems: 'center',
                 },
                 '& .MuiDataGrid-row': {
                   cursor: 'pointer',
@@ -1007,7 +1065,7 @@ const Calls = () => {
           </Box>
 
         </Box>
-      )}
+      ))}
       <Drawer
         anchor="right"
         open={Boolean(selectedCall)}
@@ -1041,6 +1099,7 @@ const Calls = () => {
             <CallLogsPanel
               call={selectedCall}
               onBack={() => setPanelMode('details')}
+              onOpenCall={(other) => { setSelectedCall(other); setPanelMode('details'); }}
               onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
             />
           )}
@@ -1090,15 +1149,6 @@ const Calls = () => {
         {liveDrawerOpen && <LiveCallsPanel open={liveDrawerOpen} />}
       </LiveDrawer>
 
-      {/* Full call reports — every queries.yml :category: calls report, tables incl. */}
-      <LiveDrawer
-        open={reportsDrawerOpen}
-        onClose={() => setReportsDrawerOpen(false)}
-        title={t('drawer.reports')}
-        icon={<AssessmentIcon sx={{ color: '#0e9488' }} />}
-      >
-        {reportsDrawerOpen && <ReportsPanel category="calls" open={reportsDrawerOpen} />}
-      </LiveDrawer>
     </Box>
   );
 };

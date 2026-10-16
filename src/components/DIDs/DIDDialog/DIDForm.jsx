@@ -42,6 +42,8 @@ import './DIDForm.css';
 const BRIDGE_LABELS = ['queue', 'ivr', 'vml', 'call_condition', 'bot', 'announcement', 'extension'];
 const BRIDGE_OPTIONS = ['number', 'announcement', 'vml', 'call_condition', 'que', 'queue', 'ivr', 'bot', 'extension', 'conference'];
 const NO_RESOURCES = ['queue', 'ivr', 'announcement', 'vml', 'call_condition', 'bot'];
+// Types the route wizard has an editor for, so a new one can be made from here.
+const CREATABLE_BRIDGES = ['announcement', 'vml', 'call_condition', 'queue', 'ivr', 'bot'];
 
 // The bridge type select's options, in capitals as ever.
 const bridgeOptionLabel = (t, type) => (BRIDGE_OPTIONS.includes(type)
@@ -101,6 +103,11 @@ const DIDForm = forwardRef(({
   const userSession = useIsUserSession();
   const { can } = usePermissions();
   const canEditProviders = can('providers', 'write');
+  // Editing or making a destination: a user needs the ACL's write grant on
+  // that type (an account's ACL names screens, not destination types).
+  const canWriteBridge = (type) => !userSession || can(type, 'write');
+  // A new one also needs an editor the route wizard can open.
+  const canCreateBridge = (type) => CREATABLE_BRIDGES.includes(type) && canWriteBridge(type);
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -644,7 +651,7 @@ const DIDForm = forwardRef(({
                   onChange={(e) => handleBridgeChange(e.target.value)}
                   MenuProps={menuProps(Z.L1)}
                 >
-                  {['announcement', 'vml', 'call_condition', 'queue', 'ivr', 'bot'].includes(formData.bridge_type) && (
+                  {canCreateBridge(formData.bridge_type) && (
                     <MenuItem value="add_new" sx={{ color: 'primary.main', fontWeight: 600 }}>
                       {t('form.createNew', { type: getBridgeTypeLabel(formData.bridge_type) })}
                     </MenuItem>
@@ -660,7 +667,7 @@ const DIDForm = forwardRef(({
                   {errors.bridge_uuid || t('form.destinationHelp')}
                 </FormHelperText>
               </FormControl>
-              {formData.bridge_uuid && onDrillDown && (
+              {formData.bridge_uuid && onDrillDown && canWriteBridge(formData.bridge_type) && (
                 <Tooltip title={t('form.editType', { type: getBridgeTypeLabel(formData.bridge_type) })}>
                   <IconButton
                     size="small"
@@ -685,7 +692,7 @@ const DIDForm = forwardRef(({
                   </IconButton>
                 </Tooltip>
               )}
-              {onDrillDown && ['announcement', 'vml', 'call_condition', 'queue', 'ivr', 'bot'].includes(formData.bridge_type) && (
+              {onDrillDown && canCreateBridge(formData.bridge_type) && (
                 <Tooltip title={t('form.createNewTooltip', { type: getBridgeTypeLabel(formData.bridge_type) })}>
                   <IconButton
                     size="small"
