@@ -1,7 +1,8 @@
 import { apiService } from '../apiService';
+import { mockApis } from './conversationsApi';
 
 /** Contacts and their site-defined fields. Bodies are form-url-encoded. */
-export const contactsApi = {
+const real = {
   /** Returns { data: contact | null }. */
   lookup: (phone) =>
     apiService.get(`/api/contacts/lookup?${new URLSearchParams({ phone })}`, {}, 'looking up contact', false),
@@ -29,5 +30,8 @@ export const contactsApi = {
   /** Returns { data: [{ key, label, type, options, required }] }. */
   fields: () => apiService.get('/api/contact_fields', {}, 'fetching contact fields', false),
 };
+
+// Same switch as conversationsApi (VITE_MOCK_CONVERSATIONS=1): shared mock state.
+export const contactsApi = mockApis ? mockApis.contactsApi : real;
 
 export default contactsApi;

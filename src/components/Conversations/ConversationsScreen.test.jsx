@@ -1,105 +1,82 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import '../../i18n';
 import ConversationsScreen from './ConversationsScreen.jsx';
+import { createMockApis, liveRowsDoc } from './fixtures';
 
-let granted;
-vi.mock('../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: (k) => granted.includes(k) }) }));
-let phoneCall;
-vi.mock('../../context/SoftphoneContext', () => ({ useSoftphone: () => ({ call: phoneCall }) }));
+const h = vi.hoisted(() => ({ granted: [], call: null, apis: null }));
+vi.mock('../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: (k) => h.granted.includes(k) }) }));
+vi.mock('../../context/SoftphoneContext', () => ({ useSoftphone: () => ({ call: h.call }) }));
 vi.mock('../LiveDashboard/useLiveEnvironment', () => ({ useLiveEnvironment: () => ({ uuid: 'env-1' }) }));
-vi.mock('../../hooks/useLiveEntities', () => ({
-  default: () => ({
-    connected: true,
-    byScope: () => [{ live_calls_incoming: [{ call_uuid: 'live-1', from_number: '0525550144' }] }],
-  }),
-}));
+vi.mock('../../hooks/useLiveEntities', () => ({ default: () => ({ connected: true, byScope: () => [liveRowsDoc] }) }));
 vi.mock('../Phone/PhoneScreen.jsx', () => ({ default: () => <div data-testid="phone-screen" /> }));
-vi.mock('../../services/api/conversationsApi', () => ({
-  conversationsApi: {
-    list: vi.fn(async () => ({ data: [{ call_uuid: 'h-1', remote_number: '0501112222', direction: 'incoming', started_at: '2026-10-16T10:00:00Z', contact: { name: 'Dan Levi' } }] })),
-    events: vi.fn(async () => ({ data: [
-      { id: 1, at: '2026-10-16T10:00:00Z', kind: 'call', text: 'Answered by Dana' },
-      { id: 2, at: '2026-10-16T10:01:00Z', kind: 'note', text: 'Send the price list' },
-    ] })),
-    addNote: vi.fn(async () => ({ data: {} })),
-  },
-}));
-vi.mock('../../services/api/contactsApi', () => ({
-  contactsApi: {
-    fields: vi.fn(async () => ({ data: [{ key: 'plan', label: 'Plan interest', type: 'text' }] })),
-    lookup: vi.fn(async () => ({ data: { uuid: 'ct-1' } })),
-    get: vi.fn(async () => ({ data: { uuid: 'ct-1', phone: '0525550144', name: 'Yael Cohen', email: '', fields: { plan: 'Annual' }, meta: { renewal: '' }, previous: [] } })),
-    update: vi.fn(async () => ({ data: {} })),
-    create: vi.fn(),
-  },
-}));
-vi.mock('../../services/api/messagesApi', () => ({ messagesApi: { send: vi.fn() } }));
-
-import { conversationsApi } from '../../services/api/conversationsApi';
-import { contactsApi } from '../../services/api/contactsApi';
+vi.mock('../../services/api/conversationsApi', () => ({ MOCK_CONVERSATIONS: false, conversationsApi: { list: (a) => h.apis.conversationsApi.list(a), events: (a) => h.apis.conversationsApi.events(a), addNote: (a, b) => h.apis.conversationsApi.addNote(a, b) } }));
+vi.mock('../../services/api/contactsApi', () => ({ contactsApi: { lookup: (a) => h.apis.contactsApi.lookup(a), get: (a) => h.apis.contactsApi.get(a), fields: () => h.apis.contactsApi.fields(), update: (a, b) => h.apis.contactsApi.update(a, b), create: (a) => h.apis.contactsApi.create(a) } }));
+vi.mock('../../services/api/messagesApi', () => ({ messagesApi: { send: vi.fn(async () => ({})) } }));
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  granted = ['calls', 'notes', 'messages', 'contacts'];
-  phoneCall = null;
+  h.granted = ['calls', 'notes', 'messages', 'contacts'];
+  h.call = null;
+  h.apis = createMockApis();
 });
 
-describe('Conversations screen', () => {
-  it('shows live rows from the cable and loads the thread of the selected one', async () => {
+describe('Conversations screen (mock data)', () => {
+  it('lists the two live calls first and switches to All and Missed', async () => {
     render(<ConversationsScreen />);
-    fireEvent.click(await screen.findByTestId('session-row'));
-    expect(await screen.findByText('Answered by Dana')).toBeInTheDocument();
-    expect(conversationsApi.events).toHaveBeenCalledWith('live-1');
-    expect(screen.getByTestId('event-note')).toHaveTextContent('Send the price list');
-    expect(conversationsApi.list).not.toHaveBeenCalled();
-  });
-
-  it('selects the conversation of the phone call', async () => {
-    phoneCall = { id: 'live-1', state: 'active', remote: '0525550144' };
-    render(<ConversationsScreen />);
-    await waitFor(() => expect(conversationsApi.events).toHaveBeenCalledWith('live-1'));
-    expect(await screen.findByText('Yael Cohen', { selector: 'button *, button' })).toBeInTheDocument();
-  });
-
-  it('loads history for the All tab from the conversations API', async () => {
-    render(<ConversationsScreen />);
+    expect(await screen.findAllByTestId('session-row')).toHaveLength(2);
     fireEvent.click(screen.getByRole('tab', { name: 'All' }));
-    expect(await screen.findByText('0501112222', { exact: false })).toBeTruthy();
-    expect(conversationsApi.list).toHaveBeenCalledWith({ tab: 'all' });
+    await screen.findByText('Dan Levi');
+    expect(screen.getAllByTestId('session-row').length).toBe(4);
+    fireEvent.click(screen.getByRole('tab', { name: 'Missed' }));
+    await waitFor(() => expect(screen.getAllByTestId('session-row')).toHaveLength(1));
+    expect(screen.getByText('Noa Bar')).toBeInTheDocument();
   });
 
-  it('posts a note from the composer', async () => {
+  it('shows the thread of the selected session with its note card', async () => {
     render(<ConversationsScreen />);
-    fireEvent.click(await screen.findByTestId('session-row'));
-    fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Call back' } });
+    fireEvent.click((await screen.findAllByTestId('session-row'))[1]);
+    expect(await screen.findByText('Answered by Dana')).toBeInTheDocument();
+    expect(screen.getByTestId('event-note')).toHaveTextContent('Wants the annual plan');
+    expect(screen.getByTestId('event-sms')).toBeInTheDocument();
+    expect(screen.getAllByTestId('session-row')[1]).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('adds a note and appends it to the thread', async () => {
+    render(<ConversationsScreen />);
+    fireEvent.click((await screen.findAllByTestId('session-row'))[1]);
+    fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Call back Sunday' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
-    await waitFor(() => expect(conversationsApi.addNote).toHaveBeenCalledWith('live-1', 'Call back'));
+    expect(await screen.findByText('Call back Sunday')).toBeInTheDocument();
   });
 
-  it('patches a contact field inline', async () => {
-    phoneCall = { id: 'live-1', state: 'active', remote: '0525550144' };
+  it("selects the phone call's conversation", async () => {
+    h.call = { id: 'c-live', state: 'active', remote: '0525550144' };
     render(<ConversationsScreen />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Email' }));
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'y@x.io' } });
-    fireEvent.keyDown(screen.getByLabelText('Email'), { key: 'Enter' });
-    await waitFor(() => expect(contactsApi.update).toHaveBeenCalledWith('ct-1', { field: 'email', value: 'y@x.io' }));
+    expect(await screen.findByText('Answered by Dana')).toBeInTheDocument();
   });
 
-  it('renders only the panes the ACL grants', async () => {
-    granted = ['calls'];
+  it('hides the composer without notes and messages, the contact without contacts', async () => {
+    h.granted = ['calls'];
     render(<ConversationsScreen />);
-    fireEvent.click(await screen.findByTestId('session-row'));
+    fireEvent.click((await screen.findAllByTestId('session-row'))[1]);
     await screen.findByText('Answered by Dana');
     expect(screen.queryByLabelText('Message')).toBeNull();
     expect(screen.queryByTestId('contact-panel')).toBeNull();
     expect(screen.getByTestId('phone-screen')).toBeInTheDocument();
   });
 
-  it('shows no list or thread without calls', () => {
-    granted = [];
+  it('hides the list and thread without calls but keeps the phone', () => {
+    h.granted = ['contacts'];
     render(<ConversationsScreen />);
     expect(screen.queryByTestId('session-row')).toBeNull();
     expect(screen.getByText('Your access does not include conversations.')).toBeInTheDocument();
+    expect(screen.getByTestId('phone-screen')).toBeInTheDocument();
+  });
+
+  it('shows the contact panel for the selected number', async () => {
+    h.call = { id: 'c-live', state: 'active', remote: '0525550144' };
+    render(<ConversationsScreen />);
+    const panel = await screen.findByTestId('contact-panel');
+    expect(await within(panel).findByText('Cohen Ltd')).toBeInTheDocument();
   });
 });

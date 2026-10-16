@@ -6,6 +6,8 @@ import { useSoftphone } from '../../context/SoftphoneContext';
 import { useLiveEnvironment } from '../LiveDashboard/useLiveEnvironment';
 import useLiveEntities from '../../hooks/useLiveEntities';
 import { liveSessions } from './liveSessions';
+import { MOCK_CONVERSATIONS } from '../../services/api/conversationsApi';
+import { liveRowsDoc } from './fixtures';
 
 const rowsOf = (res) => (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []);
 
@@ -26,7 +28,7 @@ export default function useConversations() {
   const [threadLoading, setThreadLoading] = useState(false);
   const [sendError, setSendError] = useState(false);
 
-  const liveRows = useMemo(() => liveSessions(live.byScope('environment')[0]), [live]);
+  const liveRows = useMemo(() => liveSessions(MOCK_CONVERSATIONS ? liveRowsDoc : live.byScope('environment')[0]), [live]);
 
   // History: only All / Missed come from the API.
   useEffect(() => {
