@@ -1,14 +1,50 @@
 import { useTranslation } from 'react-i18next';
-import { Avatar, Box, ButtonBase, CircularProgress, Tab, Tabs, Typography } from '@mui/material';
+import { useState } from 'react';
+import { Avatar, Box, ButtonBase, Chip, CircularProgress, IconButton, InputAdornment, ListSubheader, Menu, MenuItem, Tab, Tabs, TextField, Typography, useTheme } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import SortIcon from '@mui/icons-material/Sort';
+import { SORTS } from './viewOptions';
 import Bdi from '../../i18n/Bdi';
 import { formatTime } from '../../utils/dateUtils';
 
 const TABS = ['live', 'all', 'missed'];
 
+const isBot = (s) => s.outcome === 'bot' || s.leg_b_type === 'vml';
+const OUTCOMES = ['answered', 'missed', 'bot'];
+const DIRECTIONS = ['incoming', 'outgoing'];
+
+/** One small menu: sort, direction, outcome (and Everyone when allowed). */
+function ViewMenu({ view, onView, canEveryone, t }) {
+  const [anchor, setAnchor] = useState(null);
+  const rtl = useTheme().direction === 'rtl';
+  const item = (label, selected, onClick) => <MenuItem dense key={label} selected={selected} onClick={onClick}>{label}</MenuItem>;
+  return (
+    <>
+      <IconButton size="small" aria-label={t('view.menu')} onClick={(e) => setAnchor(e.currentTarget)}><SortIcon fontSize="small" /></IconButton>
+      <Menu
+        open={Boolean(anchor)} anchorEl={anchor} onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: rtl ? 'left' : 'right' }} transformOrigin={{ vertical: 'top', horizontal: rtl ? 'left' : 'right' }}
+      >
+        <ListSubheader disableSticky>{t('view.sortBy')}</ListSubheader>
+        {Object.keys(SORTS).map((k) => item(t(`view.sort.${k}`), view.sort === k, () => onView({ sort: k })))}
+        <ListSubheader disableSticky>{t('view.direction')}</ListSubheader>
+        {item(t('view.all'), !view.direction, () => onView({ direction: '' }))}
+        {DIRECTIONS.map((k) => item(t(`direction.${k}`), view.direction === k, () => onView({ direction: k })))}
+        <ListSubheader disableSticky>{t('view.outcome')}</ListSubheader>
+        {item(t('view.all'), !view.outcome, () => onView({ outcome: '' }))}
+        {OUTCOMES.map((k) => item(t(`outcome.${k}`), view.outcome === k, () => onView({ outcome: k })))}
+        {canEveryone && <ListSubheader disableSticky>{t('view.scope')}</ListSubheader>}
+        {canEveryone && item(t('view.mine'), !view.everyone, () => onView({ everyone: false }))}
+        {canEveryone && item(t('view.everyone'), view.everyone, () => onView({ everyone: true }))}
+      </Menu>
+    </>
+  );
+}
+
 const initialOf = (s) => ((s.contact?.name || '').trim()[0] || '?').toUpperCase();
 
 /** Left pane: Live / All / Missed. The selected row is highlighted. */
-export default function SessionList({ tab, onTab, sessions, selectedId, onSelect, loading, error, liveConnected }) {
+export default function SessionList({ tab, onTab, sessions, selectedId, onSelect, loading, error, liveConnected, search, onSearch, view, onView, canEveryone }) {
   const { t } = useTranslation('conversations');
   const empty = !loading && sessions.length === 0;
   return (
@@ -16,6 +52,15 @@ export default function SessionList({ tab, onTab, sessions, selectedId, onSelect
       <Tabs value={tab} onChange={(_, v) => onTab(v)} variant="fullWidth" sx={{ minHeight: 40, borderBottom: 1, borderColor: 'divider' }}>
         {TABS.map((k) => <Tab key={k} value={k} label={t(`tabs.${k}`)} sx={{ minHeight: 40, textTransform: 'none' }} />)}
       </Tabs>
+      <Box sx={{ px: 1.25, py: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <TextField
+          size="small" fullWidth type="search" value={search} onChange={(e) => onSearch(e.target.value)}
+          placeholder={t('search.placeholder')}
+          inputProps={{ 'aria-label': t('search.label'), dir: 'ltr', inputMode: 'tel', style: { textAlign: 'start' } }}
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+        />
+        <ViewMenu view={view} onView={onView} canEveryone={canEveryone} t={t} />
+      </Box>
       <Box sx={{ flex: 1, overflowY: 'auto' }}>
         {loading && <Box sx={{ p: 2, textAlign: 'center' }}><CircularProgress size={22} /></Box>}
         {error && <Typography role="alert" variant="body2" color="error" sx={{ p: 2 }}>{t('list.error')}</Typography>}
@@ -42,8 +87,9 @@ export default function SessionList({ tab, onTab, sessions, selectedId, onSelect
                 <Typography noWrap sx={{ fontWeight: 500, fontSize: 13 }}><Bdi>{title}</Bdi></Typography>
                 <Typography noWrap variant="caption" color="text.secondary">
                   {t(`direction.${s.direction || 'unknown'}`, { defaultValue: '' })}
-                  {s.outcome ? ` · ${s.outcome}` : ''}
+                  {s.outcome && !isBot(s) ? ` · ${t(`outcome.${s.outcome}`, { defaultValue: '' })}` : ''}
                 </Typography>
+                {isBot(s) && <Chip size="small" label={t('outcome.bot')} sx={{ ms: 0.5, height: 16, fontSize: 10 }} />}
               </Box>
               <Typography variant="caption" sx={{ color: s.live ? 'success.main' : 'text.secondary' }}>
                 {s.live ? t('list.live') : (s.started_at ? formatTime(s.started_at) : '')}

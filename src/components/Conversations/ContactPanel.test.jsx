@@ -1,16 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '../../i18n';
-import ContactPanel from './ContactPanel.jsx';
-import { createMockApis, CONTACT_UUID } from './fixtures';
-
-const h = vi.hoisted(() => ({ apis: null }));
-vi.mock('../../services/api/contactsApi', () => ({ contactsApi: {
-  lookup: (a) => h.apis.contactsApi.lookup(a), get: (a) => h.apis.contactsApi.get(a), fields: () => h.apis.contactsApi.fields(),
-  update: vi.fn((a, b) => h.apis.contactsApi.update(a, b)), create: (a) => h.apis.contactsApi.create(a) } }));
-import { contactsApi } from '../../services/api/contactsApi';
-
-beforeEach(() => { h.apis = createMockApis(); vi.clearAllMocks(); });
+import { describe, it, expect, vi, let update;
+beforeEach(() => { h.apis = createMockApis(); update = vi.spyOn(h.apis, 'updateContact'); });
 
 describe('ContactPanel (mock data)', () => {
   it('renders name, defined fields by type, tags and previous conversations', async () => {
@@ -29,7 +18,7 @@ describe('ContactPanel (mock data)', () => {
     const input = screen.getByLabelText('Company');
     fireEvent.change(input, { target: { value: 'Cohen Group' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    await waitFor(() => expect(contactsApi.update).toHaveBeenCalledWith(CONTACT_UUID, { field: 'company', value: 'Cohen Group' }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(CONTACT_UUID, { field: 'company', value: 'Cohen Group' }));
     expect(await screen.findByText('Cohen Group')).toBeInTheDocument();
   });
 
@@ -39,10 +28,10 @@ describe('ContactPanel (mock data)', () => {
     const input = screen.getByLabelText('key: value');
     fireEvent.change(input, { target: { value: 'vip: yes' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    await waitFor(() => expect(contactsApi.update).toHaveBeenCalledWith(CONTACT_UUID, { meta: { vip: 'yes' } }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(CONTACT_UUID, { meta: { vip: 'yes' } }));
     expect(await screen.findByText('vip: yes')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Remove tag renewal' }));
-    await waitFor(() => expect(contactsApi.update).toHaveBeenCalledWith(CONTACT_UUID, { removeMeta: 'renewal' }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(CONTACT_UUID, { removeMeta: 'renewal' }));
     await waitFor(() => expect(screen.queryByText('renewal')).toBeNull());
   });
 

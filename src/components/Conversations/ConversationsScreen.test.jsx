@@ -5,19 +5,23 @@ import ConversationsScreen from './ConversationsScreen.jsx';
 import { createMockApis, liveRowsDoc } from './fixtures';
 
 const h = vi.hoisted(() => ({ granted: [], call: null, apis: null }));
-vi.mock('../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: (k) => h.granted.includes(k) }) }));
+vi.mock('../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: (k, a) => h.granted.includes(a && a !== 'read' ? `${k}:${a}` : k) }) }));
 vi.mock('../../context/SoftphoneContext', () => ({ useSoftphone: () => ({ call: h.call }) }));
 vi.mock('../LiveDashboard/useLiveEnvironment', () => ({ useLiveEnvironment: () => ({ uuid: 'env-1' }) }));
 vi.mock('../../hooks/useLiveEntities', () => ({ default: () => ({ connected: true, byScope: () => [liveRowsDoc] }) }));
 vi.mock('../Phone/PhoneScreen.jsx', () => ({ default: () => <div data-testid="phone-screen" /> }));
-vi.mock('../../services/api/conversationsApi', () => ({ MOCK_CONVERSATIONS: false, conversationsApi: { list: (a) => h.apis.conversationsApi.list(a), events: (a) => h.apis.conversationsApi.events(a), addNote: (a, b) => h.apis.conversationsApi.addNote(a, b) } }));
-vi.mock('../../services/api/contactsApi', () => ({ contactsApi: { lookup: (a) => h.apis.contactsApi.lookup(a), get: (a) => h.apis.contactsApi.get(a), fields: () => h.apis.contactsApi.fields(), update: (a, b) => h.apis.contactsApi.update(a, b), create: (a) => h.apis.contactsApi.create(a) } }));
+vi.mock('../../services/api/conversationsApi', () => {
+  const m = { MOCK_CONVERSATIONS: false };
+  ['listConversations', 'getConversation', 'getEvents', 'addNote', 'lookupContact', 'getContact', 'createContact', 'updateContact', 'listFields', 'createField'].forEach((n) => { m[n] = (...a) => h.apis[n](...a); });
+  return m;
+});
 vi.mock('../../services/api/messagesApi', () => ({ messagesApi: { send: vi.fn(async () => ({})) } }));
 
 beforeEach(() => {
   h.granted = ['calls', 'notes', 'messages', 'contact'];
   h.call = null;
   h.apis = createMockApis();
+  try { localStorage.clear(); } catch { /* none */ }
 });
 
 describe('Conversations screen (mock data)', () => {
@@ -26,10 +30,54 @@ describe('Conversations screen (mock data)', () => {
     expect(await screen.findAllByTestId('session-row')).toHaveLength(2);
     fireEvent.click(screen.getByRole('tab', { name: 'All' }));
     await screen.findByText('Dan Levi');
-    expect(screen.getAllByTestId('session-row').length).toBe(4);
+    expect(screen.getAllByTestId('session-row').length).toBe(6);
     fireEvent.click(screen.getByRole('tab', { name: 'Missed' }));
     await waitFor(() => expect(screen.getAllByTestId('session-row')).toHaveLength(1));
     expect(screen.getByText('Noa Bar')).toBeInTheDocument();
+  });
+
+  it('filters live rows by typed digits (0 vs +972) and sends q to the API for All', async () => {
+    render(<ConversationsScreen />);
+    await screen.findAllByTestId('session-row');
+    fireEvent.change(screen.getByLabelText('Search by number'), { target: { value: '052 555-0199' } });
+    await waitFor(() => expect(screen.getAllByTestId('session-row')).toHaveLength(1));
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
+    const spy = vi.spyOn(h.apis, 'listConversations');
+    fireEvent.change(screen.getByLabelText('Search by number'), { target: { value: '0525550177' } });
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ tab: 'all', q: '0525550177' })), { timeout: 2000 });
+    await waitFor(() => expect(screen.getAllByTestId('session-row')).toHaveLength(1));
+  });
+
+  it('labels bot conversations with a Bot chip', async () => {
+    render(<ConversationsScreen />);
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
+    expect(await screen.findByText('Bot')).toBeInTheDocument();
+  });
+
+  it('sorts oldest first through the menu and remembers it', async () => {
+    render(<ConversationsScreen />);
+    const spy = vi.spyOn(h.apis, 'listConversations');
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sort and filter' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Oldest first' }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ orderBy: 'started_at', orderKind: 'asc' })));
+    expect(JSON.parse(localStorage.getItem('conversations-view')).sort).toBe('oldest');
+  });
+
+  it('offers Everyone only with the call environment permission and then sends scope', async () => {
+    render(<ConversationsScreen />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sort and filter' }));
+    expect(screen.queryByRole('menuitem', { name: 'Everyone' })).toBeNull();
+  });
+
+  it('sends scope=environment when Everyone is chosen', async () => {
+    h.granted = [...h.granted, 'call:environment'];
+    render(<ConversationsScreen />);
+    const spy = vi.spyOn(h.apis, 'listConversations');
+    fireEvent.click(screen.getByRole('tab', { name: 'All' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sort and filter' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Everyone' }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ scope: 'environment' })));
   });
 
   it('shows the thread of the selected session with its note card', async () => {

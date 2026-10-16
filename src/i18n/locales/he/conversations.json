@@ -55,5 +55,31 @@
     "previous": "שיחות קודמות",
     "noPrevious": "אין עדיין.",
     "error": "לא ניתן לשמור."
+  },
+  "search": {
+    "placeholder": "חיפוש לפי מספר",
+    "label": "חיפוש לפי מספר"
+  },
+  "view": {
+    "menu": "מיון וסינון",
+    "sortBy": "מיון לפי",
+    "sort": {
+      "newest": "החדשות ראשונות",
+      "oldest": "הישנות ראשונות",
+      "longest": "המשך הארוך ביותר",
+      "shortest": "המשך הקצר ביותר"
+    },
+    "direction": "כיוון",
+    "outcome": "תוצאה",
+    "all": "הכל",
+    "scope": "הצגה",
+    "mine": "שלי",
+    "everyone": "כולם"
+  },
+  "outcome": {
+    "answered": "נענתה",
+    "missed": "לא נענתה",
+    "bot": "בוט",
+    "failed": "נכשלה"
   }
 }

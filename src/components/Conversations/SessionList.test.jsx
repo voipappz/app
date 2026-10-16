@@ -4,14 +4,14 @@ import '../../i18n';
 import SessionList from './SessionList.jsx';
 import { conversations } from './fixtures';
 
-const base = { tab: 'all', sessions: conversations, selectedId: 'c-ended', loading: false, error: false, liveConnected: true };
+const base = { tab: 'all', sessions: conversations, selectedId: 'c-ended', loading: false, error: false, liveConnected: true, search: '', onSearch: () => {}, view: { sort: 'newest', direction: '', outcome: '', everyone: false }, onView: () => {}, canEveryone: false };
 
 describe('SessionList', () => {
   it('highlights the selected row and reports clicks and tab changes', () => {
     const onSelect = vi.fn(); const onTab = vi.fn();
     render(<SessionList {...base} onSelect={onSelect} onTab={onTab} />);
     const rows = screen.getAllByTestId('session-row');
-    expect(rows).toHaveLength(6);
+    expect(rows).toHaveLength(8);
     expect(rows[3]).toHaveAttribute('aria-current', 'true');
     fireEvent.click(rows[2]);
     expect(onSelect).toHaveBeenCalledWith('c-missed');

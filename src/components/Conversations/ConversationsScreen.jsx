@@ -55,7 +55,7 @@ export default function ConversationsScreen() {
         <Box component="aside" sx={{ borderInlineEnd: 1, borderColor: 'divider', bgcolor: 'background.paper', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ p: 1.25, display: 'flex', alignItems: 'center', gap: 1, minHeight: 52, borderBottom: 1, borderColor: 'divider' }}>{menu}<Typography sx={{ fontWeight: 500 }}>{t('list.title')}</Typography></Box>
           <Box sx={{ flex: 1, minHeight: 0 }}>
-            <SessionList tab={c.tab} onTab={c.setTab} sessions={c.sessions} selectedId={c.selectedId} onSelect={pick} loading={c.listLoading} error={c.listError} liveConnected={c.liveConnected} />
+            <SessionList tab={c.tab} onTab={c.setTab} sessions={c.sessions} selectedId={c.selectedId} onSelect={pick} loading={c.listLoading} error={c.listError} liveConnected={c.liveConnected} search={c.search} onSearch={c.setSearch} view={c.view} onView={c.setView} canEveryone={c.canEveryone} />
           </Box>
         </Box>
       )}
@@ -64,7 +64,7 @@ export default function ConversationsScreen() {
         <Box component="aside" data-testid="list-overlay" sx={{ position: 'absolute', zIndex: 3, insetBlock: 0, insetInlineStart: 0, width: 'min(280px, 85vw)', bgcolor: 'background.paper', boxShadow: 6, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ p: 1.25, display: 'flex', alignItems: 'center', gap: 1, minHeight: 52, borderBottom: 1, borderColor: 'divider' }}>{menu}<Typography sx={{ fontWeight: 500 }}>{t('list.title')}</Typography></Box>
           <Box sx={{ flex: 1, minHeight: 0 }}>
-            <SessionList tab={c.tab} onTab={c.setTab} sessions={c.sessions} selectedId={c.selectedId} onSelect={pick} loading={c.listLoading} error={c.listError} liveConnected={c.liveConnected} />
+            <SessionList tab={c.tab} onTab={c.setTab} sessions={c.sessions} selectedId={c.selectedId} onSelect={pick} loading={c.listLoading} error={c.listError} liveConnected={c.liveConnected} search={c.search} onSearch={c.setSearch} view={c.view} onView={c.setView} canEveryone={c.canEveryone} />
           </Box>
         </Box>
       )}

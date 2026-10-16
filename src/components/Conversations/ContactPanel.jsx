@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Box, Button, Chip, IconButton, MenuItem, TextField, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import Bdi from '../../i18n/Bdi';
-import { contactsApi } from '../../services/api/contactsApi';
+import { lookupContact, getContact, createContact, updateContact, listFields } from '../../services/api/conversationsApi';
 import { formatOnlyDate, formatTime } from '../../utils/dateUtils';
 
 const unwrap = (res) => (res && res.data !== undefined ? res.data : res);
@@ -62,7 +62,7 @@ export default function ContactPanel({ phone, contactUuid }) {
 
   useEffect(() => {
     let alive = true;
-    contactsApi.fields().then((r) => { if (alive) setFields(Array.isArray(unwrap(r)) ? unwrap(r) : []); }).catch(() => {});
+    listFields().then((r) => { if (alive) setFields(Array.isArray(unwrap(r)) ? unwrap(r) : []); }).catch(() => {});
     return () => { alive = false; };
   }, []);
 
@@ -72,8 +72,8 @@ export default function ContactPanel({ phone, contactUuid }) {
     if (!phone && !contactUuid) { setLoaded(true); return undefined; }
     (async () => {
       try {
-        let found = contactUuid ? { uuid: contactUuid } : unwrap(await contactsApi.lookup(phone));
-        if (found?.uuid) found = unwrap(await contactsApi.get(found.uuid));
+        let found = contactUuid ? { uuid: contactUuid } : unwrap(await lookupContact(phone));
+        if (found?.uuid) found = unwrap(await getContact(found.uuid));
         if (alive) setContact(found || null);
       } catch { if (alive) setError(true); }
       finally { if (alive) setLoaded(true); }
@@ -84,14 +84,14 @@ export default function ContactPanel({ phone, contactUuid }) {
   const patch = useCallback(async (change) => {
     setError(false);
     try {
-      const updated = unwrap(await contactsApi.update(contact.uuid, change));
+      const updated = unwrap(await updateContact(contact.uuid, change));
       if (updated) setContact((c) => ({ ...c, ...updated }));
     } catch { setError(true); }
   }, [contact]);
 
   const create = async () => {
     setError(false);
-    try { setContact(unwrap(await contactsApi.create({ phone }))); } catch { setError(true); }
+    try { setContact(unwrap(await createContact({ phone }))); } catch { setError(true); }
   };
 
   const addTag = () => {

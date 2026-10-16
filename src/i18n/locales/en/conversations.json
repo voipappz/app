@@ -55,5 +55,31 @@
     "previous": "Previous conversations",
     "noPrevious": "None yet.",
     "error": "Could not save."
+  },
+  "search": {
+    "placeholder": "Search by number",
+    "label": "Search by number"
+  },
+  "view": {
+    "menu": "Sort and filter",
+    "sortBy": "Sort by",
+    "sort": {
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "longest": "Longest duration",
+      "shortest": "Shortest duration"
+    },
+    "direction": "Direction",
+    "outcome": "Outcome",
+    "all": "All",
+    "scope": "Show",
+    "mine": "Mine",
+    "everyone": "Everyone"
+  },
+  "outcome": {
+    "answered": "Answered",
+    "missed": "Missed",
+    "bot": "Bot",
+    "failed": "Failed"
   }
 }
