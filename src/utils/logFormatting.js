@@ -173,7 +173,11 @@ export const convertAggregateToHistogramFormat = (aggregateData) => {
           total += n;
         }
       });
-      const parsed = time instanceof Date ? time : new Date(time);
+      // The API's buckets are naive UTC ("2026-10-15T22:00:00", no offset);
+      // new Date() would read that as LOCAL time and draw a 22:00 UTC call at
+      // 19:00 GMT in Israel. A time with no zone is UTC.
+      const iso = typeof time === 'string' && /T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(time) ? `${time}Z` : time;
+      const parsed = time instanceof Date ? time : new Date(iso);
       return { time: parsed, total, severities };
     })
     .filter((b) => b.time && !isNaN(b.time.getTime()));

@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material';
 import ShieldIcon from '@mui/icons-material/Shield';
+import LogoutIcon from '@mui/icons-material/Logout';
 import LanguageIcon from '@mui/icons-material/Language';
 import DarkModeIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeIcon from '@mui/icons-material/LightModeOutlined';
@@ -230,6 +231,23 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
               {t(userSession ? 'signedInAs.user' : 'signedInAs.admin')}
             </Typography>
           </Box>
+        )}
+        {/* Sign out, in plain sight when the sidebar is open (it lived inside
+            the account dialog / the user menu). */}
+        {(wide || !collapsed) && (
+          <Tooltip title={t('action.signOut')} placement={towardPage}>
+            <IconButton
+              data-testid="sidebar-sign-out"
+              aria-label={t('action.signOut')}
+              onClick={() => {
+                if (userSession) { userAuth.logout(); navigate('/'); }
+                else { account.logout?.(); navigate('/admin'); }
+              }}
+              sx={{ color: 'var(--theme-text-secondary)', flexShrink: 0 }}
+            >
+              <LogoutIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Tooltip>
         )}
       </Box>
 

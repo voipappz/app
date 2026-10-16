@@ -12,7 +12,12 @@ const TimeHistogram = ({
   timeInterval = 'minute',
   aggregateData = null,  // Pre-aggregated server data: [{ time: Date, total: N, severities: {...} }]
   onBrushSelection = null, // (startDate, endDate) — drag across the chart to filter the screen to that window
-  onBarClick = null // (seriesKey, bucket) — apply the clicked series as a screen filter
+  onBarClick = null, // (seriesKey, bucket) — apply the clicked series as a screen filter
+  // Optional legend under the chart: each series' colour, its name
+  // (labelFor(key) -> text, default the key) and its total over the range.
+  showLegend = false,
+  labelFor = null,
+  onLegendClick = null, // (seriesKey) — same as clicking that series' bar
 }) => {
   const containerRef = useRef();
   const svgRef = useRef();
@@ -54,6 +59,9 @@ const TimeHistogram = ({
     amd: '#8b5cf6',
     incoming: '#06b6d4',
     outgoing: '#8b5cf6',
+    // A series with no value is "unknown", never a colour that reads as data.
+    none: '#9ca3af',
+    unknown: '#cbd5e1',
   };
 
   // Process logs into time buckets (or use pre-aggregated data)
@@ -266,8 +274,12 @@ const TimeHistogram = ({
       .text("GMT");
 
     // Y Axis
+    // Counts are whole numbers: only integer ticks, at most 4 (a max of 1
+    // drew "1 1 1 0 0 0" - fractional ticks rounded by the "d" format).
+    const yMax = yScale.domain()[1];
+    const yTicks = yScale.ticks(Math.min(4, Math.max(1, Math.floor(yMax)))).filter(Number.isInteger);
     const yAxis = d3.axisLeft(yScale)
-      .ticks(4)
+      .tickValues(yTicks)
       .tickFormat(d3.format("d"));
 
     g.append("g")
@@ -280,7 +292,7 @@ const TimeHistogram = ({
     g.append("g")
       .attr("class", "grid")
       .selectAll("line")
-      .data(yScale.ticks(4))
+      .data(yTicks)
       .enter()
       .append("line")
       .attr("x1", 0)
@@ -342,6 +354,34 @@ const TimeHistogram = ({
       }}
     >
       <svg ref={svgRef} style={{ display: 'block', width: '100%' }} />
+      {showLegend && severities.length > 0 && (
+        <Box
+          data-testid="histogram-legend"
+          sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, px: 1.5, py: 0.75, borderTop: '1px solid var(--mui-palette-divider)' }}
+        >
+          {severities.map((key) => {
+            const total = chartData.reduce((sum, d) => sum + (Number(d.severities?.[key]) || 0), 0);
+            const label = labelFor ? labelFor(key) : key;
+            const clickable = typeof onLegendClick === 'function';
+            return (
+              <Box
+                key={key}
+                component={clickable ? 'button' : 'span'}
+                type={clickable ? 'button' : undefined}
+                onClick={clickable ? () => onLegendClick(key) : undefined}
+                sx={{
+                  display: 'inline-flex', alignItems: 'center', gap: 0.75, p: 0, border: 0, bgcolor: 'transparent',
+                  cursor: clickable ? 'pointer' : 'default', font: 'inherit', color: 'var(--mui-palette-text-primary)',
+                }}
+              >
+                <Box component="span" sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: SEVERITY_COLORS[key] || '#999' }} />
+                <Typography component="span" sx={{ fontSize: '0.85rem' }}>{label}</Typography>
+                <Typography component="span" sx={{ fontSize: '0.85rem', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{total}</Typography>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
     </Box>
   );
 };
