@@ -367,3 +367,45 @@ describe('apiService success toasts — never for a load', () => {
     expect(apiService.constructor.announcesSuccess('HEAD', 'ping')).toBe(false);
   });
 });
+
+// Codex review 2026-10-15: GET /api/devices/:id carries the SIP password with
+// Cache-Control: no-store, and the GET cache kept it anyway.
+describe('apiService GET cache — Cache-Control: no-store', () => {
+  const respond = (cacheControl) => ({
+    status: 200,
+    ok: true,
+    headers: { get: (h) => (h.toLowerCase() === 'cache-control' ? cacheControl : null) },
+    json: async () => ({ uuid: 'd1', password: 'Sip-Secret' }),
+    text: async () => JSON.stringify({ uuid: 'd1', password: 'Sip-Secret' }),
+  });
+
+  beforeEach(() => {
+    apiService.authInitializing = false;
+    apiService.pendingRequests.clear();
+    apiService.clearCache?.();
+    apiService.rateLimitConfig.minRequestInterval = 0;
+    vi.spyOn(apiService, 'getToken').mockReturnValue('tok');
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('does not keep a no-store response: the next read asks the server again', async () => {
+    const fetchSpy = vi.fn(async () => respond('no-store'));
+    vi.stubGlobal('fetch', fetchSpy);
+    await apiService.get('/api/devices/d1', {}, 'device', false);
+    await apiService.get('/api/devices/d1', {}, 'device', false);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('still caches an ordinary GET', async () => {
+    const fetchSpy = vi.fn(async () => respond(null));
+    vi.stubGlobal('fetch', fetchSpy);
+    await apiService.get('/api/devices/d2', {}, 'device', false);
+    await apiService.get('/api/devices/d2', {}, 'device', false);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+});

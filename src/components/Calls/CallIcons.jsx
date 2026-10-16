@@ -192,15 +192,18 @@ export const RecordingControls = ({ recordingUrl, onOpenCall }) => {
         {isPlaying || currentTime > 0 ? formatTime(currentTime) : formatTime(duration)}
       </Typography>
 
-      <Tooltip title="Open call details">
-        <IconButton
-          size="small"
-          onClick={(e) => { e.stopPropagation(); onOpenCall?.(); }}
-          sx={{ p: 0.25, color: 'var(--accent-primary)', '&:hover': { backgroundColor: 'var(--accent-primary-alpha-10)' } }}
-        >
-          <Analytics sx={{ fontSize: 16 }} />
-        </IconButton>
-      </Tooltip>
+      {/* Only where there is somewhere to open: the call panel already IS it. */}
+      {onOpenCall && (
+        <Tooltip title="Open call details">
+          <IconButton
+            size="small"
+            onClick={(e) => { e.stopPropagation(); onOpenCall(); }}
+            sx={{ p: 0.25, color: 'var(--accent-primary)', '&:hover': { backgroundColor: 'var(--accent-primary-alpha-10)' } }}
+          >
+            <Analytics sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+      )}
     </Box>
   );
 };
