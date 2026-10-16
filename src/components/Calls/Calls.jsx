@@ -44,8 +44,12 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import PhoneMissedIcon from '@mui/icons-material/PhoneMissed';
 import CallMadeIcon from '@mui/icons-material/CallMade';
 import CallReceivedIcon from '@mui/icons-material/CallReceived';
-import LogTabs from '../shared/LogTabs/LogTabs.jsx';
 import ReportsPanel from '../Reports/ReportsPanel/ReportsPanel.jsx';
+import SectionTabs from '../shared/SectionTabs.jsx';
+import DateLocalizationProvider from '../../i18n/DateLocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import SensorsIcon from '@mui/icons-material/Sensors';
 import LiveChartStrip from '../Live/LiveChartStrip.jsx';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -612,6 +616,23 @@ const Calls = () => {
     return known[key] || String(key).replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
   }, [t]);
 
+  // Quick periods, like the Logs screen. A picked from/to makes it 'custom'.
+  const [period, setPeriod] = useState('today');
+  const handlePeriod = useCallback((key) => {
+    const now = new Date();
+    let start;
+    let end = now;
+    if (key === 'today') {
+      start = new Date(now); start.setHours(0, 0, 0, 0);
+      end = new Date(now); end.setHours(23, 59, 59, 999);
+    } else {
+      const hours = { '24h': 24, '7d': 24 * 7, '30d': 24 * 30 }[key];
+      start = new Date(now.getTime() - hours * 3600 * 1000);
+    }
+    setPeriod(key);
+    handleDateRangeChange([start, end]);
+  }, [handleDateRangeChange]);
+
   const histogramData = useMemo(
     () => convertAggregateToHistogramFormat(aggregate[groupBy] || []),
     [aggregate, groupBy]
@@ -645,7 +666,6 @@ const Calls = () => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <LogTabs />
       {/* Mobile Search Bar (fallback) */}
       {isMobile && (
         <Box sx={{
@@ -711,7 +731,29 @@ const Calls = () => {
           neither means anything to it. Collapse chevron is remembered per
           screen; expand opens the full reports drawer. Filters drive it;
           brushing the histogram filters the table. */}
-      {!isMobile && (
+      {/* The screen's three jobs, one at a time: Logs (history), Live now,
+          Reports - in the card the Calls / Messages tabs used. */}
+      <Paper elevation={0} sx={{ mb: 1.5, flexShrink: 0, borderRadius: 2, bgcolor: 'var(--mui-palette-background-paper)' }}>
+        <SectionTabs
+          value={chartMode}
+          onChange={(_, v) => setChartMode(v)}
+          aria-label={t('nav:calls')}
+          sx={{ borderBottom: 'none', '& .MuiTab-root': { minHeight: 52, fontSize: '0.95rem', fontWeight: 500 } }}
+        >
+          <Tab value="timeline" label={t('view.logs', { defaultValue: 'Logs' })} icon={<ListAltIcon />} iconPosition="start" />
+          {!userSession && (
+            <Tab
+              value="live"
+              label={liveCallsTotal != null ? t('chart.liveNowCount', { count: liveCallsTotal }) : t('chart.liveNow')}
+              icon={<SensorsIcon />}
+              iconPosition="start"
+            />
+          )}
+          <Tab value="reports" label={t('drawer.reports')} icon={<AssessmentIcon />} iconPosition="start" />
+        </SectionTabs>
+      </Paper>
+
+      {!isMobile && chartMode === 'timeline' && (
         <Paper
           elevation={0}
           data-testid="calls-chart"
@@ -725,72 +767,74 @@ const Calls = () => {
               the three controls read together: the period, what to split by,
               and the bucket size. */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', minHeight: 40 }}>
-            <Tabs
-              value={['live', 'reports'].includes(chartMode) ? chartMode : 'timeline'}
-              onChange={(_, v) => setChartMode(v)}
-              aria-label={t('chart.overTime')}
-              sx={{
-                minHeight: 40,
-                '& .MuiTab-root': { minHeight: 40, py: 0.5, px: 1.5, textTransform: 'none', fontSize: '0.9rem', fontWeight: 600 },
-              }}
-            >
-              <Tab value="timeline" label={t('chart.overTime')} />
-              {!userSession && (
-                <Tab
-                  value="live"
-                  label={liveCallsTotal != null ? t('chart.liveNowCount', { count: liveCallsTotal }) : t('chart.liveNow')}
+
+            {/* One flat row, like the Logs screen: the period (quick ranges,
+                then from / to), what the chart is split by, and the bucket.
+                Buttons, not dropdowns: every choice is visible. */}
+            <ButtonGroup size="small" variant="outlined" aria-label={t('period.label', { defaultValue: 'Period' })}>
+              {[
+                { key: 'today', label: t('period.today', { defaultValue: 'Today' }) },
+                { key: '24h', label: '24h' },
+                { key: '7d', label: '7d' },
+                { key: '30d', label: '30d' },
+              ].map((p) => (
+                <Button
+                  key={p.key}
+                  onClick={() => handlePeriod(p.key)}
+                  variant={period === p.key ? 'contained' : 'outlined'}
+                  sx={{ minWidth: 44, px: 1, textTransform: 'none' }}
+                >
+                  {p.label}
+                </Button>
+              ))}
+            </ButtonGroup>
+
+            <DateLocalizationProvider>
+              <Box data-testid="calls-chart-date-range" sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <DateTimePicker
+                  value={dateRange?.[0] ? new Date(dateRange[0]) : null}
+                  onChange={(d) => { if (d) { setPeriod('custom'); handleDateRangeChange([d, dateRange?.[1] ? new Date(dateRange[1]) : new Date()]); } }}
+                  ampm={false}
+                  slotProps={{ textField: { size: 'small', sx: { width: 180 } } }}
                 />
-              )}
-              {/* Call reports: every queries.yml calls report, in this panel
-                  (it was a small expand icon opening a drawer). */}
-              <Tab value="reports" label={t('drawer.reports')} />
-            </Tabs>
+                <Typography variant="body2" color="text.secondary">{t('period.to', { defaultValue: 'to' })}</Typography>
+                <DateTimePicker
+                  value={dateRange?.[1] ? new Date(dateRange[1]) : null}
+                  onChange={(d) => { if (d) { setPeriod('custom'); handleDateRangeChange([dateRange?.[0] ? new Date(dateRange[0]) : new Date(), d]); } }}
+                  ampm={false}
+                  slotProps={{ textField: { size: 'small', sx: { width: 180 } } }}
+                />
+              </Box>
+            </DateLocalizationProvider>
 
             <Box sx={{ flexGrow: 1 }} />
 
-            {chartMode === 'timeline' && (
-              <Select
-                value={groupByOptions.some((o) => o.key === groupBy) ? groupBy : 'cause'}
-                onChange={(e) => handleGroupByChange(e.target.value)}
-                size="small"
-                aria-label={t('chart.by')}
-                renderValue={(v) => `${t('chart.by')} ${groupByOptions.find((o) => o.key === v)?.label || v}`}
-                sx={{ height: 36, fontSize: '0.9rem', minWidth: 140 }}
-              >
-                {groupByOptions.map((o) => (
-                  <MenuItem key={o.key} value={o.key} sx={{ fontSize: '0.9rem' }}>{o.label}</MenuItem>
-                ))}
-              </Select>
-            )}
+            <Typography variant="body2" color="text.secondary">{t('chart.by')}</Typography>
+            <ButtonGroup size="small" variant="outlined" aria-label={t('chart.by')}>
+              {groupByOptions.map((o) => (
+                <Button
+                  key={o.key}
+                  onClick={() => handleGroupByChange(o.key)}
+                  variant={groupBy === o.key ? 'contained' : 'outlined'}
+                  sx={{ textTransform: 'none', px: 1.25 }}
+                >
+                  {o.label}
+                </Button>
+              ))}
+            </ButtonGroup>
 
-            {chartMode === 'timeline' && (
-              <Select
-                value={aggGrouping || 'auto'}
-                onChange={(e) => handleGroupingChange(e.target.value === 'auto' ? null : e.target.value)}
-                size="small"
-                aria-label={t('bucket.auto')}
-                sx={{ height: 36, fontSize: '0.9rem', minWidth: 110 }}
-              >
-                {['auto', 'hour', 'day', 'week'].map((k) => (
-                  <MenuItem key={k} value={k} sx={{ fontSize: '0.9rem' }}>{t(`bucket.${k}`)}</MenuItem>
-                ))}
-              </Select>
-            )}
-
-            {chartMode === 'timeline' && (
-              <Box
-                data-testid="calls-chart-date-range"
-                sx={{
-                  display: 'flex', alignItems: 'center',
-                  '& .MuiButton-root': {
-                    height: 36, border: '1px solid var(--theme-border)', borderRadius: '6px',
-                    color: 'var(--theme-text-primary)', fontSize: '0.9rem', px: 1.25,
-                  },
-                }}
-              >
-                <EnhancedDateRangePicker dateRange={dateRange} setDateRange={handleDateRangeChange} compact />
-              </Box>
-            )}
+            <ButtonGroup size="small" variant="outlined" aria-label={t('bucket.auto')}>
+              {['auto', 'hour', 'day', 'week'].map((k) => (
+                <Button
+                  key={k}
+                  onClick={() => handleGroupingChange(k === 'auto' ? null : k)}
+                  variant={(aggGrouping || 'auto') === k ? 'contained' : 'outlined'}
+                  sx={{ textTransform: 'none', px: 1.25 }}
+                >
+                  {t(`bucket.${k}`)}
+                </Button>
+              ))}
+            </ButtonGroup>
 
             <Tooltip title={stripCollapsed ? t('chart.show') : t('chart.hide')}>
               <IconButton onClick={toggleStripCollapsed} aria-label={stripCollapsed ? t('chart.show') : t('chart.hide')} sx={{ color: 'var(--theme-text-secondary)' }}>
@@ -799,35 +843,7 @@ const Calls = () => {
             </Tooltip>
           </Box>
 
-          {!stripCollapsed && (chartMode === 'reports' ? (
-            <Box data-testid="calls-reports" sx={{ maxHeight: 520, overflow: 'auto', py: 1 }}>
-              <ReportsPanel category="calls" open />
-            </Box>
-          ) : chartMode === 'live' ? (
-            // Live replaces the chart — live calls monitor in the chart area.
-            <Box sx={{ maxHeight: 260, overflow: 'auto', py: 0.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Chip
-                  label={t('chart.openList')}
-                  size="small"
-                  variant="outlined"
-                  onClick={() => setLiveDrawerOpen(true)}
-                  sx={{ cursor: 'pointer', fontSize: 11, height: 22 }}
-                />
-              </Box>
-              {/* live_calls is InfluxDB-backed and actually served by
-                  /api/monitoring/charts. EnvironmentChartsPanel asked for
-                  environment_stats, whose mount was deleted from the
-                  mothership — the fetcher registry deliberately omits it, so
-                  pressing Live surfaced "Unknown chart type: environment_stats"
-                  instead of a chart. Live statistics on a list screen come
-                  from Influx; Postgres-backed reporting lives on Reports. */}
-              {/* Time runs left to right in every language. */}
-              <LtrIsland>
-                <LiveChartStrip chartType="live_calls" title={t('chart.liveCalls')} autoSeries />
-              </LtrIsland>
-            </Box>
-          ) : aggregateLoading ? (
+          {!stripCollapsed && (aggregateLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 100 }}>
               <CircularProgress size={22} />
             </Box>
@@ -857,13 +873,12 @@ const Calls = () => {
           pills read, so a card and its pill are one piece of state.
           Rendered even with an empty grid — "0 calls" is an answer; the row
           vanishing is not. A null value renders "—", never a confident 0. */}
-      {!isMobile && (
+      {!isMobile && chartMode === 'timeline' && (
         <Box data-testid="calls-counters" sx={{ mb: 1.25 }}>
-          {/* Four numbers, large: how many calls, how many were answered (and
+          {/* Four numbers, as small chips like Devices: how many calls, how many were answered (and
               the rate), how many were missed, how long they last. The first
               three filter the list; direction lives in the chart's split. */}
           <StatChips
-            size="large"
             items={[
               { key: 'total', label: t('stats.total'), hint: t('stats.totalHint'), value: summaryCounts.total, icon: <PhoneIcon />, colorVar: '--counter-total', filterKey: null },
               {
@@ -887,7 +902,7 @@ const Calls = () => {
       {/* Search + the four filters worth keeping on screen. The other nine
           segments stay behind the ⚙ panel, which is where a 13-field grid
           belongs. */}
-      {!isMobile && (
+      {!isMobile && chartMode === 'timeline' && (
         <CentralizedSearch
           inlineFilters={INLINE_FILTER_FIELDS}
           segments={segments}
@@ -910,7 +925,25 @@ const Calls = () => {
         />
       )}
 
-      {isMobile ? (
+      {/* Live now and Reports are whole views: no chart, counters or
+          history table around them. */}
+      {chartMode === 'live' && (
+        <Paper elevation={0} data-testid="calls-live-view" sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: 2, borderRadius: 2, bgcolor: 'var(--mui-palette-background-paper)' }}>
+          <LtrIsland>
+            <LiveChartStrip chartType="live_calls" title={t('chart.liveCalls')} autoSeries />
+          </LtrIsland>
+          <Box sx={{ mt: 2 }}>
+            <LiveCallsPanel open />
+          </Box>
+        </Paper>
+      )}
+      {chartMode === 'reports' && (
+        <Paper elevation={0} data-testid="calls-reports" sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: 2, borderRadius: 2, bgcolor: 'var(--mui-palette-background-paper)' }}>
+          <ReportsPanel category="calls" open />
+        </Paper>
+      )}
+
+      {chartMode === 'timeline' && (isMobile ? (
         (
           <CallMobileView
             rows={displayRows}
@@ -1032,7 +1065,7 @@ const Calls = () => {
           </Box>
 
         </Box>
-      )}
+      ))}
       <Drawer
         anchor="right"
         open={Boolean(selectedCall)}
