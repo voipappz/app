@@ -4,6 +4,8 @@ import i18n from '../../i18n';
 import { buildRouteColumns } from './routeColumns.jsx';
 import ResponsiveTable from '../shared/ResponsiveTable/ResponsiveTable';
 import { pretendPhoneScreen } from '../../test/phoneScreen';
+import { widthNeeded } from '../../test/tableWidth';
+import { formatDate } from '../../utils/dateUtils';
 
 // The events button reads the signed-in session's permissions; not under test here.
 vi.mock('../shared/RowEventsButton/RowEventsButton.jsx', () => ({ default: () => null }));
@@ -44,6 +46,28 @@ describe('Routes columns', () => {
     const labels = buildRouteColumns({ t: english, portalMode: true, isPhone: false, canWriteRoute: () => true, actions })
       .map((column) => column.label);
     expect(labels).not.toContain('Application');
+  });
+
+  it('fit every column, Provider and Tags included, in a 1280px desktop', () => {
+    const columns = buildRouteColumns({ t: english, portalMode: false, isPhone: false, loading: false, canWriteRoute: () => true, actions });
+    show();
+    expect(screen.getAllByRole('columnheader')).toHaveLength(columns.length);
+    expect(screen.getByRole('columnheader', { name: 'Provider' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeInTheDocument();
+    expect(widthNeeded(screen.getByRole('table'), columns)).toBeLessThanOrEqual(1280);
+  });
+
+  it('fix a narrow width only on the short columns and let the text ones flex', () => {
+    const columns = buildRouteColumns({ t: english, portalMode: false, isPhone: false, loading: false, canWriteRoute: () => true, actions });
+    expect(columns.filter((column) => column.width).map((column) => column.id)).toEqual(['enabled', 'type', 'number']);
+  });
+
+  it('show the dates on one line in the small secondary type, and small chips', () => {
+    show();
+    const created = screen.getByText(formatDate(route.created_at));
+    expect(created.tagName).toBe('SPAN');
+    expect(screen.getByText('Yes').closest('.MuiChip-root')).toHaveClass('MuiChip-sizeSmall');
+    expect(screen.getByText('Incoming number').closest('.MuiChip-root')).toHaveClass('MuiChip-sizeSmall');
   });
 
   it('show the row buttons on a desktop', () => {

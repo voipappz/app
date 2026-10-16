@@ -12,7 +12,8 @@ import MetaTagChips from '../common/MetaTagChips/MetaTagChips';
 import EntityLink from '../common/EntityLink/EntityLink.jsx';
 import Bdi from '../../i18n/Bdi';
 import { orEmpty } from '../shared/tableTheme.jsx';
-import { formatDate } from '../../utils/dateUtils';
+import DateTimeCell from '../shared/ResponsiveTable/DateTimeCell.jsx';
+import { COLUMN_WIDTHS, denseChipSx } from '../shared/ResponsiveTable/density';
 import { getEnabledChipProps } from '../../utils/chipStyles';
 
 // The devices table, described for ResponsiveTable. On a phone each device is a
@@ -22,21 +23,21 @@ export function buildExtensionColumns({ t, registeredUsers, canWrite, canEditEnv
   return [
     {
       id: 'created_at', label: t('table.createdAt'), sortable: true, priority: 'desktopOnly',
-      render: (extension) => <Typography variant="body2">{formatDate(extension.created_at)}</Typography>,
+      render: (extension) => <DateTimeCell value={extension.created_at} />,
     },
     {
       id: 'updated_at', label: t('table.updatedAt'), sortable: true, priority: 'desktopOnly',
-      render: (extension) => <Typography variant="body2">{formatDate(extension.updated_at)}</Typography>,
+      render: (extension) => <DateTimeCell value={extension.updated_at} />,
     },
     {
-      id: 'registration', align: 'center', width: 50, priority: 'meta',
+      id: 'registration', align: 'center', width: COLUMN_WIDTHS.icon, priority: 'meta',
       label: <Tooltip title={t('table.registrationStatus')}><RssFeedIcon fontSize="small" /></Tooltip>,
       cardLabel: t('table.registration'),
       render: (extension) => <RegistrationStatus t={t} extension={extension} registeredUsers={registeredUsers} />,
     },
     {
-      id: 'enabled', label: t('table.enabled'), sortable: true, align: 'center', priority: 'meta',
-      render: (extension) => <Chip {...getEnabledChipProps(extension.enabled)} />,
+      id: 'enabled', label: t('table.enabled'), sortable: true, align: 'center', width: COLUMN_WIDTHS.chip, priority: 'meta',
+      render: (extension) => <Chip {...getEnabledChipProps(extension.enabled)} sx={denseChipSx} />,
     },
     {
       id: 'username', label: t('table.device'), sortable: true, priority: 'primary',

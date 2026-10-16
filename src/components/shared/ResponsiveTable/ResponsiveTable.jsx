@@ -5,6 +5,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { stripedTableRowSx } from '../tableTheme.jsx';
 import MobileRecordCard from './MobileRecordCard.jsx';
+import { denseTableSx } from './density';
 
 // A table described as data: the same striped MUI table on a desktop, one card
 // per row on a phone (see MobileRecordCard for where each column goes).
@@ -13,6 +14,8 @@ import MobileRecordCard from './MobileRecordCard.jsx';
 //             width, priority: 'primary' | 'secondary' | 'meta' | 'action' | 'desktopOnly',
 //             cardLabel }
 // `align` is logical: 'start' is left in English and right in Hebrew.
+// `width` is a preferred width for a short column; text columns leave it out
+// and flex. `dense` (the default) applies the sizing in density.js.
 const CELL_ALIGN = { start: 'left', center: 'center', end: 'right' };
 
 export default function ResponsiveTable({
@@ -35,6 +38,7 @@ export default function ResponsiveTable({
   onRowsPerPageChange,
   rowsPerPageOptions,
   cardsBelow = 'md',
+  dense = true,
   'data-testid': testId,
 }) {
   const theme = useTheme(); // MUI's default theme outside a ThemeProvider
@@ -82,8 +86,8 @@ export default function ResponsiveTable({
 
   return (
     <Box data-testid={testId}>
-      <TableContainer>
-        <Table stickyHeader>
+      <TableContainer sx={{ width: '100%' }}>
+        <Table stickyHeader size={dense ? 'small' : 'medium'} sx={dense ? denseTableSx : undefined}>
           <TableHead>
             <TableRow>
               {columns.map((column) => (
@@ -109,7 +113,7 @@ export default function ResponsiveTable({
             ))}
             {!loading && rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>{emptyText}</TableCell>
+                <TableCell colSpan={columns.length} align="center"><Box sx={{ py: 4 }}>{emptyText}</Box></TableCell>
               </TableRow>
             )}
             {rows.map((row) => (
