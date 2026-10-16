@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router';
 import { useIsUserSession } from '../../hooks/useIsUserSession';
 
 // Conversations is a portal (user) screen only. An account that reaches its
