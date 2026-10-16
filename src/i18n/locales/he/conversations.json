@@ -12,8 +12,7 @@
     "outgoing": "יוצאת",
     "local": "שלוחה",
     "inbound": "נכנסת",
-    "outbound": "יוצאת",
-    "unknown": ""
+    "outbound": "יוצאת"
   },
   "list": {
     "title": "שיחות",
