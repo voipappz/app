@@ -33,6 +33,7 @@ const Reports = lazy(() => import('./components/Reports/Reports.jsx'));
 const LiveDashboard = lazy(() => import('./components/LiveDashboard/LiveDashboard.jsx'));
 const AdminDashboard = lazy(() => import('./components/Dashboard/AdminDashboard.jsx'));
 const ConversationsScreen = lazy(() => import('./components/Conversations/ConversationsScreen.jsx'));
+import UserOnly from './components/Conversations/UserOnly.jsx';
 const Calls = lazy(() => import('./components/Calls/Calls.jsx'));
 
 const Notifications = lazy(() => import('./components/Notifications/Notifications.jsx'));
@@ -99,7 +100,7 @@ const Root = ({ loginMode = 'user' }) => {
   if (new URL(window.location.href).searchParams.has('login_token')) return <Layout><SignIn mode="user" /></Layout>;
   if (admin.isAuthenticated) return <Navigate to="/calls" replace />;
   if (user.isAuthenticated) {
-    const first = getPermittedNavItems(user.acl, { strict: true })[0];
+    const first = getPermittedNavItems(user.acl, { strict: true, userSession: true })[0];
     return first ? <Navigate to={first.path} replace /> : <Layout><NoAccess /></Layout>;
   }
   return <Layout><SignIn mode={loginMode} /></Layout>;
@@ -193,9 +194,11 @@ function AppContent() {
           path="/conversations"
           element={
             <ProtectedRoute requiredAcl="calls">
-              <Suspense fallback={<PageLoader />}>
-                <ConversationsScreen />
-              </Suspense>
+              <UserOnly>
+                <Suspense fallback={<PageLoader />}>
+                  <ConversationsScreen />
+                </Suspense>
+              </UserOnly>
             </ProtectedRoute>
           }
         />

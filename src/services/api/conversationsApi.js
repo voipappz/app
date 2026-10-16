@@ -14,7 +14,7 @@ const enc = encodeURIComponent;
 
 const real = {
   /** { tab: 'all'|'missed', q, orderBy, orderKind, direction, outcome, scope, page, perPage } -> { data, total } */
-  listConversations: ({ tab = 'all', q, orderBy, orderKind, direction, outcome, scope, page = 1, perPage = 50 } = {}) => {
+  listConversations: ({ tab = 'all', q, orderBy, orderKind, direction, outcome, scope, from, to, page = 1, perPage = 50 } = {}) => {
     const p = new URLSearchParams({ tab, page: String(page), per_page: String(perPage) });
     if (q) p.set('q', q);
     if (orderBy) p.set('order_by', orderBy);
@@ -22,6 +22,8 @@ const real = {
     if (direction) p.set('direction', direction);
     if (outcome) p.set('outcome', outcome);
     if (scope) p.set('scope', scope);
+    if (from) p.set('from', from);
+    if (to) p.set('to', to);
     return apiService.get(`${BASE}?${p}`, {}, 'fetching conversations', false);
   },
 

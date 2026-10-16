@@ -86,5 +86,8 @@
     "user": "נציג",
     "recording": "הקלטה",
     "listen": "האזנה"
+  },
+  "dateRange": {
+    "clear": "נקה תקופה"
   }
 }

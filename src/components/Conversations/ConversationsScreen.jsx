@@ -7,6 +7,7 @@ import PhoneScreen from '../Phone/PhoneScreen.jsx';
 import SessionList from './SessionList.jsx';
 import ConversationThread from './ConversationThread.jsx';
 import ContactPanel from './ContactPanel.jsx';
+import DarkPanel, { ROOM } from './DarkPanel.jsx';
 import useConversations from './useConversations';
 
 const LIST_KEY = 'conversations-list-hidden';
@@ -88,12 +89,14 @@ export default function ConversationsScreen() {
         </Box>
       </Box>
 
-      <Box component="aside" sx={{ order: phoneWidth ? 1 : 0, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
-        <Box sx={{ flexShrink: 0 }}><PhoneScreen embedded /></Box>
+      {/* One continuous dark column: the phone fills it; the contact, when
+          there is one, sits under the phone on the same surface. */}
+      <Box component="aside" sx={{ order: phoneWidth ? 1 : 0, bgcolor: ROOM, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
+        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}><PhoneScreen embedded /></Box>
         {c.canContacts && !phoneWidth && (
-          <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+          <DarkPanel sx={{ flex: '0 0 auto', maxHeight: '50%', overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <ContactPanel phone={c.selected?.remote_number} contactUuid={c.selected?.contact?.uuid} />
-          </Box>
+          </DarkPanel>
         )}
       </Box>
     </Box>

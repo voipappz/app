@@ -14,6 +14,11 @@ describe('conversationsApi', () => {
     expect(apiService.get.mock.calls[0][0]).toBe('/api/conversations?tab=missed&page=2&per_page=20&q=5550144&order_by=started_at&order_kind=asc&direction=incoming&outcome=bot&scope=environment');
   });
 
+  it('sends the date range as from / to day keys', async () => {
+    await api.listConversations({ from: '2026-10-01', to: '2026-10-05' });
+    expect(apiService.get.mock.calls[0][0]).toBe('/api/conversations?tab=all&page=1&per_page=50&from=2026-10-01&to=2026-10-05');
+  });
+
   it('omits unset params', async () => {
     await api.listConversations({});
     expect(apiService.get.mock.calls[0][0]).toBe('/api/conversations?tab=all&page=1&per_page=50');
