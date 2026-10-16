@@ -73,12 +73,16 @@ describe('Calls layout', () => {
     expect(before(counters, screen.getByTestId('grid'))).toBe(true);
   });
 
-  it('keeps the date range in the chart toolbar, before the group-by, and out of the top bar search', () => {
+  it('has Over time / Live now / Reports as tabs, and the controls on the right with the date range last', () => {
     render(<Calls />);
     const chart = screen.getByTestId('calls-chart');
+    const tabs = within(chart).getAllByRole('tab').map((t) => t.textContent);
+    expect(tabs[0]).toMatch(/over time/i);
+    expect(tabs.some((t) => /reports/i.test(t))).toBe(true);
     const picker = within(chart).getByTestId('date-range-picker');
-    expect(before(picker, within(chart).getByText('by'))).toBe(true);
-    expect(before(picker, within(chart).getByRole('button', { name: 'Hourly' }))).toBe(true);
+    const [groupBy, bucket] = within(chart).getAllByRole('combobox');
+    expect(before(groupBy, bucket)).toBe(true);
+    expect(before(bucket, picker)).toBe(true);
     expect(screen.getAllByTestId('date-range-picker')).toHaveLength(1);
     expect(screen.getByTestId('centralized-search')).toHaveAttribute('data-hide-date-range', 'true');
   });
@@ -96,11 +100,13 @@ describe('Calls counters and insights', () => {
     expect(chip('answered')).toHaveTextContent('4');
     // busy + no_answer; the two `none` and two missing causes are in neither.
     expect(chip('noAnswer')).toHaveTextContent('2');
-    expect(chip('answerRate')).toHaveTextContent('40%');
+    // The rate rides on the Answered counter.
+    expect(chip('answered')).toHaveTextContent('40%');
     expect(chip('avgDuration')).toHaveTextContent('1:40');   // 400s / 4 answered
-    expect(chip('totalDuration')).toHaveTextContent('7:05'); // 425s
-    // Insights are read-only; the counters stay toggles.
-    expect(chip('answerRate')).not.toHaveAttribute('role');
+    // Four counters, no more: total duration and the direction chips left.
+    expect(screen.getByTestId('calls-counters').querySelectorAll('[data-stat]')).toHaveLength(4);
+    // The average is read-only; the counters stay toggles.
+    expect(chip('avgDuration')).not.toHaveAttribute('role');
     expect(chip('answered')).toHaveAttribute('aria-pressed', 'false');
   });
 
@@ -108,15 +114,14 @@ describe('Calls counters and insights', () => {
     hookState.aggregate = { cause: [{ time: 't1', answer: 2 }], direction: [] };
     hookState.durationAggregate = null; // API without metric=duration
     render(<Calls />);
-    expect(chip('answerRate')).toHaveTextContent('100%');
+    expect(chip('answered')).toHaveTextContent('100%');
     expect(chip('avgDuration')).toHaveTextContent('—');
-    expect(chip('totalDuration')).toHaveTextContent('—');
   });
 
   it('renders "—" everywhere when the aggregate failed', () => {
     hookState.failed = true;
     render(<Calls />);
-    ['total', 'answered', 'noAnswer', 'answerRate', 'avgDuration', 'totalDuration'].forEach((key) => {
+    ['total', 'answered', 'noAnswer', 'avgDuration'].forEach((key) => {
       expect(chip(key)).toHaveTextContent('—');
     });
   });

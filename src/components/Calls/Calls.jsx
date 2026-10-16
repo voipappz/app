@@ -61,7 +61,7 @@ import { formatClock, formatPercent } from './callFormat';
 // MUI Components
 import {
   Box, Typography, IconButton, TextField, InputAdornment, Paper, useTheme, useMediaQuery,
-  Chip, CircularProgress, Select, MenuItem, Tooltip, Button, ButtonGroup, Drawer,
+  Chip, CircularProgress, Select, MenuItem, Tooltip, Button, ButtonGroup, Drawer, Tabs, Tab,
 } from '@mui/material';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -597,7 +597,21 @@ const Calls = () => {
     try { localStorage.setItem('reportsStrip:calls:collapsed', c ? '0' : '1'); } catch { /* storage unavailable */ }
     return !c;
   });
-  const [reportsDrawerOpen, setReportsDrawerOpen] = useState(false);
+  // Legend names in plain words; an unknown key is shown humanised.
+  const seriesLabel = useCallback((key) => {
+    const known = {
+      answer: t('series.answer', { defaultValue: 'Answered' }),
+      no_answer: t('series.no_answer', { defaultValue: 'No answer' }),
+      busy: t('series.busy', { defaultValue: 'Busy' }),
+      error: t('series.error', { defaultValue: 'Failed' }),
+      none: t('series.none', { defaultValue: 'No result' }),
+      unknown: t('series.unknown', { defaultValue: 'Unknown' }),
+      incoming: t('stats.incoming'),
+      outgoing: t('stats.outgoing'),
+    };
+    return known[key] || String(key).replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+  }, [t]);
+
   const histogramData = useMemo(
     () => convertAggregateToHistogramFormat(aggregate[groupBy] || []),
     [aggregate, groupBy]
@@ -706,123 +720,90 @@ const Calls = () => {
             backgroundColor: 'var(--theme-bg-secondary)', px: 1.5, pt: 0.75, pb: stripCollapsed ? 0.75 : 0.25, mb: 1,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-            <BarChartIcon sx={{ fontSize: 16, color: 'var(--theme-text-secondary)' }} />
-            {/* The list's own chart — calls over time. Not tied to reports
-                (reports live in the full reports drawer); grouped by a field. */}
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--theme-text-primary)' }}>
-              {chartMode === 'live' ? t('chart.liveCalls') : t('chart.overTime')}
-            </Typography>
-
-            {/* The screen's ONE period control: it scopes the chart, the
-                counters and the table. It sits with the grouping and the
-                bucket size because the three are read together; the top bar
-                search leaves it out on this screen (hideDateRange). */}
-            <Box
-              data-testid="calls-chart-date-range"
+          {/* One row, one control height (32px). Over time | Live now are TABS
+              of this panel - Live swaps what it shows. Then, for the timeline,
+              the three controls read together: the period, what to split by,
+              and the bucket size. */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', minHeight: 40 }}>
+            <Tabs
+              value={['live', 'reports'].includes(chartMode) ? chartMode : 'timeline'}
+              onChange={(_, v) => setChartMode(v)}
+              aria-label={t('chart.overTime')}
               sx={{
-                display: 'flex', alignItems: 'center', ml: 0.5,
-                // Same height and outline as the group-by select beside it.
-                '& .MuiButton-root': {
-                  height: 24, border: '1px solid var(--theme-border)', borderRadius: '4px',
-                  color: 'var(--theme-text-primary)', fontSize: '0.72rem',
-                },
+                minHeight: 40,
+                '& .MuiTab-root': { minHeight: 40, py: 0.5, px: 1.5, textTransform: 'none', fontSize: '0.9rem', fontWeight: 600 },
               }}
             >
-              <EnhancedDateRangePicker dateRange={dateRange} setDateRange={handleDateRangeChange} compact />
-            </Box>
-
-            {/* Group-by belongs to the timeline only — in live mode it styled a
-                chart that isn't on screen. */}
-            {chartMode !== 'live' && (
-              <>
-                <Typography variant="caption" sx={{ color: 'var(--theme-text-secondary)', fontWeight: 600, ml: 0.5 }}>{t('chart.by')}</Typography>
-                <Select
-                  value={groupByOptions.some((o) => o.key === groupBy) ? groupBy : 'cause'}
-                  onChange={(e) => handleGroupByChange(e.target.value)}
-                  size="small"
-                  sx={{ height: 24, fontSize: '0.72rem', minWidth: 100, '& .MuiSelect-select': { py: 0.25 } }}
-                >
-                  {groupByOptions.map((o) => (
-                    <MenuItem key={o.key} value={o.key} sx={{ fontSize: '0.78rem' }}>{o.label}</MenuItem>
-                  ))}
-                </Select>
-              </>
-            )}
-
-            {/* Date bucket, beside the grouping. Timeline-only: live mode has
-                no buckets to size. */}
-            {chartMode !== 'live' && (
-            <ButtonGroup size="small" variant="outlined">
-              {[
-                { key: 'auto', label: t('bucket.auto') },
-                { key: 'hour', label: t('bucket.hour') },
-                { key: 'day', label: t('bucket.day') },
-                { key: 'week', label: t('bucket.week') },
-              ].map((b) => {
-                const active = (aggGrouping || 'auto') === b.key;
-                // Same button as the footer's page numbers. The colours set
-                // here before painted the active label in its own background
-                // colour, so the selected bucket read as a blank block.
-                return (
-                  <Button
-                    key={b.key}
-                    onClick={() => handleGroupingChange(b.key === 'auto' ? null : b.key)}
-                    variant={active ? 'contained' : 'outlined'}
-                    sx={{ minWidth: 34, px: 0.75, fontSize: '11px', py: 0.1 }}
-                  >
-                    {b.label}
-                  </Button>
-                );
-              })}
-            </ButtonGroup>
-            )}
+              <Tab value="timeline" label={t('chart.overTime')} />
+              {!userSession && (
+                <Tab
+                  value="live"
+                  label={liveCallsTotal != null ? t('chart.liveNowCount', { count: liveCallsTotal }) : t('chart.liveNow')}
+                />
+              )}
+              {/* Call reports: every queries.yml calls report, in this panel
+                  (it was a small expand icon opening a drawer). */}
+              <Tab value="reports" label={t('drawer.reports')} />
+            </Tabs>
 
             <Box sx={{ flexGrow: 1 }} />
 
-            {/* Live is a view toggle, not a filter — it swaps what this chart
-                shows. It used to sit in the counter row, where it read as a
-                sixth statistic you could filter by. */}
-            {!userSession && <Tooltip title={t('chart.liveToggleHint')}>
-              <Chip
+            {chartMode === 'timeline' && (
+              <Select
+                value={groupByOptions.some((o) => o.key === groupBy) ? groupBy : 'cause'}
+                onChange={(e) => handleGroupByChange(e.target.value)}
                 size="small"
-                onClick={() => setChartMode((mode) => (mode === 'live' ? 'timeline' : 'live'))}
-                variant={chartMode === 'live' ? 'filled' : 'outlined'}
-                icon={(
-                  <Box
-                    component="span"
-                    sx={{
-                      width: 7, height: 7, borderRadius: '50%', ml: 0.75,
-                      bgcolor: chartMode === 'live' ? '#fff' : 'var(--accent-primary)',
-                      animation: chartMode === 'live' ? 'calls-live-pulse 1.6s ease-in-out infinite' : 'none',
-                      '@keyframes calls-live-pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.25 } },
-                    }}
-                  />
-                )}
-                label={liveCallsTotal != null ? t('chart.liveNowCount', { count: liveCallsTotal }) : t('chart.liveNow')}
-                sx={{
-                  height: 24, borderRadius: 1.5, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
-                  color: chartMode === 'live' ? '#fff' : 'var(--accent-primary)',
-                  bgcolor: chartMode === 'live' ? 'var(--accent-primary)' : undefined,
-                  borderColor: 'var(--accent-primary)',
-                  '&:hover': { bgcolor: chartMode === 'live' ? 'var(--accent-primary-hover)' : 'var(--accent-primary-alpha-8)' },
-                }}
-              />
-            </Tooltip>}
+                aria-label={t('chart.by')}
+                renderValue={(v) => `${t('chart.by')} ${groupByOptions.find((o) => o.key === v)?.label || v}`}
+                sx={{ height: 36, fontSize: '0.9rem', minWidth: 140 }}
+              >
+                {groupByOptions.map((o) => (
+                  <MenuItem key={o.key} value={o.key} sx={{ fontSize: '0.9rem' }}>{o.label}</MenuItem>
+                ))}
+              </Select>
+            )}
 
-            <Tooltip title={t('chart.openReports')}>
-              <IconButton size="small" onClick={() => setReportsDrawerOpen(true)} sx={{ color: 'var(--theme-text-primary)', p: 0.25 }}>
-                <OpenInFullIcon sx={{ fontSize: 15 }} />
-              </IconButton>
-            </Tooltip>
+            {chartMode === 'timeline' && (
+              <Select
+                value={aggGrouping || 'auto'}
+                onChange={(e) => handleGroupingChange(e.target.value === 'auto' ? null : e.target.value)}
+                size="small"
+                aria-label={t('bucket.auto')}
+                sx={{ height: 36, fontSize: '0.9rem', minWidth: 110 }}
+              >
+                {['auto', 'hour', 'day', 'week'].map((k) => (
+                  <MenuItem key={k} value={k} sx={{ fontSize: '0.9rem' }}>{t(`bucket.${k}`)}</MenuItem>
+                ))}
+              </Select>
+            )}
+
+            {chartMode === 'timeline' && (
+              <Box
+                data-testid="calls-chart-date-range"
+                sx={{
+                  display: 'flex', alignItems: 'center',
+                  '& .MuiButton-root': {
+                    height: 36, border: '1px solid var(--theme-border)', borderRadius: '6px',
+                    color: 'var(--theme-text-primary)', fontSize: '0.9rem', px: 1.25,
+                  },
+                }}
+              >
+                <EnhancedDateRangePicker dateRange={dateRange} setDateRange={handleDateRangeChange} compact />
+              </Box>
+            )}
+
             <Tooltip title={stripCollapsed ? t('chart.show') : t('chart.hide')}>
-              <IconButton size="small" onClick={toggleStripCollapsed} sx={{ color: 'var(--theme-text-primary)', p: 0.25 }}>
-                {stripCollapsed ? <ExpandMoreIcon sx={{ fontSize: 17 }} /> : <ExpandLessIcon sx={{ fontSize: 17 }} />}
+              <IconButton onClick={toggleStripCollapsed} aria-label={stripCollapsed ? t('chart.show') : t('chart.hide')} sx={{ color: 'var(--theme-text-secondary)' }}>
+                {stripCollapsed ? <ExpandMoreIcon sx={{ fontSize: 22 }} /> : <ExpandLessIcon sx={{ fontSize: 22 }} />}
               </IconButton>
             </Tooltip>
           </Box>
 
-          {!stripCollapsed && (chartMode === 'live' ? (
+          {!stripCollapsed && (chartMode === 'reports' ? (
+            <Box data-testid="calls-reports" sx={{ maxHeight: 520, overflow: 'auto', py: 1 }}>
+              <ReportsPanel category="calls" open />
+            </Box>
+          ) : chartMode === 'live' ? (
             // Live replaces the chart — live calls monitor in the chart area.
             <Box sx={{ maxHeight: 260, overflow: 'auto', py: 0.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -855,7 +836,10 @@ const Calls = () => {
               <TimeHistogram
                 logs={[]}
                 aggregateData={histogramData}
-                height={100}
+                height={180}
+                showLegend
+                labelFor={seriesLabel}
+                onLegendClick={handleChartBarClick}
                 onBrushSelection={(start, end) => {
                   // Drag across a spike -> filter the table to exactly that window
                   const from = Math.floor(start.getTime() / 1000);
@@ -865,29 +849,7 @@ const Calls = () => {
                 onBarClick={handleChartBarClick}
               />
             </LtrIsland>
-          ) : (
-            <Box data-testid="calls-empty" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', py: 3, gap: 0.75 }}>
-              <Box sx={{ width: 48, height: 48, borderRadius: '14px', display: 'grid', placeItems: 'center', bgcolor: 'var(--theme-bg-secondary)', color: 'var(--theme-text-secondary)' }}>
-                <PhoneIcon />
-              </Box>
-              <Typography sx={{ fontWeight: 600, color: 'var(--theme-text-primary)' }}>{t('chart.emptyTitle')}</Typography>
-              <Typography variant="body2" sx={{ color: 'var(--theme-text-secondary)', maxWidth: 420 }}>
-                {Object.keys(currentSearchParams || {}).some((k) => k.startsWith('search[')) ? t('chart.emptyFiltered') : t('chart.emptyHint')}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
-                <Button size="small" variant="outlined" sx={{ borderRadius: 999, textTransform: 'none' }}
-                  onClick={() => { const end = new Date(); end.setHours(23, 59, 59, 999); const start = new Date(end.getTime() - 7 * 864e5 + 1); start.setHours(0, 0, 0, 0); handleDateRangeChange([start, end]); }}>
-                  {t('chart.emptyLast7')}
-                </Button>
-                {Object.keys(currentSearchParams || {}).some((k) => k.startsWith('search[')) && (
-                  <Button size="small" variant="text" sx={{ borderRadius: 999, textTransform: 'none' }}
-                    onClick={() => handleClearAllFilters(setCurrentSearchParams)}>
-                    {t('chart.emptyClear')}
-                  </Button>
-                )}
-              </Box>
-            </Box>
-          ))}
+          ) : null)}
         </Paper>
       )}
       {/* The headline of the screen: the numbers you came for, at the size that
@@ -896,32 +858,29 @@ const Calls = () => {
           Rendered even with an empty grid — "0 calls" is an answer; the row
           vanishing is not. A null value renders "—", never a confident 0. */}
       {!isMobile && (
-        <Box data-testid="calls-counters" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 1 }}>
+        <Box data-testid="calls-counters" sx={{ mb: 1.25 }}>
+          {/* Four numbers, large: how many calls, how many were answered (and
+              the rate), how many were missed, how long they last. The first
+              three filter the list; direction lives in the chart's split. */}
           <StatChips
+            size="large"
             items={[
               { key: 'total', label: t('stats.total'), hint: t('stats.totalHint'), value: summaryCounts.total, icon: <PhoneIcon />, colorVar: '--counter-total', filterKey: null },
-              { key: 'answered', label: t('stats.answered'), hint: t('stats.answeredHint'), value: summaryCounts.answered, icon: <PhoneInTalkIcon />, colorVar: '--counter-answered', filterKey: 'answered' },
+              {
+                key: 'answered',
+                label: summaryCounts.answerRate == null ? t('stats.answered') : `${t('stats.answered')} · ${formatPercent(summaryCounts.answerRate)}`,
+                hint: t('stats.answeredHint'), value: summaryCounts.answered, icon: <PhoneInTalkIcon />, colorVar: '--counter-answered', filterKey: 'answered',
+              },
               { key: 'noAnswer', label: t('stats.noAnswer'), hint: t('stats.noAnswerHint'), value: summaryCounts.noAnswer, icon: <PhoneMissedIcon />, colorVar: '--counter-no-answer', filterKey: 'noAnswer' },
-              { key: 'outgoing', label: t('stats.outgoing'), hint: t('stats.outgoingHint'), value: summaryCounts.outgoing, icon: <CallMadeIcon />, colorVar: '--counter-outgoing', filterKey: 'outgoing' },
-              { key: 'incoming', label: t('stats.incoming'), hint: t('stats.incomingHint'), value: summaryCounts.incoming, icon: <CallReceivedIcon />, colorVar: '--counter-incoming', filterKey: 'incoming' },
             ].map(({ filterKey, value, ...item }) => ({
               ...item,
               // null is "unknown", never a confident 0.
               value: value == null ? '—' : value,
               active: filterKey === null ? !anyQuickActive : isQuickActive(filterKey),
               onClick: () => (filterKey === null ? clearQuickFilters() : handleQuickFilterToggle(filterKey)),
-            }))}
-          />
-          {/* Insights: read-only, derived from the same aggregate as the
-              counters (durations from metric=duration). Not filters, so no
-              onClick and no pressed state. */}
-          <Box aria-hidden sx={{ width: '1px', alignSelf: 'stretch', my: 0.5, bgcolor: 'var(--theme-border)' }} />
-          <StatChips
-            items={[
-              { key: 'answerRate', label: t('stats.answerRate'), hint: t('stats.answerRateHint'), value: formatPercent(summaryCounts.answerRate), icon: <PercentIcon /> },
+            })).concat([
               { key: 'avgDuration', label: t('stats.avgDuration'), hint: t('stats.avgDurationHint'), value: formatClock(summaryCounts.avgDuration), icon: <TimerOutlinedIcon /> },
-              { key: 'totalDuration', label: t('stats.totalDuration'), hint: t('stats.totalDurationHint'), value: formatClock(summaryCounts.totalDuration), icon: <AccessTimeIcon /> },
-            ]}
+            ])}
           />
         </Box>
       )}
@@ -1157,15 +1116,6 @@ const Calls = () => {
         {liveDrawerOpen && <LiveCallsPanel open={liveDrawerOpen} />}
       </LiveDrawer>
 
-      {/* Full call reports — every queries.yml :category: calls report, tables incl. */}
-      <LiveDrawer
-        open={reportsDrawerOpen}
-        onClose={() => setReportsDrawerOpen(false)}
-        title={t('drawer.reports')}
-        icon={<AssessmentIcon sx={{ color: '#0e9488' }} />}
-      >
-        {reportsDrawerOpen && <ReportsPanel category="calls" open={reportsDrawerOpen} />}
-      </LiveDrawer>
     </Box>
   );
 };
