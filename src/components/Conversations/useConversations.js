@@ -87,6 +87,6 @@ export default function useConversations() {
     selectedId, select: setSelectedId, selected,
     events, threadLoading, sendNote, sendSms, sendError,
     canCalls,
-    canNotes: can('notes'), canSms: can('messages'), canContacts: can('contacts'),
+    canNotes: can('notes'), canSms: can('messages'), canContacts: can('contact'),
   };
 }

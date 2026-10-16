@@ -15,7 +15,7 @@ vi.mock('../../services/api/contactsApi', () => ({ contactsApi: { lookup: (a) =>
 vi.mock('../../services/api/messagesApi', () => ({ messagesApi: { send: vi.fn(async () => ({})) } }));
 
 beforeEach(() => {
-  h.granted = ['calls', 'notes', 'messages', 'contacts'];
+  h.granted = ['calls', 'notes', 'messages', 'contact'];
   h.call = null;
   h.apis = createMockApis();
 });
@@ -66,7 +66,7 @@ describe('Conversations screen (mock data)', () => {
   });
 
   it('hides the list and thread without calls but keeps the phone', () => {
-    h.granted = ['contacts'];
+    h.granted = ['contact'];
     render(<ConversationsScreen />);
     expect(screen.queryByTestId('session-row')).toBeNull();
     expect(screen.getByText('Your access does not include conversations.')).toBeInTheDocument();
