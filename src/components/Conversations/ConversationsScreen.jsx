@@ -6,19 +6,17 @@ import Bdi from '../../i18n/Bdi';
 import PhoneScreen from '../Phone/PhoneScreen.jsx';
 import SessionList from './SessionList.jsx';
 import ConversationThread from './ConversationThread.jsx';
-import ContactPanel from './ContactPanel.jsx';
-import DarkPanel, { ROOM } from './DarkPanel.jsx';
+import { ROOM } from './DarkPanel.jsx';
 import useConversations from './useConversations';
 
 const LIST_KEY = 'conversations-list-hidden';
 const readHidden = () => { try { return localStorage.getItem(LIST_KEY) === '1'; } catch { return false; } };
 
 /**
- * The user's working screen: sessions | thread | phone with the contact under it.
+ * The user's working screen: saved conversations (list and thread) | phone.
  * A minimal full-height shell; the admin navbar and sidebar are not mounted.
  * Wide: three columns, the menu button hides the list. Under 900px the list
- * opens over the thread. Under 620px the phone is on top, the thread under it
- * and the contact is hidden.
+ * opens over the thread. Under 620px the phone is above the saved history.
  */
 export default function ConversationsScreen() {
   const { t } = useTranslation('conversations');
@@ -56,7 +54,7 @@ export default function ConversationsScreen() {
         <Box component="aside" sx={{ borderInlineEnd: 1, borderColor: 'divider', bgcolor: 'background.paper', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ p: 1.25, display: 'flex', alignItems: 'center', gap: 1, minHeight: 52, borderBottom: 1, borderColor: 'divider' }}>{menu}<Typography sx={{ fontWeight: 500 }}>{t('list.title')}</Typography></Box>
           <Box sx={{ flex: 1, minHeight: 0 }}>
-            <SessionList tab={c.tab} onTab={c.setTab} sessions={c.sessions} selectedId={c.selectedId} onSelect={pick} loading={c.listLoading} error={c.listError} liveConnected={c.liveConnected} search={c.search} onSearch={c.setSearch} view={c.view} onView={c.setView} canEveryone={c.canEveryone} />
+            <SessionList tab={c.tab} onTab={c.setTab} sessions={c.sessions} selectedId={c.selectedId} onSelect={pick} loading={c.listLoading} error={c.listError} search={c.search} onSearch={c.setSearch} view={c.view} onView={c.setView} canEveryone={c.canEveryone} />
           </Box>
         </Box>
       )}
@@ -65,7 +63,7 @@ export default function ConversationsScreen() {
         <Box component="aside" data-testid="list-overlay" sx={{ position: 'absolute', zIndex: 3, insetBlock: 0, insetInlineStart: 0, width: 'min(280px, 85vw)', bgcolor: 'background.paper', boxShadow: 6, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ p: 1.25, display: 'flex', alignItems: 'center', gap: 1, minHeight: 52, borderBottom: 1, borderColor: 'divider' }}>{menu}<Typography sx={{ fontWeight: 500 }}>{t('list.title')}</Typography></Box>
           <Box sx={{ flex: 1, minHeight: 0 }}>
-            <SessionList tab={c.tab} onTab={c.setTab} sessions={c.sessions} selectedId={c.selectedId} onSelect={pick} loading={c.listLoading} error={c.listError} liveConnected={c.liveConnected} search={c.search} onSearch={c.setSearch} view={c.view} onView={c.setView} canEveryone={c.canEveryone} />
+            <SessionList tab={c.tab} onTab={c.setTab} sessions={c.sessions} selectedId={c.selectedId} onSelect={pick} loading={c.listLoading} error={c.listError} search={c.search} onSearch={c.setSearch} view={c.view} onView={c.setView} canEveryone={c.canEveryone} />
           </Box>
         </Box>
       )}
@@ -80,7 +78,7 @@ export default function ConversationsScreen() {
         <Box sx={{ flex: 1, minHeight: 0 }}>
           {c.canCalls ? (
             <ConversationThread
-              selected={c.selected} events={c.events} loading={c.threadLoading}
+              selected={c.selected} events={c.events} loading={c.threadLoading} error={c.threadError} onRetry={c.reloadThread}
               canNotes={c.canNotes} onNote={c.sendNote} sendError={c.sendError}
             />
           ) : (
@@ -89,15 +87,8 @@ export default function ConversationsScreen() {
         </Box>
       </Box>
 
-      {/* One continuous dark column: the phone fills it; the contact, when
-          there is one, sits under the phone on the same surface. */}
       <Box component="aside" sx={{ order: phoneWidth ? 1 : 0, bgcolor: ROOM, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
         <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}><PhoneScreen embedded /></Box>
-        {c.canContacts && !phoneWidth && (
-          <DarkPanel sx={{ flex: '0 0 auto', maxHeight: '50%', overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-            <ContactPanel phone={c.selected?.remote_number} contactUuid={c.selected?.contact?.uuid} />
-          </DarkPanel>
-        )}
       </Box>
     </Box>
   );

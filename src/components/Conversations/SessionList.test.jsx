@@ -19,8 +19,8 @@ describe('SessionList', () => {
     expect(onTab).toHaveBeenCalledWith('missed');
   });
 
-  it('says so when live updates are not connected', () => {
-    render(<SessionList {...base} tab="live" sessions={[]} liveConnected={false} onSelect={() => {}} onTab={() => {}} />);
-    expect(screen.getByText('Live updates are not connected.')).toBeInTheDocument();
+  it('shows the empty saved history', () => {
+    render(<SessionList {...base} sessions={[]} onSelect={() => {}} onTab={() => {}} />);
+    expect(screen.getByText('No conversations yet.')).toBeInTheDocument();
   });
 });
