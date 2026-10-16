@@ -122,6 +122,47 @@
     "answeredHint": "Show only answered calls",
     "noAnswerHint": "Show only unanswered calls",
     "outgoingHint": "Show only outgoing calls",
-    "incomingHint": "Show only incoming calls"
+    "incomingHint": "Show only incoming calls",
+    "answerRate": "Answer rate",
+    "answerRateHint": "Answered calls out of all calls in the period",
+    "avgDuration": "Avg duration",
+    "avgDurationHint": "Average duration of an answered call",
+    "totalDuration": "Total duration",
+    "totalDurationHint": "Summed duration of every call in the period"
+  },
+  "profile": {
+    "title": "Call profile",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyField": "Copy {{field}}",
+    "fields": {
+      "state": "State",
+      "disposition": "Disposition",
+      "duration": "Duration",
+      "caller": "Caller",
+      "callee": "Callee",
+      "caller_id_number": "Caller ID",
+      "contact_name": "Contact",
+      "user_name": "User",
+      "extension_name": "Device",
+      "did_name": "Route",
+      "queue_name": "Queue",
+      "campaign_name": "Campaign",
+      "environment_name": "Application",
+      "provider_name": "Provider",
+      "provider_status": "Provider status",
+      "tariff_name": "Tariff",
+      "sip_call_id": "SIP Call-ID",
+      "sip_user_agent": "User agent",
+      "sip_network_ip": "SIP address",
+      "remote_media_ip": "Media address",
+      "codecs": "Codecs",
+      "read_codec": "Codec in",
+      "write_codec": "Codec out",
+      "rtp_audio_in_mos": "MOS",
+      "rtp_audio_in_quality_percentage": "Audio quality %",
+      "timezone": "Time zone",
+      "domain": "Domain"
+    }
   }
 }

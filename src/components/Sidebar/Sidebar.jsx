@@ -18,10 +18,16 @@ import {
   Typography,
 } from '@mui/material';
 import ShieldIcon from '@mui/icons-material/Shield';
+import LogoutIcon from '@mui/icons-material/Logout';
+import LanguageIcon from '@mui/icons-material/Language';
+import DarkModeIcon from '@mui/icons-material/DarkModeOutlined';
+import LightModeIcon from '@mui/icons-material/LightModeOutlined';
 import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
+import { useThemeMode } from '../../context/ThemeContext';
 import { useIsUserSession } from '../../hooks/useIsUserSession';
 import { getPermittedNavItems, navLabel } from '../../config/navConfig';
+import { useLocale } from '../../i18n/LocaleContext';
 import useNavBadges from '../../hooks/useNavBadges';
 import './Sidebar.css';
 import SidebarCustomerSwitcher from './CustomerSwitcher/SidebarCustomerSwitcher.jsx';
@@ -41,6 +47,10 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
     ? { email: userAuth.user?.email, fullName: userAuth.user?.fullname || userAuth.user?.name }
     : account.user;
   const { t } = useTranslation();
+  const { isDarkMode, toggleTheme } = useThemeMode();
+  const { language, setLanguage } = useLocale();
+  const otherLanguage = language === 'he' ? 'en' : 'he';
+  const themeLabel = t(isDarkMode ? 'appearance.lightMode' : 'appearance.darkMode');
   // Menus open from the sidebar toward the page: rightwards in English,
   // leftwards in Hebrew, where the sidebar sits on the right.
   const isRtl = useTheme().direction === 'rtl';
@@ -138,10 +148,36 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
         {menuItems.map(renderNavItem)}
       </List>
 
-      {/* Bottom tools, followed by the account row. Appearance is the
-          viewer's, not a permission: both sessions get it. */}
-      <Box className="sidebar-bottom-tools" sx={{ mt: 'auto' }}>
-        {/* Language and light/dark mode moved to the top bar's end corner. */}
+      {/* Language and light/dark mode, just above the account they belong
+          to. Appearance is the viewer's, not a permission: both sessions get
+          it. Open: a compact row; collapsed: stacked icons. Each is named in
+          its tooltip, which opens toward the page. */}
+      <Box
+        className={`sidebar-bottom-tools ${collapsed && !wide ? 'sidebar-bottom-tools--stacked' : ''}`}
+        sx={{ mt: 'auto' }}
+        data-testid="sidebar-appearance"
+      >
+        {/* One click to the other language, named in that language. */}
+        <Tooltip title={t(`languageName.${otherLanguage}`)} placement={towardPage}>
+          <IconButton
+            className="sidebar-tool-button"
+            onClick={() => setLanguage(otherLanguage)}
+            aria-label={t('appearance.switchLanguage')}
+            data-testid="sidebar-language"
+          >
+            <LanguageIcon />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={themeLabel} placement={towardPage}>
+          <IconButton
+            className="sidebar-tool-button"
+            onClick={toggleTheme}
+            aria-label={themeLabel}
+            data-testid="sidebar-theme"
+          >
+            {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* Account — pinned at the bottom: the avatar, named in its tooltip. */}
@@ -195,6 +231,23 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
               {t(userSession ? 'signedInAs.user' : 'signedInAs.admin')}
             </Typography>
           </Box>
+        )}
+        {/* Sign out, in plain sight when the sidebar is open (it lived inside
+            the account dialog / the user menu). */}
+        {(wide || !collapsed) && (
+          <Tooltip title={t('action.signOut')} placement={towardPage}>
+            <IconButton
+              data-testid="sidebar-sign-out"
+              aria-label={t('action.signOut')}
+              onClick={() => {
+                if (userSession) { userAuth.logout(); navigate('/'); }
+                else { account.logout?.(); navigate('/admin'); }
+              }}
+              sx={{ color: 'var(--theme-text-secondary)', flexShrink: 0 }}
+            >
+              <LogoutIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Tooltip>
         )}
       </Box>
 

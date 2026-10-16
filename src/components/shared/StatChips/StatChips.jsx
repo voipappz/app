@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Paper, Typography } from '@mui/material';
+import { Box, Paper, Tooltip, Typography } from '@mui/material';
 
 /**
  * StatChips — the shared clickable counter-chip bar used across screens
@@ -8,11 +8,13 @@ import { Box, Paper, Typography } from '@mui/material';
  * icon + value + label; clicking calls item.onClick. A `live` item gets a
  * pulsing dot so real-time counters are visually distinct from historical ones.
  *
- * items: [{ key, label, value, icon, color?, colorVar?, active?, live?, onClick? }]
+ * items: [{ key, label, value, icon, color?, colorVar?, active?, live?, onClick?, hint? }]
+ *   hint:     a tooltip saying what the number is (or what clicking does)
  *   color:    an explicit hex (e.g. '#8b5cf6'); takes precedence
  *   colorVar: a CSS var name (e.g. '--counter-total') matching the Calls theme
  */
-const StatChips = ({ items = [], sx }) => {
+const StatChips = ({ items = [], sx, size = 'medium' }) => {
+  const large = size === 'large';
   if (!items.length) return null;
 
   const colorOf = (item) =>
@@ -23,12 +25,15 @@ const StatChips = ({ items = [], sx }) => {
       {items.map((item) => {
         const clickable = typeof item.onClick === 'function';
         const accent = colorOf(item);
-        return (
+        const chip = (
           <Paper
             key={item.key || item.label}
+            data-stat={item.key}
             elevation={0}
             role={clickable ? 'button' : undefined}
             tabIndex={clickable ? 0 : undefined}
+            // A clickable chip is a toggle: say which one is on.
+            aria-pressed={clickable ? Boolean(item.active) : undefined}
             onClick={item.onClick}
             onKeyDown={(e) => {
               if (clickable && (e.key === 'Enter' || e.key === ' ')) {
@@ -39,9 +44,10 @@ const StatChips = ({ items = [], sx }) => {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
-              px: 1.5,
-              py: 0.75,
+              px: large ? 2.25 : 1.5,
+              py: large ? 1.25 : 0.75,
+              minWidth: large ? 150 : undefined,
+              gap: large ? 1.25 : 1,
               cursor: clickable ? 'pointer' : 'default',
               userSelect: 'none',
               border: '1px solid',
@@ -79,12 +85,12 @@ const StatChips = ({ items = [], sx }) => {
             )}
             {item.icon &&
               React.cloneElement(item.icon, {
-                sx: { fontSize: 18, color: accent, opacity: 0.9 },
+                sx: { fontSize: large ? 24 : 18, color: accent, opacity: 0.9 },
               })}
             <Typography
               sx={{
-                fontWeight: 600,
-                fontSize: '0.9rem',
+                fontWeight: large ? 700 : 600,
+                fontSize: large ? '1.35rem' : '0.9rem',
                 lineHeight: 1,
                 color: 'var(--theme-text-primary)',
                 fontFamily: 'Rubik, sans-serif',
@@ -94,7 +100,7 @@ const StatChips = ({ items = [], sx }) => {
             </Typography>
             <Typography
               sx={{
-                fontSize: '0.75rem',
+                fontSize: large ? '0.9rem' : '0.75rem',
                 fontWeight: 500,
                 opacity: 0.9,
                 color: 'var(--theme-text-secondary)',
@@ -105,6 +111,9 @@ const StatChips = ({ items = [], sx }) => {
             </Typography>
           </Paper>
         );
+        return item.hint
+          ? <Tooltip key={item.key || item.label} title={item.hint} describeChild>{chip}</Tooltip>
+          : chip;
       })}
     </Box>
   );

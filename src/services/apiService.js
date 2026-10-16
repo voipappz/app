@@ -131,8 +131,19 @@ class ApiService {
     this.errorHandler = errorFn;
   }
 
-  // Centralized API response handler
-  async handleResponse(response, context = '', showMessages = true) {
+  // A success toast is for an action the user took that changed something
+  // (create / update / delete). Loading data never announces itself: a GET (or
+  // HEAD/OPTIONS) is a read, and so is any request whose context says it is
+  // fetching or loading. Errors are reported either way.
+  static announcesSuccess(method, context) {
+    const verb = String(method || 'GET').toUpperCase();
+    if (verb === 'GET' || verb === 'HEAD' || verb === 'OPTIONS') return false;
+    return !/^\s*(fetching|loading)\b/i.test(context || '');
+  }
+
+  // Centralized API response handler. `method` decides whether a success is
+  // worth a toast (see announcesSuccess); it defaults to a read.
+  async handleResponse(response, context = '', showMessages = true, method = 'GET') {
     if (response.status === 401) {
       console.error(`Authentication failed for ${context}`);
 
@@ -270,8 +281,9 @@ class ApiService {
       // Reset consecutive error counter on successful response
       this.rateLimitConfig.consecutiveErrors = 0;
       
-      // Show success message for successful operations
-      if (this.successHandler && showMessages && context) {
+      // Show a success message for a change the user made -- never for a load.
+      if (this.successHandler && showMessages && context
+          && ApiService.announcesSuccess(method, context)) {
         this.successHandler(`✅ Successfully completed: ${context}`);
       }
 
@@ -674,7 +686,7 @@ class ApiService {
           context
         });
 
-        const result = await this.handleResponse(response, context, showMessages);
+        const result = await this.handleResponse(response, context, showMessages, finalOptions.method || 'GET');
 
         // Any 2xx proves the access token is good, so nothing outstanding is a
         // session failure any more. See the post-refresh 401 branch below.
@@ -685,8 +697,11 @@ class ApiService {
           this.recordSuccess();
         }
 
-        // Cache successful GET responses
-        if (method === 'GET') {
+        // Cache successful GET responses - unless the server said not to
+        // (Cache-Control: no-store, e.g. a device read carrying its SIP
+        // password). Cache-Control is CORS-safelisted, so it is readable here.
+        const noStore = /no-store/i.test(response.headers?.get?.('Cache-Control') || '');
+        if (method === 'GET' && !noStore) {
           this.setCache(finalUrl, result);
         }
 
