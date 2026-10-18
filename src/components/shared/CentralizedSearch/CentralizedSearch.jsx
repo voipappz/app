@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import i18n from '../../../i18n';
 import {
   Box,
   TextField,
@@ -18,51 +17,34 @@ import {
   CircularProgress,
   Checkbox,
   ListItemText,
-  Menu,
   Popover,
   Popper,
   Paper,
   ClickAwayListener,
   useMediaQuery,
 } from '@mui/material';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import TuneIcon from '@mui/icons-material/Tune';
-import PersonIcon from '@mui/icons-material/Person';
-import PhoneIcon from '@mui/icons-material/Phone';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import LabelIcon from '@mui/icons-material/Label';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import EnhancedDateRangePicker from '../EnhancedDateRangePicker/EnhancedDateRangePicker.jsx';
+import FilterPills, {
+  ACTIVE_CHIP_SX, NUMERIC_OP_MAP, getActiveFilters, getSegmentIcon, isNumericSegment, isStringSegment,
+  pillSegmentsFor, withoutActiveFilter,
+} from '../FilterPills/FilterPills.jsx';
 import { useAuth } from '../../../context/AuthContext';
 import { useUserAuth } from '../../../context/UserAuthContext';
 import { parseSearchInput } from '../../../hooks/useCentralizedSearch';
 import { primaryButtonStyle, secondaryButtonStyle } from '../../../theme/buttonStyles';
 import './CentralizedSearch.css';
 
-const ICON_MAP = {
-  'caller': <PersonIcon sx={{ fontSize: 16 }} />,
-  'call.caller': <PersonIcon sx={{ fontSize: 16 }} />,
-  'callee': <PhoneIcon sx={{ fontSize: 16 }} />,
-  'call.callee': <PhoneIcon sx={{ fontSize: 16 }} />,
-  'created_at': <CalendarTodayIcon sx={{ fontSize: 16 }} />,
-  'call.created_at': <CalendarTodayIcon sx={{ fontSize: 16 }} />,
-  'name': <PersonIcon sx={{ fontSize: 16 }} />,
-  'email': <PersonIcon sx={{ fontSize: 16 }} />,
-};
-
 // The top bar's slot for the docked search field (rendered by TopBar).
 export const TOPBAR_SEARCH_SLOT_ID = 'topbar-search-slot';
 
-const getSegmentIcon = (segmentName) => {
-  return ICON_MAP[segmentName] || <FilterListIcon sx={{ fontSize: 16 }} />;
-};
-
-const NUMERIC_OP_MAP = { '=': 'EQ', '>': 'GT', '\u2265': 'GTE', '<': 'LT', '\u2264': 'LTE', '\u2260': 'NE' };
 const NUMERIC_OP_LABELS = [
   { value: '=', label: '=' },
   { value: '>', label: '>' },
@@ -71,16 +53,6 @@ const NUMERIC_OP_LABELS = [
   { value: '\u2264', label: '\u2264' },  // <=  (LTE)
   { value: '\u2260', label: '\u2260' },
 ];
-
-const isStringSegment = (segment) => {
-  const t = segment?.type;
-  return !t || t === 'string' || !['numeric', 'number', 'select', 'multi_select', 'select2_ajax', 'auto_complete_ajax', 'date', 'time', 'tag'].includes(t);
-};
-
-const isNumericSegment = (segment) => {
-  const t = segment?.type;
-  return t === 'numeric' || t === 'number';
-};
 
 const FilterInput = ({ segment, value, onChange, access }) => {
   const { t } = useTranslation();
@@ -409,195 +381,6 @@ const TagFilterInput = ({ segment, value, onChange, access }) => {
   );
 };
 
-const getActiveFilters = (segments, currentSearchParams) => {
-  if (!segments || !currentSearchParams) return [];
-
-  const active = [];
-  const matchedFields = new Set();
-
-  // Collect meta tag filters: search[meta][key]=value
-  const metaEntries = [];
-  for (const [key, value] of Object.entries(currentSearchParams)) {
-    const metaMatch = key.match(/^search\[meta\]\[([^\]]+)\]$/);
-    if (metaMatch) {
-      metaEntries.push({ metaKey: metaMatch[1], metaValue: value, paramKey: key });
-    }
-  }
-  if (metaEntries.length > 0) {
-    const tagSegment = segments?.find(s => s.type === 'tag');
-    metaEntries.forEach((entry) => {
-      const displayValue = entry.metaValue ? `${entry.metaKey}=${entry.metaValue}` : entry.metaKey;
-      active.push({
-        segment: tagSegment || { label: i18n.t('search.tag'), type: 'tag', name: 'meta' },
-        fieldName: `meta__${entry.metaKey}`,
-        paramKey: entry.paramKey,
-        value: entry.metaValue,
-        displayValue,
-        isMeta: true,
-      });
-    });
-    matchedFields.add('meta');
-  }
-
-  for (const [key, value] of Object.entries(currentSearchParams)) {
-    if (key === 'order_by' || key === 'order_type' || key === '_client') continue;
-    if (key === 'search[text]' || key === 'search[inline]') continue;
-    if (key.startsWith('search[meta]')) continue; // already handled above
-
-    for (const segment of segments) {
-      const fieldName = segment.name || segment.field;
-      if (matchedFields.has(fieldName)) continue;
-      if (segment.type === 'tag') continue; // skip tag segments in normal matching
-
-      if (key.includes(`search[${fieldName}]`)) {
-        let displayValue = value;
-        if (Array.isArray(value)) {
-          if (segment.data) {
-            const getVal = (o) => o.uuid || o.value || o.id;
-            const getLbl = (o) => o.name || o.label || String(o);
-            displayValue = value.map(v => {
-              const opt = segment.data.find(d => getVal(d) === v);
-              return opt ? getLbl(opt) : v;
-            }).join(', ');
-          } else {
-            displayValue = value.join(', ');
-          }
-        } else if (segment.data) {
-          const getVal = (o) => o.uuid || o.value || o.id;
-          const getLbl = (o) => o.name || o.label || String(o);
-          const opt = segment.data.find(d => getVal(d) === value);
-          if (opt) displayValue = getLbl(opt);
-        }
-
-        active.push({ segment, fieldName, paramKey: key, value, displayValue: String(displayValue) });
-        matchedFields.add(fieldName);
-        break;
-      }
-    }
-
-    if (!active.some(a => a.paramKey === key)) {
-      const genericMatch = key.match(/search\[([^\]]+)\]/);
-      if (genericMatch) {
-        const rawField = genericMatch[1];
-        if (!matchedFields.has(rawField)) {
-          active.push({
-            segment: null,
-            fieldName: rawField,
-            paramKey: key,
-            value,
-            displayValue: String(Array.isArray(value) ? value.join(', ') : value),
-          });
-          matchedFields.add(rawField);
-        }
-      }
-    }
-  }
-
-  return active;
-};
-
-/**
- * One filter, one element.
- *
- * Unset it reads as its own name — `Cause ▾` — and opens the values it accepts.
- * Set it reads as the answer — `Cause: Answer ✕`. That second state IS the
- * active-filter chip, not a copy of it: screens that opt into pills render this
- * row *instead of* the chip row below, so a filter is never on screen twice.
- *
- * Options come from `segment.data` when the server supplies one (cause,
- * direction, disposition…); everything else gets a one-line text box, which is
- * all the full ⚙ panel would have given it anyway.
- */
-const FilterPill = ({ segment, active, onApply, onRemove }) => {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [draft, setDraft] = useState('');
-  const fieldName = segment.name || segment.field;
-  const options = Array.isArray(segment.data) ? segment.data : null;
-
-  const close = () => setAnchorEl(null);
-
-  const apply = (value) => {
-    close();
-    if (value === '' || value === null || value === undefined) return;
-    onApply(fieldName, value);
-  };
-
-  if (active) {
-    return (
-      <Chip
-        icon={getSegmentIcon(fieldName)}
-        label={`${segment.label}: ${active.displayValue}`}
-        size="small"
-        onDelete={() => onRemove(active)}
-        sx={{
-          fontFamily: 'Rubik, sans-serif', fontSize: '0.78rem', borderRadius: '16px',
-          backgroundColor: 'var(--accent-primary-alpha-8)',
-          color: 'var(--accent-primary)',
-          border: '1px solid var(--accent-primary-alpha-20)',
-          '& .MuiChip-icon': { color: 'var(--accent-primary)' },
-          '& .MuiChip-deleteIcon': {
-            color: 'var(--accent-primary)',
-            '&:hover': { color: 'var(--accent-primary-dark)' },
-          },
-        }}
-      />
-    );
-  }
-
-  return (
-    <>
-      <Chip
-        label={segment.label}
-        size="small"
-        variant="outlined"
-        deleteIcon={<ArrowDropDownIcon />}
-        onDelete={(e) => setAnchorEl(e.currentTarget.parentElement)}
-        onClick={(e) => { setDraft(''); setAnchorEl(e.currentTarget); }}
-        sx={{
-          fontFamily: 'Rubik, sans-serif', fontSize: '0.78rem', borderRadius: '16px',
-          cursor: 'pointer',
-          color: 'var(--theme-text-secondary)',
-          borderColor: 'var(--border-light)',
-          '& .MuiChip-deleteIcon': { color: 'var(--text-tertiary)', ml: -0.5 },
-          '&:hover': { borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)' },
-        }}
-      />
-      {options ? (
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={close}>
-          {options.map((opt) => {
-            const value = opt.uuid || opt.value || opt.id || opt;
-            const label = opt.name || opt.label || String(opt);
-            return (
-              <MenuItem key={String(value)} onClick={() => apply(value)} sx={{ fontSize: '0.8rem' }}>
-                {label}
-              </MenuItem>
-            );
-          })}
-        </Menu>
-      ) : (
-        <Popover
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={close}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        >
-          <Box sx={{ p: 1 }}>
-            <TextField
-              autoFocus
-              size="small"
-              placeholder={segment.label}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') apply(draft.trim()); }}
-              sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.85rem' } }}
-            />
-          </Box>
-        </Popover>
-      )}
-    </>
-  );
-};
-
 /**
  * Shared CentralizedSearch component for all screens.
  *
@@ -606,6 +389,11 @@ const FilterPill = ({ segment, active, onApply, onRemove }) => {
  * @param {Function} onColumnSelectorOpen - Optional. If provided, shows Columns button
  * @param {string} textParam - Param the bare search text is sent as (default search[name])
  * @param {boolean} hideDateRange - Leave out the date range (Today / Month / Year...)
+ * @param {string} renderAs - 'row' (default): the search field, date range and
+ *   actions, docked in the top bar when it offers a slot. 'button': only a
+ *   Filters button that opens the full panel in a popover, plus the chips for
+ *   the active filters no `inlineFilters` pill speaks for — for a screen that
+ *   draws its own search row and only needs the panel. Never docks.
  */
 const CentralizedSearch = ({
   segments,
@@ -626,6 +414,7 @@ const CentralizedSearch = ({
   inlineFilters = null,
   textParam = 'search[name]',
   hideDateRange = false,
+  renderAs = 'row',
 }) => {
   const { t } = useTranslation();
   // The bearer for the raw fetches in AjaxInput/TagFilterInput (they bypass
@@ -636,6 +425,8 @@ const CentralizedSearch = ({
   const { token: portalToken } = useUserAuth();
   const access = adminAuthenticated ? adminAccess : (portalToken || adminAccess);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const asButton = renderAs === 'button';
+  const filtersButtonRef = useRef(null);
 
   // Where this renders: docked in the top bar when it offers a slot, unless
   // this is a phone or the screen is open inside a dialog (the bar is behind it).
@@ -646,16 +437,18 @@ const CentralizedSearch = ({
   useLayoutEffect(() => {
     const el = document.getElementById(TOPBAR_SEARCH_SLOT_ID);
     const inDialog = rootRef.current?.closest('[role="dialog"]');
-    setSlot(el && !inDialog && !isPhone && !hideSearchInput ? el : null);
-  }, [isPhone, hideSearchInput]);
+    setSlot(el && !inDialog && !isPhone && !hideSearchInput && !asButton ? el : null);
+  }, [isPhone, hideSearchInput, asButton]);
   const docked = Boolean(slot);
   const [filterValues, setFilterValues] = useState({});
   const [filterNegated, setFilterNegated] = useState({});
   const [filterNumericOps, setFilterNumericOps] = useState({});
 
+  // With no search box on screen, the bare text param is shown as a chip too:
+  // a `search[inline]` arriving in the URL would otherwise filter invisibly.
   const activeFilters = useMemo(
-    () => getActiveFilters(segments, currentSearchParams),
-    [segments, currentSearchParams]
+    () => getActiveFilters(segments, currentSearchParams, { textParams: asButton ? [textParam, 'search[text]', 'search[inline]'] : [] }),
+    [segments, currentSearchParams, asButton, textParam]
   );
 
   const handleFieldChange = useCallback((fieldName, _operator, value) => {
@@ -708,29 +501,10 @@ const CentralizedSearch = ({
   }, []);
 
   const handleRemoveActiveFilter = useCallback((filter) => {
-    const newParams = { ...currentSearchParams };
-    if (filter.isMeta) {
-      // Remove this specific meta key param
-      delete newParams[filter.paramKey];
-    } else {
-      Object.keys(newParams).forEach(key => {
-        if (key.includes(`search[${filter.fieldName}]`)) {
-          delete newParams[key];
-        }
-      });
-    }
-    onFilterChange(newParams, true);
+    onFilterChange(withoutActiveFilter(currentSearchParams, filter), true);
   }, [currentSearchParams, onFilterChange]);
 
-  // Pills for the fields a screen wants permanently visible, in the order it
-  // asked for them. Names that the server didn't send as segments are skipped
-  // rather than faked — a pill that can't be filled is worse than no pill.
-  const pillSegments = useMemo(() => {
-    if (!inlineFilters || !segments) return [];
-    return inlineFilters
-      .map((name) => segments.find(s => (s.name || s.field) === name))
-      .filter(Boolean);
-  }, [inlineFilters, segments]);
+  const pillSegments = useMemo(() => pillSegmentsFor(inlineFilters, segments), [inlineFilters, segments]);
 
   // Everything active that no pill already speaks for — tags, and whatever the
   // ⚙ panel or the search box set on the other fields.
@@ -738,25 +512,6 @@ const CentralizedSearch = ({
     const pillNames = new Set(pillSegments.map(s => s.name || s.field));
     return activeFilters.filter(f => !pillNames.has(f.fieldName));
   }, [activeFilters, pillSegments]);
-
-  const handlePillApply = useCallback((fieldName, value) => {
-    const segment = segments?.find(s => (s.name || s.field) === fieldName);
-    const isNumeric = isNumericSegment(segment);
-    const operator = isNumeric ? (NUMERIC_OP_MAP['='] || 'EQ') : 'IS';
-    // A pill picks exactly one value, so it emits IS — not the panel's IN — and
-    // wraps choice-list values in an array. That makes a pill and a screen's own
-    // quick-filter buttons write the identical param, so one lights the other.
-    const paramValue = (!isNumeric && Array.isArray(segment?.data)) ? [value] : value;
-
-    // onFilterChange replaces the whole param set, so carry the rest forward —
-    // dropping this field's other operators first, so IS can't stack on NOT.
-    const next = {};
-    Object.entries(currentSearchParams || {}).forEach(([key, val]) => {
-      if (!key.includes(`search[${fieldName}]`)) next[key] = val;
-    });
-    next[`search[${fieldName}][${operator}]`] = paramValue;
-    onFilterChange(next, false);
-  }, [segments, currentSearchParams, onFilterChange]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -1033,42 +788,36 @@ const CentralizedSearch = ({
         </Box>
       );
 
+  const chipLabel = (filter) => {
+    if (filter.isMeta) return `${t('search.tag')}: ${filter.displayValue}`;
+    if (filter.isText) return `${t('search.text')}: ${filter.displayValue}`;
+    return `${filter.segment ? filter.segment.label : filter.fieldName}: ${filter.displayValue}`;
+  };
+  const chipIcon = (filter) => {
+    if (filter.isMeta) return <LabelIcon sx={{ fontSize: 16 }} />;
+    if (filter.isText) return <SearchIcon sx={{ fontSize: 16 }} />;
+    return getSegmentIcon(filter.fieldName);
+  };
+  const overflowChips = overflowFilters.map((filter) => (
+    <Chip
+      key={filter.paramKey}
+      icon={chipIcon(filter)}
+      label={chipLabel(filter)}
+      size="small"
+      onDelete={() => handleRemoveActiveFilter(filter)}
+      sx={ACTIVE_CHIP_SX}
+    />
+  ));
+
   const pillRow = pillSegments.length > 0 && (
         <Box className="centralized-search-active-chips">
-          {pillSegments.map((segment) => {
-            const fieldName = segment.name || segment.field;
-            return (
-              <FilterPill
-                key={fieldName}
-                segment={segment}
-                active={activeFilters.find(f => f.fieldName === fieldName) || null}
-                onApply={handlePillApply}
-                onRemove={handleRemoveActiveFilter}
-              />
-            );
-          })}
-          {overflowFilters.map((filter) => (
-            <Chip
-              key={filter.paramKey}
-              icon={filter.isMeta ? <LabelIcon sx={{ fontSize: 16 }} /> : getSegmentIcon(filter.fieldName)}
-              label={filter.isMeta
-                ? `${t('search.tag')}: ${filter.displayValue}`
-                : `${filter.segment ? filter.segment.label : filter.fieldName}: ${filter.displayValue}`}
-              size="small"
-              onDelete={() => handleRemoveActiveFilter(filter)}
-              sx={{
-                fontFamily: 'Rubik, sans-serif', fontSize: '0.78rem', borderRadius: '16px',
-                backgroundColor: 'var(--accent-primary-alpha-8)',
-                color: 'var(--accent-primary)',
-                border: '1px solid var(--accent-primary-alpha-20)',
-                '& .MuiChip-icon': { color: 'var(--accent-primary)' },
-                '& .MuiChip-deleteIcon': {
-                  color: 'var(--accent-primary)',
-                  '&:hover': { color: 'var(--accent-primary-dark)' },
-                },
-              }}
-            />
-          ))}
+          <FilterPills
+            segments={segments}
+            fields={inlineFilters}
+            currentSearchParams={currentSearchParams}
+            onChange={onFilterChange}
+          />
+          {overflowChips}
           {activeFilters.length > 0 && (
             <Chip
               label={t('search.clearAll')}
@@ -1088,36 +837,16 @@ const CentralizedSearch = ({
 
   const chipRow = activeFilters.length > 0 && (
         <Box className="centralized-search-active-chips">
-          {activeFilters.map((filter) => {
-            const label = filter.isMeta
-              ? `${t('search.tag')}: ${filter.displayValue}`
-              : filter.segment
-                ? `${filter.segment.label}: ${filter.displayValue}`
-                : `${filter.fieldName}: ${filter.displayValue}`;
-
-            return (
-              <Chip
-                key={filter.paramKey}
-                icon={filter.isMeta ? <LabelIcon sx={{ fontSize: 16 }} /> : getSegmentIcon(filter.fieldName)}
-                label={label}
-                size="small"
-                onDelete={() => handleRemoveActiveFilter(filter)}
-                sx={{
-                  fontFamily: 'Rubik, sans-serif',
-                  fontSize: '0.8rem',
-                  borderRadius: '16px',
-                  backgroundColor: 'var(--accent-primary-alpha-8)',
-                  color: 'var(--accent-primary)',
-                  border: '1px solid var(--accent-primary-alpha-20)',
-                  '& .MuiChip-icon': { color: 'var(--accent-primary)' },
-                  '& .MuiChip-deleteIcon': {
-                    color: 'var(--accent-primary)',
-                    '&:hover': { color: 'var(--accent-primary-dark)' },
-                  },
-                }}
-              />
-            );
-          })}
+          {activeFilters.map((filter) => (
+            <Chip
+              key={filter.paramKey}
+              icon={chipIcon(filter)}
+              label={chipLabel(filter)}
+              size="small"
+              onDelete={() => handleRemoveActiveFilter(filter)}
+              sx={{ ...ACTIVE_CHIP_SX, fontSize: '0.8rem' }}
+            />
+          ))}
           <Chip
             label={t('search.clearAll')}
             size="small"
@@ -1134,6 +863,59 @@ const CentralizedSearch = ({
           />
         </Box>
       );
+
+  if (asButton) {
+    // One button and the chips, as siblings of whatever the screen puts around
+    // them (`display: contents`): the screen owns the row.
+    const overflowCount = overflowFilters.length;
+    return (
+      <Box className="centralized-search-button" ref={rootRef} sx={{ display: 'contents' }}>
+        <Button
+          ref={filtersButtonRef}
+          size="small"
+          variant="outlined"
+          startIcon={<FilterListIcon sx={{ fontSize: 18 }} />}
+          onClick={toggleFilterPanel}
+          aria-label={t('search.filters')}
+          aria-haspopup="dialog"
+          aria-expanded={showFilterPanel}
+          data-testid="centralized-search-filters-button"
+          sx={{
+            height: 36, minHeight: 36, borderRadius: '8px', textTransform: 'none', px: 1.5,
+            fontFamily: 'Rubik, sans-serif', fontSize: '0.8rem', whiteSpace: 'nowrap',
+            color: showFilterPanel || overflowCount > 0 ? 'var(--accent-primary)' : 'var(--theme-text-secondary)',
+            borderColor: showFilterPanel || overflowCount > 0 ? 'var(--accent-primary)' : 'var(--theme-border)',
+            '&:hover': { borderColor: 'var(--accent-primary)', backgroundColor: 'var(--accent-primary-alpha-8)' },
+          }}
+        >
+          {overflowCount > 0 ? `${t('search.filters')} · ${overflowCount}` : t('search.filters')}
+        </Button>
+        <Popover
+          open={showFilterPanel}
+          anchorEl={filtersButtonRef.current}
+          onClose={() => setShowFilterPanel(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          slotProps={{ paper: { className: 'centralized-search-popover', elevation: 6, 'data-testid': 'centralized-search-popover' } }}
+        >
+          {filterPanel}
+        </Popover>
+        {overflowChips}
+        {activeFilters.length > 0 && (
+          <Button
+            size="small"
+            variant="text"
+            onClick={onClearAllFilters}
+            sx={{
+              height: 36, minHeight: 36, textTransform: 'none', fontFamily: 'Rubik, sans-serif', fontSize: '0.8rem',
+              color: 'var(--text-tertiary)', '&:hover': { color: 'var(--accent-error)' },
+            }}
+          >
+            {t('search.clear')}
+          </Button>
+        )}
+      </Box>
+    );
+  }
 
   if (docked) {
     return (
