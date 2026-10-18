@@ -11,7 +11,7 @@
   "files": [
     "LICENSE",
     "src",
-    "!src/**/*.test.jsx",
+    "!src/**/*.test.*",
     "README.md"
   ],
   "sideEffects": [
