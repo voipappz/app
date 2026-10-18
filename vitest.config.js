@@ -15,7 +15,10 @@ export default defineConfig({
     // Vitest's default is 5s per test. Screens that render many rows or simulate
     // typing take 5-10s on a slow machine (they pass in CI), so allow 15s.
     testTimeout: 15000,
-    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    include: [
+      'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'packages/*/src/**/*.{test,spec}.{js,jsx}'
+    ],
     exclude: ['node_modules', 'dist', 'test-results', 'playwright-report'],
     // @mui/x-data-grid's entry imports its own .css, which Node cannot load
     // when the package is externalized. Inlining it lets Vite handle the
@@ -24,7 +27,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
+      '@': resolve(__dirname, 'src'),
+      '@voipappz/chat-ui': resolve(__dirname, 'packages/chat-ui/src/index.js')
     }
   }
 });
