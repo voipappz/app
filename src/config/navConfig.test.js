@@ -37,12 +37,20 @@ describe('navConfig billing and carrier screens', () => {
     expect(getPermittedTopbarItems(acl).map((item) => item.path)).not.toContain('/providers');
   });
 });
-// The top bar keeps no tool icons: Events opens from a list row, Monitoring
-// from the health dot, Syslog from Monitoring's Logs view.
+// The top bar keeps no tool icons: Events opens from a list row, Syslog from
+// Monitoring's Logs view. Monitoring itself is a rail item (below Reports):
+// admins open it on purpose, not only when the health dot turns red.
 describe('navConfig top bar tools', () => {
   it('gives none of them an icon of its own', () => {
     expect(TOPBAR_NAV_ITEMS.filter((item) => !item.noIcon)).toEqual([]);
     expect(findNavItemByPath('/logs')).toMatchObject({ text: 'Syslog', aclKey: 'logs' });
+  });
+
+  it('lists Monitoring in the rail, after Reports, for an account with monitors access', () => {
+    const acl = { data: { reports: { main: ['read'] }, monitors: { main: ['read'] } } };
+    const paths = getPermittedNavItems(acl).map((item) => item.path);
+    expect(paths.indexOf('/monitoring')).toBeGreaterThan(paths.indexOf('/reports'));
+    expect(getPermittedTopbarItems(acl).map((item) => item.path)).not.toContain('/monitoring');
   });
 });
 // Live is back in the account console (it was portal-only from 8cc1555). Gated

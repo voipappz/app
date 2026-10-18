@@ -50,6 +50,10 @@ export const NAV_ITEMS = [
   { text: 'Calls', labelKey: 'nav:calls',         path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
   { text: 'Messages', labelKey: 'nav:messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'messages',                       group: 'MONITOR'  },
   { text: 'Reports', labelKey: 'nav:reports',       path: '/reports',        iconComponent: AssessmentIcon,            aclKey: 'reports',                        group: 'MONITOR'  },
+  // Monitoring (node health, Gatus checks, syslog) is a screen admins open on
+  // purpose, not only when the health dot turns red, so it sits in the rail.
+  // Syslog stays its Logs tab; Events stays off-menu (opened from a row).
+  { text: 'Monitoring', labelKey: 'nav:monitoring',    path: '/monitoring',     iconComponent: TimelineIcon,              aclKey: 'monitors',                       group: 'MONITOR'  },
   { text: 'Users', labelKey: 'nav:users',         path: '/users',          iconComponent: PeopleIcon,                aclKey: 'users',                          group: 'MANAGE'   },
   { text: 'Accounts', labelKey: 'nav:accounts',      path: '/accounts',       iconComponent: BadgeIcon,                 aclKey: 'accounts',                       group: 'MANAGE'   },
   { text: 'Templates', labelKey: 'nav:templates',     path: '/templates',      iconComponent: ArticleIcon,               aclKey: 'templates',                      group: 'MANAGE'   },
@@ -59,11 +63,9 @@ export const NAV_ITEMS = [
 // Also consumed by global search and breadcrumbs.
 export const TOPBAR_NAV_ITEMS = [
   // `noIcon`: no top bar icon; reached from elsewhere — Events from a list
-  // row (RowEventsButton), Monitoring from the health dot, Syslog from the
-  // Logs view of Monitoring.
+  // row (RowEventsButton), Syslog from the Logs view of Monitoring.
   { text: 'Events', labelKey: 'nav:events',        path: '/events',         iconComponent: BoltIcon,                  aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
   { text: 'Syslog', labelKey: 'nav:syslog',        path: '/logs',           iconComponent: SubjectIcon,               aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
-  { text: 'Monitoring', labelKey: 'nav:monitoring',    path: '/monitoring',     iconComponent: TimelineIcon,              aclKey: 'monitors',                       group: 'MONITOR',  noIcon: true },
 ];
 
 // Screens with a route but no menu entry: they open from the screen they
