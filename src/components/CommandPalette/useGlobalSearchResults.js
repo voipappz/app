@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
@@ -14,6 +15,8 @@ import CampaignIcon from '@mui/icons-material/Campaign';
 import RouteIcon from '@mui/icons-material/Route';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import PersonIcon from '@mui/icons-material/Person';
+import BadgeIcon from '@mui/icons-material/Badge';
+import MiscellaneousServicesIcon from '@mui/icons-material/MiscellaneousServices';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { getPermittedNavItems } from '../../config/navConfig';
 import { useRecentPages } from '../../context/RecentPagesContext';
@@ -26,31 +29,40 @@ import { readRecentObjects } from '../../utils/recentObjects';
 import { timeAgo, splitMatch } from '../../utils/searchText';
 import { usePortalSidebar } from '../../context/PortalSidebarContext';
 import { useCallNumber } from '../../hooks/useCallNumber';
-import { askMcpAssistant } from '../../services/mcpAssistant';
 import { buildQuickActions } from './quickActions';
 
 export { timeAgo, splitMatch };
 
 // The "brain" of the global search (Algolia-Autocomplete-style): one hook that
-// builds the grouped results (Quick actions · Recent · Navigation · Resources ·
-// Actions), handles debounced async resource search, Ask's answer, and keyboard
-// navigation. Rendered by the CommandPalette dialog (⌘K / openResourceFinder).
+// builds the grouped results — Quick actions · Calls · Devices · Users · Routes
+// · Services · Accounts · other resources · Navigation · Recent · Actions —
+// handles the debounced async resource search, the Ask hand-off to the
+// assistant, and keyboard navigation (↑↓ ⏎ across groups, Tab across types).
+// Rendered by the CommandPalette dialog (⌘K, `/`, or openResourceFinder).
 
+// In display order. `labelKey` is the chip, the group header and the screen
+// name in "See all N in <Screen>". `carryQuery` lands on the screen with the
+// same search applied (Calls: /calls?search[inline]=q, read by useUrlSync).
+// `accountOnly` endpoints exist for an account session only.
 export const RESOURCE_TYPES = [
-  { key: 'calls',         label: 'Call',         endpoint: '/api/calls',         route: '/calls',      nameField: 'caller', subtitleField: 'callee', icon: PhoneInTalkIcon, searchParam: 'search[inline]', carryQuery: true },
-  { key: 'extensions',    label: 'Device',       endpoint: '/api/devices',    route: '/extensions', nameField: 'name', subtitleField: 'username',  icon: PhoneIcon },
-  { key: 'queues',        label: 'Queue',        endpoint: '/api/queues',        route: null,          nameField: 'name', subtitleField: 'strategy',  icon: GroupsIcon },
-  { key: 'dids',          label: 'Route',          endpoint: '/api/routes',          route: '/routes/list',       nameField: 'number', subtitleField: 'name',    icon: DialpadIcon },
-  { key: 'ivrs',          label: 'IVR',          endpoint: '/api/ivrs',          route: null,          nameField: 'name', subtitleField: null,         icon: AccountTreeIcon },
-  { key: 'conferences',   label: 'Conference',   endpoint: '/api/conferences',   route: null,          nameField: 'name', subtitleField: 'status',    icon: MeetingRoomIcon },
-  { key: 'announcements', label: 'Announcement', endpoint: '/api/announcements', route: null,          nameField: 'name', subtitleField: null,         icon: CampaignIcon },
-  { key: 'vmls',          label: 'Dialplan',     endpoint: '/api/vmls',          route: null,          nameField: 'name', subtitleField: null,         icon: RouteIcon },
-  { key: 'bots',          label: 'Bot',          endpoint: '/api/bots',          route: '/bots',       nameField: 'name', subtitleField: null,         icon: SmartToyIcon },
-  { key: 'users',         label: 'User',         endpoint: '/api/users',         route: '/users',      nameField: 'name', subtitleField: 'email',     icon: PersonIcon },
+  { key: 'calls',         labelKey: 'nav:calls',                  endpoint: '/api/calls',         route: '/calls',       nameField: 'caller', subtitleField: 'callee',   icon: PhoneInTalkIcon, searchParam: 'search[inline]', carryQuery: true },
+  { key: 'extensions',    labelKey: 'nav:devices',                endpoint: '/api/devices',       route: '/extensions',  nameField: 'name',   subtitleField: 'username', icon: PhoneIcon },
+  { key: 'users',         labelKey: 'nav:users',                  endpoint: '/api/users',         route: '/users',       nameField: 'name',   subtitleField: 'email',    icon: PersonIcon },
+  { key: 'dids',          labelKey: 'nav:routes',                 endpoint: '/api/routes',        route: '/routes/list', nameField: 'number', subtitleField: 'name',     icon: DialpadIcon },
+  { key: 'services',      labelKey: 'nav:services',               endpoint: '/api/services',      route: '/services',    nameField: 'name',   subtitleField: 'type',     icon: MiscellaneousServicesIcon },
+  { key: 'accounts',      labelKey: 'nav:accounts',               endpoint: '/api/accounts',      route: '/accounts',    nameField: 'name',   subtitleField: 'email',    icon: BadgeIcon, accountOnly: true },
+  { key: 'queues',        labelKey: 'search:types.queues',        endpoint: '/api/queues',        route: null,           nameField: 'name',   subtitleField: 'strategy', icon: GroupsIcon },
+  { key: 'ivrs',          labelKey: 'search:types.ivrs',          endpoint: '/api/ivrs',          route: null,           nameField: 'name',   subtitleField: null,       icon: AccountTreeIcon },
+  { key: 'conferences',   labelKey: 'search:types.conferences',   endpoint: '/api/conferences',   route: null,           nameField: 'name',   subtitleField: 'status',   icon: MeetingRoomIcon },
+  { key: 'announcements', labelKey: 'search:types.announcements', endpoint: '/api/announcements', route: null,           nameField: 'name',   subtitleField: null,       icon: CampaignIcon },
+  { key: 'vmls',          labelKey: 'search:types.vmls',          endpoint: '/api/vmls',          route: null,           nameField: 'name',   subtitleField: null,       icon: RouteIcon },
+  { key: 'bots',          labelKey: 'search:types.bots',          endpoint: '/api/bots',          route: '/bots',        nameField: 'name',   subtitleField: null,       icon: SmartToyIcon },
 ];
 
-// Top 5 chips shown by default, rest behind "+N more"
+// Chips shown by default ([All] + these), the rest behind "+N more".
 export const PRIMARY_CHIP_COUNT = 5;
+// Rows per group; a resource group with more adds a "See all N in <Screen>" row.
+export const MAX_PER_GROUP = 5;
 
 // Open a user's edit modal from anywhere: the Users screen consumes the pending
 // key on mount (cross-screen) and the event when already mounted (same screen).
@@ -64,7 +76,13 @@ const openUserEditorEverywhere = (navigate, obj) => {
 
 const OBJECT_ICONS = { user: EditOutlinedIcon };
 
+// Where a resource type's screen is, with the query carried when it can be.
+const screenPath = (rt, query) => (rt.carryQuery
+  ? `${rt.route}?${new URLSearchParams({ [rt.searchParam]: query.trim() })}`
+  : rt.route);
+
 export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
+  const { t } = useTranslation(['search', 'nav', 'common']);
   const navigate = useNavigate();
   const account = useAuth();
   const userAuth = useUserAuth();
@@ -78,15 +96,22 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
   const [query, setQuery] = useState('');
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [resourceType, setResourceType] = useState(null); // null = all types
-  const [resourceResults, setResourceResults] = useState({});
+  const [resourceResults, setResourceResults] = useState({}); // key -> { data, total }
   const [resourceLoading, setResourceLoading] = useState(false);
   const [showAllChips, setShowAllChips] = useState(false);
   const [recentObjects, setRecentObjects] = useState([]);
   const debounceRef = useRef(null);
-  // Ask's answer, shown in the results in place: { question, pending } | { question, text }.
-  const [answer, setAnswer] = useState(null);
+  // The question handed to the assistant: the palette's body becomes AIChat
+  // while this is set; `back` returns to the results.
+  const [asking, setAsking] = useState(null);
   const { open: openSidebar } = usePortalSidebar();
   const callNumber = useCallNumber();
+
+  const resourceSearch = !userSession;
+  const types = useMemo(
+    () => RESOURCE_TYPES.filter(rt => !rt.accountOnly || account.isAuthenticated),
+    [account.isAuthenticated],
+  );
 
   // Reset state when opened; seed from initialQuery (e.g. escalated text).
   useEffect(() => {
@@ -98,21 +123,15 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
       setResourceLoading(false);
       setShowAllChips(false);
       setRecentObjects(userSession ? [] : readRecentObjects());
-      setAnswer(null);
+      setAsking(null);
     }
   }, [open, initialQuery, userSession]);
 
-  // A new question starts from the typed text; the old answer is for other words.
-  useEffect(() => { setAnswer(null); }, [query]);
+  const ask = useCallback((question) => setAsking(question), []);
+  const back = useCallback(() => setAsking(null), []);
 
-  const ask = useCallback(async (question) => {
-    setAnswer({ question, pending: true });
-    const { text } = await askMcpAssistant(apiService.getToken(), question);
-    // A second question asked while this one was in flight wins.
-    setAnswer((current) => (current?.question === question ? { question, text } : current));
-  }, []);
-
-  // Debounced resource search
+  // Debounced resource search: a client-side fan-out, per_page=MAX_PER_GROUP
+  // each; X-Total (when the endpoint sends it) is the N of "See all N".
   const searchResources = useCallback(async (searchQuery, typeFilter) => {
     if (searchQuery.trim().length < 2) {
       setResourceResults({});
@@ -120,25 +139,24 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
       return;
     }
     setResourceLoading(true);
-    const typesToSearch = typeFilter
-      ? RESOURCE_TYPES.filter(t => t.key === typeFilter)
-      : RESOURCE_TYPES;
+    const typesToSearch = typeFilter ? types.filter(rt => rt.key === typeFilter) : types;
     try {
       const promises = typesToSearch.map(async (rt) => {
         try {
           const sp = rt.searchParam || 'search[name]';
-          const url = `${rt.endpoint}?${sp}=${encodeURIComponent(searchQuery.trim())}&per_page=5`;
+          const url = `${rt.endpoint}?${sp}=${encodeURIComponent(searchQuery.trim())}&per_page=${MAX_PER_GROUP}`;
           const response = await apiService.get(url, {}, 'searching resources', false);
           const data = Array.isArray(response) ? response : (response?.data || []);
-          return { key: rt.key, data };
+          const total = Array.isArray(response) ? null : (Number.isFinite(response?.total) ? response.total : null);
+          return { key: rt.key, data, total };
         } catch {
-          return { key: rt.key, data: [] };
+          return { key: rt.key, data: [], total: null };
         }
       });
       const results = await Promise.all(promises);
       const resultsMap = {};
-      results.forEach(({ key, data }) => {
-        if (data.length > 0) resultsMap[key] = data;
+      results.forEach(({ key, data, total }) => {
+        if (data.length > 0) resultsMap[key] = { data, total };
       });
       setResourceResults(resultsMap);
     } catch {
@@ -146,12 +164,12 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
     } finally {
       setResourceLoading(false);
     }
-  }, []);
+  }, [types]);
 
   // Trigger debounced search when query changes
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (query.trim().length >= 2 && !userSession) {
+    if (query.trim().length >= 2 && resourceSearch) {
       setResourceLoading(true);
       debounceRef.current = setTimeout(() => {
         searchResources(query, resourceType);
@@ -163,7 +181,7 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, resourceType, searchResources, userSession]);
+  }, [query, resourceType, searchResources, resourceSearch]);
 
   // Build grouped results
   const groups = useMemo(() => {
@@ -174,13 +192,83 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
     const quick = buildQuickActions({
       query,
       phoneEnabled: !userSession,
+      labels: {
+        ask: (q) => t('search:quick.ask', { query: q }),
+        askHint: t('search:quick.askHint'),
+        call: (q) => t('search:quick.call', { query: q }),
+        callHint: t('search:quick.callHint'),
+        phone: t('search:quick.phone'),
+        phoneHint: t('search:quick.phoneHint'),
+      },
       on: {
         ask,
         call: (n) => { callNumber(n); onClose(); },
         openPhone: () => { openSidebar('phone', { tab: 'dialpad' }); onClose(); },
       },
     });
-    if (quick.length > 0) result.push({ label: 'Quick actions', items: quick });
+    if (quick.length > 0) result.push({ id: 'quick', label: t('search:groups.quickActions'), items: quick });
+
+    // Resource results (from the API), one group per type, in RESOURCE_TYPES
+    // order, at most MAX_PER_GROUP rows plus a "See all N in <Screen>" row.
+    types.forEach((rt) => {
+      const found = resourceResults[rt.key];
+      if (!found || found.data.length === 0) return;
+      const screen = t(rt.labelKey);
+      const items = found.data.slice(0, MAX_PER_GROUP).map(item => {
+        const id = item.uuid || item.id;
+        const primaryText = item[rt.nameField] || '-';
+        const secondaryText = rt.subtitleField ? item[rt.subtitleField] : null;
+        const envName = item.environment?.name || '';
+        return {
+          id: `resource-${rt.key}-${id}`,
+          label: String(primaryText),
+          description: typeof secondaryText === 'object' ? JSON.stringify(secondaryText) : secondaryText,
+          envName,
+          iconComponent: rt.icon,
+          action: () => {
+            // Users open straight into their edit modal; other types go to
+            // their screen, with the search carried when the screen reads it.
+            if (rt.key === 'users' && id) {
+              openUserEditorEverywhere(navigate, { uuid: id, name: primaryText, path: '/users' });
+            } else if (rt.route) {
+              navigate(screenPath(rt, query));
+            }
+            onClose();
+          },
+        };
+      });
+      const total = found.total ?? found.data.length;
+      if (rt.route && (total > items.length || found.data.length > MAX_PER_GROUP)) {
+        items.push({
+          id: `resource-${rt.key}-more`,
+          isFooter: true,
+          label: found.total != null
+            ? t('search:seeAll', { count: total, screen })
+            : t('search:seeAllUncounted', { screen }),
+          action: () => { navigate(screenPath(rt, query)); onClose(); },
+        });
+      }
+      result.push({ id: `resource-${rt.key}`, label: screen, isResource: true, items });
+    });
+
+    // Navigation — the whole list when browsing, the best MAX_PER_GROUP when typing.
+    const navItems = getPermittedNavItems(acl, { strict: userSession });
+    const filteredNav = lowerQuery
+      ? navItems.filter(item => item.text.toLowerCase().includes(lowerQuery) || item.path.toLowerCase().includes(lowerQuery)).slice(0, MAX_PER_GROUP)
+      : navItems;
+    if (filteredNav.length > 0) {
+      result.push({
+        id: 'navigation',
+        label: t('search:groups.navigation'),
+        items: filteredNav.map(item => ({
+          id: `nav-${item.path}`,
+          label: item.labelKey ? t(item.labelKey, { defaultValue: item.text }) : item.text,
+          path: item.path,
+          iconComponent: item.iconComponent,
+          action: () => { navigate(item.path); onClose(); },
+        })),
+      });
+    }
 
     // Recent — screens you visited AND objects you edited, merged, newest
     // first, each with a visible "time ago" (browser-history style).
@@ -188,7 +276,7 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
       ...recentObjects.map(o => ({
         id: `recent-obj-${o.uuid}`,
         label: o.name || o.uuid,
-        description: o.type === 'user' ? 'User · edited' : o.type,
+        description: o.type === 'user' ? t('search:recentEditedUser') : o.type,
         timestamp: o.timestamp,
         timeLabel: timeAgo(o.timestamp),
         iconComponent: OBJECT_ICONS[o.type] || EditOutlinedIcon,
@@ -206,81 +294,22 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
     ]
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .filter(item => !lowerQuery || item.label.toLowerCase().includes(lowerQuery))
-      .slice(0, 10);
+      .slice(0, MAX_PER_GROUP);
     if (recentMerged.length > 0) {
-      result.push({ label: 'Recent', items: recentMerged });
-    }
-
-    // Navigation
-    const navItems = getPermittedNavItems(acl, { strict: userSession });
-    const filteredNav = lowerQuery
-      ? navItems.filter(item => item.text.toLowerCase().includes(lowerQuery) || item.path.toLowerCase().includes(lowerQuery))
-      : navItems;
-    if (filteredNav.length > 0) {
-      result.push({
-        label: 'Navigation',
-        items: filteredNav.map(item => ({
-          id: `nav-${item.path}`,
-          label: item.text,
-          path: item.path,
-          iconComponent: item.iconComponent,
-          action: () => { navigate(item.path); onClose(); },
-        })),
-      });
-    }
-
-    // Resource results (from API) — inserted between Navigation and Actions
-    const resourceKeys = Object.keys(resourceResults);
-    if (resourceKeys.length > 0) {
-      resourceKeys.forEach(key => {
-        const rt = RESOURCE_TYPES.find(t => t.key === key);
-        if (!rt) return;
-        const items = resourceResults[key];
-        result.push({
-          label: `${rt.label}s (${items.length})`,
-          isResource: true,
-          items: items.map(item => {
-            const id = item.uuid || item.id;
-            const primaryText = item[rt.nameField] || '-';
-            const secondaryText = rt.subtitleField ? item[rt.subtitleField] : null;
-            const envName = item.environment?.name || '';
-            return {
-              id: `resource-${key}-${id}`,
-              label: primaryText,
-              description: typeof secondaryText === 'object' ? JSON.stringify(secondaryText) : secondaryText,
-              badge: rt.label,
-              envName,
-              iconComponent: rt.icon,
-              action: () => {
-                // Users open straight into their edit modal; other types go to
-                // their screen.
-                if (rt.key === 'users' && id) {
-                  openUserEditorEverywhere(navigate, { uuid: id, name: primaryText, path: '/users' });
-                } else if (rt.route) {
-                  // carryQuery: land on the screen with the same search applied.
-                  navigate(rt.carryQuery
-                    ? `${rt.route}?${new URLSearchParams({ [rt.searchParam]: query.trim() })}`
-                    : rt.route);
-                }
-                onClose();
-              },
-            };
-          }),
-        });
-      });
+      result.push({ id: 'recent', label: t('search:groups.recent'), items: recentMerged });
     }
 
     // Actions
     const actions = [
       {
         id: 'action-theme',
-        label: isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+        label: isDarkMode ? t('common:appearance.lightMode') : t('common:appearance.darkMode'),
         iconComponent: isDarkMode ? LightModeIcon : DarkModeIcon,
         action: () => { toggleTheme(); onClose(); },
       },
       {
         id: 'action-logout',
-        label: 'Sign Out',
+        label: t('common:action.signOut'),
         iconComponent: LogoutIcon,
         action: () => { logout(); navigate(userSession ? '/' : '/admin'); onClose(); },
       },
@@ -289,16 +318,25 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
       ? actions.filter(a => a.label.toLowerCase().includes(lowerQuery))
       : actions;
     if (filteredActions.length > 0) {
-      result.push({ label: 'Actions', items: filteredActions });
+      result.push({ id: 'actions', label: t('search:groups.actions'), items: filteredActions });
     }
 
     return result;
-  }, [query, acl, userSession, recentPages, recentObjects, isDarkMode, resourceResults, navigate, onClose, logout, toggleTheme, ask, callNumber, openSidebar]);
+  }, [t, query, acl, userSession, types, recentPages, recentObjects, isDarkMode, resourceResults, navigate, onClose, logout, toggleTheme, ask, callNumber, openSidebar]);
 
-  // Flat list for keyboard navigation
+  // Flat list for keyboard navigation (footer rows included: Enter opens them)
   const flatItems = useMemo(() => groups.flatMap(g => g.items), [groups]);
 
-  // Keyboard handling for the input (↑ ↓ Enter; Esc handled by the surface)
+  // Tab / Shift+Tab cycle the type chips: All → first type → … → All.
+  const cycleType = useCallback((direction) => {
+    const order = [null, ...types.map(rt => rt.key)];
+    const current = order.indexOf(resourceType);
+    const next = order[(current + direction + order.length) % order.length];
+    if (next && order.indexOf(next) > PRIMARY_CHIP_COUNT) setShowAllChips(true);
+    setResourceType(next);
+  }, [types, resourceType]);
+
+  // Keyboard handling for the input (↑ ↓ Enter Tab; Esc handled by the dialog)
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -311,8 +349,11 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
       if (flatItems[highlightIndex]) {
         flatItems[highlightIndex].action();
       }
+    } else if (e.key === 'Tab' && resourceSearch && query.trim()) {
+      e.preventDefault();
+      cycleType(e.shiftKey ? -1 : 1);
     }
-  }, [flatItems, highlightIndex]);
+  }, [flatItems, highlightIndex, resourceSearch, query, cycleType]);
 
   // Reset highlight when results change
   useEffect(() => {
@@ -323,11 +364,12 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
     query, setQuery,
     highlightIndex, setHighlightIndex,
     resourceType, setResourceType,
+    types,
     resourceLoading,
     showAllChips, setShowAllChips,
     groups, flatItems,
     handleKeyDown,
-    answer,
-    resourceSearch: !userSession,
+    asking, ask, back,
+    resourceSearch,
   };
 }

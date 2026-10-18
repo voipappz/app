@@ -1,0 +1,40 @@
+{
+  "title": "חיפוש",
+  "assistant": "עוזר",
+  "placeholder": "חיפוש, שאלה או חיוג למספר…",
+  "clear": "ניקוי",
+  "close": "סגירה",
+  "back": "חזרה לחיפוש",
+  "chips": {
+    "all": "הכול",
+    "more": "עוד {{count}}"
+  },
+  "groups": {
+    "quickActions": "פעולות מהירות",
+    "navigation": "ניווט",
+    "recent": "אחרונים",
+    "actions": "פעולות"
+  },
+  "types": {
+    "queues": "תורים",
+    "ivrs": "מענים קוליים",
+    "conferences": "שיחות ועידה",
+    "announcements": "הודעות קוליות",
+    "vmls": "תכניות חיוג",
+    "bots": "בוטים"
+  },
+  "seeAll": "הצגת כל {{count}} ב{{screen}} ←",
+  "seeAllUncounted": "הצגת הכול ב{{screen}} ←",
+  "recentEditedUser": "משתמש · נערך",
+  "hints": "↑↓ מעבר · ↵ פתיחה · Tab סוג · Esc סגירה",
+  "searching": "מחפש…",
+  "noResults": "אין תוצאות עבור “{{query}}”",
+  "quick": {
+    "ask": "לשאול: “{{query}}”",
+    "askHint": "שאלה לעוזר",
+    "call": "חיוג {{query}}",
+    "callHint": "פותח את הטלפון עם המספר",
+    "phone": "פתיחת הטלפון",
+    "phoneHint": "הטלפון הרך, בצד"
+  }
+}

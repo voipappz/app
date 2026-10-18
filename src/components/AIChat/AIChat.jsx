@@ -400,7 +400,9 @@ const AIChatSidebar = ({
 /**
  * AI Chat Component — WhatsApp-style layout
  */
-const AIChat = () => {
+// `initialQuestion`: a question to send as soon as the assistant is ready —
+// the command palette's Ask row hands the typed text over this way.
+const AIChat = ({ initialQuestion = null }) => {
   const {
     messages,
     inputValue,
@@ -464,6 +466,15 @@ const AIChat = () => {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Send the hand-off question once, when the assistant can take it.
+  const initialSentRef = useRef(false);
+  useEffect(() => {
+    if (!initialQuestion || initialSentRef.current) return;
+    if (!isEndpointActive || isRestoringSession || isStreaming) return;
+    initialSentRef.current = true;
+    sendMessage(initialQuestion);
+  }, [initialQuestion, isEndpointActive, isRestoringSession, isStreaming, sendMessage]);
 
   const formatTime = (timestamp) => {
     const date = typeof timestamp === 'number' && timestamp < 9999999999

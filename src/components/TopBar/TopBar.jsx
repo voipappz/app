@@ -101,6 +101,7 @@ import DynamicProfileEditor from '../common/DynamicProfileEditor/DynamicProfileE
 import { nodesApi } from '../../services/api/nodesApi';
 import { useNodeHealth } from '../../hooks/useNodeHealth';
 import CommandPalette from '../CommandPalette/CommandPalette';
+import { useSearchShortcuts } from '../CommandPalette/useSearchShortcuts';
 import EnvironmentResourcesPanel from './EnvironmentResourcesPanel';
 import NotificationPanel from '../Notifications/NotificationPanel/NotificationPanel';
 import MonitoringSidebar from '../Monitoring/MonitoringSidebar.jsx';
@@ -301,17 +302,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
     setResourceSearchOpen(true);
   }, []);
 
-  // Ctrl+K shortcut to open Resource Finder
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        openResourceFinder();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [openResourceFinder]);
+  // Ctrl+K / ⌘K, and `/` when nothing is being typed into, open the search.
+  useSearchShortcuts(openResourceFinder, resourceSearchOpen);
 
   // Listen for openResourceFinder events from
   // page-level CentralizedSearch escalating to global. CustomEvent.detail.query

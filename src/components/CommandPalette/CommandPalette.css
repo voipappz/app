@@ -9,8 +9,25 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
   background-color: var(--theme-bg-primary) !important;
   max-height: 600px !important;
-  width: 680px !important;
   max-width: calc(100vw - 32px) !important;
+}
+
+.command-palette-paper.MuiDialog-paperWidthLg {
+  max-height: 85dvh !important;
+}
+
+/* The Esc affordance in the input, same look as the footer keys */
+.command-palette-kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-family: monospace;
+  color: var(--theme-text-secondary);
+  background-color: var(--theme-bg-secondary);
+  cursor: pointer;
 }
 
 .command-palette-results {
@@ -29,6 +46,9 @@
 }
 
 .command-palette-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 16px 4px;
   font-size: 0.65rem;
   font-weight: 600;
@@ -44,13 +64,20 @@
   padding: 7px 16px;
   cursor: pointer;
   transition: background-color 0.1s;
-  border-left: 2px solid transparent;
+  border-inline-start: 2px solid transparent;
 }
 
 .command-palette-item:hover,
 .command-palette-item.highlighted {
   background-color: var(--accent-primary-alpha-8, rgba(101, 117, 142, 0.08));
-  border-left-color: var(--accent-primary, #65758E);
+  border-inline-start-color: var(--accent-primary, #65758E);
+}
+
+/* "See all N in <Screen>" — the last row of a resource group */
+.command-palette-item-footer .command-palette-item-label {
+  color: var(--accent-primary, #65758E);
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .command-palette-item-icon {
