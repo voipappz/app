@@ -22,7 +22,6 @@ import { canAccessScreen } from '../utils/jwt';
 // environment selector. Everything else stays reachable through the Studio and
 // ⌘K search (routes still exist), it's just off the rail.
 export const NAV_ITEMS = [
-  // The user's working screen (sessions, thread, phone, contact); a user with `calls` lands here.
   { text: 'Routes', labelKey: 'nav:routes',          path: '/routes',          iconComponent: SchemaIcon,                aclKey: 'routes',          alwaysShow: true, group: 'MANAGE'   },
   { text: 'Services', labelKey: 'nav:services',      path: '/services',       iconComponent: MiscellaneousServicesIcon, aclKey: 'services',                       group: 'MANAGE'   },
   { text: 'Devices', labelKey: 'nav:devices',       path: '/extensions',     iconComponent: DevicesIcon,               aclKey: 'extensions',                     group: 'MANAGE'   },
