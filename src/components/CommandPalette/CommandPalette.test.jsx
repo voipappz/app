@@ -14,8 +14,10 @@ vi.mock('../AIChat/AIChat.jsx', () => ({
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true, acl: {}, logout: vi.fn() }),
 }));
-vi.mock('../../context/UserAuthContext', () => ({ useUserAuth: () => ({ isAuthenticated: false }) }));
-vi.mock('../../hooks/useIsUserSession', () => ({ useIsUserSession: () => false }));
+let userSession = false;
+let userAcl = null;
+vi.mock('../../context/UserAuthContext', () => ({ useUserAuth: () => ({ isAuthenticated: userSession, acl: userAcl }) }));
+vi.mock('../../hooks/useIsUserSession', () => ({ useIsUserSession: () => userSession }));
 vi.mock('../../context/ThemeContext', () => ({ useThemeMode: () => ({ isDarkMode: false, toggleTheme: vi.fn() }) }));
 vi.mock('../../context/RecentPagesContext', () => ({
   useRecentPages: () => ({ recentPages: [{ path: '/calls', label: 'Calls', timestamp: Date.now() - 60000 }] }),
@@ -92,6 +94,24 @@ describe('CommandPalette', () => {
     notes.blur();
     fireEvent.keyDown(document.body, { key: '/' });
     expect(await screen.findByRole('textbox', { name: 'Search' })).toHaveFocus();
+  });
+
+  // A portal user searches their own data: only the types their ACL opens.
+  it('a portal user searches only the screens their ACL grants', async () => {
+    userSession = true;
+    userAcl = { data: { calls: { main: ['read'] } } };
+    try {
+      render(<CommandPalette open onClose={vi.fn()} />);
+      await typeQuery('054');
+      expect(screen.getAllByRole('tab').map((c) => c.textContent)).toEqual(['All', 'Calls']);
+      const searched = apiGet.mock.calls.map(([url]) => url.split('?')[0]);
+      expect(searched).toContain('/api/calls');
+      expect(searched).not.toContain('/api/devices');
+      expect(searched).not.toContain('/api/accounts');
+    } finally {
+      userSession = false;
+      userAcl = null;
+    }
   });
 
   it('groups results by type and bolds the match', async () => {

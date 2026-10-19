@@ -31,6 +31,7 @@ import { usePortalSidebar } from '../../context/PortalSidebarContext';
 import { useCallNumber } from '../../hooks/useCallNumber';
 import { buildQuickActions } from './quickActions';
 import { formatDate } from '../../utils/dateUtils';
+import { canAccessScreen } from '../../utils/jwt';
 
 export { timeAgo, splitMatch };
 
@@ -44,17 +45,18 @@ export { timeAgo, splitMatch };
 // In display order. `labelKey` is the chip, the group header and the screen
 // name in "See all N in <Screen>". `carryQuery` lands on the screen with the
 // same search applied (Calls: /calls?search[inline]=q, read by useUrlSync).
-// `accountOnly` endpoints exist for an account session only.
+// `accountOnly` endpoints exist for an account session only. `aclKey` is the
+// screen a portal USER needs to search the type: they search only those.
 export const RESOURCE_TYPES = [
   // A call has no name: the row is "caller → callee" (a leg with no caller
   // showed as "-"), with when it happened underneath.
-  { key: 'calls',         labelKey: 'nav:calls',                  endpoint: '/api/calls',         route: '/calls',       nameField: 'caller', subtitleField: 'callee',   icon: PhoneInTalkIcon, searchParam: 'search[inline]', carryQuery: true,
+  { key: 'calls',         labelKey: 'nav:calls',                  endpoint: '/api/calls',         route: '/calls',       nameField: 'caller', subtitleField: 'callee',   icon: PhoneInTalkIcon, searchParam: 'search[inline]', carryQuery: true, aclKey: 'calls',
     label: (c) => `${c.caller || '—'} → ${c.callee || '—'}`,
     subtitle: (c) => [c.direction, c.created_at ? formatDate(c.created_at) : null].filter(Boolean).join(' · ') || null },
-  { key: 'extensions',    labelKey: 'nav:devices',                endpoint: '/api/devices',       route: '/extensions',  nameField: 'name',   subtitleField: 'username', icon: PhoneIcon },
-  { key: 'users',         labelKey: 'nav:users',                  endpoint: '/api/users',         route: '/users',       nameField: 'name',   subtitleField: 'email',    icon: PersonIcon },
-  { key: 'dids',          labelKey: 'nav:routes',                 endpoint: '/api/routes',        route: '/routes/list', nameField: 'number', subtitleField: 'name',     icon: DialpadIcon },
-  { key: 'services',      labelKey: 'nav:services',               endpoint: '/api/services',      route: '/services',    nameField: 'name',   subtitleField: 'type',     icon: MiscellaneousServicesIcon },
+  { key: 'extensions',    labelKey: 'nav:devices',                endpoint: '/api/devices',       route: '/extensions',  nameField: 'name',   subtitleField: 'username', icon: PhoneIcon, aclKey: 'extensions' },
+  { key: 'users',         labelKey: 'nav:users',                  endpoint: '/api/users',         route: '/users',       nameField: 'name',   subtitleField: 'email',    icon: PersonIcon, aclKey: 'users' },
+  { key: 'dids',          labelKey: 'nav:routes',                 endpoint: '/api/routes',        route: '/routes/list', nameField: 'number', subtitleField: 'name',     icon: DialpadIcon, aclKey: 'routes' },
+  { key: 'services',      labelKey: 'nav:services',               endpoint: '/api/services',      route: '/services',    nameField: 'name',   subtitleField: 'type',     icon: MiscellaneousServicesIcon, aclKey: 'services' },
   { key: 'accounts',      labelKey: 'nav:accounts',               endpoint: '/api/accounts',      route: '/accounts',    nameField: 'name',   subtitleField: 'email',    icon: BadgeIcon, accountOnly: true },
   { key: 'queues',        labelKey: 'search:types.queues',        endpoint: '/api/queues',        route: null,           nameField: 'name',   subtitleField: 'strategy', icon: GroupsIcon },
   { key: 'ivrs',          labelKey: 'search:types.ivrs',          endpoint: '/api/ivrs',          route: null,           nameField: 'name',   subtitleField: null,       icon: AccountTreeIcon },
@@ -112,11 +114,18 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
   const { open: openSidebar } = usePortalSidebar();
   const callNumber = useCallNumber();
 
-  const resourceSearch = !userSession;
+  // An account searches every type; a portal user only the screens their ACL
+  // opens (the API scopes the rows to their token as well).
+  // Keyed on the portal user's ACL only: an account's ACL object can change
+  // identity between renders, and a new list here re-runs the search.
+  const portalAcl = userSession ? userAuth.acl : null;
   const types = useMemo(
-    () => RESOURCE_TYPES.filter(rt => !rt.accountOnly || account.isAuthenticated),
-    [account.isAuthenticated],
+    () => (userSession
+      ? RESOURCE_TYPES.filter(rt => rt.aclKey && rt.route && canAccessScreen(portalAcl, rt.aclKey))
+      : RESOURCE_TYPES.filter(rt => !rt.accountOnly || account.isAuthenticated)),
+    [userSession, portalAcl, account.isAuthenticated],
   );
+  const resourceSearch = types.length > 0;
 
   // Reset state when opened; seed from initialQuery (e.g. escalated text).
   useEffect(() => {
@@ -233,7 +242,7 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
           action: () => {
             // Users open straight into their edit modal; other types go to
             // their screen, with the search carried when the screen reads it.
-            if (rt.key === 'users' && id) {
+            if (rt.key === 'users' && id && !userSession) {
               openUserEditorEverywhere(navigate, { uuid: id, name: primaryText, path: '/users' });
             } else if (rt.route) {
               navigate(screenPath(rt, query));
