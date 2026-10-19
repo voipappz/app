@@ -48,8 +48,8 @@ vi.mock('../../hooks/useNavBadges', () => ({ default: () => ({ liveCalls: 3, cri
 vi.mock('react-router', async (importOriginal) => ({ ...(await importOriginal()), useNavigate: () => mocks.navigate }));
 vi.mock('../shared/CentralizedSearch/CentralizedSearch.jsx', () => ({
   TOPBAR_SEARCH_SLOT_ID: 'topbar-search-slot',
-  default: ({ hideDateRange, renderAs }) => (
-    <button type="button" data-testid="centralized-search" data-hide-date-range={String(Boolean(hideDateRange))} data-render-as={renderAs}>Filters</button>
+  default: ({ hideDateRange, renderAs, placeholder, textParam }) => (
+    <button type="button" data-testid="centralized-search" data-hide-date-range={String(Boolean(hideDateRange))} data-render-as={renderAs} data-placeholder={placeholder} data-text-param={textParam}>Filters</button>
   ),
 }));
 vi.mock('../../views/syslogs/TimeHistogram', () => ({ default: () => <div data-testid="histogram" /> }));
@@ -59,7 +59,6 @@ vi.mock('./FilterEditDialog/FilterEditDialog.jsx', () => ({ default: () => null 
 vi.mock('@mui/x-data-grid', () => ({ DataGrid: () => <div data-testid="grid" /> }));
 
 import Calls from './Calls.jsx';
-import { TOPBAR_SEARCH_SLOT_ID } from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 
 const before = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 const chip = (key) => document.querySelector(`[data-stat="${key}"]`);
@@ -122,7 +121,7 @@ describe('Calls layout', () => {
     expect(mocks.handleSearch).toHaveBeenCalledWith({ 'search[call.queue_name][IS]': 'sales' }, false);
   });
 
-  it('the five counters, the four pills and the Filters button share one row', () => {
+  it('the five counters, the four pills and the search share one row', () => {
     render(<Calls />);
     const row = screen.getByTestId('calls-counters');
     expect(Array.from(row.querySelectorAll('[data-stat]')).map((el) => el.dataset.stat).slice(0, 5))
@@ -130,25 +129,19 @@ describe('Calls layout', () => {
     const pills = within(row).getByTestId('filter-pills');
     expect(Array.from(pills.querySelectorAll('.MuiChip-root')).map((el) => el.textContent)).toEqual(['Cause', 'Direction', 'Caller', 'Callee']);
     const filters = within(row).getByTestId('centralized-search');
-    expect(filters).toHaveAttribute('data-render-as', 'button');
+    // Not the Filters button: the search docks into the top bar.
+    expect(filters).not.toHaveAttribute('data-render-as', 'button');
     expect(before(chip('incoming'), pills)).toBe(true);
     expect(before(pills, filters)).toBe(true);
     // One flex row that wraps.
     expect(getComputedStyle(row).display).toBe('flex');
   });
 
-  it('has no search field on the desktop screen and leaves the top-bar slot empty', () => {
-    const slot = document.createElement('div');
-    slot.id = TOPBAR_SEARCH_SLOT_ID;
-    document.body.appendChild(slot);
-    try {
-      render(<Calls />);
-      expect(screen.queryByPlaceholderText(/search/i)).toBeNull();
-      expect(screen.queryByTestId('topbar-search')).toBeNull();
-      expect(slot.childElementCount).toBe(0);
-    } finally {
-      slot.remove();
-    }
+  it('docks an inline calls search into the top bar', () => {
+    render(<Calls />);
+    const search = screen.getByTestId('centralized-search');
+    expect(search).toHaveAttribute('data-placeholder', 'Search caller, callee, user, route or call ID');
+    expect(search).toHaveAttribute('data-text-param', 'search[inline]');
   });
 
   it('shows a Live now chip for an account and none for a user session', () => {

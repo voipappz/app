@@ -1,23 +1,30 @@
 import { test, expect } from './auth-fixture';
 
 /**
- * The top bar and the Calls toolbar: the bar carries no per-screen search on
- * Calls any more (its filters sit in the counter row, refresh / export /
- * columns beside the period), and the top-right tools, including Support
- * (which replaced Help) and the health dot.
+ * The top bar: the open screen's search field beside the application selector,
+ * its popup (date range, filters, refresh / export / columns), and the
+ * top-right tools, including Support (which replaced Help) and the health dot.
  */
 test.describe('Top bar', () => {
   test.setTimeout(process.env.CI ? 90000 : 30000);
 
-  test('Calls: the filters live in the counter row, and a search[inline] in the URL reaches the API', async ({ authenticatedPage: page }) => {
-    // The Calls search left the top bar (the bar is for the global Ctrl+K
-    // search): the counter row carries a Filters button with the panel in a
-    // popover, and the text search arrives from the palette as search[inline].
+  test('the Calls search is in the top bar, opens its popup and searches with search[inline]', async ({ authenticatedPage: page }) => {
+    await page.goto('/calls', { waitUntil: 'domcontentloaded', timeout: 20000 });
+
+    const box = page.locator('#topbar-search-slot').getByPlaceholder('Search caller, callee, user, route or call ID');
+    await expect(box).toBeVisible({ timeout: 30000 });
+
+    await box.click();
+    const popup = page.getByTestId('topbar-search-popup');
+    await expect(popup).toBeVisible();
+    await expect(popup.getByRole('button', { name: 'Refresh' })).toBeVisible();
+
     const listRequest = page.waitForRequest((req) => {
       const u = new URL(req.url());
       return u.pathname.endsWith('/api/calls') && u.searchParams.has('page') && u.searchParams.get('search[inline]') === 'test';
-    }, { timeout: 30000 });
-    await page.goto('/calls?search%5Binline%5D=test', { waitUntil: 'domcontentloaded', timeout: 20000 });
+    }, { timeout: 20000 });
+    await box.fill('test');
+    await box.press('Enter');
 
     const request = await listRequest;
     expect(new URL(request.url()).searchParams.has('search[name]')).toBe(false);
@@ -32,30 +39,19 @@ test.describe('Top bar', () => {
     });
     const said = `${await response?.text()} acl=${JSON.stringify(callsAcl)} ${JSON.stringify(await response?.allHeaders())}`;
     expect(response?.status(), said).toBe(200);
-
-    const counters = page.getByTestId('calls-counters');
-    await expect(counters).toBeVisible({ timeout: 30000 });
-    await expect(counters.getByText('Search: test')).toBeVisible();
-    await expect(page.locator('#topbar-search-slot').getByPlaceholder('Search caller, callee, user, route or call ID')).toHaveCount(0);
-
-    const filters = counters.getByTestId('centralized-search-filters-button');
-    await filters.click();
-    const popover = page.getByTestId('centralized-search-popover');
-    await expect(popover).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(popover).toBeHidden();
+    await expect(popup).toBeHidden();
   });
 
-  test('Calls: refresh, export and columns sit in the toolbar beside the period', async ({ authenticatedPage: page }) => {
+  test('the search field takes the whole bar between the selector and the tools', async ({ authenticatedPage: page }) => {
     await page.setViewportSize({ width: 1920, height: 900 });
     await page.goto('/calls', { waitUntil: 'domcontentloaded', timeout: 20000 });
 
-    const actions = page.getByTestId('calls-toolbar-actions');
-    await expect(actions).toBeVisible({ timeout: 30000 });
-    for (const name of ['Refresh', 'Export CSV', 'Columns']) {
-      await expect(actions.getByRole('button', { name, exact: true })).toBeVisible();
-    }
-    await expect(page.getByRole('group', { name: 'Period' }).getByRole('button', { name: '7d', exact: true })).toBeVisible();
+    const slot = page.locator('#topbar-search-slot');
+    await expect(slot.getByPlaceholder('Search caller, callee, user, route or call ID')).toBeVisible({ timeout: 30000 });
+
+    const bar = await page.locator('.topbar-container').boundingBox();
+    const field = await slot.boundingBox();
+    expect(field!.width).toBeGreaterThan(bar!.width * 0.6);
   });
 
   test('the top-right tools show Support instead of Help and the health dot', async ({ authenticatedPage: page }) => {

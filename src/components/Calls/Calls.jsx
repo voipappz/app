@@ -271,8 +271,7 @@ const Calls = () => {
     fetchCalls(dateRange, currentSearchParams);
   };
 
-  // The quick search is the PHONE's: the desktop has no search field any more
-  // (its filters are the counters, the pills and the Filters button).
+  // The quick search: the top bar's field on desktop, the TextField on a phone.
   const handleQuickSearch = (e) => {
     if (e.key === 'Enter') {
       if (quickSearchText.trim()) {
@@ -914,12 +913,19 @@ const Calls = () => {
             currentSearchParams={currentSearchParams}
             onChange={handleSearch}
           />
+          {/* The search field docks into the top bar (inline search over
+              calls, search[inline]); its popup holds the full filter panel.
+              Refresh / Export / Columns stay in the chart toolbar. */}
           <CentralizedSearch
-            renderAs="button"
             inlineFilters={INLINE_FILTER_FIELDS}
             segments={segments}
             currentSearchParams={currentSearchParams}
             onFilterChange={handleSearch}
+            onQuickSearch={handleQuickSearch}
+            quickSearchText={quickSearchText}
+            onQuickSearchChange={handleQuickSearchChange}
+            onRefresh={handleRefresh}
+            placeholder={t('search.placeholder')}
             onClearAllFilters={() => handleClearAllFilters(setCurrentSearchParams)}
             textParam="search[inline]"
             showExclude={true}
