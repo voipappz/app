@@ -62,7 +62,10 @@
     "value": "Value",
     "tag": "Tag",
     "today": "Today",
-    "dateRange": "Date range: {{range}}"
+    "dateRange": "Date range: {{range}}",
+    "filters": "Filters",
+    "clear": "Clear",
+    "text": "Search"
   },
   "datePicker": {
     "quick": {
