@@ -150,6 +150,10 @@ const Calls = () => {
   // Below lg the chart toolbar folds: the grouping becomes one select and the
   // bucket buttons go, so the row stays one row.
   const isNarrow = useMediaQuery(theme.breakpoints.down('lg'));
+  // Eight group-by buttons only fit beside the period, the pickers and the
+  // actions on a wide screen; below xl they are one Select (seen wrapping
+  // at 1440, with "by" stranded at the end of the first row).
+  const compactGroupBy = useMediaQuery(theme.breakpoints.down('xl'));
   
   // Data and API calls
   const {
@@ -790,10 +794,11 @@ const Calls = () => {
               ))}
             </ButtonGroup>
 
-            <Box sx={{ flexGrow: 1 }} />
-
+            {/* Group-by, bucket and the collapse chevron wrap as one unit,
+                so "by" never ends up alone at the end of a row. */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, ml: 'auto' }}>
             <Typography variant="body2" color="text.secondary">{t('chart.by')}</Typography>
-            {isNarrow ? (
+            {compactGroupBy ? (
               <Select
                 size="small"
                 value={groupBy}
@@ -842,6 +847,7 @@ const Calls = () => {
                 {stripCollapsed ? <ExpandMoreIcon sx={{ fontSize: 22 }} /> : <ExpandLessIcon sx={{ fontSize: 22 }} />}
               </IconButton>
             </Tooltip>
+            </Box>
           </Box>
 
           {!stripCollapsed && (aggregateLoading ? (
