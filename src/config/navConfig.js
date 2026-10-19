@@ -15,7 +15,6 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import ChatIcon from '@mui/icons-material/Chat';
 import BoltIcon from '@mui/icons-material/Bolt';
 import SubjectIcon from '@mui/icons-material/Subject';
-import ForumIcon from '@mui/icons-material/Forum';
 import { canAccessScreen } from '../utils/jwt';
 
 // Sidebar — kept deliberately simple. The Studio is the landing/home and
@@ -24,8 +23,6 @@ import { canAccessScreen } from '../utils/jwt';
 // ⌘K search (routes still exist), it's just off the rail.
 export const NAV_ITEMS = [
   // The user's working screen (sessions, thread, phone, contact); a user with `calls` lands here.
-  // `userOnly`: a portal (user) screen; never listed for an account session.
-  { text: 'Conversations', labelKey: 'nav:conversations', path: '/conversations', iconComponent: ForumIcon, aclKey: 'calls', group: 'MONITOR', userOnly: true },
   { text: 'Routes', labelKey: 'nav:routes',          path: '/routes',          iconComponent: SchemaIcon,                aclKey: 'routes',          alwaysShow: true, group: 'MANAGE'   },
   { text: 'Services', labelKey: 'nav:services',      path: '/services',       iconComponent: MiscellaneousServicesIcon, aclKey: 'services',                       group: 'MANAGE'   },
   { text: 'Devices', labelKey: 'nav:devices',       path: '/extensions',     iconComponent: DevicesIcon,               aclKey: 'extensions',                     group: 'MANAGE'   },
@@ -80,9 +77,8 @@ export const navLabel = (t, item) => t(item.labelKey, { defaultValue: item.text 
 // `strict` (a portal USER session — same ACL model as an account): an item is
 // shown only when the ACL grants its key. Items with no key, or alwaysShow,
 // are account-console affordances and stay hidden.
-export function getPermittedNavItems(acl, { strict = false, userSession = false } = {}) {
+export function getPermittedNavItems(acl, { strict = false } = {}) {
   return NAV_ITEMS.filter(item => {
-    if (item.userOnly && !userSession) return false;
     if (strict) return Boolean(item.aclKey && acl && canAccessScreen(acl, item.aclKey));
     if (item.alwaysShow) return true;
     if (!item.aclKey) return true; // utility screens (e.g. Settings) — no ACL gate

@@ -104,12 +104,3 @@ describe('navConfig Calls and Messages', () => {
     expect(items.find((item) => item.path === '/messages')).toMatchObject({ text: 'Messages', aclKey: 'messages' });
   });
 });
-
-describe('navConfig Conversations entry', () => {
-  const acl = { call: { main: ['read'] } };
-  it('is a portal (user) screen: listed for a user session, never for an account', () => {
-    expect(getPermittedNavItems(acl, { strict: true, userSession: true }).map((i) => i.path)).toContain('/conversations');
-    expect(getPermittedNavItems(acl, { strict: true }).map((i) => i.path)).not.toContain('/conversations');
-    expect(getPermittedNavItems({ calls: { main: ['read'] } }).map((i) => i.path)).not.toContain('/conversations');
-  });
-});

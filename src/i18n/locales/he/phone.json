@@ -36,27 +36,14 @@
     "hold": "המתנה",
     "transfer": "העברה",
     "hangUp": "סיום שיחה",
-    "incomingTitle": "שיחה נכנסת",
-    "outgoing": "יוצאת",
-    "connected": "מחובר",
-    "onHold": "בהמתנה",
-    "mute": "השתק",
-    "unmute": "בטל השתקה",
-    "keypad": "מקלדת",
-    "answer": "מענה",
-    "decline": "דחייה",
-    "duration": "משך השיחה",
-    "you": "אני",
-    "muted": "מושתק"
+    "incomingTitle": "שיחה נכנסת"
   },
   "dialpad": {
     "enterNumber": "הזינו מספר",
     "enterNumberToCall": "הזינו מספר לחיוג",
     "notRegistered": "הטלפון אינו רשום",
     "couldNotStart": "לא ניתן היה להתחיל את השיחה",
-    "notConnected": "לא מחובר — ראו הגדרות",
-    "call": "חיוג",
-    "backspace": "מחק ספרה אחרונה"
+    "notConnected": "לא מחובר — ראו הגדרות"
   },
   "tabs": {
     "calls": "שיחות",
@@ -128,11 +115,5 @@
       "codeLength": "הזינו את הקוד בן 6 הספרות",
       "codeInvalid": "הקוד שגוי או פג תוקף. נסו שוב."
     }
-  },
-  "session": {
-    "signOut": "יציאה",
-    "confirmTitle": "לצאת במהלך השיחה?",
-    "confirmBody": "היציאה תנתק את הטלפון ותסיים את השיחה הנוכחית.",
-    "stay": "להישאר מחוברים"
   }
 }

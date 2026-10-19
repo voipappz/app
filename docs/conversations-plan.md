@@ -1,5 +1,8 @@
 # Conversations: next steps
 
+> **Status 2026-10-19: the Conversations screen was removed from the app.** The last version
+> with it is kept on branch `archive/conversations-screen`. This plan stays for reference.
+
 Written 2026-10-16. Builds on [communication-platform-plan.md](communication-platform-plan.md)
 (sections 7 and 8), the API's `docs/CONVERSATIONS.md`, and the earlier research in
 `voipappz-api/docs/MINIMAL_CRM_PORTAL_IMPLEMENTATION_PLAN.md` and `SAAS_CORE_BOUNDARY.md`
