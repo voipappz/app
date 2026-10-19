@@ -15,7 +15,6 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import ChatIcon from '@mui/icons-material/Chat';
 import BoltIcon from '@mui/icons-material/Bolt';
 import SubjectIcon from '@mui/icons-material/Subject';
-import ForumIcon from '@mui/icons-material/Forum';
 import { canAccessScreen } from '../utils/jwt';
 
 // Sidebar — kept deliberately simple. The Studio is the landing/home and
@@ -23,9 +22,6 @@ import { canAccessScreen } from '../utils/jwt';
 // environment selector. Everything else stays reachable through the Studio and
 // ⌘K search (routes still exist), it's just off the rail.
 export const NAV_ITEMS = [
-  // The user's working screen (sessions, thread, phone, contact); a user with `calls` lands here.
-  // `userOnly`: a portal (user) screen; never listed for an account session.
-  { text: 'Conversations', labelKey: 'nav:conversations', path: '/conversations', iconComponent: ForumIcon, aclKey: 'calls', group: 'MONITOR', userOnly: true },
   { text: 'Routes', labelKey: 'nav:routes',          path: '/routes',          iconComponent: SchemaIcon,                aclKey: 'routes',          alwaysShow: true, group: 'MANAGE'   },
   { text: 'Services', labelKey: 'nav:services',      path: '/services',       iconComponent: MiscellaneousServicesIcon, aclKey: 'services',                       group: 'MANAGE'   },
   { text: 'Devices', labelKey: 'nav:devices',       path: '/extensions',     iconComponent: DevicesIcon,               aclKey: 'extensions',                     group: 'MANAGE'   },
@@ -50,6 +46,10 @@ export const NAV_ITEMS = [
   { text: 'Calls', labelKey: 'nav:calls',         path: '/calls',          iconComponent: CallIcon,                  aclKey: 'calls',                          group: 'MONITOR'  },
   { text: 'Messages', labelKey: 'nav:messages',      path: '/messages',       iconComponent: ChatIcon,                  aclKey: 'messages',                       group: 'MONITOR'  },
   { text: 'Reports', labelKey: 'nav:reports',       path: '/reports',        iconComponent: AssessmentIcon,            aclKey: 'reports',                        group: 'MONITOR'  },
+  // Monitoring (node health, Gatus checks, syslog) is a screen admins open on
+  // purpose, not only when the health dot turns red, so it sits in the rail.
+  // Syslog stays its Logs tab; Events stays off-menu (opened from a row).
+  { text: 'Monitoring', labelKey: 'nav:monitoring',    path: '/monitoring',     iconComponent: TimelineIcon,              aclKey: 'monitors',                       group: 'MONITOR'  },
   { text: 'Users', labelKey: 'nav:users',         path: '/users',          iconComponent: PeopleIcon,                aclKey: 'users',                          group: 'MANAGE'   },
   { text: 'Accounts', labelKey: 'nav:accounts',      path: '/accounts',       iconComponent: BadgeIcon,                 aclKey: 'accounts',                       group: 'MANAGE'   },
   { text: 'Templates', labelKey: 'nav:templates',     path: '/templates',      iconComponent: ArticleIcon,               aclKey: 'templates',                      group: 'MANAGE'   },
@@ -59,11 +59,9 @@ export const NAV_ITEMS = [
 // Also consumed by global search and breadcrumbs.
 export const TOPBAR_NAV_ITEMS = [
   // `noIcon`: no top bar icon; reached from elsewhere — Events from a list
-  // row (RowEventsButton), Monitoring from the health dot, Syslog from the
-  // Logs view of Monitoring.
+  // row (RowEventsButton), Syslog from the Logs view of Monitoring.
   { text: 'Events', labelKey: 'nav:events',        path: '/events',         iconComponent: BoltIcon,                  aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
   { text: 'Syslog', labelKey: 'nav:syslog',        path: '/logs',           iconComponent: SubjectIcon,               aclKey: 'logs',                           group: 'MONITOR',  noIcon: true },
-  { text: 'Monitoring', labelKey: 'nav:monitoring',    path: '/monitoring',     iconComponent: TimelineIcon,              aclKey: 'monitors',                       group: 'MONITOR',  noIcon: true },
 ];
 
 // Screens with a route but no menu entry: they open from the screen they
@@ -78,9 +76,8 @@ export const navLabel = (t, item) => t(item.labelKey, { defaultValue: item.text 
 // `strict` (a portal USER session — same ACL model as an account): an item is
 // shown only when the ACL grants its key. Items with no key, or alwaysShow,
 // are account-console affordances and stay hidden.
-export function getPermittedNavItems(acl, { strict = false, userSession = false } = {}) {
+export function getPermittedNavItems(acl, { strict = false } = {}) {
   return NAV_ITEMS.filter(item => {
-    if (item.userOnly && !userSession) return false;
     if (strict) return Boolean(item.aclKey && acl && canAccessScreen(acl, item.aclKey));
     if (item.alwaysShow) return true;
     if (!item.aclKey) return true; // utility screens (e.g. Settings) — no ACL gate
