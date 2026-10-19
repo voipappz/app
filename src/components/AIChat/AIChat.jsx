@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button } from '@mui/material';
 import { ChatView } from '@voipappz/chat-ui';
 import { useAIChat, NO_LLM_MESSAGE } from './useAIChat';
@@ -43,7 +43,9 @@ const toSession = (s) => ({ id: s.session_id, title: s.session_name || 'Chat Ses
 /**
  * The admin Assistant: useAIChat's state rendered with the shared chat UI.
  */
-const AIChat = () => {
+// `initialQuestion`: a question to send as soon as the assistant is ready —
+// the command palette's Ask row hands the typed text over this way.
+const AIChat = ({ initialQuestion = null }) => {
   const {
     messages,
     inputValue,
@@ -64,6 +66,15 @@ const AIChat = () => {
     setInputValue,
     fetchAgents
   } = useAIChat();
+
+  // Send the hand-off question once, when the assistant can take it.
+  const initialSentRef = useRef(false);
+  useEffect(() => {
+    if (!initialQuestion || initialSentRef.current) return;
+    if (!isEndpointActive || isRestoringSession || isStreaming) return;
+    initialSentRef.current = true;
+    sendMessage(initialQuestion);
+  }, [initialQuestion, isEndpointActive, isRestoringSession, isStreaming, sendMessage]);
 
   const { aiSidebarOpen, toggleAISidebar } = useAIChatSidebar();
 
