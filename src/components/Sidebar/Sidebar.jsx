@@ -64,7 +64,7 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
 
   const badges = useNavBadges(!userSession);            // live nav counts (account only)
 
-  const menuItems = getPermittedNavItems(acl, { strict: userSession, userSession });     // day-to-day (top)
+  const menuItems = getPermittedNavItems(acl, { strict: userSession });     // day-to-day (top)
   // The account's profile opens the account dialog; a user's opens this menu.
   const openProfile = (e) => (userSession
     ? setUserMenuAnchor(e.currentTarget)
