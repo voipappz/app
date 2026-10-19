@@ -77,9 +77,8 @@ export const navLabel = (t, item) => t(item.labelKey, { defaultValue: item.text 
 // `strict` (a portal USER session — same ACL model as an account): an item is
 // shown only when the ACL grants its key. Items with no key, or alwaysShow,
 // are account-console affordances and stay hidden.
-export function getPermittedNavItems(acl, { strict = false, userSession = false } = {}) {
+export function getPermittedNavItems(acl, { strict = false } = {}) {
   return NAV_ITEMS.filter(item => {
-    if (item.userOnly && !userSession) return false;
     if (strict) return Boolean(item.aclKey && acl && canAccessScreen(acl, item.aclKey));
     if (item.alwaysShow) return true;
     if (!item.aclKey) return true; // utility screens (e.g. Settings) — no ACL gate

@@ -98,7 +98,7 @@ const Root = ({ loginMode = 'user' }) => {
   if (new URL(window.location.href).searchParams.has('login_token')) return <Layout><SignIn mode="user" /></Layout>;
   if (admin.isAuthenticated) return <Navigate to="/calls" replace />;
   if (user.isAuthenticated) {
-    const first = getPermittedNavItems(user.acl, { strict: true, userSession: true })[0];
+    const first = getPermittedNavItems(user.acl, { strict: true })[0];
     return first ? <Navigate to={first.path} replace /> : <Layout><NoAccess /></Layout>;
   }
   return <Layout><SignIn mode={loginMode} /></Layout>;
