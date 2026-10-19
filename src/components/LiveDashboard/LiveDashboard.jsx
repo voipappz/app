@@ -16,6 +16,7 @@ import { useLiveEnvironment } from './useLiveEnvironment';
 import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
 import WidgetBoard from '../DashboardBuilder/WidgetBoard';
+import LiveCallsPanel from '../Live/panels/LiveCallsPanel.jsx';
 import {
   getLiveSettings, setLiveSettingsScope, statusColor, stateColor,
 } from '../../services/liveSettings';
@@ -246,6 +247,19 @@ const LiveDashboard = () => {
           </Table>
         </TableContainer>
       </Box>
+
+      {/* Calls in progress, one row each, with listen / whisper / barge /
+          hang up: what the Calls screen's "Live now" tab used to show. It
+          polls the API (the cable carries counts, not calls), so it is the
+          account console's: a portal user sees the counts above only. */}
+      {accountUuid && !portalUser && (
+        <Box data-testid="live-calls-panel">
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>Calls in progress</Typography>
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <LiveCallsPanel open />
+          </Paper>
+        </Box>
+      )}
 
       <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Agents</Typography>
       <TableContainer component={Paper} variant="outlined">
