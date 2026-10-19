@@ -3,7 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The Calls screen rendered for real; the data hook, handlers and heavy panels
 // are stubbed so what is under test is the layout and the counters.
-const hookState = { aggregate: { cause: [], direction: [] }, durationAggregate: null, failed: false };
+const hookState = { aggregate: { cause: [], direction: [] }, durationAggregate: null, failed: false, segments: [], params: {} };
+const mocks = vi.hoisted(() => ({ handleSearch: vi.fn(), navigate: vi.fn(), userSession: false }));
+
+const SEGMENTS = [
+  { name: 'call.cause', label: 'Cause', type: 'select', data: [{ value: 'answer', name: 'Answer' }, { value: 'busy', name: 'Busy' }] },
+  { name: 'call.direction', label: 'Direction', type: 'select', data: [{ value: 'incoming', name: 'Incoming' }, { value: 'outgoing', name: 'Outgoing' }] },
+  { name: 'call.caller', label: 'Caller', type: 'string' },
+  { name: 'call.callee', label: 'Callee', type: 'string' },
+  { name: 'call.queue_name', label: 'Queue', type: 'string' },
+];
 
 vi.mock('./Calls.js', async (importOriginal) => {
   const actual = await importOriginal();
@@ -14,7 +23,7 @@ vi.mock('./Calls.js', async (importOriginal) => {
       loadingCalls: false, loadingMore: false, errorCalls: null,
       fetchCalls: vi.fn(), loadMoreCalls: vi.fn(), goToPage: vi.fn(),
       dateRange: [new Date(2026, 9, 15), new Date(2026, 9, 15, 23, 59)], setDateRange: vi.fn(),
-      sortModel: [], handleSortModelChange: vi.fn(), segments: [], buildSearchQueryParams: () => ({}),
+      sortModel: [], handleSortModelChange: vi.fn(), segments: hookState.segments, buildSearchQueryParams: () => ({}),
       aggregate: hookState.aggregate, aggregateLoading: false, fetchAggregate: vi.fn(),
       summaryCounts: actual.deriveSummary({
         aggregate: hookState.aggregate, durationAggregate: hookState.durationAggregate, failed: hookState.failed,
@@ -22,35 +31,35 @@ vi.mock('./Calls.js', async (importOriginal) => {
     }),
   };
 });
-vi.mock('./UrlSync/useUrlSync.js', () => ({ default: () => ({ currentSearchParams: {}, setCurrentSearchParams: vi.fn(), syncUrl: vi.fn() }) }));
+vi.mock('./UrlSync/useUrlSync.js', () => ({ default: () => ({ currentSearchParams: hookState.params, setCurrentSearchParams: vi.fn(), syncUrl: vi.fn() }) }));
 vi.mock('./RecordingHandlers/useRecordingHandlers.js', () => ({ default: () => ({}) }));
-vi.mock('./ColumnHandlers/useColumnHandlers.jsx', () => ({ default: () => ({ visibleColumns: [], createGridColumns: () => [] }) }));
-vi.mock('./FilterHandlers/FilterHandlers.js', () => ({ default: () => ({ filteredRows: [], handleSearch: vi.fn(), handleClearAllFilters: vi.fn() }) }));
+vi.mock('./ColumnHandlers/useColumnHandlers.jsx', () => ({ default: () => ({ visibleColumns: [], createGridColumns: () => [], handleColumnSelectorOpen: vi.fn() }) }));
+vi.mock('./FilterHandlers/FilterHandlers.js', () => ({ default: () => ({ filteredRows: [], handleSearch: mocks.handleSearch, handleClearAllFilters: vi.fn() }) }));
 vi.mock('./RowHandlers/useRowHandlers.js', () => ({ default: () => ({ rows: [], handleRowsScrollEnd: vi.fn(), scrollContainerRef: { current: null } }) }));
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ access: 'token' }) }));
 vi.mock('../../context/UserAuthContext', () => ({ useUserAuth: () => ({ token: null }) }));
-vi.mock('../../hooks/useIsUserSession', () => ({ useIsUserSession: () => false }));
+vi.mock('../../hooks/useIsUserSession', () => ({ useIsUserSession: () => mocks.userSession }));
 vi.mock('../../context/GlobalSearchContext', () => ({ useGlobalSearch: () => ({ registerScreen: vi.fn(), unregisterScreen: vi.fn() }) }));
 vi.mock('../../context/NotificationContext', () => ({ useNotification: () => ({ showNotification: vi.fn() }) }));
 vi.mock('../../hooks/useNavigateToLogs', () => ({ useNavigateToEvents: () => vi.fn() }));
 vi.mock('../../hooks/usePermissions', () => ({ usePermissions: () => ({ canAccess: () => true }) }));
-vi.mock('../Live/useLiveCalls', () => ({ useLiveCalls: () => ({ totalCount: 2, refresh: vi.fn() }) }));
-vi.mock('../shared/LogTabs/LogTabs.jsx', () => ({ default: () => <div data-testid="log-tabs" /> }));
+// The sidebar's live count, shared with the Live now chip.
+vi.mock('../../hooks/useNavBadges', () => ({ default: () => ({ liveCalls: 3, criticalEvents: 0, openAlerts: 0, criticalAlerts: 0 }) }));
+vi.mock('react-router', async (importOriginal) => ({ ...(await importOriginal()), useNavigate: () => mocks.navigate }));
 vi.mock('../shared/CentralizedSearch/CentralizedSearch.jsx', () => ({
-  default: ({ hideDateRange }) => <div data-testid="centralized-search" data-hide-date-range={String(Boolean(hideDateRange))} />,
+  TOPBAR_SEARCH_SLOT_ID: 'topbar-search-slot',
+  default: ({ hideDateRange, renderAs }) => (
+    <button type="button" data-testid="centralized-search" data-hide-date-range={String(Boolean(hideDateRange))} data-render-as={renderAs}>Filters</button>
+  ),
 }));
-vi.mock('../shared/EnhancedDateRangePicker/EnhancedDateRangePicker.jsx', () => ({ default: () => <div data-testid="date-range-picker" /> }));
 vi.mock('../../views/syslogs/TimeHistogram', () => ({ default: () => <div data-testid="histogram" /> }));
-vi.mock('../Live/LiveDrawer.jsx', () => ({ default: () => null }));
-vi.mock('../Live/panels/LiveCallsPanel.jsx', () => ({ default: () => null }));
-vi.mock('../Live/LiveChartStrip.jsx', () => ({ default: () => null }));
-vi.mock('../Reports/ReportsPanel/ReportsPanel.jsx', () => ({ default: () => null }));
 vi.mock('./RecordingDialog/RecordingDialog.jsx', () => ({ default: () => null }));
 vi.mock('./ColumnSelector/ColumnSelector.jsx', () => ({ default: () => null }));
 vi.mock('./FilterEditDialog/FilterEditDialog.jsx', () => ({ default: () => null }));
 vi.mock('@mui/x-data-grid', () => ({ DataGrid: () => <div data-testid="grid" /> }));
 
 import Calls from './Calls.jsx';
+import { TOPBAR_SEARCH_SLOT_ID } from '../shared/CentralizedSearch/CentralizedSearch.jsx';
 
 const before = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 const chip = (key) => document.querySelector(`[data-stat="${key}"]`);
@@ -59,35 +68,104 @@ beforeEach(() => {
   hookState.aggregate = { cause: [], direction: [] };
   hookState.durationAggregate = null;
   hookState.failed = false;
+  hookState.segments = SEGMENTS;
+  hookState.params = {};
+  mocks.userSession = false;
+  mocks.handleSearch.mockClear();
+  mocks.navigate.mockClear();
 });
 
 describe('Calls layout', () => {
-  it('has Logs / Live now / Reports as the view tabs at the top', () => {
+  it('has no view tabs: the chart, then the counters and filters, then the table', () => {
     render(<Calls />);
-    const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
-    expect(tabs[0]).toMatch(/logs/i);
-    expect(tabs.some((t) => /reports/i.test(t))).toBe(true);
-  });
-
-  it('Logs: the chart (with its one flat row of period, grouping and bucket) above the counters and the table', () => {
-    render(<Calls />);
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
     const chart = screen.getByTestId('calls-chart');
     const counters = screen.getByTestId('calls-counters');
     expect(before(chart, counters)).toBe(true);
     expect(before(counters, screen.getByTestId('grid'))).toBe(true);
-    expect(within(chart).getByRole('button', { name: '7d' })).toBeInTheDocument();
+    // The filters are part of the counter row, not a row of their own.
+    expect(within(counters).getByTestId('centralized-search')).toHaveAttribute('data-hide-date-range', 'true');
     expect(within(chart).getByTestId('calls-chart-date-range')).toBeInTheDocument();
-    expect(within(chart).queryAllByRole('combobox')).toHaveLength(0);
-    expect(screen.getByTestId('centralized-search')).toHaveAttribute('data-hide-date-range', 'true');
   });
 
-  it('Reports is a whole view: no chart, counters or table', () => {
+  it('toolbar: period, from/to, then refresh, export and columns, then grouping and bucket, then the collapse chevron', () => {
     render(<Calls />);
-    fireEvent.click(screen.getAllByRole('tab').find((t) => /reports/i.test(t.textContent)));
-    expect(screen.getByTestId('calls-reports')).toBeInTheDocument();
-    expect(screen.queryByTestId('calls-chart')).toBeNull();
-    expect(screen.queryByTestId('calls-counters')).toBeNull();
-    expect(screen.queryByTestId('grid')).toBeNull();
+    const chart = screen.getByTestId('calls-chart');
+    const wanted = ['Period', 'Refresh', 'Export CSV', 'Columns', 'Group by', 'Bucket', 'Hide chart'];
+    const labels = Array.from(chart.querySelectorAll('[aria-label]'))
+      .map((el) => el.getAttribute('aria-label'))
+      .filter((l) => wanted.includes(l));
+    expect(labels).toEqual(wanted);
+    // from / to sit between the period and the actions.
+    const range = within(chart).getByTestId('calls-chart-date-range');
+    expect(before(within(chart).getByRole('group', { name: 'Period' }), range)).toBe(true);
+    expect(before(range, within(chart).getByTestId('calls-toolbar-actions'))).toBe(true);
+    // The three actions are one group of icon buttons, each named.
+    const actions = within(chart).getByTestId('calls-toolbar-actions');
+    expect(within(actions).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Refresh', 'Export CSV', 'Columns']);
+    expect(within(chart).getByRole('button', { name: '7d' })).toBeInTheDocument();
+  });
+
+  it('counters are the quick filters: Answered writes search[call.cause][IS]=answer; Total clears', () => {
+    const { unmount } = render(<Calls />);
+    fireEvent.click(chip('answered'));
+    expect(mocks.handleSearch).toHaveBeenCalledWith({ 'search[call.cause][IS]': ['answer'] }, false);
+    unmount();
+
+    hookState.params = { 'search[call.cause][IS]': ['answer'], 'search[call.queue_name][IS]': 'sales' };
+    mocks.handleSearch.mockClear();
+    render(<Calls />);
+    expect(chip('answered')).toHaveAttribute('aria-pressed', 'true');
+    expect(chip('total')).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(chip('total'));
+    // Only the quick filters go; the queue stays.
+    expect(mocks.handleSearch).toHaveBeenCalledWith({ 'search[call.queue_name][IS]': 'sales' }, false);
+  });
+
+  it('the five counters, the four pills and the Filters button share one row', () => {
+    render(<Calls />);
+    const row = screen.getByTestId('calls-counters');
+    expect(Array.from(row.querySelectorAll('[data-stat]')).map((el) => el.dataset.stat).slice(0, 5))
+      .toEqual(['total', 'answered', 'noAnswer', 'outgoing', 'incoming']);
+    const pills = within(row).getByTestId('filter-pills');
+    expect(Array.from(pills.querySelectorAll('.MuiChip-root')).map((el) => el.textContent)).toEqual(['Cause', 'Direction', 'Caller', 'Callee']);
+    const filters = within(row).getByTestId('centralized-search');
+    expect(filters).toHaveAttribute('data-render-as', 'button');
+    expect(before(chip('incoming'), pills)).toBe(true);
+    expect(before(pills, filters)).toBe(true);
+    // One flex row that wraps.
+    expect(getComputedStyle(row).display).toBe('flex');
+  });
+
+  it('has no search field on the desktop screen and leaves the top-bar slot empty', () => {
+    const slot = document.createElement('div');
+    slot.id = TOPBAR_SEARCH_SLOT_ID;
+    document.body.appendChild(slot);
+    try {
+      render(<Calls />);
+      expect(screen.queryByPlaceholderText(/search/i)).toBeNull();
+      expect(screen.queryByTestId('topbar-search')).toBeNull();
+      expect(slot.childElementCount).toBe(0);
+    } finally {
+      slot.remove();
+    }
+  });
+
+  it('shows a Live now chip for an account and none for a user session', () => {
+    const { unmount } = render(<Calls />);
+    const live = chip('live');
+    expect(live).toHaveTextContent('3');
+    expect(live).toHaveTextContent('Live now');
+    // Last in the row, after the filters.
+    expect(before(screen.getByTestId('centralized-search'), live)).toBe(true);
+    fireEvent.click(live);
+    expect(mocks.navigate).toHaveBeenCalledWith('/live');
+    unmount();
+
+    mocks.userSession = true;
+    render(<Calls />);
+    expect(chip('live')).toBeNull();
+    expect(chip('total')).toBeInTheDocument();
   });
 });
 
@@ -103,11 +181,13 @@ describe('Calls counters and insights', () => {
     expect(chip('answered')).toHaveTextContent('4');
     // busy + no_answer; the two `none` and two missing causes are in neither.
     expect(chip('noAnswer')).toHaveTextContent('2');
+    expect(chip('outgoing')).toHaveTextContent('4');
+    expect(chip('incoming')).toHaveTextContent('6');
     // The rate rides on the Answered counter.
     expect(chip('answered')).toHaveTextContent('40%');
     expect(chip('avgDuration')).toHaveTextContent('1:40');   // 400s / 4 answered
-    // Four counters, no more: total duration and the direction chips left.
-    expect(screen.getByTestId('calls-counters').querySelectorAll('[data-stat]')).toHaveLength(4);
+    // Five filters, the average and the Live now chip: no total duration.
+    expect(screen.getByTestId('calls-counters').querySelectorAll('[data-stat]')).toHaveLength(7);
     // The average is read-only; the counters stay toggles.
     expect(chip('avgDuration')).not.toHaveAttribute('role');
     expect(chip('answered')).toHaveAttribute('aria-pressed', 'false');
@@ -124,7 +204,7 @@ describe('Calls counters and insights', () => {
   it('renders "—" everywhere when the aggregate failed', () => {
     hookState.failed = true;
     render(<Calls />);
-    ['total', 'answered', 'noAnswer', 'avgDuration'].forEach((key) => {
+    ['total', 'answered', 'noAnswer', 'outgoing', 'incoming', 'avgDuration'].forEach((key) => {
       expect(chip(key)).toHaveTextContent('—');
     });
   });
