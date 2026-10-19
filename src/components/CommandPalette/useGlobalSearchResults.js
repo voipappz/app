@@ -30,6 +30,7 @@ import { timeAgo, splitMatch } from '../../utils/searchText';
 import { usePortalSidebar } from '../../context/PortalSidebarContext';
 import { useCallNumber } from '../../hooks/useCallNumber';
 import { buildQuickActions } from './quickActions';
+import { formatDate } from '../../utils/dateUtils';
 
 export { timeAgo, splitMatch };
 
@@ -45,7 +46,11 @@ export { timeAgo, splitMatch };
 // same search applied (Calls: /calls?search[inline]=q, read by useUrlSync).
 // `accountOnly` endpoints exist for an account session only.
 export const RESOURCE_TYPES = [
-  { key: 'calls',         labelKey: 'nav:calls',                  endpoint: '/api/calls',         route: '/calls',       nameField: 'caller', subtitleField: 'callee',   icon: PhoneInTalkIcon, searchParam: 'search[inline]', carryQuery: true },
+  // A call has no name: the row is "caller → callee" (a leg with no caller
+  // showed as "-"), with when it happened underneath.
+  { key: 'calls',         labelKey: 'nav:calls',                  endpoint: '/api/calls',         route: '/calls',       nameField: 'caller', subtitleField: 'callee',   icon: PhoneInTalkIcon, searchParam: 'search[inline]', carryQuery: true,
+    label: (c) => `${c.caller || '—'} → ${c.callee || '—'}`,
+    subtitle: (c) => [c.direction, c.created_at ? formatDate(c.created_at) : null].filter(Boolean).join(' · ') || null },
   { key: 'extensions',    labelKey: 'nav:devices',                endpoint: '/api/devices',       route: '/extensions',  nameField: 'name',   subtitleField: 'username', icon: PhoneIcon },
   { key: 'users',         labelKey: 'nav:users',                  endpoint: '/api/users',         route: '/users',       nameField: 'name',   subtitleField: 'email',    icon: PersonIcon },
   { key: 'dids',          labelKey: 'nav:routes',                 endpoint: '/api/routes',        route: '/routes/list', nameField: 'number', subtitleField: 'name',     icon: DialpadIcon },
@@ -216,13 +221,13 @@ export function useGlobalSearchResults({ open, initialQuery = '', onClose }) {
       const screen = t(rt.labelKey);
       const items = found.data.slice(0, MAX_PER_GROUP).map(item => {
         const id = item.uuid || item.id;
-        const primaryText = item[rt.nameField] || '-';
-        const secondaryText = rt.subtitleField ? item[rt.subtitleField] : null;
+        const primaryText = rt.label ? rt.label(item) : (item[rt.nameField] || '-');
+        const secondaryText = rt.subtitle ? rt.subtitle(item) : (rt.subtitleField ? item[rt.subtitleField] : null);
         const envName = item.environment?.name || '';
         return {
           id: `resource-${rt.key}-${id}`,
           label: String(primaryText),
-          description: typeof secondaryText === 'object' ? JSON.stringify(secondaryText) : secondaryText,
+          description: secondaryText && typeof secondaryText === 'object' ? JSON.stringify(secondaryText) : secondaryText,
           envName,
           iconComponent: rt.icon,
           action: () => {

@@ -100,7 +100,7 @@ describe('CommandPalette', () => {
 
     const calls = screen.getByRole('group', { name: 'Calls' });
     expect(within(calls).getAllByRole('option').map((o) => o.textContent)).toEqual([
-      '0541234567200', '0549999999201', 'See all 12 in Calls →',
+      '0541234567 → 200', '0549999999 → 201', 'See all 12 in Calls →',
     ]);
     expect(within(calls).getAllByText('054', { selector: 'b' })).toHaveLength(2);
 
@@ -122,7 +122,7 @@ describe('CommandPalette', () => {
     // Quick actions: Ask, Call. Then the first call.
     fireEvent.keyDown(input, { key: 'ArrowDown' });
     fireEvent.keyDown(input, { key: 'ArrowDown' });
-    expect(highlightedLabel()).toBe('0541234567');
+    expect(highlightedLabel()).toBe('0541234567 → 200');
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(decodeURIComponent(navigate.mock.calls[0][0])).toBe('/calls?search[inline]=054');
     expect(onClose).toHaveBeenCalled();

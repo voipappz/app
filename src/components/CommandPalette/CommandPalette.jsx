@@ -39,6 +39,9 @@ const CommandPalette = ({ open, onClose, initialQuery = '' }) => {
         sx: asking ? { height: '85dvh', display: 'flex', flexDirection: 'column' } : undefined,
       }}
       slotProps={{ backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.3)' } } }}
+      // autoFocus covers the first open; a reopen (`/` after Esc) found the
+      // input unfocused and the keystrokes went to the page behind it.
+      TransitionProps={{ onEntered: () => inputRef.current?.focus() }}
     >
       {asking ? (
         <>
