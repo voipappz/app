@@ -53,6 +53,26 @@ export const syslogLink = (event, now = Date.now()) => {
   return `/logs?${new URLSearchParams({ search: needle, period })}`;
 };
 
+// The same fields, compact, for hovering a row's message.
+export const EventFieldsTooltip = ({ event }) => {
+  const lines = (title, values) => Object.entries(values || {})
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => (
+      <Box key={`${title}-${k}`} component="div" sx={{ fontFamily: 'monospace', fontSize: '0.72rem', wordBreak: 'break-word' }}>
+        <b>{k}</b>: {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+      </Box>
+    ));
+  const data = lines('data', event?.data);
+  const meta = lines('metadata', event?.metadata);
+  return (
+    <Box data-testid="event-fields-tooltip">
+      {data.length > 0 && <><Box sx={{ fontWeight: 600, fontSize: '0.7rem', mb: 0.25 }}>Data</Box>{data}</>}
+      {meta.length > 0 && <><Box sx={{ fontWeight: 600, fontSize: '0.7rem', mt: 0.75, mb: 0.25 }}>Metadata</Box>{meta}</>}
+      {data.length + meta.length === 0 && '—'}
+    </Box>
+  );
+};
+
 const EventDetailPanel = ({ event, message, onClose }) => {
   if (!event) return null;
   const logs = syslogLink(event);

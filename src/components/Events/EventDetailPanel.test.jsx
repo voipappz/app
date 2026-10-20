@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import EventDetailPanel, { syslogLink } from './EventDetailPanel';
+import EventDetailPanel, { syslogLink, EventFieldsTooltip } from './EventDetailPanel';
 
 const failed = {
   id: 1,
@@ -46,5 +46,12 @@ describe('EventDetailPanel', () => {
   it('shows the Syslog button only when the event names a call or session', () => {
     render(<EventDetailPanel event={failed} onClose={() => {}} />);
     expect(screen.getByTestId('event-detail-syslog')).toHaveAttribute('href', expect.stringContaining('search=2a8c0072'));
+  });
+
+  it('the hover tooltip lists data and metadata', () => {
+    render(<EventFieldsTooltip event={failed} />);
+    const tip = screen.getByTestId('event-fields-tooltip');
+    expect(tip).toHaveTextContent('error: Scalla answered 500: boom');
+    expect(tip).toHaveTextContent('call_uuid: 2a8c0072');
   });
 });

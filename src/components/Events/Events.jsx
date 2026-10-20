@@ -36,7 +36,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import DateLocalizationProvider from '../../i18n/DateLocalizationProvider';
 import { useEvents } from './Events';
-import EventDetailPanel from './EventDetailPanel';
+import EventDetailPanel, { EventFieldsTooltip } from './EventDetailPanel';
 import { stripedDataGridSx } from '../shared/tableTheme.jsx';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
 import TimeHistogram from '../../views/syslogs/TimeHistogram';
@@ -431,13 +431,20 @@ const Events = ({ initialParams, leftSlot } = {}) => {
       flex: 1,
       sortable: false,
       renderCell: (params) => (
-        <Typography
-          variant="body2"
-          noWrap
-          sx={{ fontSize: '0.78rem', color: 'var(--mui-palette-text-primary)' }}
+        <Tooltip
+          title={<EventFieldsTooltip event={params.row} />}
+          placement="bottom-start"
+          enterDelay={400}
+          slotProps={{ tooltip: { sx: { maxWidth: 520 } } }}
         >
-          {formatAuditMessage(params.row)}
-        </Typography>
+          <Typography
+            variant="body2"
+            noWrap
+            sx={{ fontSize: '0.78rem', color: 'var(--mui-palette-text-primary)' }}
+          >
+            {formatAuditMessage(params.row)}
+          </Typography>
+        </Tooltip>
       ),
     },
     {
