@@ -99,3 +99,60 @@ describe('CentralizedSearch date-range filter', () => {
     expect(screen.getByLabelText('To')).toBeInTheDocument();
   });
 });
+
+// A screen that draws its own search row (Calls) wants only the full panel,
+// behind one button, plus the chips for filters its own pills don't cover.
+describe('CentralizedSearch as a Filters button', () => {
+  const segments = [
+    { name: 'call.cause', label: 'Cause', type: 'select', data: [{ value: 'answer', name: 'Answer' }] },
+    { name: 'call.caller', label: 'Caller', type: 'string' },
+    { name: 'call.queue_name', label: 'Queue', type: 'string' },
+  ];
+
+  it('renders as a Filters button with the panel in a popover when renderAs="button"', () => {
+    const p = props({
+      renderAs: 'button', segments, inlineFilters: ['call.cause', 'call.caller'],
+      currentSearchParams: { 'search[call.cause][IS]': ['answer'], 'search[call.queue_name][IS]': 'sales', 'search[inline]': '97250' },
+    });
+    render(<CentralizedSearch {...p} />);
+    // No search field, no date range, no table actions.
+    expect(screen.queryByPlaceholderText('Search calls')).toBeNull();
+    expect(screen.queryByTestId('date-picker')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
+    // The button counts the filters no pill speaks for: the queue and the text.
+    const button = screen.getByRole('button', { name: 'Filters' });
+    expect(button).toHaveTextContent('Filters · 2');
+    // Those two are chips with a ×; the cause is a pill's business, so no chip.
+    expect(screen.getByText('Queue: sales')).toBeInTheDocument();
+    expect(screen.getByText('Search: 97250')).toBeInTheDocument();
+    expect(screen.queryByText(/Cause:/)).toBeNull();
+    expect(screen.queryByText('Cause')).toBeNull();
+    fireEvent.click(screen.getByText('Search: 97250').parentElement.querySelector('.MuiChip-deleteIcon'));
+    expect(p.onFilterChange).toHaveBeenCalledWith({ 'search[call.cause][IS]': ['answer'], 'search[call.queue_name][IS]': 'sales' }, true);
+    // Clear is the whole screen's.
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(p.onClearAllFilters).toHaveBeenCalled();
+    // The panel opens in a popover, every field in it.
+    expect(screen.queryByTestId('centralized-search-popover')).toBeNull();
+    fireEvent.click(button);
+    const popover = screen.getByTestId('centralized-search-popover');
+    expect(popover.textContent).toContain('Cause');
+    expect(popover.textContent).toContain('Caller');
+    expect(popover.textContent).toContain('Queue');
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('does not dock into the top bar in button mode', () => {
+    const slot = document.createElement('div');
+    slot.id = TOPBAR_SEARCH_SLOT_ID;
+    document.body.appendChild(slot);
+    try {
+      render(<CentralizedSearch {...props({ renderAs: 'button', segments })} />);
+      expect(slot.childElementCount).toBe(0);
+      expect(screen.queryByTestId('topbar-search')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument();
+    } finally {
+      slot.remove();
+    }
+  });
+});

@@ -1,0 +1,40 @@
+{
+  "title": "Search",
+  "assistant": "Assistant",
+  "placeholder": "Search, ask, or call a number…",
+  "clear": "Clear",
+  "close": "Close",
+  "back": "Back to search",
+  "chips": {
+    "all": "All",
+    "more": "+{{count}} more"
+  },
+  "groups": {
+    "quickActions": "Quick actions",
+    "navigation": "Navigation",
+    "recent": "Recent",
+    "actions": "Actions"
+  },
+  "types": {
+    "queues": "Queues",
+    "ivrs": "IVRs",
+    "conferences": "Conferences",
+    "announcements": "Announcements",
+    "vmls": "Dialplans",
+    "bots": "Bots"
+  },
+  "seeAll": "See all {{count}} in {{screen}} →",
+  "seeAllUncounted": "See all in {{screen}} →",
+  "recentEditedUser": "User · edited",
+  "hints": "↑↓ move · ↵ open · Tab type · Esc close",
+  "searching": "Searching…",
+  "noResults": "No results for “{{query}}”",
+  "quick": {
+    "ask": "Ask: “{{query}}”",
+    "askHint": "Ask the assistant",
+    "call": "Call {{query}}",
+    "callHint": "Opens the phone with the number",
+    "phone": "Open phone",
+    "phoneHint": "The softphone, on the side"
+  }
+}

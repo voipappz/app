@@ -4,7 +4,12 @@
  */
 
 const BASE = 'https://voipappz.zendesk.com/api/v2/help_center';
-const AUTH = 'Basic ' + Buffer.from('nir@voipappz.com/token:9Bmnx67kYFxCC97WUsyYlrIpeguL8xapxSDGUDhL').toString('base64');
+// Credentials come from the environment, never the repo (it is public):
+// ZENDESK_EMAIL and ZENDESK_API_TOKEN.
+if (!process.env.ZENDESK_EMAIL || !process.env.ZENDESK_API_TOKEN) {
+  throw new Error('Set ZENDESK_EMAIL and ZENDESK_API_TOKEN');
+}
+const AUTH = 'Basic ' + Buffer.from(`${process.env.ZENDESK_EMAIL}/token:${process.env.ZENDESK_API_TOKEN}`).toString('base64');
 const LOCALE = 'en-us';
 
 const headers = {
