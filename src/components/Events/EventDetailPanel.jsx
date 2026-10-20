@@ -104,9 +104,9 @@ const EventDetailPanel = ({ event, message, onClose, syslogOpen = false, onToggl
         </Typography>
       )}
       {logs && (
-        <Button size="small" variant={syslogOpen ? 'contained' : 'outlined'} startIcon={<SyslogIcon />}
+        <Button size="small" variant="outlined" startIcon={<SyslogIcon />}
           data-testid="event-detail-syslog" onClick={onToggleSyslog} sx={{ mb: 1.5, textTransform: 'none' }}>
-          {syslogOpen ? 'Hide syslog' : 'Show syslog'}
+          Show syslog
         </Button>
       )}
       <Divider sx={{ mb: 1.5 }} />

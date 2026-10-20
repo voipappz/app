@@ -45,11 +45,10 @@ describe('EventDetailPanel', () => {
 
   it('toggles the embedded syslog for an event that names a call', () => {
     const onToggle = vi.fn();
-    const { rerender } = render(<EventDetailPanel event={failed} onClose={() => {}} onToggleSyslog={onToggle} />);
+    render(<EventDetailPanel event={failed} onClose={() => {}} onToggleSyslog={onToggle} />);
     fireEvent.click(screen.getByTestId('event-detail-syslog'));
     expect(onToggle).toHaveBeenCalled();
-    rerender(<EventDetailPanel event={failed} onClose={() => {}} onToggleSyslog={onToggle} syslogOpen />);
-    expect(screen.getByTestId('event-detail-syslog')).toHaveTextContent('Hide syslog');
+    expect(screen.getByTestId('event-detail-syslog')).toHaveTextContent('Show syslog');
   });
 
   it('the hover tooltip lists data and metadata', () => {
