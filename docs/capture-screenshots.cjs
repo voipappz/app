@@ -110,7 +110,9 @@ async function uploadToZendesk(articleId, filePath, fileName) {
   const { listArticles } = require('./zendesk-api.cjs');
   // Use direct API fetch for the single article
   const BASE = 'https://voipappz.zendesk.com/api/v2/help_center';
-  const AUTH = 'Basic ' + Buffer.from('nir@voipappz.com/token:9Bmnx67kYFxCC97WUsyYlrIpeguL8xapxSDGUDhL').toString('base64');
+  // Credentials come from the environment, never the repo (it is public):
+  // ZENDESK_EMAIL and ZENDESK_API_TOKEN.
+  const AUTH = 'Basic ' + Buffer.from(`${process.env.ZENDESK_EMAIL}/token:${process.env.ZENDESK_API_TOKEN}`).toString('base64');
   const res = await fetch(`${BASE}/en-us/articles/${articleId}.json`, {
     headers: { 'Authorization': AUTH }
   });
