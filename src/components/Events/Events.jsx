@@ -991,7 +991,6 @@ const Events = ({ initialParams, leftSlot } = {}) => {
             event={selectedEvent}
             message={formatAuditMessage(selectedEvent)}
             onClose={() => { setSelectedEvent(null); setSyslogOpen(false); }}
-            syslogOpen={syslogOpen}
             onToggleSyslog={() => setSyslogOpen((v) => !v)}
           />
         )}

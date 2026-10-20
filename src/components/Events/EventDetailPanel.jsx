@@ -73,7 +73,7 @@ export const EventFieldsTooltip = ({ event }) => {
   );
 };
 
-const EventDetailPanel = ({ event, message, onClose, syslogOpen = false, onToggleSyslog }) => {
+const EventDetailPanel = ({ event, message, onClose, onToggleSyslog }) => {
   if (!event) return null;
   const logs = onToggleSyslog ? syslogParams(event) : null;
   const copy = () => {
