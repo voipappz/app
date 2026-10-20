@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   TextField,
   Button,
   Typography,
+  Paper,
   FormControl,
   FormHelperText,
   CircularProgress,
@@ -15,51 +16,15 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
 import { Trans, useTranslation } from 'react-i18next';
 import { useUserLogin } from './UserLogin';
-import { useOptionalLocale } from '../../i18n/LocaleContext';
+import LanguageLink from '../../i18n/LanguageLink';
 import useCustomerDefaultLanguage from '../../i18n/useCustomerDefaultLanguage';
 import { loadCustomerPortalData } from '../../services/customerPortalService';
 import './Login.css';
-import './UserLogin.css';
 
 // The `/` entry point — a compact, tenant-branded customer login that remains
 // easy to use on a phone and keeps admin credentials visually distinct.
-// Administrators reach the account sign-in through the small link at the bottom.
-// Six boxes, always left to right. Typing moves on, backspace moves back and a
-// pasted code fills them all; the value still reaches the hook as one string.
-function OtpBoxes({ value, onChange, label }) {
-  const refs = useRef([]);
-  const set = (next) => onChange({ target: { value: next } });
-  const focus = (i) => refs.current[Math.max(0, Math.min(5, i))]?.focus();
-  const type = (i, raw) => {
-    const digits = raw.replace(/\D/g, '');
-    if (!digits) return;
-    const chars = value.padEnd(6, ' ').split('');
-    digits.split('').forEach((d, k) => { if (i + k < 6) chars[i + k] = d; });
-    set(chars.join('').replace(/ /g, ''));
-    focus(i + digits.length);
-  };
-  const key = (i, e) => {
-    if (e.key !== 'Backspace') return;
-    e.preventDefault();
-    const chars = value.padEnd(6, ' ').split('');
-    if (chars[i] !== ' ') chars[i] = ' '; else if (i > 0) { chars[i - 1] = ' '; focus(i - 1); }
-    set(chars.join('').trimEnd().replace(/ /g, ''));
-  };
-  return (
-    <Box className="ul-otp" data-testid="user-otp-input">
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <input
-          key={i} ref={(el) => { refs.current[i] = el; }} value={value[i] || ''} aria-label={label(i + 1)}
-          inputMode="numeric" autoComplete={i === 0 ? 'one-time-code' : 'off'} autoFocus={i === 0}
-          onChange={(e) => type(i, e.target.value)} onKeyDown={(e) => key(i, e)}
-          onPaste={(e) => { e.preventDefault(); type(0, e.clipboardData.getData('text')); }}
-        />
-      ))}
-    </Box>
-  );
-}
-
-const UserLogin = () => {
+// `switcher`: the User / Account toggle (SignIn), shown on the credentials step.
+const UserLogin = ({ switcher = null }) => {
   const {
     email,
     password,
@@ -94,7 +59,6 @@ const UserLogin = () => {
     qrSigningIn
   } = useUserLogin();
   const { t } = useTranslation('auth');
-  const locale = useOptionalLocale();
   const [showPassword, setShowPassword] = useState(false);
 
   // Per-tenant branding (logo, brand colour) for this unauthenticated screen —
@@ -243,19 +207,6 @@ const UserLogin = () => {
           )}
         </FormControl>
 
-        <Box className="ul-row">
-          <Typography
-            variant="body2"
-            component="button"
-            type="button"
-            className="forgot-password"
-            onClick={handleForgotPasswordClick}
-            data-testid="user-forgot-password-link"
-          >
-            {t('forgot.linkUser')}
-          </Typography>
-        </Box>
-
         <Box className="form-actions">
           <Button
             type="submit"
@@ -267,10 +218,20 @@ const UserLogin = () => {
           >
             {loading ? t('user.signingIn') : t('user.signIn')}
           </Button>
+
+          <Typography
+            variant="body2"
+            component="button"
+            type="button"
+            className="forgot-password"
+            onClick={handleForgotPasswordClick}
+            data-testid="user-forgot-password-link"
+          >
+            {t('forgot.linkUser')}
+          </Typography>
+
         </Box>
       </Box>
-
-      <Box className="ul-qr"><i aria-hidden="true" /><span>{t('user.qrHint')}</span></Box>
     </>
   );
 
@@ -291,7 +252,30 @@ const UserLogin = () => {
       )}
 
       <Box component="form" onSubmit={handleOtpSubmit} className="login-form" data-testid="user-otp-form">
-        <OtpBoxes value={otpCode} onChange={handleOtpCodeChange} label={(n) => t('otp.digit', { n })} />
+        <FormControl fullWidth className="form-group">
+          <TextField
+            size="medium"
+            fullWidth
+            id="user-otp-code"
+            name="otp-code"
+            label={t('field.verificationCode')}
+            placeholder={t('field.codePlaceholder')}
+            value={otpCode}
+            onChange={handleOtpCodeChange}
+            variant="outlined"
+            className="form-control"
+            data-testid="user-otp-input"
+            required
+            autoFocus
+            inputProps={{
+              maxLength: 6,
+              inputMode: 'numeric',
+              pattern: '[0-9]*',
+              style: { textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.25rem' }
+            }}
+            autoComplete="one-time-code"
+          />
+        </FormControl>
 
         <Box className="form-actions">
           <Button
@@ -551,49 +535,33 @@ const UserLogin = () => {
   };
 
   return (
-    <Box className="ul-page" style={brandColor ? { '--accent-color': brandColor } : undefined}>
-      <Box component="aside" className="ul-brand">
-        <Box className="ul-logo">
-          {brandLogo ? <img src={brandLogo} alt={brandName} /> : <span>{brandName}</span>}
-        </Box>
-        <Box className="ul-hero">
-          <Box className="ul-circle" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z" /></svg>
+    <Box className="login-page login-page--portal" style={brandColor ? { '--accent-color': brandColor } : undefined}>
+      <Paper elevation={0} className="login-paper">
+        {brandLogo && (
+          <Box className="portal-login-brand">
+            <img src={brandLogo} alt={brandName} className="portal-login-logo" />
           </Box>
-          <Box className="ul-eq" aria-hidden="true">
-            {[8, 15, 22, 13, 7].map((h, i) => <i key={i} style={{ height: h }} />)}
-          </Box>
-          <Box>
-            <h2>{t('user.brandHeadline')}</h2>
-            <p>{t('user.brandLine')}</p>
-          </Box>
-        </Box>
-        {locale ? (
-          <Box className="ul-lang" role="group" aria-label={t('user.language')}>
-            <button type="button" aria-pressed={locale.language === 'en'} onClick={() => locale.setLanguage('en')}>English</button>
-            <button type="button" aria-pressed={locale.language === 'he'} onClick={() => locale.setLanguage('he')}>עברית</button>
-          </Box>
-        ) : <span />}
-      </Box>
-      <Box className="ul-form">
+        )}
         {qrSigningIn ? (
           <Box data-testid="qr-signing-in" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 4 }}>
             <CircularProgress />
             <Typography>{t('user.signingYouIn')}</Typography>
           </Box>
-        ) : (
-          showForgetForm
-            ? renderForgotForm()
-            : otpStep
-              ? renderOtpForm()
-              : renderLoginForm()
-        )}
-        {!qrSigningIn && !showForgetForm && !otpStep && (
-          <Typography className="ul-admin" component="div">
-            {t('user.adminPrompt')} <a href="/admin">{t('user.adminLink')}</a>
-          </Typography>
-        )}
-      </Box>
+        ) : (<>
+        {!showForgetForm && !otpStep && switcher}
+        {showForgetForm
+          ? renderForgotForm()
+          : otpStep
+            ? renderOtpForm()
+            : renderLoginForm()
+        }
+        </>)}
+        <Typography variant="caption" className="portal-login-footer">
+          {t('user.secureFooter')}
+        </Typography>
+      </Paper>
+      {/* Below the card: available, but never in the way of signing in. */}
+      <LanguageLink sx={{ mt: 2 }} />
     </Box>
   );
 };

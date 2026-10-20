@@ -114,9 +114,6 @@ VITE_API_BASE_URL=https://your-api-host.example.com   # the API to talk to
 TEST_EMAIL=you@example.com                            # an account in that API
 TEST_PASSWORD=...                                     # its password
 VA_TEST_OTP=...                                       # only if the API has OTP on
-TEST_USER_EMAIL=...                                   # optional: a portal user, for tests/conversations.spec.ts
-TEST_USER_PASSWORD=...
-E2E_CALL_TARGET=...                                   # optional: a number that answers, for the call cycle
 ```
 
 `make dev` and `make test` check the login first (`make onboard` runs the same
@@ -330,8 +327,7 @@ Click **Use this template**, then:
 
 1. `make setup` and point `VITE_API_BASE_URL` at your API.
 2. Add repository secrets for CI — `VITE_API_BASE_URL`, `TEST_EMAIL`,
-   `TEST_PASSWORD`, `VA_TEST_OTP` (and, for the Conversations spec, `TEST_USER_EMAIL`,
-   `TEST_USER_PASSWORD`, `E2E_CALL_TARGET`) — under *Settings → Secrets and variables →
+   `TEST_PASSWORD`, `VA_TEST_OTP` — under *Settings → Secrets and variables →
    Actions*. Without them the `check` job still runs; only `e2e` is skipped.
 3. Delete the screens you do not need. Each is a self-contained directory under
    `src/components/` plus one spec in `tests/`.
