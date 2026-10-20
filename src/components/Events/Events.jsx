@@ -36,7 +36,8 @@ import { DataGrid } from '@mui/x-data-grid';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import DateLocalizationProvider from '../../i18n/DateLocalizationProvider';
 import { useEvents } from './Events';
-import EventDetailPanel, { EventFieldsTooltip } from './EventDetailPanel';
+import EventDetailPanel, { EventFieldsTooltip, syslogParams } from './EventDetailPanel';
+import LogsScreen from '../../views/syslogs/LogsScreen.jsx';
 import { stripedDataGridSx } from '../shared/tableTheme.jsx';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
 import TimeHistogram from '../../views/syslogs/TimeHistogram';
@@ -225,6 +226,8 @@ const Events = ({ initialParams, leftSlot } = {}) => {
   // Local debounced search state
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [syslogOpen, setSyslogOpen] = useState(false);
+  const embeddedSyslog = syslogOpen && selectedEvent ? syslogParams(selectedEvent) : null;
   const searchTimerRef = React.useRef(null);
 
   const handleSearchChange = useCallback((e) => {
@@ -946,6 +949,16 @@ const Events = ({ initialParams, leftSlot } = {}) => {
             />
           </Box>
 
+          {/* The call's syslog, in place: the technical trace of the selected event */}
+          {embeddedSyslog && (
+            <Box data-testid="events-embedded-syslog" sx={{
+              height: '45%', minHeight: 260, mt: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+              border: '1px solid var(--mui-palette-divider)', borderRadius: '8px',
+            }}>
+              <LogsScreen key={embeddedSyslog} initialParams={embeddedSyslog} />
+            </Box>
+          )}
+
           {/* Pagination Controls */}
           <Box sx={{
             borderTop: '1px solid var(--mui-palette-divider)',
@@ -981,7 +994,9 @@ const Events = ({ initialParams, leftSlot } = {}) => {
           <EventDetailPanel
             event={selectedEvent}
             message={formatAuditMessage(selectedEvent)}
-            onClose={() => setSelectedEvent(null)}
+            onClose={() => { setSelectedEvent(null); setSyslogOpen(false); }}
+            syslogOpen={syslogOpen}
+            onToggleSyslog={() => setSyslogOpen((v) => !v)}
           />
         )}
       </Box>

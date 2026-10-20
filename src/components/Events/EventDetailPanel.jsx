@@ -44,13 +44,13 @@ export const syslogNeedle = (event) => {
 
 // Syslog takes a relative period, not a range: the shortest one that still
 // reaches back to the event.
-export const syslogLink = (event, now = Date.now()) => {
+export const syslogParams = (event, now = Date.now()) => {
   const needle = syslogNeedle(event);
   if (!needle) return null;
   const at = Date.parse(event.time);
   const age = Number.isNaN(at) ? 0 : now - at;
   const period = PERIOD_OPTIONS.find((p) => PERIOD_MS[p] && PERIOD_MS[p] > age + 6e5) || '30d';
-  return `/logs?${new URLSearchParams({ search: needle, period })}`;
+  return new URLSearchParams({ search: needle, period }).toString();
 };
 
 // The same fields, compact, for hovering a row's message.
@@ -73,9 +73,9 @@ export const EventFieldsTooltip = ({ event }) => {
   );
 };
 
-const EventDetailPanel = ({ event, message, onClose }) => {
+const EventDetailPanel = ({ event, message, onClose, syslogOpen = false, onToggleSyslog }) => {
   if (!event) return null;
-  const logs = syslogLink(event);
+  const logs = onToggleSyslog ? syslogParams(event) : null;
   const copy = () => {
     const { id, data, metadata, event_type: type, time, event_id: eventId } = event;
     navigator.clipboard?.writeText(JSON.stringify({ id, event_id: eventId, type, time, data, metadata }, null, 2));
@@ -104,9 +104,9 @@ const EventDetailPanel = ({ event, message, onClose }) => {
         </Typography>
       )}
       {logs && (
-        <Button size="small" variant="outlined" startIcon={<SyslogIcon />} data-testid="event-detail-syslog"
-          href={logs} target="_blank" rel="noopener" sx={{ mb: 1.5, textTransform: 'none' }}>
-          View in Syslog
+        <Button size="small" variant={syslogOpen ? 'contained' : 'outlined'} startIcon={<SyslogIcon />}
+          data-testid="event-detail-syslog" onClick={onToggleSyslog} sx={{ mb: 1.5, textTransform: 'none' }}>
+          {syslogOpen ? 'Hide syslog' : 'Show syslog'}
         </Button>
       )}
       <Divider sx={{ mb: 1.5 }} />
