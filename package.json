@@ -53,7 +53,7 @@
     "jwt-decode": "^4.0.0",
     "luaparse": "^0.3.1",
     "moment": "^2.31.0",
-    "monaco-editor": "^0.53.0",
+    "monaco-editor": "^0.57.0",
     "nats.ws": "^1.30.3",
     "node-fetch": "^3.3.2",
     "papaparse": "^5.7.0",
