@@ -26,6 +26,7 @@ import { Close as CloseIcon, Visibility, VisibilityOff, CloudQueue as CloudIcon,
 import { useState, useEffect } from 'react';
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import SecretField from '../../common/SecretField.jsx';
+import { PASSWORD_HINT, passwordPolicyError } from '../../../utils/passwordPolicy';
 
 const icon = <CheckBoxOutlineBlank fontSize="small" />;
 const checkedIcon = <CheckBoxIcon fontSize="small" />;
@@ -123,8 +124,8 @@ const AccountCreateDialog = ({
 
     if (!formData.password?.trim()) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (passwordPolicyError(formData.password)) {
+      newErrors.password = passwordPolicyError(formData.password);
     }
 
     if (formData.selectedEnvironments.length === 0) {
@@ -286,7 +287,7 @@ const AccountCreateDialog = ({
               value={formData.password}
               onChange={(e) => handleChange('password', e.target.value)}
               error={!!errors.password}
-              helperText={errors.password || 'Minimum 6 characters'}
+              helperText={errors.password || PASSWORD_HINT}
               disabled={loading}
               required
               placeholder="Enter password"

@@ -41,6 +41,7 @@ import { ACLSelect } from '../../common/ACLSelect';
 import { accountsApi } from '../../../services/api/accountsApi';
 import { parseServerErrors, is406Error } from '../../../utils/formValidation';
 import SecretField from '../../common/SecretField.jsx';
+import { PASSWORD_HINT, passwordPolicyError } from '../../../utils/passwordPolicy';
 
 const icon = <CheckBoxOutlineBlank fontSize="small" />;
 const checkedIcon = <CheckBoxIcon fontSize="small" />;
@@ -246,8 +247,8 @@ const AccountDialog = ({
     if (!isEditMode) {
       if (!formData.password?.trim()) {
         newErrors.password = 'Password is required';
-      } else if (formData.password.length < 6) {
-        newErrors.password = 'Password must be at least 6 characters';
+      } else if (passwordPolicyError(formData.password)) {
+        newErrors.password = passwordPolicyError(formData.password);
       }
     }
 
@@ -546,7 +547,7 @@ const AccountDialog = ({
                   value={formData.password}
                   onChange={(e) => handleChange('password', e.target.value)}
                   error={!!errors.password || (submitAttempted && !formData.password?.trim())}
-                  helperText={errors.password || (submitAttempted && !formData.password?.trim() ? 'Password is required' : 'Minimum 6 characters')}
+                  helperText={errors.password || (submitAttempted && !formData.password?.trim() ? 'Password is required' : PASSWORD_HINT)}
                   disabled={loading}
                   required
                   placeholder="Enter password"
