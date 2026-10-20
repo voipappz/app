@@ -1,5 +1,8 @@
 # Conversations: next steps
 
+> **Status 2026-10-19: the Conversations screen was removed from the app.** The last version
+> with it is kept on branch `archive/conversations-screen`. This plan stays for reference.
+
 Written 2026-10-16. Builds on [communication-platform-plan.md](communication-platform-plan.md)
 (sections 7 and 8), the API's `docs/CONVERSATIONS.md`, and the earlier research in
 `voipappz-api/docs/MINIMAL_CRM_PORTAL_IMPLEMENTATION_PLAN.md` and `SAAS_CORE_BOUNDARY.md`
@@ -15,12 +18,30 @@ conversation, SMS comes later, no voicemail (VML is the bot).
 - Endpoints: `GET /api/conversations` (filters, page/per_page, order_by/order_kind, from/to,
   `X-Total`), `GET …/:call_uuid`, `GET …/:call_uuid/events`, `POST …/:call_uuid/notes`.
 - Contact and form folds, their writers and `/contacts`, `/fields` endpoints: specified, not built.
-- App (PR #230, origin/main): three panes, sessions list (Live / All / Missed, sort and filter
-  menu, search by digits) | thread (summary strip, notes composer) | phone + contact (dynamic
-  fields, meta tags, previous calls). ACL keys `calls`/`call`, `notes`, `contact`;
-  `can('call','environment')` for "Everyone".
-- Rules kept: no read-model tables, API never touches the cable, portal users only, one
-  `Conversations` module, no "crm" naming.
+- App (PRs #230, #231, #233-#235 on main), as the owner reshaped it in the Codex session of
+  2026-10-16 ([conversations-history-module.md](conversations-history-module.md)):
+  - **History only.** No Live tab; the list tabs are **All / Missed**, plus search on its own
+    row, the date range and the view menu (sort, scope). Live calls belong to the phone.
+  - **Two panes: conversation and phone.** List + thread on the left and middle, the phone on
+    the right. The contact panel is gone from this screen.
+  - **One card per call**, grouped by call ID (`groupCallHistory.js`), in plain language for a
+    non-technical user (Close's "Called…", "Missed call from…"). The latest summary shows first;
+    earlier events sit under "Call details". Notes flow between the cards; the button says
+    "Save note".
+  - An activity chart with Today / 7 days / 30 days / custom for the selected conversation
+    (`ConversationActivity`, `HistoryPeriod`); **Sign out** in the phone header.
+  - Modules: `useConversations`, `useConversationHistory`, `useConversationNotifications`,
+    `SessionList`, `ConversationThread`, `CallSummary`, `NoteComposer`.
+  - ACL keys `calls`/`call`, `notes`; `can('call','environment')` for "Everyone".
+- Realtime (API PR #124): after an event is readable on its call stream, Ruby publishes
+  `{type: "conversation.changed", version: 1, event_id, call_uuid}` over NATS to the existing
+  user-scoped `Notifications` channel of the Crystal cable. No body, number or note on the wire.
+  The app batches bursts (300 ms), skips duplicate event IDs and refetches from the API; it also
+  refetches on reconnect, focus and every 60 s while visible. Incoming-call popups stay in the
+  softphone. No new socket server.
+- Rules kept: no read-model tables, the API never opens a socket (it only publishes the change
+  notice to NATS), portal users only, one `Conversations` module, no "crm" naming, SMS out of
+  scope.
 
 ## 2. Chatwoot mapping
 
@@ -137,20 +158,24 @@ contact's `meta[k]` / `remove_meta[]` shape.
 
 ## 5. UI additions per pane
 
-Left list: tabs become **Live | Open | Resolved** (Missed stays an outcome filter in the view
-menu; Open shows the `/meta` count). View menu gains **Assignee: Mine / Unassigned / Everyone**
+Every step follows the UX the owner set in Codex: plain words a non-technical user reads at a
+glance, one card per call, technical detail only on demand, nothing that changes the selection
+or clears a draft when an update arrives.
+
+Left list: tabs become **Open | All | Missed** (no Live; Open shows the `/meta` count and is the
+landing tab). View menu gains **Assignee: Mine / Unassigned / Everyone**
 (replaces today's scope toggle, same `call` environment check) and **Label**. Row: status dot,
 assignee initials, up to two label chips. `j`/`k` move the selection.
 
 Middle thread: header gets a **Resolve / Reopen** button (`⌘E` / `⌘O`), an **assignee chip**
 with a menu of the environment's users, and **label chips** with an add field (the same
 `MetaTagChips` as the other screens). Status, assignment and label events render as small
-centered activity lines. Composer: note as today, plus a split button **Add note and resolve**;
+centered activity lines in plain words ("Dana marked this done", "Assigned to you"). Composer: note as today, plus a split button **Add note and resolve**;
 `⌘↵` sends; the composer focuses when the phone answers (Close); `::` canned picker later.
 Shortcuts are off while typing, except `⌘↵`.
 
-Right column: **phone + contact, unchanged**. Later: "merge into…" in the contact menu and
-call fields under the summary strip.
+Right column: **the phone only.** The owner removed the contact panel; contact data returns in
+step 4 inside the thread, not as a pane (see below).
 
 ## 6. Steps
 
@@ -159,14 +184,16 @@ call fields under the summary strip.
 | 1 | Status: two events, fold, `status` filter, `/meta`, `/status` endpoint; Open/Resolved tabs, Resolve/Reopen button, `⌘E`/`⌘O`, `j`/`k` | S (1 week) | Lifecycle on the call stream with activity lines, no read model, fold still fast at the 5,000-event scan |
 | 2 | Assignment: two events, default assignee from the summary, `assignee` filter, `/assignments`; Mine/Unassigned menu, assignee chip | S (1 week) | Environment-scope ACL for acting on others' calls; users list reuse |
 | 3 | Labels: two events, `PATCH :call_uuid`, `/labels`, label filter; chips in thread and list | S–M (1 week) | Tags as data on calls with the chip component every screen uses |
-| 4 | Finish the contacts half already specified (folds, writers, `/contacts`, `/fields`, specs) | M | Right pane end to end; FieldDefined with expected version |
+| 4 | Finish the contacts half already specified (folds, writers, `/contacts`, `/fields`, specs). In the app: the contact's name replaces the number in the list and thread header; fields and tags open from the header as a collapsible section, not a third pane | M | Contacts end to end without bringing the panel back; FieldDefined with expected version |
 | 5 | Snooze: `ConversationSnoozed {until}`, time-based status at fold, Snoozed filter | S | A timed state with no job |
 | 6 | Canned notes: `canned-<env>` stream, `::` picker in the composer | M | The template store SMS will reuse |
 | 7 | SMS in the thread (platform plan step 4); status, assignee, labels apply unchanged | L | One thread for two channels |
 | 8 | `/summary` for the Dashboard board; if the fold is slow here, the first app-owned read model (ecommerce shape) | M | When a read model is actually needed |
 | 9 | Contact merge | M | Two-aggregate command with expected versions |
 
-Each step ships its specs on CI and the Hebrew/375px check as this repo requires.
+Each step ships its specs on CI and the Hebrew/375px check as this repo requires. Every new
+event (status, assignment, label, contact) also emits `conversation.changed` through the same
+NATS notice, so open screens refresh with no new realtime code.
 
 ## Rule for every step: modular
 
@@ -187,6 +214,7 @@ own is not done.
    `conversations` key so a role can read calls without acting on them?
 3. Labels: free `key:value` as on contacts (proposal), or an admin-defined list per environment
    with colors (Chatwoot's Label) via a `FieldDefined` of type `label`?
-4. Landing tab: **Open** (Chatwoot defaults to `status=open`) or **Live** as today?
+4. ~~Landing tab Open or Live~~ — decided 2026-10-16: no Live tab. Landing is **Open** once
+   step 1 ships; **All** until then.
 5. Does an agent who was not on the call need `call` environment scope to resolve it, or is a
    missed call in the user's queue theirs to act on?

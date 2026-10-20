@@ -186,8 +186,6 @@ export function useSipPhone(overrides = {}) {
   const [consult, setConsultInfo] = useState(null);
   const [lastError, setLastError] = useState(null);
   const [networkAvailable, setNetworkAvailable] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
-  // The active call's media, for the UI (speaking indicator). Null outside a call.
-  const [streams, setStreams] = useState({ local: null, remote: null });
 
   const uaRef = useRef(null);
   const regRef = useRef(null);
@@ -278,19 +276,12 @@ export function useSipPhone(overrides = {}) {
         activeIdRef.current = info.id;
         if (invitationRef.current && invitationRef.current.ctxid === info.id) invitationRef.current = null;
         if (audioRef.current) setupRemoteAudio(session, audioRef.current, (why) => reportError('sip.Media', new Error(why), 'Browser blocked call audio — click the page and try again'));
-        const pc = peerConnectionOf(session);
-        if (pc && typeof MediaStream !== 'undefined') {
-          setStreams({
-            local: new MediaStream(pc.getSenders().map((s) => s.track).filter(Boolean)),
-            remote: new MediaStream(pc.getReceivers().map((r) => r.track).filter(Boolean))
-          });
-        }
         setCall((c) => reduceCallState(c, { type: 'established', id: info.id }));
         if (hangupRequestedRef.current.delete(info.id)) void session.bye().catch(() => {});
       } else if (state === SessionState.Terminated) {
         sessionsRef.current.delete(info.id);
         hangupRequestedRef.current.delete(info.id);
-        if (activeIdRef.current === info.id) { activeIdRef.current = null; setStreams({ local: null, remote: null }); }
+        if (activeIdRef.current === info.id) activeIdRef.current = null;
         if (invitationRef.current && invitationRef.current.ctxid === info.id) invitationRef.current = null;
         mutedRef.current = false; setMutedState(false);
         heldRef.current = false; setHeldState(false);
@@ -890,7 +881,7 @@ export function useSipPhone(overrides = {}) {
   useEffect(() => () => { void unregister(); }, [unregister]);
 
   return {
-    status, call, muted, held, doNotDisturb, networkAvailable, lastError, streams,
+    status, call, muted, held, doNotDisturb, networkAvailable, lastError,
     register, unregister, dial, answer, hangup, sendDtmf, setMuted,
     setHeld, setDoNotDisturb, logs, clearLogs,
     transfer, consult, transferBlind, startAttendedTransfer, completeAttendedTransfer, cancelAttendedTransfer

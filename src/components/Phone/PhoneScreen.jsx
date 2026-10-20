@@ -8,7 +8,7 @@ import LtrIsland from '../../i18n/LtrIsland';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Box, IconButton, Tabs, Tab, TextField, Button, Typography, Stack, Tooltip, Avatar, Paper, Chip
+  Box, IconButton, Tabs, Tab, TextField, Button, Typography, Stack, Tooltip, Avatar, Paper
 } from '@mui/material';
 import CallIcon from '@mui/icons-material/Call';
 import CallEndIcon from '@mui/icons-material/CallEnd';
@@ -23,84 +23,20 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import { useSoftphone } from '../../context/SoftphoneContext';
 import { usePortalSidebar } from '../../context/PortalSidebarContext';
-import { useIsUserSession } from '../../hooks/useIsUserSession';
-import { useAudioLevel } from '../../hooks/useAudioLevel';
 import { defaultSipSettings } from '../../lib/sip/sipSettings';
 import SipSettingsForm from './SipSettingsForm.jsx';
 import PhoneSignIn from './PhoneSignIn.jsx';
 import CallToast from './CallToast.jsx';
 import TransferControls from './TransferControls.jsx';
 import PhoneCallsTab from './PhoneCallsTab.jsx';
-import PhoneSessionSignOut from './PhoneSessionSignOut.jsx';
 import PhonePresence from './PhonePresence.jsx';
 import { formatTime } from '../../utils/dateUtils';
 import { ACCENT, GREEN, MUTED, PANEL, PANEL_HEADER } from './panelTheme.js';
 // Calls · Dialpad along the bottom; Settings is the gear in the header.
 // Calls remain in the shared Calls screen; the phone lives in the drawer.
 const TABS = ['calls', 'dialpad'];
-
-// The call room, after the advanced-communication Janus app: dark room,
-// avatar circles that glow while that side speaks, round controls.
-const ROOM = '#282c34';
-const ROOM_FG = '#fdfdff';
-const ROOM_SEP = '#2c2c34';
-const LEAVE = '#d83838';
-const SPEAK = '#00ff00';
-
-// Close-style audio bars: five bars scaled by the stream's level.
-const BARS = [0.45, 0.75, 1, 0.75, 0.45];
-function Equalizer({ level, speaking, height = 22 }) {
-  return (
-    <Box aria-hidden sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', height, mt: 1 }}>
-      {BARS.map((w, i) => (
-        <Box key={i} sx={{ width: 4, borderRadius: 2, bgcolor: speaking ? SPEAK : 'rgba(255,255,255,0.25)', transition: 'height 90ms linear, background-color 150ms', height: Math.max(3, Math.round(height * Math.min(1, level * 1.5) * w)) }} />
-      ))}
-    </Box>
-  );
-}
-
-function CallAvatar({ name, sub, audio, muted, size, t }) {
-  const speaking = !!audio?.speaking;
-  return (
-    <Box sx={{ textAlign: 'center', minWidth: 0 }}>
-      <Box sx={{ position: 'relative', width: size, height: size, mx: 'auto' }}>
-        <Avatar sx={{ width: size, height: size, bgcolor: '#333', color: '#41414d', border: '4px solid transparent', transition: 'all 0.2s', ...(speaking && { borderColor: SPEAK, boxShadow: `0 0 26px ${SPEAK}` }) }}>
-          <PersonOutlineIcon sx={{ fontSize: size * 0.55 }} />
-        </Avatar>
-        {muted && (
-          <Box sx={{ position: 'absolute', bottom: -8, insetInline: 0, display: 'flex', justifyContent: 'center' }}>
-            <Chip label={t('call.muted')} size="small" sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#40404d', color: ROOM_FG }} />
-          </Box>
-        )}
-      </Box>
-      <Typography sx={{ pt: 1.5, color: ROOM_FG, overflowWrap: 'anywhere' }}><Bdi>{name}</Bdi></Typography>
-      {sub && <Typography variant="caption" sx={{ display: 'block', color: MUTED }}><Bdi>{sub}</Bdi></Typography>}
-      {audio && <Equalizer level={audio.level} speaking={speaking} />}
-    </Box>
-  );
-}
-
-function RoundControl({ label, icon, onClick, disabled, pressed, expanded, color, size = 52, testId }) {
-  return (
-    <Stack alignItems="center" spacing={0.5}>
-      <IconButton
-        aria-label={label} aria-pressed={pressed} aria-expanded={expanded} disabled={disabled} onClick={onClick} data-testid={testId}
-        sx={{
-          width: size, height: size, color: ROOM_FG, bgcolor: color || 'rgba(255,255,255,0.1)', transition: 'all 0.2s',
-          '&:hover': { bgcolor: color || 'rgba(255,255,255,0.18)', transform: 'scale(1.05)' },
-          '&.Mui-disabled': { color: MUTED, bgcolor: 'rgba(255,255,255,0.06)' },
-          '&[aria-pressed="true"]': { bgcolor: ACCENT, color: '#1f2328' }
-        }}
-      >
-        {icon}
-      </IconButton>
-      <Typography variant="caption" sx={{ color: MUTED }}>{label}</Typography>
-    </Stack>
-  );
-}
 import { requestIncomingCallNotifications, useIncomingCallAlerts } from '../../lib/sip/useIncomingCallAlerts.js';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
@@ -125,15 +61,11 @@ function useCallTimer(connectedAt) {
 export default function PhoneScreen({ embedded = false, initialTab, device, initialNumber }) {
   const {
     status, connected, call, muted, held, doNotDisturb, networkAvailable, lastError,
-    streams, dial, answer, hangup, sendDtmf, setMuted, setHeld, setDoNotDisturb,
+    dial, answer, hangup, sendDtmf, setMuted, setHeld, setDoNotDisturb,
     transfer, consult, settings, logs = [], clearLogs, disconnect, updateSettings
   } = useSoftphone();
   const { t } = useTranslation('phone');
   const sidebar = usePortalSidebar();
-  // The user portal gets the redesigned call panel (caller card, labelled
-  // controls, keypad on demand, a fixed Answer / Hang up bar). The account
-  // console keeps the phone it has.
-  const redesigned = useIsUserSession();
 
   // An account has no extension of its own: until it signs the phone in (as a
   // device, or through a user login) the panel is that sign-in. Opened for a
@@ -159,13 +91,9 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
   }, [initialNumber]);
   const [logsOpen, setLogsOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
-  const [keypadOpen, setKeypadOpen] = useState(false);
   const [holdPending, setHoldPending] = useState(false);
   const [dialError, setDialError] = useState(null);
   const logEndRef = useRef(null);
-
-  // Each call starts with the keypad and transfer closed.
-  useEffect(() => { setKeypadOpen(false); setTransferOpen(false); }, [call?.id]);
 
   useEffect(() => { void requestIncomingCallNotifications(); }, []);
   useEffect(() => { if (logsOpen) logEndRef.current?.scrollIntoView({ block: 'end' }); }, [logs, logsOpen]);
@@ -176,9 +104,6 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
   const transferBusy = Boolean(transfer) || Boolean(consult && consult.state !== 'ended');
   useIncomingCallAlerts(call);
   const timer = useCallTimer(call?.state === 'active' ? call.connectedAt : null);
-  const roomActive = redesigned && call?.state === 'active';
-  const localAudio = useAudioLevel(roomActive && !muted ? streams?.local : null);
-  const remoteAudio = useAudioLevel(roomActive && !held ? streams?.remote : null);
 
   const ext = settings?.username || '—';
   const name = settings?.displayName || settings?.username || t('header.guest');
@@ -226,14 +151,14 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
       <Paper
         elevation={0}
         sx={{
-          overflow: 'hidden', bgcolor: redesigned ? ROOM : PANEL, color: '#e5e7eb',
+          overflow: 'hidden', bgcolor: PANEL, color: '#e5e7eb',
           display: 'flex', flexDirection: 'column',
           ...(embedded ? { flex: 1, minHeight: 0, borderRadius: 0 } : { borderRadius: 3 })
         }}
       >
         {/* Header — avatar, name / ext, ready status */}
-        <Box sx={{ bgcolor: redesigned ? ROOM_SEP : PANEL_HEADER, px: 1.5, py: 1.25, display: 'flex', gap: 1.25, alignItems: 'flex-start' }}>
-          <Avatar sx={{ width: 44, height: 44, bgcolor: redesigned ? '#40404d' : '#5b6675', fontSize: '1.1rem' }}>{initial}</Avatar>
+        <Box sx={{ bgcolor: PANEL_HEADER, px: 1.5, py: 1.25, display: 'flex', gap: 1.25, alignItems: 'flex-start' }}>
+          <Avatar sx={{ width: 44, height: 44, bgcolor: '#5b6675', fontSize: '1.1rem' }}>{initial}</Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }} noWrap>
               {name} <Box component="span" sx={{ color: MUTED, fontWeight: 400 }}>• <Bdi>{ext}</Bdi></Box>
@@ -245,7 +170,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
             />
             <Typography sx={{ mt: 0.5, fontSize: '0.68rem', color: MUTED, display: 'flex', alignItems: 'center', gap: 0.5 }} noWrap>
               <Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: DOT[status] || '#94a3b8', display: 'inline-block' }} />
-              {statusText}{!redesigned && settings?.domain ? <> • <Bdi>{settings.domain}</Bdi></> : ''}
+              {statusText}{settings?.domain ? <> • <Bdi>{settings.domain}</Bdi></> : ''}
             </Typography>
             {lastError && (
               <Typography
@@ -266,14 +191,10 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
               <SettingsIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          {(!redesigned || settingsOpen || logsOpen) && <Tooltip title={t('header.logs')}>
-            <IconButton size="small" aria-label={t('header.logs')} aria-pressed={logsOpen} sx={{ color: logsOpen ? ACCENT : MUTED }} onClick={() => { setSettingsOpen(false); setLogsOpen((v) => !v); }}><TerminalIcon fontSize="small" /></IconButton>
-          </Tooltip>}
+          <Tooltip title={t('header.logs')}>
+            <IconButton size="small" sx={{ color: logsOpen ? ACCENT : MUTED }} onClick={() => setLogsOpen((v) => !v)}><TerminalIcon fontSize="small" /></IconButton>
+          </Tooltip>
         </Box>
-
-        {redesigned && <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 1.5, bgcolor: ROOM_SEP }}>
-          <PhoneSessionSignOut inCall={Boolean(inCall)} />
-        </Box>}
 
         {/* Body */}
         <Box sx={{ display: 'flex', flexDirection: 'column', ...(embedded ? { flex: 1, minHeight: 0, overflowY: 'auto' } : { minHeight: 360 }) }}>
@@ -319,46 +240,6 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
             </Box>
           ) : needsSignIn && !inCall ? (
             <PhoneSignIn device={openedForOtherDevice ? device : undefined} />
-          ) : inCall && redesigned ? (
-            <Box sx={{ p: 2, pt: 3, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', bgcolor: ROOM }}>
-              {call.state === 'active' ? (
-                <Box>
-                  <Typography sx={{ fontWeight: 300, color: ROOM_FG }}>{t('call.duration')}</Typography>
-                  <Typography sx={{ fontWeight: 700, fontSize: '1.6rem', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em', color: '#fff' }}><Bdi>{timer}</Bdi></Typography>
-                </Box>
-              ) : (
-                <Typography variant="overline" sx={{ color: MUTED }}>
-                  {call.direction === 'inbound' ? t('call.incoming') : t('call.outgoing')}
-                </Typography>
-              )}
-              <Stack direction="row" spacing={3} justifyContent="center" alignItems="flex-end" sx={{ pt: 3 }}>
-                {call.state === 'active' && <CallAvatar name={t('call.you')} sub={settings?.username} audio={localAudio} muted={muted} size={72} t={t} />}
-                <CallAvatar name={call.remote} sub={call.direction === 'inbound' ? t('call.incoming') : t('call.outgoing')} audio={call.state === 'active' ? remoteAudio : null} size={96} t={t} />
-              </Stack>
-              <Typography role="status" sx={{ pt: 2, color: held ? ACCENT : MUTED }}>
-                {call.state === 'active' ? (held ? t('call.onHold') : t('call.connected')) : call.state === 'ringing' ? t('call.ringing') : t('call.connecting')}
-              </Typography>
-              <Stack direction="row" spacing={1.5} justifyContent="center" sx={{ pt: 3 }}>
-                <RoundControl label={muted ? t('call.unmute') : t('call.mute')} icon={muted ? <MicOffIcon /> : <MicIcon />} pressed={muted} onClick={() => setMuted(!muted)} />
-                <RoundControl
-                  label={held ? t('call.resume') : t('call.hold')} icon={held ? <PlayArrowIcon /> : <PauseIcon />} pressed={held} testId="phone-hold"
-                  disabled={call.state !== 'active' || holdPending || transferBusy} onClick={toggleHold}
-                />
-                <RoundControl
-                  label={t('call.transfer')} icon={<PhoneForwardedIcon />} expanded={transferOpen || transferBusy} testId="phone-transfer-open"
-                  disabled={call.state !== 'active'} onClick={() => setTransferOpen((v) => !v)}
-                />
-                <RoundControl label={t('call.keypad')} icon={<DialpadIcon />} expanded={keypadOpen} disabled={call.state !== 'active'} onClick={() => setKeypadOpen((v) => !v)} />
-              </Stack>
-              <Box sx={{ width: '100%' }}>
-                <TransferControls open={transferOpen} onClose={() => setTransferOpen(false)} callActive={call.state === 'active'} />
-              </Box>
-              {keypadOpen && (
-                <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 64px)', gap: 1, pt: 2.5 }}>
-                  {KEYS.map((k) => <Button key={k} disabled={call.state !== 'active'} sx={{ minWidth: 0, minHeight: 48, borderRadius: 2.5, bgcolor: 'rgba(255,255,255,0.08)', color: ROOM_FG, fontSize: '1.25rem', fontWeight: 300 }} onClick={() => sendDtmf(k)}>{k}</Button>)}
-                </Box>
-              )}
-            </Box>
           ) : inCall ? (
             <Box sx={{ p: 2, textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <Typography variant="overline" sx={{ color: MUTED }}>
@@ -417,24 +298,17 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                 <TextField
                   fullWidth size="small" value={number} onChange={(e) => setNumber(e.target.value)}
                   placeholder={t('dialpad.enterNumber')}
-                  inputProps={{ 'aria-label': t('dialpad.enterNumber'), style: { direction: 'ltr', textAlign: 'center', fontSize: '1.25rem', color: 'var(--mui-palette-text-primary)' } }}
+                  inputProps={{ style: { direction: 'ltr', textAlign: 'center', fontSize: '1.25rem', color: 'var(--mui-palette-text-primary)' } }}
                   sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'var(--mui-palette-background-paper)', borderRadius: 1.5 } }}
                 />
                 {number && (
-                  <IconButton size="small" aria-label={t('dialpad.backspace')} onClick={() => setNumber((n) => n.slice(0, -1))} sx={{ ...(redesigned && { width: 44, height: 44 }), position: 'absolute', insetInlineEnd: 4, top: '50%', transform: 'translateY(-50%)', color: 'var(--mui-palette-text-secondary)' }}>
+                  <IconButton size="small" onClick={() => setNumber((n) => n.slice(0, -1))} sx={{ position: 'absolute', insetInlineEnd: 4, top: '50%', transform: 'translateY(-50%)', color: 'var(--mui-palette-text-secondary)' }}>
                     <BackspaceIcon fontSize="small" />
                   </IconButton>
                 )}
               </LtrIsland>
               <Box dir="ltr" sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', rowGap: 1.5, mb: 2 }}>
-                {KEYS.map((k) => redesigned ? (
-                  <Button
-                    key={k} onClick={() => press(k)}
-                    sx={{ minHeight: 44, minWidth: 0, fontSize: '1.5rem', color: '#dfe5ec', py: { xs: 1.25, sm: 0.5 }, borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }}
-                  >
-                    {k}
-                  </Button>
-                ) : (
+                {KEYS.map((k) => (
                   <Box
                     key={k} role="button" onClick={() => press(k)}
                     sx={{ textAlign: 'center', fontSize: '1.5rem', color: '#dfe5ec', cursor: 'pointer', userSelect: 'none', py: { xs: 1.25, sm: 0.5 }, borderRadius: 1, '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }}
@@ -443,13 +317,12 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                   </Box>
                 ))}
               </Box>
-              {!redesigned && <Box sx={{ flex: 1 }} />}
+              <Box sx={{ flex: 1 }} />
               <Button
                 fullWidth variant="contained" onClick={() => startCall()} disabled={!connected || !number.trim()}
-                startIcon={redesigned ? <CallIcon /> : undefined}
                 sx={{ bgcolor: GREEN, borderRadius: 1.5, py: 1.2, '&:hover': { bgcolor: '#28b14c' }, '&.Mui-disabled': { bgcolor: 'rgba(52,199,89,0.4)', color: '#f0fdf4' } }}
               >
-                {redesigned ? t('dialpad.call') : <CallIcon />}
+                <CallIcon />
               </Button>
               {dialError && (
                 <Typography data-testid="dial-error" variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', color: '#fca5a5' }}>
@@ -461,21 +334,12 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
           ) : null}
         </Box>
 
-        {/* The user portal's call bar: Answer / Decline while ringing, Hang up
-            once connected. Fixed under the body so it never scrolls away. */}
-        {inCall && redesigned && (
-          <Stack direction="row" spacing={4} justifyContent="center" sx={{ p: 2, flexShrink: 0, bgcolor: ROOM }}>
-            {incoming && <RoundControl label={t('call.answer')} icon={<CallIcon sx={{ fontSize: 30 }} />} color={GREEN} size={64} onClick={() => answer()} />}
-            <RoundControl label={incoming ? t('call.decline') : t('call.hangUp')} icon={<CallEndIcon sx={{ fontSize: 30 }} />} color={LEAVE} size={64} onClick={() => hangup()} />
-          </Stack>
-        )}
-
         {/* Bottom tabs — Calls / Dialpad / Assistant (Settings is the gear) */}
         {!logsOpen && !settingsOpen && !inCall && !needsSignIn && (
           <Tabs
             value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth"
             sx={{
-              borderTop: '1px solid rgba(255,255,255,0.08)', minHeight: 48, bgcolor: redesigned ? ROOM_SEP : PANEL_HEADER,
+              borderTop: '1px solid rgba(255,255,255,0.08)', minHeight: 48, bgcolor: PANEL_HEADER,
               '& .MuiTab-root': { minHeight: 48, color: MUTED, fontSize: '0.72rem', fontWeight: 700 },
               '& .Mui-selected': { color: `${ACCENT} !important` },
               '& .MuiTabs-indicator': { backgroundColor: ACCENT }

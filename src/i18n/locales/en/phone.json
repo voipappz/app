@@ -36,27 +36,14 @@
     "hold": "Hold",
     "transfer": "Transfer",
     "hangUp": "Hang up",
-    "incomingTitle": "Incoming call",
-    "outgoing": "Outgoing",
-    "connected": "Connected",
-    "onHold": "On hold",
-    "mute": "Mute",
-    "unmute": "Unmute",
-    "keypad": "Keypad",
-    "answer": "Answer",
-    "decline": "Decline",
-    "duration": "Call duration",
-    "you": "You",
-    "muted": "Muted"
+    "incomingTitle": "Incoming call"
   },
   "dialpad": {
     "enterNumber": "Enter number",
     "enterNumberToCall": "Enter a number to call",
     "notRegistered": "Phone is not registered",
     "couldNotStart": "Call could not be started",
-    "notConnected": "Not connected — see Settings",
-    "call": "Call",
-    "backspace": "Delete last digit"
+    "notConnected": "Not connected — see Settings"
   },
   "tabs": {
     "calls": "Calls",
@@ -128,11 +115,5 @@
       "codeLength": "Please enter the 6-digit code",
       "codeInvalid": "Invalid or expired code. Please try again."
     }
-  },
-  "session": {
-    "signOut": "Sign out",
-    "confirmTitle": "Sign out during this call?",
-    "confirmBody": "Signing out disconnects your phone and ends the current call.",
-    "stay": "Stay signed in"
   }
 }

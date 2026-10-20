@@ -4,28 +4,33 @@
     "quick": "Quick search..."
   },
   "chart": {
-    "liveCalls": "Live calls",
-    "overTime": "Calls over time",
     "by": "by",
-    "liveToggleHint": "Show calls happening right now instead of the timeline",
     "liveNow": "Live now",
-    "liveNowCount": "Live now · {{count}}",
-    "openReports": "Open full reports",
     "show": "Show chart",
     "hide": "Hide chart",
-    "openList": "Open list",
     "empty": "No calls in the selected period.",
     "emptyTitle": "No calls yet",
     "emptyHint": "Calls in the selected period will appear here.",
     "emptyFiltered": "No calls match these filters in the selected period.",
     "emptyLast7": "Show the last 7 days",
-    "emptyClear": "Clear filters"
+    "emptyClear": "Clear filters",
+    "groupBy": "Group by",
+    "liveNowHint": "Calls happening right now — open the live view"
+  },
+  "period": {
+    "label": "Period",
+    "today": "Today",
+    "to": "to"
+  },
+  "toolbar": {
+    "actions": "Table actions"
   },
   "bucket": {
     "auto": "Auto",
     "hour": "Hourly",
     "day": "Daily",
-    "week": "Weekly"
+    "week": "Weekly",
+    "label": "Bucket"
   },
   "groupBy": {
     "cause": "Cause",
@@ -36,10 +41,6 @@
     "route": "Route",
     "application": "Application",
     "user": "User"
-  },
-  "drawer": {
-    "liveCalls": "Live Calls",
-    "reports": "Call Reports"
   },
   "mobile": {
     "empty": "No call data available.",
