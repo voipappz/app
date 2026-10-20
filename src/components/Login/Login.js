@@ -6,6 +6,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { getAccountUuidFromToken, getAccountDataFromToken, getTokenExpiry } from '../../utils/jwt';
 import { logLoginDebug } from '../../utils/loginDebug';
+import { isPasswordValid } from '../../utils/passwordPolicy';
 
 export const useLogin = () => {
   // Client-side messages in the active language; server messages pass through as sent.
@@ -138,7 +139,7 @@ export const useLogin = () => {
   const handleForgotResetSubmit = async (e) => {
     e.preventDefault();
 
-    if (!newPassword || newPassword.length < 8) {
+    if (!isPasswordValid(newPassword)) {
       setError(t('error.passwordTooShort'));
       return;
     }
