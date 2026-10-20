@@ -112,7 +112,7 @@ const StatChips = ({ items = [], sx, size = 'medium' }) => {
           </Paper>
         );
         return item.hint
-          ? <Tooltip key={item.key || item.label} title={item.hint} describeChild>{chip}</Tooltip>
+          ? <Tooltip key={item.key || item.label} title={item.hint} describeChild disableInteractive>{chip}</Tooltip>
           : chip;
       })}
     </Box>

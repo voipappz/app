@@ -47,7 +47,7 @@ test.describe('Extensions CSV import', () => {
     // Import a row with a unique username so the existence check can't be
     // satisfied by a pre-existing extension.
     const username = `9${Date.now().toString().slice(-3)}`;
-    const oneRow = `Username,Name,Password,CallerID\n${username},CI Import ${username},P6Pq8fZxoj${username},08-3819793\n`;
+    const oneRow = `Username,Name,Password,CallerID\n${username},CI Import ${username},ImportTest${username},08-3819793\n`;
 
     const resp = await page.request.post(`${apiBaseUrl}${IMPORT_ROUTE}`, {
       headers: { Authorization: `Bearer ${token}` },

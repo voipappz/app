@@ -126,3 +126,25 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* The full panel as a popover under a screen's Filters button (renderAs="button"). */
+.centralized-search-popover {
+  width: min(760px, 95vw);
+  max-height: 70vh;
+  overflow: auto;
+  margin-top: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--theme-border, #e5e7eb);
+  border-radius: 12px;
+  background-color: var(--theme-bg-secondary, #fff);
+}
+
+.centralized-search-popover .centralized-search-filter-panel {
+  border: none;
+  border-radius: 0;
+  margin-top: 0;
+  padding: 0;
+  box-shadow: none;
+  animation: none;
+  background-color: transparent;
+}
