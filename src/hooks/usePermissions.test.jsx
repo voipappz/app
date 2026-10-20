@@ -27,7 +27,7 @@ describe('usePermissions under a portal user session', () => {
     const items = getPermittedTopbarItems(aclWith('logs'), { strict: true }).map((i) => i.path);
 
     expect(items).toEqual(['/events', '/logs']);
-    expect(TOPBAR_NAV_ITEMS.map((i) => i.path)).toContain('/monitoring');
+    expect(TOPBAR_NAV_ITEMS.map((i) => i.path)).not.toContain('/monitoring');
   });
 
   it('prefers the admin ACL while an account is signed in', () => {

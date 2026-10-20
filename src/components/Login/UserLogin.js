@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { userLoginErrorText } from './loginErrors';
+import { loginErrorText } from './loginErrors';
 import { useNavigate } from 'react-router';
 import axios from 'axios';
 import { useUserAuth } from '../../context/UserAuthContext';
@@ -160,7 +160,7 @@ export const useUserLogin = () => {
         completeLogin(response.data);
       }
     } catch (err) {
-      setError(userLoginErrorText(t, err));
+      setError(loginErrorText(t, err));
     }
   };
 

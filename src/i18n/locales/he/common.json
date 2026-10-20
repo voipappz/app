@@ -62,7 +62,10 @@
     "value": "ערך",
     "tag": "תגית",
     "today": "היום",
-    "dateRange": "טווח תאריכים: {{range}}"
+    "dateRange": "טווח תאריכים: {{range}}",
+    "filters": "מסננים",
+    "clear": "ניקוי",
+    "text": "חיפוש"
   },
   "datePicker": {
     "quick": {

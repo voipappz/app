@@ -141,7 +141,9 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        '@': resolve(__dirname, 'src')
+        '@': resolve(__dirname, 'src'),
+        // Shared chat UI package (also consumed by VoipAppz Builder)
+        '@voipappz/chat-ui': resolve(__dirname, 'packages/chat-ui/src/index.js')
       }
     }
   }

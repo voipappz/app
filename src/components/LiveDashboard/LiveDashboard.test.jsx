@@ -31,19 +31,21 @@ vi.mock('../../hooks/useLiveEntities', () => ({
 }));
 
 // A portal session: one environment, straight off the user object.
+const PORTAL_USER = {
+  uuid: 'user-1',
+  environment: { uuid: 'env-906', name: '4186 - MATEMATICA' },
+};
+let portalUser = PORTAL_USER;
 vi.mock('../../context/UserAuthContext', () => ({
-  useUserAuth: () => ({
-    user: {
-      uuid: 'user-1',
-      environment: { uuid: 'env-906', name: '4186 - MATEMATICA' },
-    },
-  }),
+  useUserAuth: () => ({ user: portalUser }),
 }));
 
 vi.mock('../../context/CustomerEnvironmentContext', () => ({
   useCustomerEnvironment: () => ({ selectedEnvironments: [] }),
 }));
-vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ accountUuid: null }) }));
+let accountUuid = null;
+vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ accountUuid }) }));
+vi.mock('../Live/panels/LiveCallsPanel.jsx', () => ({ default: () => <div>calls in progress panel</div> }));
 
 // A user document as the node writes it: identity from the mothership, the
 // rest from the switch.
@@ -156,6 +158,25 @@ describe('LiveDashboard', () => {
     expect(screen.getAllByText(/Not live — the cable is not delivering/)).toHaveLength(2);
     expect(screen.queryByText('No calls in progress')).not.toBeInTheDocument();
     expect(screen.queryByText('No agents in this environment')).not.toBeInTheDocument();
+  });
+
+  // The Calls screen's former "Live now" tab: calls in progress with their
+  // actions, for an account only (it polls the API; a portal user gets counts).
+  it('shows the calls-in-progress panel to an account, not to a portal user', () => {
+    liveRows = [agent(), environment()];
+    const { unmount } = render(<LiveDashboard />);
+    expect(screen.queryByTestId('live-calls-panel')).not.toBeInTheDocument();
+    unmount();
+
+    portalUser = null;
+    accountUuid = 'acct-1';
+    try {
+      render(<LiveDashboard />);
+      expect(screen.getByTestId('live-calls-panel')).toHaveTextContent('calls in progress panel');
+    } finally {
+      portalUser = PORTAL_USER;
+      accountUuid = null;
+    }
   });
 
   it('never calls the API — the cable is the only source', () => {
