@@ -603,8 +603,8 @@ const Users = () => {
         showTemplateOption={true}
         templateHeaders={['Username', 'Name', 'Password', 'caller_id_number']}
         templateData={[
-          { Username: '930891', Name: '210', Password: 'P6Pq8fZxoj210', caller_id_number: '308045551' },
-          { Username: '930892', Name: '211', Password: 'P6Pq8fZxoj211', caller_id_number: '308045551' }
+          { Username: '930891', Name: '210', Password: 'ChangeMe-210', caller_id_number: '308045551' },
+          { Username: '930892', Name: '211', Password: 'ChangeMe-211', caller_id_number: '308045551' }
         ]}
       />
 
