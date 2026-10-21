@@ -36,6 +36,7 @@ import { getAnnouncement } from '../../../services/api/announcementsApi';
 import { getVML } from '../../../services/api/vmlsApi';
 import { getCallCondition } from '../../../services/api/callConditionsApi';
 import { AnnouncementBridge } from '../AnnouncementBridge/AnnouncementBridge.jsx';
+import AnnouncementActions from '../shared/AnnouncementActions.jsx';
 import { Z } from '../../../utils/zIndex.js';
 import { QueueBridge } from '../QueueBridge/QueueBridge.jsx';
 import { VMLBridge } from '../VMLBridge/VMLBridge.jsx';
@@ -1028,18 +1029,11 @@ export const IVRBridge = ({
             ]}
           </Select>
         </FormControl>
-        {/* Edit Announcement Button */}
-        {formData.announcement_uuid && (
-          <IconButton
-            size="small"
-            color="primary"
-            onClick={() => handleEditBridge('announcement', formData.announcement_uuid, 'announcement')}
-            disabled={loading}
-            sx={{ mt: 0.5 }}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-        )}
+        {/* Hear / edit the announcement */}
+        <AnnouncementActions
+          uuid={formData.announcement_uuid}
+          onEdit={loading ? null : (uuid) => handleEditBridge('announcement', uuid, 'announcement')}
+        />
       </Box>
 
       {/* Timeout - Row with 3 fields + Edit button */}

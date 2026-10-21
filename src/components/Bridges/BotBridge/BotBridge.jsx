@@ -27,6 +27,7 @@ import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentCont
 import { botsApi } from '../../../services/api/botsApi';
 import { bridgeApi } from '../../../services/api/bridgeApi';
 import { AnnouncementBridge } from '../AnnouncementBridge/AnnouncementBridge.jsx';
+import AnnouncementActions from '../shared/AnnouncementActions.jsx';
 import { Z } from '../../../utils/zIndex.js';
 import { useIsUserSession } from '../../../hooks/useIsUserSession';
 
@@ -75,6 +76,7 @@ export const BotBridge = ({
   const [announcements, setAnnouncements] = useState([]);
   const [announcementsLoading, setAnnouncementsLoading] = useState(false);
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
+  const [announcementToEdit, setAnnouncementToEdit] = useState(null);
 
   // Initialize form data
   useEffect(() => {
@@ -122,35 +124,38 @@ export const BotBridge = ({
     }
   }, [open, formData.environment_uuid]);
 
-  // Handle create new announcement click
-  const handleCreateNewAnnouncement = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  // Open the announcement editor: a new one (no uuid) or the chosen one.
+  const openAnnouncement = (uuid = null) => {
     if (onDrillDown) {
       onDrillDown({
         type: 'announcement',
-        mode: 'create',
-        data: null,
+        mode: uuid ? 'edit' : 'create',
+        data: uuid ? { uuid } : null,
         environmentUuid: formData.environment_uuid,
         onResult: async (savedData) => {
           // Handle the result - set announcement_uuid and reload announcements
-          const uuid = savedData.uuid || savedData.id;
-          handleChange('announcement_uuid', uuid);
+          const savedUuid = savedData.uuid || savedData.id;
+          if (savedUuid) handleChange('announcement_uuid', savedUuid);
           // Reload announcements list
           try {
             const response = await bridgeApi.getBridgeResources('announcement', formData.environment_uuid);
             setAnnouncements(Array.isArray(response) ? response : []);
           } catch (err) {
-            console.error('Error reloading announcements after drill-down creation:', err);
+            console.error('Error reloading announcements after drill-down save:', err);
           }
         }
       });
     } else {
-      // Legacy: open announcement dialog inline
-      console.log('Opening announcement creation dialog from Bot');
+      setAnnouncementToEdit(uuid ? { uuid } : null);
       setAnnouncementDialogOpen(true);
     }
+  };
+
+  // Handle create new announcement click
+  const handleCreateNewAnnouncement = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openAnnouncement();
   };
 
   // Handle announcement save - reload announcements
@@ -160,6 +165,7 @@ export const BotBridge = ({
 
     // Close the announcement dialog
     setAnnouncementDialogOpen(false);
+    setAnnouncementToEdit(null);
 
     // Reload announcements
     try {
@@ -323,6 +329,7 @@ export const BotBridge = ({
           )}
 
           <Grid size={{ xs: 12, md: 6 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <FormControl fullWidth disabled={loading || announcementsLoading}>
               <InputLabel>Announcement (Optional)</InputLabel>
               <Select
@@ -351,6 +358,8 @@ export const BotBridge = ({
                 ]}
               </Select>
             </FormControl>
+            <AnnouncementActions uuid={formData.announcement_uuid} onEdit={openAnnouncement} />
+            </Box>
           </Grid>
 
           <Grid size={{ xs: 12, md: 6 }}>
@@ -408,10 +417,12 @@ export const BotBridge = ({
   const announcementBridgeDialog = !onDrillDown ? (
     <AnnouncementBridge
       open={announcementDialogOpen}
-      onClose={() => setAnnouncementDialogOpen(false)}
+      onClose={() => { setAnnouncementDialogOpen(false); setAnnouncementToEdit(null); }}
       onSave={handleAnnouncementSave}
       environmentUuid={formData.environment_uuid}
       hideEnvironment={true}
+      announcement={announcementToEdit}
+      editMode={announcementToEdit ? 'edit' : 'create'}
       zLayer={Z.L3}
     />
   ) : null;

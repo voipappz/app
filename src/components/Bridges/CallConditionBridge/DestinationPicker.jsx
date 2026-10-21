@@ -8,6 +8,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { ResponsiveDialog as Dialog } from '../../ui';
 import { NumberSelector } from '../NumberBridge/NumberSelector.jsx';
+import AnnouncementActions from '../shared/AnnouncementActions.jsx';
 import { menuProps } from '../../../utils/zIndex.js';
 
 const CREATE_NEW = '__create__';
@@ -17,9 +18,10 @@ const CREATABLE = ['announcement', 'vml', 'call_condition', 'queue', 'ivr', 'bot
 /**
  * Type, then the destination of that type. A phone number is searched; every
  * other type is picked from its list. "Create new" opens that type's editor
- * in the wizard (when there is one) and picks what it saves.
+ * in the wizard (when there is one) and picks what it saves. A chosen
+ * announcement can be heard, and opened in its editor when `onEdit` is given.
  */
-export function DestinationFields({ target, onChange, types, destinations, environmentUuid, layer, error, onCreateNew }) {
+export function DestinationFields({ target, onChange, types, destinations, environmentUuid, layer, error, onCreateNew, onEdit }) {
   const { t } = useTranslation('callConditions');
   const list = destinations.lists[target.type] || [];
   const { load } = destinations;
@@ -76,6 +78,10 @@ export function DestinationFields({ target, onChange, types, destinations, envir
       ) : (
         error && <FormHelperText error>{t(error)}</FormHelperText>
       )}
+
+      {target.type === 'announcement' && (
+        <AnnouncementActions uuid={target.uuid} onEdit={onEdit && ((uuid) => onEdit(target.type, uuid))} />
+      )}
     </Box>
   );
 }
@@ -130,6 +136,20 @@ export default function DestinationPicker({
     });
   } : null;
 
+  // Editing what is chosen also happens in the wizard: the choice is kept,
+  // and the list reloads so a renamed destination shows its new name.
+  const editExisting = onDrillDown ? (type, uuid) => {
+    onChange(draft);
+    setOpen(false);
+    onDrillDown({
+      type,
+      mode: 'edit',
+      data: { uuid },
+      environmentUuid,
+      onResult: () => load(type, true),
+    });
+  } : null;
+
   const chosen = targetText(target, destinations);
 
   return (
@@ -166,6 +186,7 @@ export default function DestinationPicker({
               environmentUuid={environmentUuid}
               layer={nestedLayer}
               onCreateNew={createNew}
+              onEdit={editExisting}
             />
           </Box>
         </DialogContent>
