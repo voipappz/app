@@ -1,7 +1,7 @@
-import { Box, Button, CircularProgress, IconButton, Typography } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, IconButton, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import { ArrowBack as BackIcon, Download as DownloadIcon, Phone as PhoneIcon, Timeline as EventsIcon } from '@mui/icons-material';
+import { ArrowBack as BackIcon, Block as BlockIcon, Download as DownloadIcon, LockOpen as UnblockIcon, Phone as PhoneIcon, Timeline as EventsIcon } from '@mui/icons-material';
 import { ResponsiveDialog } from '../../ui';
 import Bdi from '../../../i18n/Bdi';
 import { formatDate } from '../../../utils/dateUtils';
@@ -11,6 +11,7 @@ import { callFacts, recordingUrl, shortDuration } from '../CallLogRow/callDirect
 import { callSummary } from './callSummary';
 import { useCallDetails } from './useCallDetails';
 import CallHistory from '../CallHistory/CallHistory';
+import { useNumberBlock } from '../CallActions/CallActions';
 
 // The call's own facts, in the order a person asks them. Numbers and names
 // come from the server as they are; empty ones are left out.
@@ -52,11 +53,12 @@ function InfoLine({ label, children }) {
  * the recording, the summary and transcription from the server, the details,
  * and the other calls with the same number (a tap opens that one).
  */
-export default function CallDetailsScreen({ call, open, onClose, onOpenCall, canViewEvents, onViewEvents }) {
+export default function CallDetailsScreen({ call, open, onClose, onOpenCall, canViewEvents, onViewEvents, onBlockChanged }) {
   const { t } = useTranslation('calls');
   const theme = useTheme();
   const { canDial, dialNow } = useDialNow();
   const { transcript } = useCallDetails(open ? call : null);
+  const { blocked, toggle: toggleBlock } = useNumberBlock({ call, onChanged: onBlockChanged });
   if (!call) return null;
 
   const facts = callFacts(call);
@@ -92,6 +94,25 @@ export default function CallDetailsScreen({ call, open, onClose, onOpenCall, can
             </Button>
           )}
         </Box>
+
+        {/* Block the other party: a full-width line under the call, so it is
+            easy to find with a thumb and hard to hit by mistake (it asks first). */}
+        {facts.number && (
+          <Box sx={{ px: 2, pb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+            {blocked && <Chip label={t('block.blockedChip')} size="small" color="error" icon={<BlockIcon />} />}
+            <Button
+              size="small"
+              variant={blocked ? 'text' : 'outlined'}
+              color={blocked ? 'inherit' : 'error'}
+              startIcon={blocked ? <UnblockIcon /> : <BlockIcon />}
+              onClick={toggleBlock}
+              data-testid="call-details-block"
+              sx={{ ms: blocked ? 'auto' : 0 }}
+            >
+              {blocked ? t('block.unblockNumber') : t('block.blockNumber')}
+            </Button>
+          </Box>
+        )}
 
         {recording && (
           <Section title={t('mobile.details.recording')} testId="call-details-recording">

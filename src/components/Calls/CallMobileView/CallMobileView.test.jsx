@@ -2,6 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import i18n from '../../../i18n';
 import CallMobileView from './CallMobileView';
+// The Block button tells its outcome through notifications.
+vi.mock('../../../context/NotificationContext', () => ({ useNotification: () => ({ showNotification: vi.fn() }) }));
 
 // The sentinel's observer is not what's under test.
 vi.mock('react-intersection-observer', () => ({ useInView: () => ({ ref: () => {}, inView: false }) }));

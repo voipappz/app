@@ -167,30 +167,18 @@ export const callsApi = {
   },
 
   /**
-   * Add number to blacklist from call
+   * Block or unblock the other party of a call (an incoming call's caller, an
+   * outgoing call's callee): PATCH /api/calls/:uuid, action=blacklist_add or
+   * blacklist_remove. The server rejects later calls from a blocked number in
+   * the call's environment. The screen says the outcome, so no message here.
    * @param {string} callUuid - The call UUID
-   * @param {Object} blacklistData - Blacklist entry data
-   * @returns {Promise<Object>} - Blacklist confirmation
+   * @param {boolean} blocked - true to block, false to unblock
    */
-  addToBlacklist: async (callUuid, blacklistData = {}) => {
-    const url = `/api/blacklists`;
-    const headers = {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    };
-    const data = { call_uuid: callUuid, ...blacklistData };
-    const formData = toFormData(data);
-    return apiService.post(url, formData, headers, `adding call ${callUuid} to blacklist`, true);
-  },
-
-  /**
-   * Remove number from blacklist
-   * @param {string} blacklistId - The blacklist entry ID
-   * @returns {Promise<Object>} - Removal confirmation
-   */
-  removeFromBlacklist: async (blacklistId) => {
-    const url = `/api/blacklists/${blacklistId}`;
-    return apiService.delete(url, {}, `removing blacklist entry ${blacklistId}`, true);
-  },
+  setNumberBlocked: async (callUuid, blocked) => apiService.patch(
+    `/api/calls/${callUuid}`,
+    new URLSearchParams({ action: blocked ? 'blacklist_add' : 'blacklist_remove' }),
+    {}, `${blocked ? 'blocking' : 'unblocking'} the number of call ${callUuid}`, false,
+  ),
 
   /**
    * Export calls data to CSV

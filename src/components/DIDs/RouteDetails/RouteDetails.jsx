@@ -85,7 +85,7 @@ export default function RouteDetails({
 
   return (
     <Drawer
-      // On the left in Hebrew: MUI's Drawer mirrors the anchor itself.
+      // On the left in Hebrew: the RTL style plugin mirrors `right` itself.
       anchor="right"
       open={open}
       onClose={onClose}

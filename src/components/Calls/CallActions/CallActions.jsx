@@ -6,12 +6,12 @@ import {
   ListItemIcon,
   ListItemText,
   Tooltip,
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  Button
+  Button,
+  Divider
 } from '@mui/material';
 import {
   MoreVert,
@@ -19,21 +19,67 @@ import {
   PersonAdd,
   Note,
   ContentCopy,
-  History
+  History,
+  Block,
+  LockOpen
 } from '@mui/icons-material';
 import { useCallNumber } from '../../../hooks/useCallNumber';
 import { useNotification } from '../../../context/NotificationContext';
 import { useTranslation } from 'react-i18next';
+import { ResponsiveDialog as Dialog, useConfirm } from '../../ui';
+import { callsApi } from '../../../services/api/callsApi';
+import { isolated } from '../../Phone/isolated';
+import { callFacts } from '../CallLogRow/callDirection';
 
-const CallActions = ({ call, onAddNote }) => {
+/**
+ * Block or unblock the number of a call's other party (the caller of an
+ * incoming call, the callee of an outgoing one — the server picks it).
+ * Whether it is blocked is the server's word: the call's `blacklisted`.
+ * Blocking asks first; the outcome is told either way, and `onChanged` (the
+ * screen's refresh) then brings the new state back from the server.
+ * Used by the row's ⋮ menu, the call panel, and the phone's row and details page.
+ */
+export function useNumberBlock({ call, onChanged }) {
+  const { t } = useTranslation('calls');
+  const { showNotification } = useNotification();
+  const confirm = useConfirm();
+  const blocked = call?.blacklisted === true;
+  const number = isolated(callFacts(call).number);
+
+  const toggle = async () => {
+    const block = !blocked;
+    if (block && !(await confirm({
+      title: t('block.confirmTitle'),
+      message: t('block.confirmMessage', { number }),
+      description: null,
+      confirmLabel: t('block.block'),
+    }))) return;
+    try {
+      await callsApi.setNumberBlocked(call.uuid || call.id, block);
+      showNotification(t(block ? 'block.blocked' : 'block.unblocked', { number }), 'success');
+      onChanged?.();
+    } catch {
+      showNotification(t('block.failed', { number }), 'error');
+    }
+  };
+
+  return { blocked, toggle };
+}
+
+// The ⋮ menu of a call row: call back, copy, contact, note, history, block.
+// `call` is the row as the API sends it.
+const CallActions = ({ call, onAddNote, onBlockChanged }) => {
   const { t } = useTranslation('calls');
   const [anchorEl, setAnchorEl] = useState(null);
   const [noteDialog, setNoteDialog] = useState(false);
   const [noteText, setNoteText] = useState('');
-  
+
   const callNumber = useCallNumber();
   const { showNotification } = useNotification();
-  
+  // The other party, the same for every action: who called in, or who was called.
+  const { number } = callFacts(call);
+  const { blocked, toggle: toggleBlock } = useNumberBlock({ call, onChanged: onBlockChanged });
+
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -43,28 +89,21 @@ const CallActions = ({ call, onAddNote }) => {
   };
 
   const handleCallback = () => {
-    if (call.caller_number || call.destination_number) {
-      const numberToCall = call.direction === 'inbound' ? call.caller_number : call.destination_number;
-      
-      // The phone opens on the right with the number in its dialpad.
-      callNumber(numberToCall);
-    }
+    // The phone opens on the right with the number in its dialpad.
+    if (number) callNumber(number);
     handleMenuClose();
   };
 
   const handleCopyNumber = () => {
-    const numberToCopy = call.caller_number || call.destination_number;
-    if (numberToCopy) {
-      navigator.clipboard.writeText(numberToCopy);
-      showNotification(t('actions.copied', { number: numberToCopy }), 'success');
+    if (number) {
+      navigator.clipboard.writeText(number);
+      showNotification(t('actions.copied', { number: isolated(number) }), 'success');
     }
     handleMenuClose();
   };
 
   const handleAddContact = () => {
     // This would integrate with a contacts system
-    const number = call.caller_number || call.destination_number;
-    console.log('👤 Add to contacts:', number);
     showNotification(t('actions.contactsSoon'), 'info');
     handleMenuClose();
   };
@@ -84,11 +123,14 @@ const CallActions = ({ call, onAddNote }) => {
   };
 
   const handleShowHistory = () => {
-    const number = call.caller_number || call.destination_number;
-    console.log('📋 Show history for:', number);
     // This would filter the calls list to show only calls from/to this number
-    showNotification(t('actions.showingHistory', { number }), 'info');
+    showNotification(t('actions.showingHistory', { number: isolated(number) }), 'info');
     handleMenuClose();
+  };
+
+  const handleToggleBlock = () => {
+    handleMenuClose();
+    toggleBlock();
   };
 
   return (
@@ -98,7 +140,7 @@ const CallActions = ({ call, onAddNote }) => {
           <MoreVert />
         </IconButton>
       </Tooltip>
-      
+
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -113,37 +155,47 @@ const CallActions = ({ call, onAddNote }) => {
           </ListItemIcon>
           <ListItemText primary={t('actions.callBack')} />
         </MenuItem>
-        
+
         <MenuItem onClick={handleCopyNumber}>
           <ListItemIcon>
             <ContentCopy fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={t('actions.copyNumber')} />
         </MenuItem>
-        
+
         <MenuItem onClick={handleAddContact}>
           <ListItemIcon>
             <PersonAdd fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={t('actions.addContact')} />
         </MenuItem>
-        
+
         <MenuItem onClick={handleAddNote}>
           <ListItemIcon>
             <Note fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={t('actions.addNote')} />
         </MenuItem>
-        
+
         <MenuItem onClick={handleShowHistory}>
           <ListItemIcon>
             <History fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={t('actions.showHistory')} />
         </MenuItem>
+
+        {number && <Divider />}
+        {number && (
+          <MenuItem onClick={handleToggleBlock} sx={blocked ? undefined : { color: 'error.main' }}>
+            <ListItemIcon>
+              {blocked ? <LockOpen fontSize="small" /> : <Block fontSize="small" color="error" />}
+            </ListItemIcon>
+            <ListItemText primary={blocked ? t('block.unblockNumber') : t('block.blockNumber')} />
+          </MenuItem>
+        )}
       </Menu>
 
-      {/* Add Note Dialog */}
+      {/* Add Note Dialog: full screen on a phone */}
       <Dialog open={noteDialog} onClose={() => setNoteDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{t('actions.addNote')}</DialogTitle>
         <DialogContent>
@@ -157,7 +209,7 @@ const CallActions = ({ call, onAddNote }) => {
             variant="outlined"
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
-            placeholder={t('actions.notePlaceholder', { number: call.caller_number || call.destination_number || t('actions.unknown') })}
+            placeholder={t('actions.notePlaceholder', { number: number ? isolated(number) : t('actions.unknown') })}
           />
         </DialogContent>
         <DialogActions>

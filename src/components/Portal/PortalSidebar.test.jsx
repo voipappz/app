@@ -38,11 +38,12 @@ describe('the portal sidebar', () => {
   });
 
   // The phone opens from the end of the top bar: the right, and the left in
-  // Hebrew. MUI mirrors the anchor itself; flipping it twice put it back on
-  // the right.
-  it.each([['ltr', 'Right'], ['rtl', 'Left']])('opens from the screen\'s end side (%s)', (direction, side) => {
+  // Hebrew. The RTL style plugin mirrors the paper's `right: 0` in Hebrew, so
+  // the anchor stays 'right' in both languages; picking 'left' for Hebrew as
+  // well flipped it twice, back to the right.
+  it.each(['ltr', 'rtl'])('anchors to the right and lets the RTL styles mirror it (%s)', (direction) => {
     sidebar = { view: 'phone', params: { tab: 'dialpad' }, close: vi.fn() };
     render(<ThemeProvider theme={createTheme({ direction })}><PortalSidebar /></ThemeProvider>);
-    expect(document.querySelector('.MuiDrawer-paper')).toHaveClass(`MuiDrawer-paperAnchor${side}`);
+    expect(document.querySelector('.MuiDrawer-paper')).toHaveClass('MuiDrawer-paperAnchorRight');
   });
 });

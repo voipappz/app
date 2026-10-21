@@ -688,12 +688,16 @@ const SystemLogs = ({ initialParams }) => {
             onSelectRange={(start, end) => setDateRange({ start, end, period: 'custom' })}
           />
 
-          {/* One row per line: level bar, time, server, source, message. */}
+          {/* One row per line: level bar, time, server, source, message. The
+              lines are the servers' own English, so the stream stays left to
+              right in Hebrew too; its sides are logical, so the RTL styles
+              don't flip them inside it. */}
           <Paper
             elevation={0}
+            dir="ltr"
             data-testid="syslog-stream"
             sx={{ flex: 1, minHeight: 0, overflow: 'auto', border: '1px solid var(--mui-palette-divider)', borderRadius: 1, bgcolor: 'var(--mui-palette-background-paper)' }}>
-            <Box role="row" sx={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', gap: 1, pl: 1.5, pr: 1, py: 0.4, bgcolor: 'var(--mui-palette-surface-muted)', borderBottom: '1px solid var(--mui-palette-divider)' }}>
+            <Box role="row" sx={{ position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', gap: 1, ps: 1.5, pe: 1, py: 0.4, bgcolor: 'var(--mui-palette-surface-muted)', borderBottom: '1px solid var(--mui-palette-divider)' }}>
               {[['Date', COL.time], ['Server', COL.host], ['Source', COL.source]].map(([label, width]) => (
                 <Typography key={label} role="columnheader" sx={{ width, flexShrink: 0, fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' }}>{label}</Typography>
               ))}
@@ -722,15 +726,15 @@ const SystemLogs = ({ initialParams }) => {
                   role="row"
                   onClick={() => setSelectedLog(log)}
                   title={rawLine}
-                  sx={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 1, pl: 1.5, pr: 1, py: 0.25, minHeight: 26, borderBottom: '1px solid var(--mui-palette-divider)', cursor: 'pointer', overflow: 'hidden', '&:hover': { bgcolor: 'action.hover' },
-                    '&::before': { content: '""', position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, bgcolor: levelStyle.color } }}
+                  sx={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 1, ps: 1.5, pe: 1, py: 0.25, minHeight: 26, borderBottom: '1px solid var(--mui-palette-divider)', cursor: 'pointer', overflow: 'hidden', '&:hover': { bgcolor: 'action.hover' },
+                    '&::before': { content: '""', position: 'absolute', insetInlineStart: 0, top: 0, bottom: 0, width: 3, bgcolor: levelStyle.color } }}
                 >
                   <Typography noWrap sx={{ ...cell, width: COL.time }}>{formatLogTime(time)}</Typography>
                   <Typography noWrap sx={{ ...cell, width: COL.host }} title={host}>{host || '—'}</Typography>
                   <Typography noWrap sx={{ ...cell, width: COL.source, color: 'text.primary' }} title={displayed.source}>{displayed.source}</Typography>
                   <Typography noWrap sx={{ flex: 1, minWidth: 0, fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', lineHeight: 1.25 }}>
                     {!['info', 'notice', 'debug'].includes(level) && (
-                      <Box component="span" sx={{ color: levelStyle.color, fontWeight: 700, mr: 0.75 }}>{rawLevel.toUpperCase()}</Box>
+                      <Box component="span" sx={{ color: levelStyle.color, fontWeight: 700, me: 0.75 }}>{rawLevel.toUpperCase()}</Box>
                     )}
                     {message}
                   </Typography>
@@ -828,7 +832,7 @@ const SystemLogs = ({ initialParams }) => {
             ))}
           </Box>
           <Typography component="h3" sx={{ mt: 2, mb: 0.5, fontWeight: 700, fontSize: '0.85rem' }}>Raw message</Typography>
-          <Box component="pre" tabIndex={0} sx={{ m: 0, p: 1.5, bgcolor: 'var(--mui-palette-surface-muted)', border: '1px solid var(--mui-palette-divider)', borderRadius: 1, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontSize: '0.78rem' }}>
+          <Box component="pre" dir="ltr" tabIndex={0} sx={{ m: 0, p: 1.5, bgcolor: 'var(--mui-palette-surface-muted)', border: '1px solid var(--mui-palette-divider)', borderRadius: 1, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontSize: '0.78rem' }}>
             {selectedLog?.message || selectedLog?.msg || ''}
           </Box>
         </DialogContent>

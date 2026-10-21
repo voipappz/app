@@ -179,6 +179,11 @@ const Calls = () => {
     fetchAggregate,
     summaryCounts,
   } = useCalls({ allTime: isMobile });
+  // The open call as the list has it now, so a refresh (after blocking its
+  // number, say) shows in the panel too; a call opened from History may not
+  // be in the list, and is shown as it was opened.
+  const sameCall = (a, b) => (a.uuid || a.id) === (b.uuid || b.id);
+  const openCall = selectedCall && ((allRows || []).find((row) => sameCall(row, selectedCall)) || selectedCall);
   // The filters' names as shown: the API names them in English (callWords.js).
   const shownSegments = useMemo(
     () => (segments || []).map((segment) => ({
@@ -279,9 +284,9 @@ const Calls = () => {
   };
 
   // Manual refresh with current filters and date range
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     fetchCalls(dateRange, currentSearchParams);
-  };
+  }, [fetchCalls, dateRange, currentSearchParams]);
 
   // The quick search: the top bar's field on desktop, the TextField on a phone.
   const handleQuickSearch = (e) => {
@@ -484,18 +489,21 @@ const Calls = () => {
 
   // Create grid columns with icons and actions
   const gridColumns = useMemo(() => {
-    const columns = createGridColumns(visibleColumns, DirectionIcon, CauseIcon, RecordingControls, CallActions, handleAddNote);
+    const columns = createGridColumns(visibleColumns, DirectionIcon, CauseIcon, RecordingControls);
     return [...columns, {
+      // The row's own actions, for an account and a user alike: details,
+      // Events (with `logs`), and the ⋮ menu (call back, copy, note, block).
       field: 'callRowActions',
       headerName: '',
-      width: canViewEvents ? 88 : 52,
+      width: canViewEvents ? 122 : 86,
       sortable: false,
       filterable: false,
       disableColumnMenu: true,
       resizable: false,
       align: 'right',
       renderCell: ({ row }) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
+        // A click in here (or in the ⋮ menu, through its portal) is not a row click.
+        <Box onClick={(event) => event.stopPropagation()} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
           <Tooltip title={t('row.callInfo')}>
             <IconButton size="small" aria-label={t('row.callInfo')} onClick={(event) => {
               event.stopPropagation();
@@ -513,10 +521,11 @@ const Calls = () => {
             '&:hover': { bgcolor: 'var(--accent-primary-alpha-12)' },
           }}
         />
+          <CallActions call={row} onAddNote={handleAddNote} onBlockChanged={handleRefresh} />
         </Box>
       ),
     }];
-  }, [visibleColumns, createGridColumns, canViewEvents]);
+  }, [visibleColumns, createGridColumns, canViewEvents, handleRefresh]);
 
   // Answered/No-Answer/Outgoing/Incoming are REAL search filters now — each maps
   // to a search[call.*] param that becomes part of the query (server-side), not
@@ -953,6 +962,7 @@ const Calls = () => {
             hasNextPage={hasNextPage}
             loadingMore={loadingMore}
             onLoadMore={() => loadMoreCalls(dateRange)}
+            onBlockChanged={handleRefresh}
             canViewEvents={canViewEvents}
             onViewEvents={(call) => goToEvents('call', call.uuid || call.id)}
           />
@@ -1080,9 +1090,10 @@ const Calls = () => {
           '& .call-detail-panel': { width: '100%', minHeight: 0, border: 'none', borderRadius: 0, animation: 'none' },
         } }}
       >
-          {selectedCall && (
+          {openCall && (
             <CallDetailPanel
-              call={selectedCall}
+              call={openCall}
+              onBlockChanged={handleRefresh}
               onClose={() => setSelectedCall(null)}
               onOpenCall={setSelectedCall}
               onViewEvents={() => goToEvents('call', selectedCall.uuid || selectedCall.id)}

@@ -44,6 +44,9 @@ const BRIDGE_OPTIONS = ['number', 'announcement', 'vml', 'call_condition', 'que'
 const NO_RESOURCES = ['queue', 'ivr', 'announcement', 'vml', 'call_condition', 'bot'];
 // Types the route wizard has an editor for, so a new one can be made from here.
 const CREATABLE_BRIDGES = ['announcement', 'vml', 'call_condition', 'queue', 'ivr', 'bot'];
+// A destination type's capability in the ACL, where the names differ: the API's
+// ACL lists only `call_conditions` (queue, ivr, vml… have their own keys).
+const ACL_KEYS = { call_condition: 'call_conditions' };
 
 // The bridge type select's options, in capitals as ever.
 const bridgeOptionLabel = (t, type) => (BRIDGE_OPTIONS.includes(type)
@@ -105,7 +108,7 @@ const DIDForm = forwardRef(({
   const canEditProviders = can('providers', 'write');
   // Editing or making a destination: a user needs the ACL's write grant on
   // that type (an account's ACL names screens, not destination types).
-  const canWriteBridge = (type) => !userSession || can(type, 'write');
+  const canWriteBridge = (type) => !userSession || can(ACL_KEYS[type] || type, 'write');
   // A new one also needs an editor the route wizard can open.
   const canCreateBridge = (type) => CREATABLE_BRIDGES.includes(type) && canWriteBridge(type);
   const [formData, setFormData] = useState({});

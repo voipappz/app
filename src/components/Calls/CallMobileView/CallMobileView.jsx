@@ -19,11 +19,15 @@ const groupByDay = (rows) => {
   return groups;
 };
 
-const CallMobileView = ({ rows, hasNextPage, loadingMore, onLoadMore, canViewEvents, onViewEvents }) => {
+const CallMobileView = ({ rows, hasNextPage, loadingMore, onLoadMore, canViewEvents, onViewEvents, onBlockChanged }) => {
   const { t } = useTranslation('calls');
   // One line open at a time, like a phone's call history.
   const [openUuid, setOpenUuid] = useState(null);
   const [detailsCall, setDetailsCall] = useState(null);
+  // The open call as the list has it now, so a refresh (after blocking its
+  // number, say) shows on the page; one opened from History may not be listed.
+  const idOf = (call) => call.uuid || call.id;
+  const shownDetails = detailsCall && ((rows || []).find((row) => idOf(row) === idOf(detailsCall)) || detailsCall);
   const today = dayKey(new Date());
   const yesterday = dayKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
   const dayHeading = (group) => {
@@ -107,6 +111,7 @@ const CallMobileView = ({ rows, hasNextPage, loadingMore, onLoadMore, canViewEve
                   expanded={openUuid === id}
                   onToggle={() => setOpenUuid((current) => (current === id ? null : id))}
                   onOpenDetails={setDetailsCall}
+                  onBlockChanged={onBlockChanged}
                 />
               );
             })}
@@ -139,8 +144,9 @@ const CallMobileView = ({ rows, hasNextPage, loadingMore, onLoadMore, canViewEve
         </Box>
       )}
       <CallDetailsScreen
-        call={detailsCall}
+        call={shownDetails}
         open={Boolean(detailsCall)}
+        onBlockChanged={onBlockChanged}
         onClose={() => setDetailsCall(null)}
         onOpenCall={setDetailsCall}
         canViewEvents={canViewEvents}

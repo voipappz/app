@@ -255,15 +255,11 @@
   "detail": {
     "title": "Call Details",
     "close": "Close call details",
-    "back": "Back",
     "callBack": "Call back",
-    "callLogsTitle": "Call Logs",
     "application": "Application",
     "unknown": "Unknown",
-    "transcription": "Transcription",
     "noTranscription": "No transcription for this call",
     "transcriptError": "The transcript is temporarily unavailable. Please try again.",
-    "copy": "Copy",
     "tabs": {
       "summary": "Summary",
       "transcription": "Transcription",
@@ -315,5 +311,16 @@
   "export": {
     "failed": "Export failed. Please try again.",
     "ready": "Export ready — your download has started."
+  },
+  "block": {
+    "blockNumber": "Block number",
+    "unblockNumber": "Unblock number",
+    "confirmTitle": "Block this number?",
+    "confirmMessage": "Calls from {{number}} will be rejected. You can unblock it later.",
+    "block": "Block",
+    "blocked": "{{number}} is blocked",
+    "unblocked": "{{number}} is unblocked",
+    "failed": "Couldn't change the block on {{number}}. Please try again.",
+    "blockedChip": "Blocked"
   }
 }

@@ -1,16 +1,21 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
+import { callsApi } from '../../../services/api/callsApi';
 
 // Who is signed in: an account (admin) unless a test signs in a portal user.
 const session = vi.hoisted(() => ({ role: 'admin' }));
 vi.mock('../../../hooks/useIsUserSession', () => ({ useSessionRole: () => session.role }));
 vi.mock('../../../context/AuthContext', () => ({ useAuth: () => ({ access: 'token' }) }));
-vi.mock('../../../hooks/usePermissions', () => ({ usePermissions: () => ({ canAccess: () => false }) }));
+const permissions = vi.hoisted(() => ({ logs: false }));
+vi.mock('../../../hooks/usePermissions', () => ({ usePermissions: () => ({ canAccess: () => permissions.logs }) }));
 vi.mock('../../../hooks/useDialNow', () => ({ useDialNow: () => ({ canDial: true, dialNow: vi.fn() }) }));
 vi.mock('../../../services/conversationService', () => ({ default: { getConversationByCallId: vi.fn(async () => null) } }));
 vi.mock('./CallTimeline', () => ({ default: () => null }));
 vi.mock('../CallHistory/CallHistory', () => ({ default: () => <div>other calls</div> }));
+vi.mock('../../../context/NotificationContext', () => ({ useNotification: () => ({ showNotification: vi.fn() }) }));
+vi.mock('../../../hooks/useCallNumber', () => ({ useCallNumber: () => vi.fn() }));
+vi.mock('../../../services/api/callsApi', () => ({ callsApi: { setNumberBlocked: vi.fn(async () => ({})) } }));
 
 import CallDetailPanel from './CallDetailPanel.jsx';
 
@@ -22,6 +27,7 @@ const call = {
 
 afterEach(() => {
   session.role = 'admin';
+  permissions.logs = false;
   return i18n.changeLanguage('en');
 });
 
@@ -67,6 +73,27 @@ describe('CallDetailPanel', () => {
     render(<CallDetailPanel call={call} onClose={vi.fn()} onOpenCall={vi.fn()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'History' }));
     expect(screen.getByText('other calls')).toBeInTheDocument();
+  });
+
+  it('blocks the caller after asking, then asks the screen for the server\'s new state', async () => {
+    window.confirm = vi.fn(() => true);
+    const onBlockChanged = vi.fn();
+    render(<CallDetailPanel call={call} onClose={vi.fn()} onBlockChanged={onBlockChanged} />);
+    fireEvent.click(screen.getByTestId('call-detail-block'));
+    await waitFor(() => expect(onBlockChanged).toHaveBeenCalled());
+    expect(callsApi.setNumberBlocked).toHaveBeenCalledWith('call-1', true);
+  });
+
+  it('shows the Events tab with access to events, even where Events cannot be opened', () => {
+    permissions.logs = true;
+    render(<CallDetailPanel call={call} onClose={vi.fn()} />);
+    expect(screen.getByRole('tab', { name: 'Events' })).toBeInTheDocument();
+  });
+
+  it('starts as blocked when the call says its number is', () => {
+    render(<CallDetailPanel call={{ ...call, blacklisted: true }} onClose={vi.fn()} />);
+    expect(screen.getByText('Blocked')).toBeInTheDocument();
+    expect(screen.getByTestId('call-detail-block')).toHaveTextContent('Unblock number');
   });
 
   it('speaks Hebrew', async () => {

@@ -255,15 +255,11 @@
   "detail": {
     "title": "פרטי השיחה",
     "close": "סגירת פרטי השיחה",
-    "back": "חזרה",
     "callBack": "חיוג חוזר",
-    "callLogsTitle": "יומן שיחות",
     "application": "אפליקציה",
     "unknown": "לא ידוע",
-    "transcription": "תמלול",
     "noTranscription": "אין תמלול לשיחה הזו",
     "transcriptError": "התמלול אינו זמין כרגע. נסו שוב.",
-    "copy": "העתקה",
     "tabs": {
       "summary": "סיכום",
       "transcription": "תמלול",
@@ -315,5 +311,16 @@
   "export": {
     "failed": "הייצוא נכשל. נסו שוב.",
     "ready": "הייצוא מוכן — ההורדה התחילה."
+  },
+  "block": {
+    "blockNumber": "חסימת המספר",
+    "unblockNumber": "ביטול חסימת המספר",
+    "confirmTitle": "לחסום את המספר?",
+    "confirmMessage": "שיחות מ-{{number}} יידחו. אפשר לבטל את החסימה בהמשך.",
+    "block": "חסימה",
+    "blocked": "המספר {{number}} נחסם",
+    "unblocked": "החסימה של {{number}} בוטלה",
+    "failed": "לא ניתן היה לשנות את החסימה של {{number}}. נסו שוב.",
+    "blockedChip": "חסום"
   }
 }

@@ -8,6 +8,8 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CloseIcon from '@mui/icons-material/Close';
 import PhoneIcon from '@mui/icons-material/Phone';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import BlockIcon from '@mui/icons-material/Block';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -16,6 +18,7 @@ import ConversationMessages from './ConversationMessages';
 import CallTimeline from './CallTimeline';
 import CallProfile, { profileRows } from './CallProfile';
 import CallHistory from '../CallHistory/CallHistory';
+import { useNumberBlock } from '../CallActions/CallActions';
 import CallDirectionIcon from '../CallLogRow/CallDirectionIcon';
 import { callFacts, recordingUrl, shortDuration } from '../CallLogRow/callDirection';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -61,7 +64,7 @@ const CAUSE_COLORS = { answer: 'success', no_answer: 'error', busy: 'error', fai
  * Technical details (ids, SIP, codecs, quality, addresses, raw fields) are an
  * account's: a portal user never sees them.
  */
-const CallDetailPanel = ({ call, onClose, onViewEvents, onCallBack, onOpenCall, isMobile }) => {
+const CallDetailPanel = ({ call, onClose, onViewEvents, onCallBack, onOpenCall, onBlockChanged, isMobile }) => {
   const { t } = useTranslation('calls');
   // The portal reuses this panel with a user session, where AuthContext holds
   // no admin token; apiService.getToken() returns whichever session exists.
@@ -75,18 +78,20 @@ const CallDetailPanel = ({ call, onClose, onViewEvents, onCallBack, onOpenCall, 
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [transcriptError, setTranscriptError] = useState(null);
   const [transcriptAttempt, setTranscriptAttempt] = useState(0);
-  const [chosenTab, setChosenTab] = useState(null); // null: the panel picks
+  const [chosenTab, setChosenTab] = useState('summary');
   const [technicalOpen, setTechnicalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const callUuid = call?.uuid;
-  // The call's events show to whichever session's ACL grants `logs`.
+  const { blocked, toggle: toggleBlock } = useNumberBlock({ call, onChanged: onBlockChanged });
+  // The call's events show to whichever session's ACL grants `logs`; "Open in
+  // Events" inside the tab appears only where the screen can open them.
   const { canAccess } = usePermissions();
-  const canSeeEvents = canAccess('logs') && Boolean(onViewEvents);
+  const canSeeEvents = canAccess('logs');
 
-  // Another call opens on its own first tab, technical details closed.
+  // Another call opens on Summary, technical details closed.
   useEffect(() => {
-    setChosenTab(null);
+    setChosenTab('summary');
     setTechnicalOpen(false);
   }, [callUuid]);
 
@@ -153,8 +158,9 @@ const CallDetailPanel = ({ call, onClose, onViewEvents, onCallBack, onOpenCall, 
     ...(onOpenCall ? [{ value: 'history', label: t('detail.tabs.history') }] : []),
     ...(canSeeEvents ? [{ value: 'events', label: t('detail.tabs.events') }] : []),
   ];
-  const automaticTab = transcript.length ? 'transcription' : 'summary';
-  const tab = tabs.some((item) => item.value === chosenTab) ? chosenTab : automaticTab;
+  // Always opens on Summary, never switching by itself (the transcription
+  // loads after the panel opens, and a jump would move the text being read).
+  const tab = tabs.some((item) => item.value === chosenTab) ? chosenTab : 'summary';
 
   return (
     <Box className={`call-detail-panel ${isMobile ? 'mobile' : ''}`}>
@@ -185,6 +191,9 @@ const CallDetailPanel = ({ call, onClose, onViewEvents, onCallBack, onOpenCall, 
             )}
             {resultWord && (
               <Chip label={resultWord} size="small" color={CAUSE_COLORS[cause] || 'default'} variant="outlined" sx={{ height: 22 }} />
+            )}
+            {blocked && (
+              <Chip label={t('block.blockedChip')} size="small" color="error" icon={<BlockIcon />} sx={{ height: 22 }} />
             )}
           </Box>
 
@@ -227,6 +236,19 @@ const CallDetailPanel = ({ call, onClose, onViewEvents, onCallBack, onOpenCall, 
                   <ContentCopyIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+            )}
+            {facts.number && (
+              <Button
+                size="small"
+                variant={blocked ? 'text' : 'outlined'}
+                color={blocked ? 'inherit' : 'error'}
+                startIcon={blocked ? <LockOpenIcon /> : <BlockIcon />}
+                onClick={toggleBlock}
+                data-testid="call-detail-block"
+                sx={{ ms: 'auto', textTransform: 'none', borderRadius: '8px' }}
+              >
+                {blocked ? t('block.unblockNumber') : t('block.blockNumber')}
+              </Button>
             )}
           </Box>
         </Box>

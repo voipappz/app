@@ -30,7 +30,6 @@ const COLUMN_WIDTHS = {
   provider: 130,
   environment: 130,
   recording: 180,
-  actions: 90,
 };
 const FLEX_COLUMNS = new Set(['caller', 'callee', 'contact', 'fullname', 'user_name', 'name']);
 
@@ -41,7 +40,7 @@ const FLEX_COLUMNS = new Set(['caller', 'callee', 'contact', 'fullname', 'user_n
 const FLEX_MAX_WIDTH = 220;
 
 // Columns that can never be hidden — the ones that make a row actionable.
-const MANDATORY_COLUMNS = new Set(['recording', 'actions']);
+const MANDATORY_COLUMNS = new Set(['recording']);
 
 // A status value's tone, drawn as a small dot beside plain text. The colours
 // are the counters' own tokens, so "answered" is the same green in the counter
@@ -331,9 +330,9 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
   };
 
   const handleToggleColumnVisibility = (fieldKey) => {
-    // Recording and Actions are mandatory: they're how you DO something with a
-    // row (play/download a recording, open the row's actions). Hiding them
-    // leaves a row you can read but not act on, with no obvious way back.
+    // Recording is mandatory: it's how you play a call. Hiding it leaves a row
+    // you can read but not act on, with no obvious way back. (The row's other
+    // actions sit in Calls.jsx's own cell, which is always there.)
     if (MANDATORY_COLUMNS.has(fieldKey) && visibleColumns.includes(fieldKey)) return;
 
     const newVisibleColumns = visibleColumns.includes(fieldKey)
@@ -375,7 +374,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
   }, [apiColumns, getSelectedColumnsFromApi]);
 
   // Create DataGrid columns dynamically
-  const createGridColumns = useCallback((visibleCols, DirectionIcon, CauseIcon, RecordingControls, CallActions, handleAddNote) => {
+  const createGridColumns = useCallback((visibleCols, DirectionIcon, CauseIcon, RecordingControls) => {
     return visibleCols.map(fieldKey => {
       const columnDef = availableColumns[fieldKey];
       if (!columnDef) return null;
@@ -544,25 +543,6 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
               />
             );
           }
-        };
-      }
-
-      // Actions column (special - not from API)
-      if (logicalName === 'actions' || fieldKey === 'actions') {
-        return {
-          ...baseColumn,
-          renderCell: (params) => (
-            <CallActions
-              call={{
-                uuid: params.row.uuid,
-                id: params.row.id,
-                caller_number: params.row.profile?.caller,
-                destination_number: params.row.profile?.callee,
-                direction: params.row.profile?.direction
-              }}
-              onAddNote={handleAddNote}
-            />
-          )
         };
       }
 

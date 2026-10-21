@@ -7,8 +7,9 @@ import CallDetailPanel from '../Calls/CallDetailPanel/CallDetailPanel.jsx';
 
 /**
  * The one sidebar, open on the right (on the left in Hebrew) — in the portal
- * and the account console. MUI's Drawer mirrors `anchor="right"` itself in a
- * right-to-left theme; flipping it here as well put it back on the right.
+ * and the account console. Always `anchor="right"`: in Hebrew the RTL style
+ * plugin (i18n/emotionCaches.js) turns the paper's `right: 0` into `left: 0`,
+ * so choosing 'left' here as well put it back on the right.
  *
  * The phone opens here, and so does a call's details — same drawer, same edge,
  * so there is one place on the screen where things appear. Right, because the
