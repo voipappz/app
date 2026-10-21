@@ -36,6 +36,9 @@ import { DataGrid } from '@mui/x-data-grid';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import DateLocalizationProvider from '../../i18n/DateLocalizationProvider';
 import { useEvents } from './Events';
+import EventDetailPanel, { EventFieldsTooltip, syslogParams } from './EventDetailPanel';
+import LogsScreen from '../../views/syslogs/LogsScreen.jsx';
+import ToolDialog from '../TopBar/ToolDialog.jsx';
 import { stripedDataGridSx } from '../shared/tableTheme.jsx';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
 import TimeHistogram from '../../views/syslogs/TimeHistogram';
@@ -137,6 +140,15 @@ const formatAuditMessage = (event) => {
   }
 };
 
+// A failure audit (webhook.failed, service_action.failed) is written without a
+// level, so it read as INFO beside the error it carries.
+const displayLevel = (evt) => {
+  if (evt.level) return evt.level;
+  const action = String(evt.action || evt.data?.action || '');
+  if (action.endsWith('.failed') || evt.data?.error) return 'error';
+  return evt.level;
+};
+
 /** Stat card for the summary bar */
 const StatCard = ({ icon, label, value, color }) => (
   <Box sx={{
@@ -214,6 +226,9 @@ const Events = ({ initialParams, leftSlot } = {}) => {
 
   // Local debounced search state
   const [localSearch, setLocalSearch] = useState(searchQuery);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [syslogOpen, setSyslogOpen] = useState(false);
+  const embeddedSyslog = syslogOpen && selectedEvent ? syslogParams(selectedEvent) : null;
   const searchTimerRef = React.useRef(null);
 
   const handleSearchChange = useCallback((e) => {
@@ -245,6 +260,7 @@ const Events = ({ initialParams, leftSlot } = {}) => {
     return events.map((evt, index) => ({
       ...evt,
       id: evt.uuid || evt.id || index,
+      level: displayLevel(evt),
     }));
   }, [events]);
 
@@ -419,13 +435,20 @@ const Events = ({ initialParams, leftSlot } = {}) => {
       flex: 1,
       sortable: false,
       renderCell: (params) => (
-        <Typography
-          variant="body2"
-          noWrap
-          sx={{ fontSize: '0.78rem', color: 'var(--mui-palette-text-primary)' }}
+        <Tooltip
+          title={<EventFieldsTooltip event={params.row} />}
+          placement="bottom-start"
+          enterDelay={400}
+          slotProps={{ tooltip: { sx: { maxWidth: 520 } } }}
         >
-          {formatAuditMessage(params.row)}
-        </Typography>
+          <Typography
+            variant="body2"
+            noWrap
+            sx={{ fontSize: '0.78rem', color: 'var(--mui-palette-text-primary)' }}
+          >
+            {formatAuditMessage(params.row)}
+          </Typography>
+        </Tooltip>
       ),
     },
     {
@@ -865,6 +888,7 @@ const Events = ({ initialParams, leftSlot } = {}) => {
               onSortModelChange={setSortModel}
               hideFooter
               disableRowSelectionOnClick
+              onRowClick={(params) => setSelectedEvent((prev) => (prev?.id === params.row.id ? null : params.row))}
               disableColumnMenu
               autoHeight={false}
               rowHeight={44}
@@ -957,6 +981,19 @@ const Events = ({ initialParams, leftSlot } = {}) => {
           </Box>
         </Box>
 
+        {/* The selected event's syslog, in a modal over Events, filtered to its call */}
+        <ToolDialog title="Syslog" open={Boolean(embeddedSyslog)} onClose={() => setSyslogOpen(false)}>
+          {embeddedSyslog && <LogsScreen key={embeddedSyslog} initialParams={embeddedSyslog} />}
+        </ToolDialog>
+
+        {selectedEvent && (
+          <EventDetailPanel
+            event={selectedEvent}
+            message={formatAuditMessage(selectedEvent)}
+            onClose={() => { setSelectedEvent(null); setSyslogOpen(false); }}
+            onToggleSyslog={() => setSyslogOpen((v) => !v)}
+          />
+        )}
       </Box>
     </Box>
   );

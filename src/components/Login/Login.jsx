@@ -15,6 +15,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { useLogin } from './Login';
 import Bdi from '../../i18n/Bdi';
 import LanguageLink from '../../i18n/LanguageLink';
+import { isPasswordValid } from '../../utils/passwordPolicy';
 import './Login.css';
 
 // `switcher`: the User / Account toggle (SignIn), shown on the credentials step.
@@ -408,6 +409,8 @@ const Login = ({ switcher = null }) => {
               autoFocus
               autoComplete="new-password"
             />
+            <FormHelperText error={newPassword !== '' && !isPasswordValid(newPassword)} className="help-block">{t('error.passwordTooShort')}</FormHelperText>
+            <FormHelperText error={newPassword !== '' && !isPasswordValid(newPassword)} className="help-block">{t('error.passwordTooShort')}</FormHelperText>
           </FormControl>
 
           <FormControl fullWidth className="form-group">
@@ -448,7 +451,7 @@ const Login = ({ switcher = null }) => {
               variant="contained"
               className="login-button"
               data-testid="forgot-reset-submit-button"
-              disabled={loading || forgotSent || !newPassword || newPassword.length < 8 || newPassword !== confirmPassword}
+              disabled={loading || forgotSent || !isPasswordValid(newPassword) || newPassword !== confirmPassword}
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
             >
               {loading ? t('forgot.resetting') : t('forgot.reset')}

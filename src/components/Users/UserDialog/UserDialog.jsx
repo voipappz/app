@@ -39,6 +39,7 @@ import { liveApi } from '../../../services/api/liveApi';
 import { queuesApi } from '../../../services/api/queuesApi';
 import SecretField from '../../common/SecretField.jsx';
 import SoftphoneDownloadLinks from '../../shared/SoftphoneDownloadLinks/SoftphoneDownloadLinks.jsx';
+import { PASSWORD_HINT, passwordPolicyError, generatePolicyPassword } from '../../../utils/passwordPolicy';
 
 /**
  * UserDialog Component
@@ -123,7 +124,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
       setFormData({
         name: '',
         email: '',
-        password: generateRandomPassword(12),
+        password: generatePolicyPassword(),
         environment_uuid: '',
         acl_uuid: '',
         status_uuid: '',
@@ -185,6 +186,8 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
     }
     if (!user && !formData.password) {
       newErrors.password = 'Password is required for new users';
+    } else if (!user && passwordPolicyError(formData.password)) {
+      newErrors.password = passwordPolicyError(formData.password);
     }
     if (!formData.environment_uuid) {
       newErrors.environment_uuid = 'Application is required';
@@ -353,15 +356,6 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
         console.error('Failed to copy password');
       }
     }
-  };
-
-  const generateRandomPassword = (length) => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
   };
 
   const handleGenerateExtension = useCallback(async () => {
@@ -546,7 +540,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                         value={formData.password}
                         onChange={(e) => handleChange('password', e.target.value)}
                         error={!!errors.password || (submitAttempted && !formData.password)}
-                        helperText={errors.password || (submitAttempted && !formData.password ? 'Password is required for new users' : 'Must have at least 4 characters')}
+                        helperText={errors.password || (submitAttempted && !formData.password ? 'Password is required for new users' : PASSWORD_HINT)}
                         disabled={loading}
                         InputProps={{
                           endAdornment: (
@@ -555,7 +549,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                                 <Button
                                   size="small"
                                   variant="contained"
-                                  onClick={() => handleChange('password', generateRandomPassword(12))}
+                                  onClick={() => handleChange('password', generatePolicyPassword())}
                                   disabled={loading}
                                   sx={{ textTransform: 'none', minWidth: 'auto', px: 2 }}
                                 >
