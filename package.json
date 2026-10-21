@@ -95,7 +95,7 @@
     "jsdom": "^30.1.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.71.2",
-    "vite": "^6.4.2",
+    "vite": "^6.4.5",
     "vitest": "^5.0.4",
     "wait-on": "^9.5.1"
   },
@@ -107,7 +107,8 @@
     "lodash": "4.18.1",
     "joi": "^18.2.1",
     "esbuild": "^0.28.1",
-    "js-yaml": "4.3.2"
+    "js-yaml": "4.3.2",
+    "dompurify": "^3.4.17"
   },
   "description": "React admin and end-user portal for the VoIPappz telephony platform",
   "license": "MIT",
