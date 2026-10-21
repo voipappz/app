@@ -92,5 +92,118 @@
     "to": "to",
     "cancel": "Cancel",
     "apply": "Apply"
+  },
+  "accountFallback": "Account",
+  "chip": {
+    "yes": "Yes",
+    "no": "No",
+    "active": "Active",
+    "suspended": "Suspended",
+    "cancelled": "Cancelled",
+    "pending": "Pending",
+    "created": "Created",
+    "running": "Running",
+    "paused": "Paused",
+    "stopped": "Stopped",
+    "unknown": "Unknown"
+  },
+  "noAccess": {
+    "title": "Not available",
+    "body": "Your access does not include this screen."
+  },
+  "errorPage": {
+    "networkTitle": "Couldn't load this screen",
+    "networkBodyOnline": "Part of the app could not be downloaded. The connection may have dropped for a moment, or a new version was just released. Reloading the page fetches the current version.",
+    "networkBodyOffline": "You appear to be offline, so part of the app could not be downloaded. Check your connection, then reload.",
+    "missingFile": "Missing file: {{file}}",
+    "appTitle": "Oops! Something went wrong",
+    "appBody": "We're sorry, but there was an unexpected error. Please try refreshing the page or go back to the home screen.",
+    "errorId": "Error ID: {{id}}",
+    "reloadPage": "Reload page",
+    "tryAgain": "Try Again",
+    "goHome": "Go Home",
+    "reloadPageButton": "Reload Page",
+    "componentStack": "Component Stack (Development Only):"
+  },
+  "health": {
+    "status": "Status — {{reason}}",
+    "reason": {
+      "checking": "checking…",
+      "apiUnhealthy": "API unhealthy",
+      "allProbesDown": "all node probes down",
+      "allHealthy": "all healthy"
+    },
+    "nodeTitle": "{{name}} · health",
+    "nodeMonitors": "{{name}} · Monitors",
+    "close": "Close"
+  },
+  "notificationsDrawer": {
+    "back": "Back to notifications",
+    "close": "Close notifications"
+  },
+  "toolDialog": {
+    "restore": "Restore size",
+    "expand": "Expand to fullscreen",
+    "close": "Close {{title}}",
+    "confirmTitle": "Close {{title}}?",
+    "confirmBody": "Any unsaved edits will be lost. Keep this tool open to finish editing.",
+    "keepEditing": "Keep editing",
+    "closeTool": "Close tool"
+  },
+  "rowEvents": "Events",
+  "importCsv": {
+    "title": "Import from CSV",
+    "entityName": "records",
+    "parseErrors": "CSV parsing errors: {{errors}}",
+    "parseFailed": "Failed to parse CSV: {{message}}",
+    "onlyCsv": "Only CSV files are allowed",
+    "chooseApplication": "Choose an application",
+    "fixRow": "Fix the row marked in red first",
+    "fixRows": "Fix the {{n}} rows marked in red first",
+    "selectFile": "Please select a CSV file",
+    "failedCount": "{{n}} failed",
+    "failedLine": "Line {{line}}: {{error}}",
+    "failedLineUser": "Line {{line}} ({{username}}): {{error}}",
+    "importedWithMessage": "{{entity}}: {{message}}",
+    "imported": "{{entity}} imported",
+    "importFailed": "Failed to import {{entity}}",
+    "application": "Application",
+    "selectApplication": "Select Application...",
+    "preview": "CSV Preview",
+    "oneRow": "1 row",
+    "rows": "{{n}} rows",
+    "oneColumn": "1 column",
+    "columns": "{{n}} columns",
+    "clickToEdit": "Click any cell to edit",
+    "changeFile": "Change File",
+    "removeRow": "Remove row",
+    "addRow": "Add Row",
+    "willImportOne": "1 row will be imported",
+    "willImport": "{{n}} rows will be imported",
+    "oneNeedsFixing": "· 1 row needs fixing",
+    "needFixing": "· {{n}} rows need fixing",
+    "format": "Format:",
+    "dropHere": "Drop CSV file here or click to select",
+    "allowed": "Allowed extensions: .csv",
+    "orTemplate": "Or start with a ready-made template:",
+    "useTemplate": "Use Template",
+    "downloadTemplate": "Download Template",
+    "importing": "Importing...",
+    "cancel": "Cancel",
+    "import": "Import"
+  },
+  "columnPicker": {
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "reset": "Reset",
+    "close": "Close"
+  },
+  "pager": {
+    "previous": "Previous page",
+    "next": "Next page",
+    "current": "Current page {{page}}",
+    "goTo": "Go to page {{page}}",
+    "clearFilter": "Clear Filter",
+    "loading": "Loading..."
   }
 }

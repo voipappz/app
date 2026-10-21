@@ -2,6 +2,7 @@ import React from 'react';
 import { Menu, Checkbox, FormControlLabel, Button, Box, ButtonGroup } from '@mui/material';
 import './ColumnSelector.css';
 import useColumnSelector from './useColumnSelector';
+import { useTranslation } from 'react-i18next';
 
 const ColumnSelector = ({
   anchorEl,
@@ -14,6 +15,7 @@ const ColumnSelector = ({
   onDeselectAll,
   onReset
 }) => {
+  const { t } = useTranslation();
   const { handleToggle, handleClose } = useColumnSelector(onToggle, onClose);
 
   return (
@@ -33,13 +35,13 @@ const ColumnSelector = ({
       <Box sx={{ p: 1.5, borderBottom: '1px solid var(--border-dark)', display: 'flex', gap: 1 }}>
         <ButtonGroup size="small" variant="outlined">
           <Button onClick={onSelectAll}>
-            Select All
+            {t('columnPicker.selectAll')}
           </Button>
           <Button onClick={onDeselectAll}>
-            Deselect All
+            {t('columnPicker.deselectAll')}
           </Button>
           <Button onClick={onReset} color="warning">
-            Reset
+            {t('columnPicker.reset')}
           </Button>
         </ButtonGroup>
       </Box>
@@ -79,9 +81,9 @@ const ColumnSelector = ({
           );
         })}
       </Box>
-      <Box sx={{ p: 1, borderTop: '1px solid var(--border-dark)', textAlign: 'right' }}>
+      <Box sx={{ p: 1, borderTop: '1px solid var(--border-dark)', textAlign: 'end' }}>
         <Button onClick={handleClose} size="small" variant="contained">
-          Close
+          {t('columnPicker.close')}
         </Button>
       </Box>
     </Menu>

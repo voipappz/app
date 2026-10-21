@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import LtrIsland from '../../i18n/LtrIsland';
 import { Tooltip, IconButton, Box, LinearProgress, Typography } from '@mui/material';
 import {
   CallMade,
@@ -64,6 +66,7 @@ const formatTime = (seconds) => {
 let _currentlyPlayingAudio = null;
 
 export const RecordingControls = ({ recordingUrl, onOpenCall }) => {
+  const { t } = useTranslation('calls');
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [currentTime, setCurrentTime] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
@@ -103,7 +106,7 @@ export const RecordingControls = ({ recordingUrl, onOpenCall }) => {
   if (!recordingUrl) {
     return (
       <Box sx={{ color: 'var(--text-tertiary)', fontSize: '0.7rem', fontFamily: 'Rubik, sans-serif', fontStyle: 'italic' }}>
-        No recording
+        {t('row.noRecording')}
       </Box>
     );
   }
@@ -144,13 +147,14 @@ export const RecordingControls = ({ recordingUrl, onOpenCall }) => {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%', minWidth: 130 }}>
+    // A player runs left to right in every language: play, then the bar.
+    <LtrIsland sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%', minWidth: 130 }}>
       <audio ref={audioRef} src={recordingUrl} preload="metadata" />
 
       <IconButton
         size="small"
         onClick={handlePlayPause}
-        aria-label={isPlaying ? "Pause recording" : "Play recording"}
+        aria-label={isPlaying ? t('row.pause') : t('row.play')}
         sx={{
           p: 0.25,
           color: 'var(--accent-primary)',
@@ -187,16 +191,17 @@ export const RecordingControls = ({ recordingUrl, onOpenCall }) => {
         color: 'var(--theme-text-secondary)',
         fontFamily: 'var(--font-family)',
         minWidth: 32,
-        textAlign: 'right',
+        textAlign: 'end',
       }}>
         {isPlaying || currentTime > 0 ? formatTime(currentTime) : formatTime(duration)}
       </Typography>
 
       {/* Only where there is somewhere to open: the call panel already IS it. */}
       {onOpenCall && (
-        <Tooltip title="Open call details">
+        <Tooltip title={t('row.openDetails')}>
           <IconButton
             size="small"
+            aria-label={t('row.openDetails')}
             onClick={(e) => { e.stopPropagation(); onOpenCall(); }}
             sx={{ p: 0.25, color: 'var(--accent-primary)', '&:hover': { backgroundColor: 'var(--accent-primary-alpha-10)' } }}
           >
@@ -204,6 +209,6 @@ export const RecordingControls = ({ recordingUrl, onOpenCall }) => {
           </IconButton>
         </Tooltip>
       )}
-    </Box>
+    </LtrIsland>
   );
 };

@@ -23,8 +23,10 @@ import {
 } from '@mui/icons-material';
 import { useCallNumber } from '../../../hooks/useCallNumber';
 import { useNotification } from '../../../context/NotificationContext';
+import { useTranslation } from 'react-i18next';
 
 const CallActions = ({ call, onAddNote }) => {
+  const { t } = useTranslation('calls');
   const [anchorEl, setAnchorEl] = useState(null);
   const [noteDialog, setNoteDialog] = useState(false);
   const [noteText, setNoteText] = useState('');
@@ -54,7 +56,7 @@ const CallActions = ({ call, onAddNote }) => {
     const numberToCopy = call.caller_number || call.destination_number;
     if (numberToCopy) {
       navigator.clipboard.writeText(numberToCopy);
-      showNotification(`Number ${numberToCopy} copied to clipboard`, 'success');
+      showNotification(t('actions.copied', { number: numberToCopy }), 'success');
     }
     handleMenuClose();
   };
@@ -63,7 +65,7 @@ const CallActions = ({ call, onAddNote }) => {
     // This would integrate with a contacts system
     const number = call.caller_number || call.destination_number;
     console.log('👤 Add to contacts:', number);
-    showNotification('Contact integration not implemented yet', 'info');
+    showNotification(t('actions.contactsSoon'), 'info');
     handleMenuClose();
   };
 
@@ -75,7 +77,7 @@ const CallActions = ({ call, onAddNote }) => {
   const handleSaveNote = () => {
     if (noteText.trim()) {
       onAddNote?.(call.uuid || call.id, noteText.trim());
-      showNotification('Note added successfully', 'success');
+      showNotification(t('actions.noteAdded'), 'success');
       setNoteText('');
     }
     setNoteDialog(false);
@@ -85,14 +87,14 @@ const CallActions = ({ call, onAddNote }) => {
     const number = call.caller_number || call.destination_number;
     console.log('📋 Show history for:', number);
     // This would filter the calls list to show only calls from/to this number
-    showNotification(`Showing history for ${number}`, 'info');
+    showNotification(t('actions.showingHistory', { number }), 'info');
     handleMenuClose();
   };
 
   return (
     <>
-      <Tooltip title="Call actions">
-        <IconButton size="small" onClick={handleMenuOpen}>
+      <Tooltip title={t('actions.menu')}>
+        <IconButton size="small" onClick={handleMenuOpen} aria-label={t('actions.menu')}>
           <MoreVert />
         </IconButton>
       </Tooltip>
@@ -109,59 +111,59 @@ const CallActions = ({ call, onAddNote }) => {
           <ListItemIcon>
             <Phone fontSize="small" color="primary" />
           </ListItemIcon>
-          <ListItemText primary="Call Back" />
+          <ListItemText primary={t('actions.callBack')} />
         </MenuItem>
         
         <MenuItem onClick={handleCopyNumber}>
           <ListItemIcon>
             <ContentCopy fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Copy Number" />
+          <ListItemText primary={t('actions.copyNumber')} />
         </MenuItem>
         
         <MenuItem onClick={handleAddContact}>
           <ListItemIcon>
             <PersonAdd fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Add Contact" />
+          <ListItemText primary={t('actions.addContact')} />
         </MenuItem>
         
         <MenuItem onClick={handleAddNote}>
           <ListItemIcon>
             <Note fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Add Note" />
+          <ListItemText primary={t('actions.addNote')} />
         </MenuItem>
         
         <MenuItem onClick={handleShowHistory}>
           <ListItemIcon>
             <History fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Show History" />
+          <ListItemText primary={t('actions.showHistory')} />
         </MenuItem>
       </Menu>
 
       {/* Add Note Dialog */}
       <Dialog open={noteDialog} onClose={() => setNoteDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Note</DialogTitle>
+        <DialogTitle>{t('actions.addNote')}</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            label="Note"
+            label={t('actions.note')}
             fullWidth
             multiline
             rows={4}
             variant="outlined"
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
-            placeholder={`Add a note about this call from ${call.caller_number || call.destination_number || 'Unknown'}...`}
+            placeholder={t('actions.notePlaceholder', { number: call.caller_number || call.destination_number || t('actions.unknown') })}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setNoteDialog(false)}>Cancel</Button>
+          <Button onClick={() => setNoteDialog(false)}>{t('actions.cancel')}</Button>
           <Button onClick={handleSaveNote} variant="contained" disabled={!noteText.trim()}>
-            Save Note
+            {t('actions.saveNote')}
           </Button>
         </DialogActions>
       </Dialog>

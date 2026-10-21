@@ -1,6 +1,11 @@
 import React from 'react';
 import { Box, Typography, Button, Alert, Paper } from '@mui/material';
 import { Refresh as RefreshIcon, Home as HomeIcon } from '@mui/icons-material';
+import i18n from '../../i18n';
+
+// A class component has no useTranslation; this reads the active language
+// each time the page renders.
+const text = (key, values) => i18n.t(`common:errorPage.${key}`, values);
 
 // A lazy screen whose file could not be downloaded: Chrome, Safari and Firefox
 // word it differently. It is a network/deploy problem, not a bug in the page.
@@ -12,17 +17,15 @@ export function describeError(error, online = typeof navigator === 'undefined' ?
     const file = (message.match(/[\w.-]+\.js/) || [])[0] || null;
     return {
       kind: 'network',
-      title: "Couldn't load this screen",
-      body: online
-        ? 'Part of the app could not be downloaded. The connection may have dropped for a moment, or a new version was just released. Reloading the page fetches the current version.'
-        : 'You appear to be offline, so part of the app could not be downloaded. Check your connection, then reload.',
-      detail: file ? `Missing file: ${file}` : message,
+      title: text('networkTitle'),
+      body: text(online ? 'networkBodyOnline' : 'networkBodyOffline'),
+      detail: file ? text('missingFile', { file }) : message,
     };
   }
   return {
     kind: 'app',
-    title: 'Oops! Something went wrong',
-    body: "We're sorry, but there was an unexpected error. Please try refreshing the page or go back to the home screen.",
+    title: text('appTitle'),
+    body: text('appBody'),
     detail: message || null,
   };
 }
@@ -148,8 +151,8 @@ class ErrorBoundary extends React.Component {
               {described.body}
             </Typography>
 
-            <Alert severity={isNetwork ? 'warning' : 'error'} sx={{ mb: 3, textAlign: 'left' }}>
-              <Typography variant="subtitle2">Error ID: {this.state.errorId}</Typography>
+            <Alert severity={isNetwork ? 'warning' : 'error'} sx={{ mb: 3, textAlign: 'start' }}>
+              <Typography variant="subtitle2">{text('errorId', { id: this.state.errorId })}</Typography>
               {!isDevelopment && described.detail && (
                 <Typography variant="body2" sx={{ mt: 1, fontFamily: 'monospace', overflowWrap: 'anywhere' }}>
                   {described.detail}
@@ -172,7 +175,7 @@ class ErrorBoundary extends React.Component {
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
               {isNetwork && (
                 <Button variant="contained" color="primary" startIcon={<RefreshIcon />} onClick={this.handleReload}>
-                  Reload page
+                  {text('reloadPage')}
                 </Button>
               )}
               {!isNetwork && (
@@ -182,7 +185,7 @@ class ErrorBoundary extends React.Component {
                 startIcon={<RefreshIcon />}
                 onClick={this.handleRefresh}
               >
-                Try Again
+                {text('tryAgain')}
               </Button>
               )}
 
@@ -192,7 +195,7 @@ class ErrorBoundary extends React.Component {
                 startIcon={<HomeIcon />}
                 onClick={this.handleGoHome}
               >
-                Go Home
+                {text('goHome')}
               </Button>
               
               {!isNetwork && (
@@ -201,7 +204,7 @@ class ErrorBoundary extends React.Component {
                 color="secondary"
                 onClick={this.handleReload}
               >
-                Reload Page
+                {text('reloadPageButton')}
               </Button>
               )}
             </Box>
@@ -209,7 +212,7 @@ class ErrorBoundary extends React.Component {
             {isDevelopment && this.state.errorInfo && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="h6" gutterBottom>
-                  Component Stack (Development Only):
+                  {text('componentStack')}
                 </Typography>
                 <Alert severity="info">
                   <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>

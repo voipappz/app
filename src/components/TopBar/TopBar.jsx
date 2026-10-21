@@ -84,6 +84,15 @@ const TOOL_SCREENS = {
   '/settings': lazy(() => import('../Settings/Settings.jsx')),
 };
 // Top-right tools that are not ACL screens but still open in the tool dialog.
+// The fixed health reasons (healthLevel.js) by their key in common.json;
+// a degraded reason names the failing checks and stays as written.
+const HEALTH_REASON_KEYS = {
+  'checking…': 'checking',
+  'API unhealthy': 'apiUnhealthy',
+  'all node probes down': 'allProbesDown',
+  'all healthy': 'allHealthy',
+};
+
 const ACCOUNT_TOOLS = [
   { text: 'Settings', path: '/settings' },
   { text: 'MCP', path: '/mcp' },
@@ -120,7 +129,7 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import MenuIcon from '@mui/icons-material/Menu';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { TOPBAR_NAV_ITEMS } from '../../config/navConfig';
+import { TOPBAR_NAV_ITEMS, navLabel } from '../../config/navConfig';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -1007,7 +1016,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               '&:hover': { backgroundColor: 'var(--theme-hover)' },
             }}
           >
-            <Tooltip title={`Status — ${health.reason}`}>
+            <Tooltip title={t('health.status', { reason: HEALTH_REASON_KEYS[health.reason] ? t(`health.reason.${HEALTH_REASON_KEYS[health.reason]}`) : health.reason })}>
               <CircleIcon data-testid="health-dot" data-level={health.level} sx={{ fontSize: 12, color: HEALTH_COLORS[health.level] }} />
             </Tooltip>
           </Button>
@@ -1418,8 +1427,8 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
       >
         <Box sx={{ p: 2, height: '100%', minHeight: 0, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, flexShrink: 0 }}>
-            {selectedNotification && <Button onClick={() => setSelectedNotification(null)}>Back to notifications</Button>}
-            <IconButton aria-label="Close notifications" onClick={handleNotificationDrawerClose} sx={{ ml: 'auto' }}><CloseIcon /></IconButton>
+            {selectedNotification && <Button onClick={() => setSelectedNotification(null)}>{t('notificationsDrawer.back')}</Button>}
+            <IconButton aria-label={t('notificationsDrawer.close')} onClick={handleNotificationDrawerClose} sx={{ ms: 'auto' }}><CloseIcon /></IconButton>
           </Box>
           {notificationDrawerOpen && (selectedNotification ? (
             <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
@@ -1441,7 +1450,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
       <Dialog open={healthDialogOpen} onClose={() => { setHealthDialogOpen(false); setHealthNode(null); }} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CircleIcon sx={{ fontSize: 20, color: (healthNode ? nodeHealth.isHealthy : healthStatus.isHealthy) ? '#4caf50' : '#f44336' }} />
-          {healthNode ? `${healthNode.name} · health` : 'Health'}
+          {healthNode ? t('health.nodeTitle', { name: healthNode.name }) : t('shell.health')}
         </DialogTitle>
         <DialogContent dividers>
           {/* Main icon: authenticated API detail. Node button: that node's
@@ -1452,26 +1461,26 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               row={nodeHealth.row}
               loading={nodeHealth.loading}
               error={nodeHealth.error}
-              title={`${healthNode.name} · Monitors`}
+              title={t('health.nodeMonitors', { name: healthNode.name })}
             />
           ) : (
             healthDialogOpen && <ApiHealthPanel />
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setHealthDialogOpen(false); setHealthNode(null); }}>Close</Button>
+          <Button onClick={() => { setHealthDialogOpen(false); setHealthNode(null); }}>{t('health.close')}</Button>
         </DialogActions>
       </Dialog>
 
 
-      <ToolDialog title="Events" open={eventsModalOpen && canAccess('logs')} onClose={() => setEventsModalOpen(false)}>
+      <ToolDialog title={t('nav:events')} open={eventsModalOpen && canAccess('logs')} onClose={() => setEventsModalOpen(false)}>
         <Suspense fallback={<CircularProgress sx={{ m: 'auto' }} />}>
           <Events key={eventsModalParams} initialParams={eventsModalParams} />
         </Suspense>
       </ToolDialog>
       <ToolDialog
         key={activeTool || 'closed'}
-        title={activeToolItem?.text || ''}
+        title={activeToolItem?.labelKey ? navLabel(t, activeToolItem) : (activeToolItem?.text || '')}
         open={Boolean(activeToolItem)}
         onClose={() => setActiveTool(null)}
         confirmClose={activeTool === '/templates'}

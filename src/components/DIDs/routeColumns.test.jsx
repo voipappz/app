@@ -19,7 +19,7 @@ const route = {
 };
 const actions = {
   onCall: vi.fn(), onEditApplication: vi.fn(), onEditBridge: vi.fn(), onOpenProvider: vi.fn(),
-  onEdit: vi.fn(), onOpenFlow: vi.fn(), onDuplicate: vi.fn(), onDelete: vi.fn(),
+  onEdit: vi.fn(), onDuplicate: vi.fn(), onDelete: vi.fn(),
 };
 const english = i18n.getFixedT('en', 'routes');
 const show = ({ isPhone = false, portalMode = false, t = english } = {}) => render(
@@ -74,6 +74,12 @@ describe('Routes columns', () => {
     show();
     expect(screen.getByTestId('edit-did-button')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Call +97235551234' })).toBeInTheDocument();
+  });
+
+  it('give a portal user no way into the workflow diagram on a desktop', () => {
+    show({ portalMode: true });
+    expect(screen.getByTestId('edit-did-button')).toBeInTheDocument();
+    expect(screen.queryByTestId('routing-did-button')).not.toBeInTheDocument();
   });
 
   it('show a route as a card on a phone: number, name, type and where calls go, no buttons', () => {

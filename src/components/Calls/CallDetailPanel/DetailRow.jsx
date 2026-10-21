@@ -1,12 +1,16 @@
 import React from 'react';
 import { Box, Typography, Chip, IconButton, Tooltip } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { useTranslation } from 'react-i18next';
 
-const DetailRow = ({ icon, label, value, chip, copyable }) => {
+// `copyText` is what Copy puts on the clipboard when `value` is not plain
+// text (a number wrapped in <Bdi>).
+const DetailRow = ({ icon, label, value, chip, copyable, copyText }) => {
+  const { t } = useTranslation('calls');
   if (value === null || value === undefined || value === '') return null;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(String(value));
+    navigator.clipboard.writeText(String(copyText ?? value));
   };
 
   return (
@@ -54,8 +58,8 @@ const DetailRow = ({ icon, label, value, chip, copyable }) => {
           </Typography>
         )}
         {copyable && (
-          <Tooltip title="Copy">
-            <IconButton size="small" onClick={handleCopy} sx={{ p: 0.25 }}>
+          <Tooltip title={t('detail.copy')}>
+            <IconButton size="small" onClick={handleCopy} aria-label={t('detail.copy')} sx={{ p: 0.25 }}>
               <ContentCopyIcon sx={{ fontSize: 14, color: 'var(--text-tertiary)' }} />
             </IconButton>
           </Tooltip>

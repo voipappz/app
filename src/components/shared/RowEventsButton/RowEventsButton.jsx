@@ -1,5 +1,6 @@
 import { IconButton, Tooltip } from '@mui/material';
 import BoltIcon from '@mui/icons-material/Bolt';
+import { useTranslation } from 'react-i18next';
 import { useNavigateToEvents } from '../../../hooks/useNavigateToLogs';
 import { usePermissions } from '../../../hooks/usePermissions';
 
@@ -17,6 +18,7 @@ import { usePermissions } from '../../../hooks/usePermissions';
  * Shown to whichever session's ACL grants `logs`, account or user.
  */
 export default function RowEventsButton({ subject, uuid, actor, sx }) {
+  const { t } = useTranslation();
   const goToEvents = useNavigateToEvents();
   const { canAccess } = usePermissions();
   if (!(actor || (subject && uuid)) || !canAccess('logs')) return null;
@@ -29,8 +31,8 @@ export default function RowEventsButton({ subject, uuid, actor, sx }) {
     }
   };
   return (
-    <Tooltip title="Events">
-      <IconButton size="small" aria-label="Events" data-testid="row-events-button" onClick={open} sx={sx}>
+    <Tooltip title={t('rowEvents')}>
+      <IconButton size="small" aria-label={t('rowEvents')} data-testid="row-events-button" onClick={open} sx={sx}>
         <BoltIcon fontSize="small" />
       </IconButton>
     </Tooltip>

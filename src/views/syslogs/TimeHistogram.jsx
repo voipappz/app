@@ -2,6 +2,9 @@ import React, { useRef, useEffect, useMemo } from 'react';
 import { Box, Typography } from '@mui/material';
 import * as d3 from 'd3';
 
+// The hover box's total line on the Logs screens.
+const LOGS_TOTAL_TEXT = (count) => `Total: ${count} logs`;
+
 /**
  * Chronograf-style Time Histogram
  * Shows log volume over time as vertical bars
@@ -18,6 +21,8 @@ const TimeHistogram = ({
   showLegend = false,
   labelFor = null,
   onLegendClick = null, // (seriesKey) — same as clicking that series' bar
+  // The hover box's total line, (count) -> text; the Logs wording by default.
+  totalText = LOGS_TOTAL_TEXT,
 }) => {
   const containerRef = useRef();
   const svgRef = useRef();
@@ -228,11 +233,11 @@ const TimeHistogram = ({
           : d3.utcFormat("%H:%M");
 
         let html = `<strong>${timeFormat(d.data.time)} GMT</strong><br/>`;
-        html += `Total: ${d.data.total} logs<br/>`;
+        html += `${totalText(d.data.total)}<br/>`;
         Object.entries(d.data.severities)
           .sort((a, b) => b[1] - a[1])
           .forEach(([sev, count]) => {
-            html += `<span style="color:${SEVERITY_COLORS[sev] || '#999'}">${sev}: ${count}</span><br/>`;
+            html += `<span style="color:${SEVERITY_COLORS[sev] || '#999'}">${labelFor ? labelFor(sev) : sev}: ${count}</span><br/>`;
           });
 
         tooltip
@@ -322,7 +327,7 @@ const TimeHistogram = ({
       svg.style('cursor', 'crosshair');
     }
 
-  }, [chartData, severities, height, timeInterval, onBrushSelection, onBarClick]);
+  }, [chartData, severities, height, timeInterval, onBrushSelection, onBarClick, labelFor, totalText]);
 
   if ((!logs || logs.length === 0) && (!aggregateData || aggregateData.length === 0)) {
     return (

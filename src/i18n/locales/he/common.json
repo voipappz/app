@@ -92,5 +92,118 @@
     "to": "עד",
     "cancel": "ביטול",
     "apply": "החלה"
+  },
+  "accountFallback": "חשבון",
+  "chip": {
+    "yes": "כן",
+    "no": "לא",
+    "active": "פעיל",
+    "suspended": "מושעה",
+    "cancelled": "בוטל",
+    "pending": "ממתין",
+    "created": "נוצר",
+    "running": "פועל",
+    "paused": "מושהה",
+    "stopped": "נעצר",
+    "unknown": "לא ידוע"
+  },
+  "noAccess": {
+    "title": "לא זמין",
+    "body": "ההרשאות שלך אינן כוללות את המסך הזה."
+  },
+  "errorPage": {
+    "networkTitle": "לא ניתן לטעון את המסך",
+    "networkBodyOnline": "לא ניתן היה להוריד חלק מהאפליקציה. ייתכן שהחיבור נותק לרגע, או שגרסה חדשה שוחררה זה עתה. טעינת הדף מחדש תביא את הגרסה העדכנית.",
+    "networkBodyOffline": "נראה שאין חיבור לאינטרנט, ולכן לא ניתן היה להוריד חלק מהאפליקציה. בדקו את החיבור וטענו מחדש.",
+    "missingFile": "קובץ חסר: {{file}}",
+    "appTitle": "אופס! משהו השתבש",
+    "appBody": "מצטערים, אירעה שגיאה לא צפויה. נסו לרענן את הדף או לחזור למסך הבית.",
+    "errorId": "מזהה שגיאה: {{id}}",
+    "reloadPage": "טעינה מחדש",
+    "tryAgain": "ניסיון נוסף",
+    "goHome": "למסך הבית",
+    "reloadPageButton": "טעינת הדף מחדש",
+    "componentStack": "מחסנית רכיבים (פיתוח בלבד):"
+  },
+  "health": {
+    "status": "מצב — {{reason}}",
+    "reason": {
+      "checking": "בודק…",
+      "apiUnhealthy": "ה-API לא תקין",
+      "allProbesDown": "כל בדיקות השרתים נכשלו",
+      "allHealthy": "הכול תקין"
+    },
+    "nodeTitle": "{{name}} · תקינות",
+    "nodeMonitors": "{{name}} · ניטור",
+    "close": "סגירה"
+  },
+  "notificationsDrawer": {
+    "back": "חזרה להתראות",
+    "close": "סגירת ההתראות"
+  },
+  "toolDialog": {
+    "restore": "שחזור גודל",
+    "expand": "הרחבה למסך מלא",
+    "close": "סגירת {{title}}",
+    "confirmTitle": "לסגור את {{title}}?",
+    "confirmBody": "שינויים שלא נשמרו יאבדו. השאירו את הכלי פתוח כדי לסיים את העריכה.",
+    "keepEditing": "המשך עריכה",
+    "closeTool": "סגירת הכלי"
+  },
+  "rowEvents": "אירועים",
+  "importCsv": {
+    "title": "ייבוא מקובץ CSV",
+    "entityName": "רשומות",
+    "parseErrors": "שגיאות בקריאת ה-CSV: {{errors}}",
+    "parseFailed": "קריאת ה-CSV נכשלה: {{message}}",
+    "onlyCsv": "ניתן להעלות קובצי CSV בלבד",
+    "chooseApplication": "בחרו אפליקציה",
+    "fixRow": "תקנו קודם את השורה המסומנת באדום",
+    "fixRows": "תקנו קודם את {{n}} השורות המסומנות באדום",
+    "selectFile": "בחרו קובץ CSV",
+    "failedCount": "{{n}} נכשלו",
+    "failedLine": "שורה {{line}}: {{error}}",
+    "failedLineUser": "שורה {{line}} ({{username}}): {{error}}",
+    "importedWithMessage": "{{entity}}: {{message}}",
+    "imported": "{{entity}} יובאו",
+    "importFailed": "ייבוא {{entity}} נכשל",
+    "application": "אפליקציה",
+    "selectApplication": "בחירת אפליקציה...",
+    "preview": "תצוגה מקדימה של ה-CSV",
+    "oneRow": "שורה אחת",
+    "rows": "{{n}} שורות",
+    "oneColumn": "עמודה אחת",
+    "columns": "{{n}} עמודות",
+    "clickToEdit": "לחצו על תא כדי לערוך",
+    "changeFile": "החלפת קובץ",
+    "removeRow": "הסרת שורה",
+    "addRow": "הוספת שורה",
+    "willImportOne": "תיובא שורה אחת",
+    "willImport": "ייובאו {{n}} שורות",
+    "oneNeedsFixing": "· שורה אחת דורשת תיקון",
+    "needFixing": "· {{n}} שורות דורשות תיקון",
+    "format": "מבנה:",
+    "dropHere": "גררו לכאן קובץ CSV או לחצו לבחירה",
+    "allowed": "סיומות מותרות: .csv",
+    "orTemplate": "או התחילו מתבנית מוכנה:",
+    "useTemplate": "שימוש בתבנית",
+    "downloadTemplate": "הורדת תבנית",
+    "importing": "מייבא...",
+    "cancel": "ביטול",
+    "import": "ייבוא"
+  },
+  "columnPicker": {
+    "selectAll": "בחירת הכול",
+    "deselectAll": "ניקוי הבחירה",
+    "reset": "איפוס",
+    "close": "סגירה"
+  },
+  "pager": {
+    "previous": "העמוד הקודם",
+    "next": "העמוד הבא",
+    "current": "עמוד נוכחי {{page}}",
+    "goTo": "מעבר לעמוד {{page}}",
+    "clearFilter": "ניקוי סינון",
+    "loading": "טוען..."
   }
 }

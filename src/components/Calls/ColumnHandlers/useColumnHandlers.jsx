@@ -8,6 +8,8 @@ import CallReceivedIcon from '@mui/icons-material/CallReceived';
 import ReactCountryFlag from 'react-country-flag';
 import CellWithHover from '../CellWithHover/CellWithHover.jsx';
 import { useCallNumber } from '../../../hooks/useCallNumber';
+import { useTranslation } from 'react-i18next';
+import { callFieldName, callStatusWord } from '../callWords';
 
 // Per-column width hints (matched by logical name) so columns size to their
 // content instead of every column stretching to flex:1 (which made them too wide).
@@ -58,19 +60,6 @@ const STATUS_TONES = {
   break: 'warn', on_break: 'warn', paused: 'warn', caller_hangup: 'warn',
   waiting: 'info', contact_hangup: 'info',
 };
-const STATUS_LABELS = {
-  available: 'Available', busy: 'Busy', incall: 'In Call',
-  break: 'Break', on_break: 'On Break', offline: 'Offline',
-  paused: 'Paused', waiting: 'Waiting',
-  answer: 'Answer', completed: 'Completed', complete: 'Complete',
-  no_answer: 'No Answer', noanswer: 'No Answer',
-  failed: 'Failed', cancel: 'Cancel',
-  contact_hangup: 'Contact Hangup', caller_hangup: 'Caller Hangup',
-  contact_answer: 'Contact Answer',
-  incoming: 'Incoming', outgoing: 'Outgoing',
-  registered: 'Registered',
-};
-
 // Faint placeholder so empty/zero values recede and real data stands out.
 const EMPTY_DASH = (
   <span style={{ color: 'var(--theme-text-tertiary, #9ca3af)', opacity: 0.5 }}>—</span>
@@ -79,8 +68,6 @@ const isEmptyValue = (v) =>
   v === null || v === undefined || v === '' || v === 'N/A' || String(v).toLowerCase() === 'none';
 
 const statusKey = (value) => String(value).toLowerCase().replace(/-/g, '_');
-const statusLabel = (value) =>
-  STATUS_LABELS[statusKey(value)] || String(value).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
 // Every status-like cell (cause, state, disposition, hangup) in one look.
 const StatusText = ({ value }) => (
@@ -92,7 +79,7 @@ const StatusText = ({ value }) => (
         bgcolor: TONE_COLORS[STATUS_TONES[statusKey(value)] || 'neutral'],
       }}
     />
-    <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{statusLabel(value)}</Box>
+    <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{callStatusWord(value)}</Box>
   </Box>
 );
 
@@ -156,6 +143,9 @@ const getLogicalName = (fieldKey, columnDef) => {
 };
 
 const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = {}, apiColumns = [], segments = [], onOpenCall = null) => {
+  // Headers and status words follow the language (callWords.js); `t` changes
+  // with it, so the grid's columns are rebuilt.
+  const { t } = useTranslation('calls');
 
   // Column key -> server segment. `segments` (Segment.calls) is the authority on
   // what the API will actually filter by, so it decides which cells offer the
@@ -400,7 +390,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
       // Every header is the grid's own title: same type, no icon on some.
       const baseColumn = {
         field: fieldKey,
-        headerName: columnDef.name,
+        headerName: callFieldName(columnDef.type === 'link' ? columnDef.link_prop : logicalName, columnDef.name),
         ...sizing,
         sortable: !!columnDef.sort_by,
       };
@@ -474,7 +464,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
             >
               <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                 <Arrow sx={{ fontSize: 14, color: 'var(--theme-text-secondary)' }} />
-                {statusLabel(value)}
+                {callStatusWord(value)}
               </Box>
             </CellWithHover>
           );
@@ -679,7 +669,7 @@ const useColumnHandlers = (handleOpenRecording, onSearch, currentSearchParams = 
         }
       };
     }).filter(Boolean);
-  }, [availableColumns, currentSearchParams, cellSearchFor, handleCopy, callNumber, handleOpenRecording, onOpenCall]);
+  }, [availableColumns, currentSearchParams, cellSearchFor, handleCopy, callNumber, handleOpenRecording, onOpenCall, t]);
 
   return {
     visibleColumns,

@@ -4,7 +4,6 @@ import {
   Delete as DeleteIcon,
   Phone as PhoneIcon,
   ContentCopy as DuplicateIcon,
-  AccountTree as RoutingIcon,
 } from '@mui/icons-material';
 import RowEventsButton from '../shared/RowEventsButton/RowEventsButton.jsx';
 import MetaTagChips from '../common/MetaTagChips/MetaTagChips';
@@ -173,19 +172,10 @@ function RouteRowActions({ t, did, portalMode, loading, canWrite, actions }) {
     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
       {canWrite && (
         // Admin edits a Route on the routing canvas. The portal opens the
-        // wizard instead — a customer editing their own number wants the
-        // fields, and reaches the canvas through the Routing action beside
-        // this one when they want the flow.
+        // wizard instead: the workflow diagram is not shown to a user.
         <Tooltip title={portalMode ? t('row.editNumber') : t('row.editRoute')}>
           <IconButton data-testid="edit-did-button" size="small" onClick={() => actions.onEdit(did)} disabled={loading}>
             <EditIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      )}
-      {canWrite && portalMode && (
-        <Tooltip title={t('row.routing')}>
-          <IconButton data-testid="routing-did-button" size="small" onClick={() => actions.onOpenFlow(did)} disabled={loading}>
-            <RoutingIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       )}

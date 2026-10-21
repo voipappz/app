@@ -7,8 +7,10 @@ import MessageInput from '../../Conversations/MessageInput';
 import conversationService from '../../../services/conversationService';
 import { useAuth } from '../../../context/AuthContext';
 import './CallDetailPanel.css';
+import { useTranslation } from 'react-i18next';
 
 const CallConversationPanel = ({ call, onBack, onClose, isMobile }) => {
+  const { t } = useTranslation('calls');
   const { access } = useAuth();
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -16,7 +18,7 @@ const CallConversationPanel = ({ call, onBack, onClose, isMobile }) => {
   const [error, setError] = useState(null);
 
   const callUuid = call?.uuid;
-  const caller = call?.profile?.caller || 'Unknown';
+  const caller = call?.profile?.caller || t('detail.unknown');
   const callee = call?.profile?.callee || '';
 
   useEffect(() => {
@@ -134,7 +136,7 @@ const CallConversationPanel = ({ call, onBack, onClose, isMobile }) => {
         messages={messages}
         loading={loading}
         error={error}
-        emptyMessage="No conversation found"
+        emptyMessage={t('conversation.notFound')}
       />
 
       {/* Message Input - only show when conversation exists */}

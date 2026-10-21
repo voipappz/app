@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import ResponsiveTable from './ResponsiveTable';
 import { DENSITY } from './density';
 import { pretendPhoneScreen } from '../../../test/phoneScreen';
+import { pretendScreenWidth } from '../../../test/screenWidth';
 import { styledCss } from '../../../test/styledCss';
 
 const columns = [
@@ -82,5 +83,45 @@ describe('ResponsiveTable on a phone', () => {
     expect(within(cards[0]).getByRole('button', { name: 'Edit Alice' })).toBeInTheDocument();
     expect(screen.queryByText('2026-01-01')).toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
+  });
+});
+
+describe('ResponsiveTable between a phone and a desktop', () => {
+  const withHidden = [
+    ...columns.slice(0, 2),
+    { ...columns[2], hideBelow: 'lg' },
+    { ...columns[3], hideBelow: 'xl' },
+    columns[4],
+  ];
+  const headers = () => screen.getAllByRole('columnheader').map((header) => header.textContent);
+
+  it('drops a column below its hideBelow breakpoint and keeps it above', () => {
+    backToDesktop = pretendScreenWidth(1024);
+    const { unmount } = render(table({ columns: withHidden }));
+    expect(headers()).toEqual(['Name', 'Extension', 'Actions']);
+    unmount();
+
+    backToDesktop = pretendScreenWidth(1440);
+    const second = render(table({ columns: withHidden }));
+    expect(headers()).toEqual(['Name', 'Extension', 'Status', 'Actions']);
+    second.unmount();
+
+    backToDesktop = pretendScreenWidth(1600);
+    render(table({ columns: withHidden }));
+    expect(headers()).toHaveLength(5);
+  });
+
+  it('still shows a hidden column on the cards', () => {
+    backToDesktop = pretendScreenWidth(768);
+    render(table({ columns: withHidden }));
+    expect(within(screen.getAllByTestId('mobile-record-card')[0]).getByText('Online')).toBeInTheDocument();
+  });
+
+  it('puts two cards in a row from a tablet up, one on a phone', () => {
+    backToDesktop = pretendScreenWidth(768);
+    render(table());
+    const css = styledCss();
+    expect(css).toMatch(/grid-template-columns:minmax\(0,\s*1fr\)/);
+    expect(css).toMatch(/grid-template-columns:repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
   });
 });

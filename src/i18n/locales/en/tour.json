@@ -1,0 +1,82 @@
+{
+  "overlay": {
+    "close": "Close tour",
+    "step": "Step {{current}} of {{total}}",
+    "skip": "Skip Tour",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish"
+  },
+  "first-login": {
+    "steps": {
+      "welcome": {
+        "title": "Welcome to VoIP Admin!",
+        "description": "This quick tour will help you get started with the main features of the admin panel."
+      },
+      "env-selector": {
+        "title": "Select Your Environment",
+        "description": "Choose which customer and environment you want to manage. All data is scoped to your selection."
+      },
+      "users-menu": {
+        "title": "Manage Users",
+        "description": "Create user accounts, set permissions with ACLs, and manage devices for phone calls."
+      },
+      "dids-menu": {
+        "title": "Manage Routes",
+        "description": "Configure phone numbers (Routes) and set up call routing to IVRs, queues, or devices."
+      },
+      "subscriptions-menu": {
+        "title": "Subscriptions & Billing",
+        "description": "Manage billing subscriptions, assign tariffs, and track subscription balances."
+      },
+      "tour-complete": {
+        "title": "You're Ready!",
+        "description": "You can restart this tour anytime from the Help menu. Enjoy using VoIP Admin!"
+      }
+    }
+  },
+  "dids-guide": {
+    "steps": {
+      "did-list": {
+        "title": "Route List",
+        "description": "This table shows all your Routes. Use the filters on the left to narrow down the list."
+      },
+      "did-create": {
+        "title": "Create New Route",
+        "description": "Click here to add a new phone number to your system."
+      },
+      "did-bridge": {
+        "title": "Bridge Types",
+        "description": "Bridge type determines where calls go: IVR for menus, Queue for call centers, Device for direct lines."
+      }
+    }
+  },
+  "devzone-guide": {
+    "steps": {
+      "devzone-overview": {
+        "title": "One live Developer Zone",
+        "description": "Search the current OpenAPI contract, connect an AI agent, or follow the human quickstart without leaving Nimbus."
+      },
+      "devzone-connect-mcp": {
+        "title": "Connect through MCP",
+        "description": "Copy this endpoint into an MCP-capable agent, with a token of its own. Its tools see only that account's customer."
+      },
+      "devzone-navigation": {
+        "title": "Explore by task",
+        "description": "Use the quickstart for a first request, API Reference for endpoints grouped in the left rail, and Automation readiness for agent safety guidance."
+      }
+    }
+  },
+  "quick-actions": {
+    "steps": {
+      "help-button": {
+        "title": "Need Help?",
+        "description": "Click the help icon on any screen to open the documentation for that feature."
+      },
+      "refresh-button": {
+        "title": "Refresh Data",
+        "description": "Click to reload the latest data from the server."
+      }
+    }
+  }
+}
