@@ -38,6 +38,7 @@ import DateLocalizationProvider from '../../i18n/DateLocalizationProvider';
 import { useEvents } from './Events';
 import EventDetailPanel, { EventFieldsTooltip, syslogParams } from './EventDetailPanel';
 import LogsScreen from '../../views/syslogs/LogsScreen.jsx';
+import ToolDialog from '../TopBar/ToolDialog.jsx';
 import { stripedDataGridSx } from '../shared/tableTheme.jsx';
 import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext';
 import TimeHistogram from '../../views/syslogs/TimeHistogram';
@@ -949,16 +950,6 @@ const Events = ({ initialParams, leftSlot } = {}) => {
             />
           </Box>
 
-          {/* The call's syslog, in place: the technical trace of the selected event */}
-          {embeddedSyslog && (
-            <Box data-testid="events-embedded-syslog" sx={{
-              height: '45%', minHeight: 260, mt: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
-              border: '1px solid var(--mui-palette-divider)', borderRadius: '8px',
-            }}>
-              <LogsScreen key={embeddedSyslog} initialParams={embeddedSyslog} />
-            </Box>
-          )}
-
           {/* Pagination Controls */}
           <Box sx={{
             borderTop: '1px solid var(--mui-palette-divider)',
@@ -990,12 +981,16 @@ const Events = ({ initialParams, leftSlot } = {}) => {
           </Box>
         </Box>
 
+        {/* The selected event's syslog, in a modal over Events, filtered to its call */}
+        <ToolDialog title="Syslog" open={Boolean(embeddedSyslog)} onClose={() => setSyslogOpen(false)}>
+          {embeddedSyslog && <LogsScreen key={embeddedSyslog} initialParams={embeddedSyslog} />}
+        </ToolDialog>
+
         {selectedEvent && (
           <EventDetailPanel
             event={selectedEvent}
             message={formatAuditMessage(selectedEvent)}
             onClose={() => { setSelectedEvent(null); setSyslogOpen(false); }}
-            syslogOpen={syslogOpen}
             onToggleSyslog={() => setSyslogOpen((v) => !v)}
           />
         )}
