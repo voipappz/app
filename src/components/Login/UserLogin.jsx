@@ -19,7 +19,7 @@ import { useUserLogin } from './UserLogin';
 import LanguageLink from '../../i18n/LanguageLink';
 import useCustomerDefaultLanguage from '../../i18n/useCustomerDefaultLanguage';
 import { loadCustomerPortalData } from '../../services/customerPortalService';
-import { isPasswordValid } from '../../utils/passwordPolicy';
+import { isPasswordValid, passwordRuleMessage, usePasswordPolicy } from '../../utils/passwordPolicy';
 import './Login.css';
 
 // The `/` entry point — a compact, tenant-branded customer login that remains
@@ -60,6 +60,7 @@ const UserLogin = ({ switcher = null }) => {
     qrSigningIn
   } = useUserLogin();
   const { t } = useTranslation('auth');
+  const passwordPolicy = usePasswordPolicy();
   const [showPassword, setShowPassword] = useState(false);
 
   // Per-tenant branding (logo, brand colour) for this unauthenticated screen —
@@ -483,8 +484,7 @@ const UserLogin = ({ switcher = null }) => {
               autoFocus
               autoComplete="new-password"
             />
-            <FormHelperText error={newPassword !== '' && !isPasswordValid(newPassword)} className="help-block">{t('error.passwordTooShort')}</FormHelperText>
-            <FormHelperText error={newPassword !== '' && !isPasswordValid(newPassword)} className="help-block">{t('error.passwordTooShort')}</FormHelperText>
+            <FormHelperText error={newPassword !== '' && !isPasswordValid(newPassword, passwordPolicy)} className="help-block">{passwordRuleMessage(t, passwordPolicy)}</FormHelperText>
           </FormControl>
 
           <FormControl fullWidth className="form-group">
@@ -526,7 +526,7 @@ const UserLogin = ({ switcher = null }) => {
               variant="contained"
               className="login-button"
               data-testid="user-forgot-reset-submit-button"
-              disabled={loading || forgotSent || !isPasswordValid(newPassword) || newPassword !== confirmPassword}
+              disabled={loading || forgotSent || !isPasswordValid(newPassword, passwordPolicy) || newPassword !== confirmPassword}
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
             >
               {loading ? t('forgot.resetting') : t('forgot.reset')}

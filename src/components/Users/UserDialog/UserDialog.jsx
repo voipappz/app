@@ -39,7 +39,7 @@ import { liveApi } from '../../../services/api/liveApi';
 import { queuesApi } from '../../../services/api/queuesApi';
 import SecretField from '../../common/SecretField.jsx';
 import SoftphoneDownloadLinks from '../../shared/SoftphoneDownloadLinks/SoftphoneDownloadLinks.jsx';
-import { PASSWORD_HINT, passwordPolicyError, generatePolicyPassword } from '../../../utils/passwordPolicy';
+import { passwordHint, passwordPolicyError, generatePolicyPassword, usePasswordPolicy } from '../../../utils/passwordPolicy';
 
 /**
  * UserDialog Component
@@ -47,6 +47,7 @@ import { PASSWORD_HINT, passwordPolicyError, generatePolicyPassword } from '../.
  */
 const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, environments, acls, statuses, embedded = false, onDirty, canWrite = true }) => {
   const openPhoneAs = useOpenPhoneAs();
+  const passwordPolicy = usePasswordPolicy();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -124,7 +125,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
       setFormData({
         name: '',
         email: '',
-        password: generatePolicyPassword(),
+        password: generatePolicyPassword(passwordPolicy),
         environment_uuid: '',
         acl_uuid: '',
         status_uuid: '',
@@ -186,8 +187,8 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
     }
     if (!user && !formData.password) {
       newErrors.password = 'Password is required for new users';
-    } else if (!user && passwordPolicyError(formData.password)) {
-      newErrors.password = passwordPolicyError(formData.password);
+    } else if (!user && passwordPolicyError(formData.password, passwordPolicy)) {
+      newErrors.password = passwordPolicyError(formData.password, passwordPolicy);
     }
     if (!formData.environment_uuid) {
       newErrors.environment_uuid = 'Application is required';
@@ -540,7 +541,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                         value={formData.password}
                         onChange={(e) => handleChange('password', e.target.value)}
                         error={!!errors.password || (submitAttempted && !formData.password)}
-                        helperText={errors.password || (submitAttempted && !formData.password ? 'Password is required for new users' : PASSWORD_HINT)}
+                        helperText={errors.password || (submitAttempted && !formData.password ? 'Password is required for new users' : passwordHint(passwordPolicy))}
                         disabled={loading}
                         InputProps={{
                           endAdornment: (
@@ -549,7 +550,7 @@ const UserDialog = ({ open, onClose, onSave, onResetPassword, user, loading, env
                                 <Button
                                   size="small"
                                   variant="contained"
-                                  onClick={() => handleChange('password', generatePolicyPassword())}
+                                  onClick={() => handleChange('password', generatePolicyPassword(passwordPolicy))}
                                   disabled={loading}
                                   sx={{ textTransform: 'none', minWidth: 'auto', px: 2 }}
                                 >

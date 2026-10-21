@@ -31,7 +31,6 @@ import {
   Close as CloseIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
-  Edit as EditIcon,
   RssFeed as RssFeedIcon
 } from '@mui/icons-material';
 import { Trans, useTranslation } from 'react-i18next';
@@ -43,6 +42,7 @@ import { bridgeApi } from '../../../services/api/bridgeApi';
 import { extensionsApi } from '../../../services/api/extensionsApi';
 import { usersApi } from '../../../services/api/usersApi';
 import { AnnouncementBridge } from '../AnnouncementBridge/AnnouncementBridge.jsx';
+import AnnouncementActions from '../shared/AnnouncementActions.jsx';
 import { Z, menuProps } from '../../../utils/zIndex.js';
 import { useIsUserSession } from '../../../hooks/useIsUserSession';
 
@@ -102,7 +102,7 @@ export const QueueBridge = ({
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
   const [announcementEditMode, setAnnouncementEditMode] = useState('create');
   const [announcementToEdit, setAnnouncementToEdit] = useState(null);
-  const [announcementTarget, setAnnouncementTarget] = useState('hold'); // 'intro' or 'hold'
+  const [announcementTarget, setAnnouncementTarget] = useState('hold'); // 'intro', 'hold' or 'maxWait'
 
   // Agents state
   const [allAgents, setAllAgents] = useState([]);
@@ -402,23 +402,28 @@ export const QueueBridge = ({
   // back into selectedAgents previously caused an infinite render loop
   // when a tier referenced an agent that wasn't in the loaded users list.
 
-  // Build onResult callback for drill-down announcement saves
-  const buildAnnouncementDrillDownResult = (target) => async (savedData) => {
-    const uuid = savedData.uuid || savedData.id;
-    // Reload announcements
+  // The fields that hold an announcement: intro, hold, and the max-wait
+  // destination when its type is an announcement.
+  const ANNOUNCEMENT_FIELDS = {
+    intro: 'intro_announcement_uuid',
+    hold: 'hold_announcement_uuid',
+    maxWait: 'max_wait_time_bridge_uuid',
+  };
+
+  // After an announcement is saved: reload the list and choose it for the
+  // field it was opened from.
+  const applySavedAnnouncement = async (target, savedData) => {
+    const uuid = savedData?.uuid || savedData?.id;
     try {
       const response = await bridgeApi.getBridgeResources('announcement', formData.environment_uuid);
       const updatedAnnouncements = Array.isArray(response) ? response : (response?.data || []);
       setAnnouncements(updatedAnnouncements);
-      // Auto-select for the target field
+      if (target === 'maxWait') setBridgeResources(updatedAnnouncements);
       if (uuid) {
-        setFormData(prev => ({
-          ...prev,
-          [target === 'intro' ? 'intro_announcement_uuid' : 'hold_announcement_uuid']: uuid
-        }));
+        setFormData(prev => ({ ...prev, [ANNOUNCEMENT_FIELDS[target]]: uuid }));
       }
     } catch (err) {
-      console.error('Error reloading announcements after drill-down save:', err);
+      console.error('Error reloading announcements after save:', err);
     }
   };
 
@@ -434,7 +439,7 @@ export const QueueBridge = ({
         mode: 'create',
         data: null,
         environmentUuid: formData.environment_uuid,
-        onResult: buildAnnouncementDrillDownResult(target)
+        onResult: (saved) => applySavedAnnouncement(target, saved)
       });
     } else {
       setAnnouncementEditMode('create');
@@ -443,52 +448,34 @@ export const QueueBridge = ({
     }
   };
 
-  // Handle edit announcement click
+  // Handle edit announcement click. The editor loads the announcement by its
+  // uuid, so one missing from the loaded list still opens.
   const handleEditAnnouncement = (target) => {
-    const uuid = target === 'intro' ? formData.intro_announcement_uuid : formData.hold_announcement_uuid;
-    const ann = announcements.find(a => a.uuid === uuid);
+    const uuid = formData[ANNOUNCEMENT_FIELDS[target]];
+    if (!uuid) return;
+    const ann = announcements.find(a => a.uuid === uuid) || bridgeResources.find(r => r.uuid === uuid) || { uuid };
 
     if (onDrillDown) {
       onDrillDown({
         type: 'announcement',
         mode: 'edit',
-        data: ann || null,
+        data: ann,
         environmentUuid: formData.environment_uuid,
-        onResult: buildAnnouncementDrillDownResult(target)
+        onResult: (saved) => applySavedAnnouncement(target, saved)
       });
     } else {
-      if (ann) {
-        setAnnouncementTarget(target);
-        setAnnouncementEditMode('edit');
-        setAnnouncementToEdit(ann);
-        setAnnouncementDialogOpen(true);
-      }
+      setAnnouncementTarget(target);
+      setAnnouncementEditMode('edit');
+      setAnnouncementToEdit(ann);
+      setAnnouncementDialogOpen(true);
     }
   };
 
-  // Handle announcement save - reload announcements
+  // Handle announcement save from the inline dialog
   const handleAnnouncementSave = async (announcementData) => {
-    const uuid = announcementData.uuid || announcementData.id;
-
     setAnnouncementDialogOpen(false);
     setAnnouncementToEdit(null);
-
-    // Reload announcements
-    try {
-      const response = await bridgeApi.getBridgeResources('announcement', formData.environment_uuid);
-      const updatedAnnouncements = Array.isArray(response) ? response : (response?.data || []);
-      setAnnouncements(updatedAnnouncements);
-
-      // Auto-select the newly created/edited announcement for the target field
-      if (uuid) {
-        setFormData(prev => ({
-          ...prev,
-          [announcementTarget === 'intro' ? 'intro_announcement_uuid' : 'hold_announcement_uuid']: uuid
-        }));
-      }
-    } catch (err) {
-      console.error('Error reloading announcements after save:', err);
-    }
+    await applySavedAnnouncement(announcementTarget, announcementData);
   };
 
   // Load bridge resources when bridge type changes
@@ -880,13 +867,7 @@ export const QueueBridge = ({
                 ))}
               </Select>
             </FormControl>
-            {formData.intro_announcement_uuid && (
-              <Tooltip title={t('queue.editAnnouncement')}>
-                <IconButton onClick={() => handleEditAnnouncement('intro')} size="small" color="primary">
-                  <EditIcon />
-                </IconButton>
-              </Tooltip>
-            )}
+            <AnnouncementActions uuid={formData.intro_announcement_uuid} onEdit={() => handleEditAnnouncement('intro')} />
           </Box>
         </Grid>
 
@@ -916,13 +897,7 @@ export const QueueBridge = ({
                     ]}
                   </Select>
                 </FormControl>
-                {formData.hold_announcement_uuid && (
-                  <Tooltip title={t('queue.editAnnouncement')}>
-                    <IconButton onClick={() => handleEditAnnouncement('hold')} size="small" color="primary">
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                )}
+                <AnnouncementActions uuid={formData.hold_announcement_uuid} onEdit={() => handleEditAnnouncement('hold')} />
               </Box>
             </Grid>
 
@@ -969,6 +944,7 @@ export const QueueBridge = ({
 
         {/* Bridge Destination */}
         <Grid size={12}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <FormControl fullWidth required error={!!formErrors.max_wait_time_bridge_uuid} disabled={loading || bridgeResourcesLoading || !formData.max_wait_time_bridge_type}>
             <InputLabel required>{t('queue.maxWait.destination')}</InputLabel>
             <Select
@@ -993,6 +969,10 @@ export const QueueBridge = ({
               )}
             </Select>
           </FormControl>
+          {formData.max_wait_time_bridge_type === 'announcement' && (
+            <AnnouncementActions uuid={formData.max_wait_time_bridge_uuid} onEdit={() => handleEditAnnouncement('maxWait')} />
+          )}
+          </Box>
         </Grid>
       </Grid>
 
