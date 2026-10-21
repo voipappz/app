@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Paper, Typography, Button, IconButton, LinearProgress } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import { Close as CloseIcon, ArrowBack, ArrowForward } from '@mui/icons-material';
 import { useTour } from '../../context/TourContext';
 
@@ -10,6 +12,9 @@ import { useTour } from '../../context/TourContext';
  * Highlights target elements and shows step descriptions.
  */
 const TourOverlay = () => {
+  const { t } = useTranslation('tour');
+  // Back and Next point the other way in Hebrew.
+  const mirrored = useTheme().direction === 'rtl' ? { transform: 'scaleX(-1)' } : undefined;
   const {
     activeTour,
     currentStep,
@@ -120,13 +125,13 @@ const TourOverlay = () => {
         onClick={skipTour}
       />
 
-      {/* Spotlight cutout */}
+      {/* Spotlight cutout. Measured screen coordinates go in `style`: the
+          right-to-left style plugin would turn an sx `left` into `right`. */}
       {targetRect && (
         <Box
+          style={{ top: targetRect.top - 8, left: targetRect.left - 8 }}
           sx={{
             position: 'fixed',
-            top: targetRect.top - 8,
-            left: targetRect.left - 8,
             width: targetRect.width + 16,
             height: targetRect.height + 16,
             borderRadius: 2,
@@ -141,10 +146,9 @@ const TourOverlay = () => {
       {/* Tooltip */}
       <Paper
         elevation={8}
+        style={{ top: position.top, left: position.left }}
         sx={{
           position: 'fixed',
-          top: position.top,
-          left: position.left,
           width: 320,
           zIndex: 10000,
           p: 2,
@@ -159,13 +163,13 @@ const TourOverlay = () => {
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
           <Typography variant="subtitle1" fontWeight="bold">
-            {step.title}
+            {t(`${tour.id}.steps.${step.id}.title`)}
           </Typography>
           <IconButton
             size="small"
             onClick={skipTour}
-            sx={{ ml: 1, mt: -0.5, mr: -0.5 }}
-            aria-label="Close tour"
+            sx={{ ms: 1, mt: -0.5, me: -0.5 }}
+            aria-label={t('overlay.close')}
           >
             <CloseIcon fontSize="small" />
           </IconButton>
@@ -173,7 +177,7 @@ const TourOverlay = () => {
 
         {/* Description */}
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {step.description}
+          {t(`${tour.id}.steps.${step.id}.description`)}
         </Typography>
 
         {/* Progress */}
@@ -184,7 +188,7 @@ const TourOverlay = () => {
             sx={{ height: 4, borderRadius: 2 }}
           />
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-            Step {currentStep + 1} of {totalSteps}
+            {t('overlay.step', { current: currentStep + 1, total: totalSteps })}
           </Typography>
         </Box>
 
@@ -195,7 +199,7 @@ const TourOverlay = () => {
             onClick={skipTour}
             sx={{ textTransform: 'none' }}
           >
-            Skip Tour
+            {t('overlay.skip')}
           </Button>
 
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -203,21 +207,21 @@ const TourOverlay = () => {
               <Button
                 size="small"
                 variant="outlined"
-                startIcon={<ArrowBack />}
+                startIcon={<ArrowBack sx={mirrored} />}
                 onClick={prevStep}
                 sx={{ textTransform: 'none' }}
               >
-                Back
+                {t('overlay.back')}
               </Button>
             )}
             <Button
               size="small"
               variant="contained"
-              endIcon={!isLastStep && <ArrowForward />}
+              endIcon={!isLastStep && <ArrowForward sx={mirrored} />}
               onClick={isLastStep ? completeTour : nextStep}
               sx={{ textTransform: 'none' }}
             >
-              {isLastStep ? 'Finish' : 'Next'}
+              {isLastStep ? t('overlay.finish') : t('overlay.next')}
             </Button>
           </Box>
         </Box>

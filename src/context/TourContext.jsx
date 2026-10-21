@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import PropTypes from 'prop-types';
 import { TOURS, getAutoStartTours } from '../constants/tours';
+import { useSessionRole } from '../hooks/useIsUserSession';
 
 const TourContext = createContext();
 
@@ -16,13 +17,16 @@ const STORAGE_KEY = 'completedTours';
  * TourProvider Component
  *
  * Manages tour state and provides tour controls to the application.
- * Tours are automatically triggered on first login if configured.
+ * Tours are automatically triggered on first login if configured — for an
+ * account (admin) only: the tours walk through admin screens a portal user
+ * does not have.
  * Completed tours are stored in localStorage to prevent repeat showings.
  */
 export const TourProvider = ({ children }) => {
   const [activeTour, setActiveTour] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
+  const role = useSessionRole();
 
   // Load completed tours from localStorage
   const [completedTours, setCompletedTours] = useState(() => {
@@ -45,7 +49,7 @@ export const TourProvider = ({ children }) => {
 
   // Check for auto-start tours on initial load
   useEffect(() => {
-    if (isInitialized) return;
+    if (isInitialized || role !== 'admin') return;
 
     const autoStartTourIds = getAutoStartTours();
     for (const tourId of autoStartTourIds) {
@@ -60,7 +64,7 @@ export const TourProvider = ({ children }) => {
       }
     }
     setIsInitialized(true);
-  }, [completedTours, isInitialized]);
+  }, [completedTours, isInitialized, role]);
 
   /**
    * Start a specific tour

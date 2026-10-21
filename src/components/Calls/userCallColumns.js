@@ -10,5 +10,4 @@ export const USER_CALL_COLUMNS = [
   { name: 'Callee', type: 'sub_object', field: 'call.callee', prop: 'profile', sub_prop: 'callee', selected: true },
   { name: 'Talk Duration', type: 'sub_object', field: 'call.talk_duration', prop: 'profile', sub_prop: 'talk_duration', selected: true },
   { name: 'Cause', type: 'sub_object', field: 'call.cause', prop: 'profile', sub_prop: 'cause', selected: true },
-  { name: '', type: 'special', field: 'actions', prop: 'actions', selected: true },
 ];

@@ -287,6 +287,15 @@ describe('creating a destination from the route', () => {
     renderForm({ did: queueRoute(), bridgeTypes: ['queue'], onDrillDown: vi.fn() });
     expect(createButton()).toBeInTheDocument();
   });
+
+  // The type is `call_condition`; the API's ACL names the capability
+  // `call_conditions`. Asking for the type's own name hid the button for good.
+  it("lets a user create a call condition when the ACL grants call_conditions", () => {
+    mockUserSession = true;
+    writable = ['call_conditions'];
+    renderForm({ did: route('dst', { bridge_type: 'call_condition', bridge_uuid: '' }), bridgeTypes: ['call_condition'], onDrillDown: vi.fn() });
+    expect(screen.getByRole('button', { name: /^Create New/ })).toBeInTheDocument();
+  });
 });
 
 describe('editing the destination from the route', () => {

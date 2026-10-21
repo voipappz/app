@@ -8,19 +8,20 @@ import VoicemailIcon from '@mui/icons-material/Voicemail';
 import DoneIcon from '@mui/icons-material/Done';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import StickyNote2Icon from '@mui/icons-material/StickyNote2';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../i18n';
+import { dayKey, formatDayHeading, formatTime } from '../../../utils/dateUtils';
 // Reuse existing Conversations bubble styling
 import '../../Conversations/Conversations.css';
 
-const formatMessageTime = (dateString) =>
-  new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const formatMessageTime = (dateString) => formatTime(dateString);
 
 const getDateSeparator = (dateString) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  return date.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dayKey(dateString) === dayKey(new Date())) return i18n.t('calls:conversation.today');
+  if (dayKey(dateString) === dayKey(yesterday)) return i18n.t('calls:conversation.yesterday');
+  return formatDayHeading(dateString);
 };
 
 const getInteractionIcon = (type) => {
@@ -34,6 +35,7 @@ const getInteractionIcon = (type) => {
 };
 
 const ConversationMessages = ({ messages, loading, error, emptyMessage, onRetry }) => {
+  const { t } = useTranslation('calls');
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -47,7 +49,7 @@ const ConversationMessages = ({ messages, loading, error, emptyMessage, onRetry 
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, p: 5 }}>
         <CircularProgress size={40} sx={{ color: '#65758E' }} />
         <Typography variant="body2" sx={{ fontFamily: 'Rubik, sans-serif', color: 'var(--mui-palette-text-secondary)' }}>
-          Loading conversation...
+          {t('conversation.loading')}
         </Typography>
       </Box>
     );
@@ -59,7 +61,7 @@ const ConversationMessages = ({ messages, loading, error, emptyMessage, onRetry 
         <Typography variant="body2" sx={{ fontFamily: 'Rubik, sans-serif', color: '#ef4444' }}>
           {error}
         </Typography>
-        {onRetry && <Button onClick={onRetry}>Retry</Button>}
+        {onRetry && <Button onClick={onRetry}>{t('conversation.retry')}</Button>}
       </Box>
     );
   }
@@ -69,10 +71,10 @@ const ConversationMessages = ({ messages, loading, error, emptyMessage, onRetry 
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, p: 5 }}>
         <MessageIcon sx={{ fontSize: 56, color: '#d1d5db' }} />
         <Typography variant="h6" sx={{ fontFamily: 'Rubik, sans-serif', color: 'var(--mui-palette-text-secondary)' }}>
-          {emptyMessage || 'No conversation found'}
+          {emptyMessage || t('conversation.notFound')}
         </Typography>
         <Typography variant="body2" sx={{ fontFamily: 'Rubik, sans-serif', color: '#d1d5db', textAlign: 'center' }}>
-          No conversation is linked to this call
+          {t('conversation.notLinked')}
         </Typography>
       </Box>
     );
@@ -113,9 +115,9 @@ const ConversationMessages = ({ messages, loading, error, emptyMessage, onRetry 
                 <Box className="call-event">
                   {getInteractionIcon(message.callType)}
                   <Typography variant="body2" sx={{ fontFamily: 'Rubik, sans-serif' }}>
-                    {message.callType === 'inbound' ? 'Incoming call' :
-                     message.callType === 'outbound' ? 'Outgoing call' :
-                     message.callType === 'missed' ? 'Missed call' : 'Voicemail'}
+                    {message.callType === 'inbound' ? t('conversation.incomingCall') :
+                     message.callType === 'outbound' ? t('conversation.outgoingCall') :
+                     message.callType === 'missed' ? t('conversation.missedCall') : t('conversation.voicemail')}
                     {message.duration && ` - ${message.duration}`}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
@@ -133,7 +135,7 @@ const ConversationMessages = ({ messages, loading, error, emptyMessage, onRetry 
                         fontWeight: 600,
                         fontSize: '0.65rem',
                       }}>
-                        Private Note
+                        {t('conversation.privateNote')}
                       </Typography>
                     </Box>
                   )}

@@ -3,6 +3,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import i18n from '../../../i18n';
 import CallDetailsScreen from './CallDetailsScreen';
 import { callsApi } from '../../../services/api/callsApi';
+// The Block button tells its outcome through notifications.
+vi.mock('../../../context/NotificationContext', () => ({ useNotification: () => ({ showNotification: vi.fn() }) }));
 
 const dialNow = vi.fn();
 let canDial = true;
@@ -37,6 +39,14 @@ const renderScreen = (props = {}) => {
 };
 
 describe('CallDetailsScreen', () => {
+  // The page is mounted closed, with no call, all the time: reading the block
+  // state there crashed, and the softphone's error boundary rebuilt the whole
+  // Calls screen over and over — reloading its calls each time.
+  it('renders nothing, without crashing, while no call is open', () => {
+    const { container } = render(<CallDetailsScreen call={null} open={false} onClose={vi.fn()} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('shows who, when, the recording and the details', async () => {
     renderScreen();
     expect(screen.getByRole('dialog', { name: 'Call details' })).toBeInTheDocument();

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import PortalSidebar from './PortalSidebar.jsx';
 
 let sidebar = { view: null, params: null, close: vi.fn() };
@@ -34,5 +35,15 @@ describe('the portal sidebar', () => {
     render(<PortalSidebar />);
     expect(screen.getByTestId('phone-screen')).toHaveAttribute('data-number', '0501234567');
     expect(screen.getByTestId('phone-screen')).toHaveAttribute('data-device', 'dev-1');
+  });
+
+  // The phone opens from the end of the top bar: the right, and the left in
+  // Hebrew. The RTL style plugin mirrors the paper's `right: 0` in Hebrew, so
+  // the anchor stays 'right' in both languages; picking 'left' for Hebrew as
+  // well flipped it twice, back to the right.
+  it.each(['ltr', 'rtl'])('anchors to the right and lets the RTL styles mirror it (%s)', (direction) => {
+    sidebar = { view: 'phone', params: { tab: 'dialpad' }, close: vi.fn() };
+    render(<ThemeProvider theme={createTheme({ direction })}><PortalSidebar /></ThemeProvider>);
+    expect(document.querySelector('.MuiDrawer-paper')).toHaveClass('MuiDrawer-paperAnchorRight');
   });
 });

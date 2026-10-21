@@ -34,8 +34,11 @@ import { formatDate } from '../../../utils/dateUtils';
 import './NotificationPanel.css';
 import CopyableEmail from '../../common/CopyableEmail/CopyableEmail.jsx';
 import { useConfirm } from '../../ui';
+import { Trans, useTranslation } from 'react-i18next';
+import Bdi from '../../../i18n/Bdi.jsx';
 
 const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetchNotificationDetails }) => {
+  const { t } = useTranslation('notifications');
   const confirm = useConfirm();
   const [copySuccess, setCopySuccess] = useState(false);
   const [fullDetails, setFullDetails] = useState(null);
@@ -106,7 +109,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
   };
 
   const handleDelete = async () => {
-    if (await confirm({ title: 'Delete notification', message: 'Are you sure you want to delete this notification?' })) {
+    if (await confirm({ title: t('panel.deleteTitle'), message: t('panel.deleteMessage') })) {
       onDelete(notification.uuid);
       onClose();
     }
@@ -140,14 +143,14 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
           </Avatar>
           <Box>
             <Typography variant="h6" component="div">
-              Notification Details
+              {t('panel.title')}
             </Typography>
             <Typography variant="caption" color="textSecondary">
               {formatDate(notification.created_at)}
             </Typography>
           </Box>
         </Box>
-        <IconButton onClick={onClose} size="small">
+        <IconButton onClick={onClose} size="small" aria-label={t('panel.close')}>
           <CloseIcon />
         </IconButton>
       </Box>
@@ -190,11 +193,11 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
                 label={`×${notification.count || 1}`}
                 color="secondary"
                 size="small"
-                title="Occurrence count"
+                title={t('panel.occurrences')}
               />
               {!notification.read_at && (
                 <Chip
-                  label="Unread"
+                  label={t('panel.unread')}
                   color="warning"
                   size="small"
                 />
@@ -210,7 +213,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
                 size="small"
                 onClick={handleMarkAsRead}
               >
-                Mark as Read
+                {t('panel.markAsRead')}
               </Button>
             )}
             <Button
@@ -220,7 +223,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
               size="small"
               onClick={handleDelete}
             >
-              Delete
+              {t('panel.delete')}
             </Button>
           </Box>
         </Paper>
@@ -228,7 +231,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
         {/* Subject */}
         <Paper elevation={1} sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom color="primary">
-            Subject
+            {t('panel.subject')}
           </Typography>
           <Typography variant="body1" sx={{ fontFamily: 'monospace', backgroundColor: 'grey.50', p: 1, borderRadius: 1 }}>
             {notification.subject}
@@ -239,11 +242,12 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
         <Paper elevation={1} sx={{ p: 2 }}>
           <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
             <Typography variant="h6" color="primary">
-              Message
+              {t('panel.message')}
             </Typography>
             <IconButton 
               size="small" 
               onClick={() => handleCopyToClipboard(notification.msg)}
+              aria-label={t('panel.copyMessage')}
             >
               <CopyIcon />
             </IconButton>
@@ -251,7 +255,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
           <TextField
             multiline
             fullWidth
-            value={notification.msg || 'No message'}
+            value={notification.msg || t('panel.noMessage')}
             InputProps={{
               readOnly: true,
               sx: { fontFamily: 'monospace', fontSize: '0.9rem' }
@@ -264,7 +268,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
         {contextMeta.length > 0 && (
           <Paper elevation={1} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom color="primary">
-              Alert context
+              {t('panel.alertContext')}
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(130px, 0.7fr) minmax(0, 1.3fr)', gap: 0.75, alignItems: 'center' }}>
               {contextMeta.map(([key, value]) => (
@@ -284,13 +288,13 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
         {/* Recipient Information */}
         <Paper elevation={1} sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom color="primary">
-            Recipient
+            {t('panel.recipient')}
           </Typography>
           {detailsLoading ? (
             <Box display="flex" alignItems="center" gap={2}>
               <CircularProgress size={24} />
               <Typography variant="body2" color="textSecondary">
-                Loading recipient details...
+                {t('panel.loadingRecipient')}
               </Typography>
             </Box>
           ) : displayNotification.recipient ? (
@@ -304,25 +308,25 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
                 </Typography>
                 {displayNotification.recipient_type && (
                   <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'capitalize' }}>
-                    Recipient type: {displayNotification.recipient_type}
+                    {t('panel.recipientType', { type: displayNotification.recipient_type })}
                   </Typography>
                 )}
                 <Typography variant="body2" color="textSecondary">
                   <CopyableEmail email={displayNotification.recipient.email} />
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
-                  ID: {displayNotification.recipient.uuid}
+                  <Trans t={t} i18nKey="panel.recipientId" components={{ id: <Bdi>{displayNotification.recipient.uuid}</Bdi> }} />
                 </Typography>
               </Box>
             </Box>
           ) : (
             <Typography variant="body2" color="textSecondary">
-              No recipient information available
+              {t('panel.noRecipient')}
             </Typography>
           )}
           {!displayNotification.recipient && displayNotification.recipient_type && (
             <Typography variant="caption" color="textSecondary">
-              Recipient type: {displayNotification.recipient_type}
+              {t('panel.recipientType', { type: displayNotification.recipient_type })}
             </Typography>
           )}
         </Paper>
@@ -330,13 +334,13 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
         {/* Timeline */}
         <Paper elevation={1} sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom color="primary">
-            Timeline
+            {t('panel.timeline')}
           </Typography>
           <Box display="flex" flexDirection="column" gap={1}>
             <Box display="flex" alignItems="center" gap={2}>
               <ScheduleIcon color="action" />
               <Box>
-                <Typography variant="body2">Created</Typography>
+                <Typography variant="body2">{t('panel.created')}</Typography>
                 <Typography variant="caption" color="textSecondary">
                   {formatDate(notification.created_at)}
                 </Typography>
@@ -346,7 +350,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
               <Box display="flex" alignItems="center" gap={2}>
                 <ScheduleIcon color="action" />
                 <Box>
-                  <Typography variant="body2">Last Updated</Typography>
+                  <Typography variant="body2">{t('panel.lastUpdated')}</Typography>
                   <Typography variant="caption" color="textSecondary">
                     {formatDate(notification.updated_at)}
                   </Typography>
@@ -357,7 +361,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
               <Box display="flex" alignItems="center" gap={2}>
                 <MarkReadIcon color="success" />
                 <Box>
-                  <Typography variant="body2">Read</Typography>
+                  <Typography variant="body2">{t('panel.read')}</Typography>
                   <Typography variant="caption" color="textSecondary">
                     {formatDate(notification.read_at)}
                   </Typography>
@@ -375,7 +379,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
                 <Box display="flex" alignItems="center" gap={1}>
                   <CodeIcon color="primary" />
                   <Typography variant="h6" color="primary">
-                    Stack Trace
+                    {t('panel.stackTrace')}
                   </Typography>
                 </Box>
               </AccordionSummary>
@@ -389,9 +393,9 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
                         fontFamily: 'monospace',
                         fontSize: '0.8rem',
                         color: 'text.secondary',
-                        borderLeft: '2px solid',
+                        borderInlineStart: '2px solid',
                         borderColor: 'primary.main',
-                        pl: 1,
+                        ps: 1,
                         mb: 0.5,
                         backgroundColor: index % 2 === 0 ? 'grey.50' : 'transparent'
                       }}
@@ -407,7 +411,7 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
                     size="small"
                     onClick={() => handleCopyToClipboard(notification.meta.backtrace)}
                   >
-                    Copy Stack Trace
+                    {t('panel.copyStackTrace')}
                   </Button>
                 </Box>
               </AccordionDetails>
@@ -422,12 +426,12 @@ const NotificationPanel = ({ notification, onClose, onMarkAsRead, onDelete, fetc
           severity="success" 
           sx={{ 
             position: 'fixed', 
-            bottom: 16, 
-            right: 16, 
+            bottom: 16,
+            insetInlineEnd: 16,
             zIndex: 1000 
           }}
         >
-          Copied to clipboard!
+          {t('panel.copied')}
         </Alert>
       )}
     </Box>

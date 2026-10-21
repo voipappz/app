@@ -314,7 +314,6 @@ const DIDs = ({ portalMode = false }) => {
       onOpenProvider: (provider) => navigate(`/providers?id=${provider.uuid}`),
       // Admin edits a Route on the routing canvas; the portal opens the wizard.
       onEdit: (did) => (portalMode ? handleOpenDialog(did) : navigate(`/routes?did=${did.uuid || did.id}`)),
-      onOpenFlow: (did) => navigate(`/routes?did=${did.uuid || did.id}`),
       onDuplicate: handleOpenDuplicateDialog,
       onDelete: handleOpenDeleteDialog,
     },

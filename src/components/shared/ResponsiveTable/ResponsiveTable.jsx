@@ -12,10 +12,14 @@ import { denseTableSx } from './density';
 //
 // A column: { id, label, render(row), sortable, align: 'start' | 'center' | 'end',
 //             width, priority: 'primary' | 'secondary' | 'meta' | 'action' | 'desktopOnly',
-//             cardLabel }
+//             cardLabel, hideBelow: 'lg' | 'xl' }
 // `align` is logical: 'start' is left in English and right in Hebrew.
 // `width` is a preferred width for a short column; text columns leave it out
 // and flex. `dense` (the default) applies the sizing in density.js.
+// `hideBelow` drops a less important column from the table on a screen
+// narrower than that breakpoint (a tablet, a small laptop), so the rest fit
+// without scrolling sideways; the cards still show it.
+// Between a phone and the cards' cut-off the cards sit two to a row.
 const CELL_ALIGN = { start: 'left', center: 'center', end: 'right' };
 
 export default function ResponsiveTable({
@@ -43,6 +47,11 @@ export default function ResponsiveTable({
 }) {
   const theme = useTheme(); // MUI's default theme outside a ThemeProvider
   const showCards = useMediaQuery(theme.breakpoints.down(cardsBelow));
+  const hidden = {
+    lg: useMediaQuery(theme.breakpoints.down('lg')),
+    xl: useMediaQuery(theme.breakpoints.down('xl')),
+  };
+  const tableColumns = columns.filter((column) => !hidden[column.hideBelow]);
   const cell = (column, row) => (column.render ? column.render(row) : row[column.id]);
   const showSkeleton = loading && rows.length === 0;
 
@@ -66,9 +75,9 @@ export default function ResponsiveTable({
   if (showCards) {
     return (
       <Box data-testid={testId}>
-        <Box sx={{ p: 1 }}>
+        <Box sx={{ p: 1, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, columnGap: 1 }}>
           {showSkeleton && Array.from({ length: 3 }, (_, i) => <Skeleton key={i} variant="rounded" height={96} sx={{ mb: 1 }} />)}
-          {!loading && rows.length === 0 && <Box sx={{ textAlign: 'center', py: 4 }}>{emptyText}</Box>}
+          {!loading && rows.length === 0 && <Box sx={{ textAlign: 'center', py: 4, gridColumn: '1 / -1' }}>{emptyText}</Box>}
           {rows.map((row) => (
             <MobileRecordCard
               key={getRowId(row)}
@@ -90,7 +99,7 @@ export default function ResponsiveTable({
         <Table stickyHeader size={dense ? 'small' : 'medium'} sx={dense ? denseTableSx : undefined}>
           <TableHead>
             <TableRow>
-              {columns.map((column) => (
+              {tableColumns.map((column) => (
                 <TableCell key={column.id} align={CELL_ALIGN[column.align]} sx={column.width ? { width: column.width } : undefined}>
                   {column.sortable && onSort ? (
                     <TableSortLabel
@@ -108,12 +117,12 @@ export default function ResponsiveTable({
           <TableBody>
             {showSkeleton && Array.from({ length: skeletonRows }, (_, i) => (
               <TableRow key={i}>
-                {columns.map((column) => <TableCell key={column.id}><Skeleton height={20} /></TableCell>)}
+                {tableColumns.map((column) => <TableCell key={column.id}><Skeleton height={20} /></TableCell>)}
               </TableRow>
             ))}
             {!loading && rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={columns.length} align="center"><Box sx={{ py: 4 }}>{emptyText}</Box></TableCell>
+                <TableCell colSpan={tableColumns.length} align="center"><Box sx={{ py: 4 }}>{emptyText}</Box></TableCell>
               </TableRow>
             )}
             {rows.map((row) => (
@@ -124,7 +133,7 @@ export default function ResponsiveTable({
                 sx={{ ...stripedTableRowSx, cursor: onRowClick ? 'pointer' : undefined, ...rowSx }}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
-                {columns.map((column) => (
+                {tableColumns.map((column) => (
                   <TableCell key={column.id} align={CELL_ALIGN[column.align]}>{cell(column, row)}</TableCell>
                 ))}
               </TableRow>

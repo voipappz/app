@@ -30,8 +30,6 @@ import CallLogFilter from './CallLogFilter/CallLogFilter';
 import { activeCallFilter, withCallFilter } from './CallLogRow/callDirection';
 import CallMobileView from './CallMobileView/CallMobileView.jsx';
 import CallDetailPanel from './CallDetailPanel/CallDetailPanel.jsx';
-import CallConversationPanel from './CallDetailPanel/CallConversationPanel.jsx';
-import CallLogsPanel from './CallDetailPanel/CallLogsPanel.jsx';
 import StatChips from '../shared/StatChips/StatChips.jsx';
 import { DirectionIcon, CauseIcon, RecordingControls } from './CallIcons.jsx';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
@@ -54,6 +52,8 @@ import useNavBadges from '../../hooks/useNavBadges';
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import { formatClock, formatPercent } from './callFormat';
+import { callFieldName, callValueName } from './callWords';
+import { formatNumber } from '../../utils/numberUtils';
 
 // MUI Components
 import {
@@ -120,7 +120,6 @@ const Calls = () => {
   const { t } = useTranslation('calls');
   const [quickSearchText, setQuickSearchText] = React.useState('');
   const [selectedCall, setSelectedCall] = React.useState(null);
-  const [panelMode, setPanelMode] = useState('details'); // 'details' | 'conversation' | 'logs'
   // "Live now" is one chip at the end of the counter row, and a link to /live.
   // Its count is the sidebar's: useNavBadges already polls action=live every
   // 30s for the Calls nav badge, so the chip and the badge say the same number.
@@ -180,6 +179,24 @@ const Calls = () => {
     fetchAggregate,
     summaryCounts,
   } = useCalls({ allTime: isMobile });
+  // The open call as the list has it now, so a refresh (after blocking its
+  // number, say) shows in the panel too; a call opened from History may not
+  // be in the list, and is shown as it was opened.
+  const sameCall = (a, b) => (a.uuid || a.id) === (b.uuid || b.id);
+  const openCall = selectedCall && ((allRows || []).find((row) => sameCall(row, selectedCall)) || selectedCall);
+  // The filters' names as shown: the API names them in English (callWords.js).
+  const shownSegments = useMemo(
+    () => (segments || []).map((segment) => ({
+      ...segment,
+      label: callFieldName(segment.name || segment.field, segment.label),
+      ...(Array.isArray(segment.data) && {
+        data: segment.data.map((option) => (option && typeof option === 'object'
+          ? { ...option, name: callValueName(option.value ?? option.uuid ?? option.id, option.name ?? option.label) }
+          : option)),
+      }),
+    })),
+    [segments, t],
+  );
 
   // Crossing the phone breakpoint swaps the range: a phone reaches back to the
   // first call (no period picker there), a desktop starts at today again.
@@ -247,7 +264,7 @@ const Calls = () => {
   // Register call segments with GlobalSearchContext
   useEffect(() => {
     if (segments && segments.length > 0) {
-      registerScreen('calls', segments, {
+      registerScreen('calls', shownSegments, {
         onSearch: (params) => {
           handleSearch(params, false);
         },
@@ -257,7 +274,7 @@ const Calls = () => {
       });
     }
     return () => unregisterScreen();
-  }, [segments, registerScreen, unregisterScreen]);
+  }, [shownSegments, registerScreen, unregisterScreen]);
 
   // Handle date range changes
   const handleDateRangeChange = (newRange) => {
@@ -267,9 +284,9 @@ const Calls = () => {
   };
 
   // Manual refresh with current filters and date range
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     fetchCalls(dateRange, currentSearchParams);
-  };
+  }, [fetchCalls, dateRange, currentSearchParams]);
 
   // The quick search: the top bar's field on desktop, the TextField on a phone.
   const handleQuickSearch = (e) => {
@@ -367,14 +384,14 @@ const Calls = () => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Export failed:', response.status, errorText);
-        showNotification('Export failed. Please try again.', 'error');
+        showNotification(t('export.failed'), 'error');
         return;
       }
 
       // Saves the streamed CSV body, or fetches a legacy x-report URL WITH the
       // token. Returns false when neither worked, so we build the CSV below.
       if (await saveExportResponse(response, { access })) {
-        showNotification('Export ready — your download has started.', 'success');
+        showNotification(t('export.ready'), 'success');
         return;
       }
 
@@ -445,7 +462,7 @@ const Calls = () => {
       }
     } catch (error) {
       console.error('Export error:', error);
-      showNotification('Export failed. Please try again.', 'error');
+      showNotification(t('export.failed'), 'error');
     }
   };
 
@@ -467,37 +484,29 @@ const Calls = () => {
   const handleAddNote = (callId, note) => {
     console.log(`Adding note to call ${callId}:`, note);
     // This would typically save to an API or local storage
-    showNotification('Note added successfully', 'success');
-  };
-
-  // Switch to conversation panel view
-  const handleViewConversation = () => {
-    setPanelMode('conversation');
-  };
-
-  // Switch to logs panel view
-  const handleViewLogs = () => {
-    setPanelMode('logs');
+    showNotification(t('actions.noteAdded'), 'success');
   };
 
   // Create grid columns with icons and actions
   const gridColumns = useMemo(() => {
-    const columns = createGridColumns(visibleColumns, DirectionIcon, CauseIcon, RecordingControls, CallActions, handleAddNote);
+    const columns = createGridColumns(visibleColumns, DirectionIcon, CauseIcon, RecordingControls);
     return [...columns, {
+      // The row's own actions, for an account and a user alike: details,
+      // Events (with `logs`), and the ⋮ menu (call back, copy, note, block).
       field: 'callRowActions',
       headerName: '',
-      width: canViewEvents ? 88 : 52,
+      width: canViewEvents ? 122 : 86,
       sortable: false,
       filterable: false,
       disableColumnMenu: true,
       resizable: false,
       align: 'right',
       renderCell: ({ row }) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
-          <Tooltip title="Call info">
-            <IconButton size="small" aria-label="Call info" onClick={(event) => {
+        // A click in here (or in the ⋮ menu, through its portal) is not a row click.
+        <Box onClick={(event) => event.stopPropagation()} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, height: '100%' }}>
+          <Tooltip title={t('row.callInfo')}>
+            <IconButton size="small" aria-label={t('row.callInfo')} onClick={(event) => {
               event.stopPropagation();
-              setPanelMode('details');
               setSelectedCall(row);
             }}>
               <InfoOutlinedIcon fontSize="small" />
@@ -512,10 +521,11 @@ const Calls = () => {
             '&:hover': { bgcolor: 'var(--accent-primary-alpha-12)' },
           }}
         />
+          <CallActions call={row} onAddNote={handleAddNote} onBlockChanged={handleRefresh} />
         </Box>
       ),
     }];
-  }, [visibleColumns, createGridColumns, canViewEvents]);
+  }, [visibleColumns, createGridColumns, canViewEvents, handleRefresh]);
 
   // Answered/No-Answer/Outgoing/Incoming are REAL search filters now — each maps
   // to a search[call.*] param that becomes part of the query (server-side), not
@@ -579,7 +589,7 @@ const Calls = () => {
   // aggregate endpoint supports, so every option really groups. Labels come from
   // the API; falls back to the static list before segments load.
   const groupByOptions = useMemo(() => {
-    const fromApi = (segments || [])
+    const fromApi = shownSegments
       .filter((s) => GROUPABLE_SEGMENT_TYPES.has(s.type))
       .map((s) => ({ key: segmentGroupKey(s.name), label: s.label || s.name }))
       .filter((o) => SERVER_GROUP_KEYS.has(o.key));
@@ -591,7 +601,7 @@ const Calls = () => {
     staticOptions.forEach((o) => { if (!byKey.has(o.key)) byKey.set(o.key, o); });
     const list = [...byKey.values()];
     return list.length ? list : staticOptions;
-  }, [segments, t]);
+  }, [shownSegments, t]);
   const [aggGrouping, setAggGrouping] = useState(null);   // null=auto | 'hour' | 'day' | 'week'
   const [stripCollapsed, setStripCollapsed] = useState(() => {
     try { return localStorage.getItem('reportsStrip:calls:collapsed') === '1'; } catch { return false; }
@@ -614,6 +624,9 @@ const Calls = () => {
     };
     return known[key] || String(key).replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
   }, [t]);
+
+  // The chart's hover box: "Total: 12 calls".
+  const chartTotalText = useCallback((count) => t('chart.total', { n: formatNumber(count) }), [t]);
 
   // Quick periods, like the Logs screen. A picked from/to makes it 'custom'.
   const [period, setPeriod] = useState('today');
@@ -861,6 +874,7 @@ const Calls = () => {
                 height={180}
                 showLegend
                 labelFor={seriesLabel}
+                totalText={chartTotalText}
                 onLegendClick={handleChartBarClick}
                 onBrushSelection={(start, end) => {
                   // Drag across a spike -> filter the table to exactly that window
@@ -908,7 +922,7 @@ const Calls = () => {
           {/* The four fields people actually filter calls by, as pills. The
               other nine are behind the Filters button. */}
           <FilterPills
-            segments={segments}
+            segments={shownSegments}
             fields={INLINE_FILTER_FIELDS}
             currentSearchParams={currentSearchParams}
             onChange={handleSearch}
@@ -918,7 +932,7 @@ const Calls = () => {
               Refresh / Export / Columns stay in the chart toolbar. */}
           <CentralizedSearch
             inlineFilters={INLINE_FILTER_FIELDS}
-            segments={segments}
+            segments={shownSegments}
             currentSearchParams={currentSearchParams}
             onFilterChange={handleSearch}
             onQuickSearch={handleQuickSearch}
@@ -948,6 +962,7 @@ const Calls = () => {
             hasNextPage={hasNextPage}
             loadingMore={loadingMore}
             onLoadMore={() => loadMoreCalls(dateRange)}
+            onBlockChanged={handleRefresh}
             canViewEvents={canViewEvents}
             onViewEvents={(call) => goToEvents('call', call.uuid || call.id)}
           />
@@ -1067,7 +1082,7 @@ const Calls = () => {
       <Drawer
         anchor="right"
         open={Boolean(selectedCall)}
-        onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
+        onClose={() => setSelectedCall(null)}
         PaperProps={{ sx: {
           width: { xs: '100vw', sm: SIDEBAR_WIDTH },
           maxWidth: '100vw',
@@ -1075,30 +1090,13 @@ const Calls = () => {
           '& .call-detail-panel': { width: '100%', minHeight: 0, border: 'none', borderRadius: 0, animation: 'none' },
         } }}
       >
-          {selectedCall && panelMode === 'details' && (
+          {openCall && (
             <CallDetailPanel
-              call={selectedCall}
-              onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
-              onOpenRecording={handleOpenRecording}
-              onAddNote={handleAddNote}
-              onViewConversation={handleViewConversation}
-              onViewLogs={handleViewLogs}
+              call={openCall}
+              onBlockChanged={handleRefresh}
+              onClose={() => setSelectedCall(null)}
+              onOpenCall={setSelectedCall}
               onViewEvents={() => goToEvents('call', selectedCall.uuid || selectedCall.id)}
-            />
-          )}
-          {selectedCall && panelMode === 'conversation' && (
-            <CallConversationPanel
-              call={selectedCall}
-              onBack={() => setPanelMode('details')}
-              onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
-            />
-          )}
-          {selectedCall && panelMode === 'logs' && (
-            <CallLogsPanel
-              call={selectedCall}
-              onBack={() => setPanelMode('details')}
-              onOpenCall={(other) => { setSelectedCall(other); setPanelMode('details'); }}
-              onClose={() => { setSelectedCall(null); setPanelMode('details'); }}
             />
           )}
       </Drawer>
@@ -1122,7 +1120,7 @@ const Calls = () => {
         onReset={handleResetColumns}
         columns={Object.entries(availableColumns || {}).map(([field, col]) => ({
           field,
-          headerName: col.name || field
+          headerName: callFieldName(col.type === 'link' ? col.link_prop : (col.sub_prop || field), col.name || field)
         }))}
       />
       <FilterEditDialog

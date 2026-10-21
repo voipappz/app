@@ -1,6 +1,7 @@
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router';
 import { Suspense, lazy } from 'react';
+import { useTranslation } from 'react-i18next';
 // Sentry is initialized in main.jsx
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { UserAuthProvider, useUserAuth } from './context/UserAuthContext';
@@ -107,12 +108,15 @@ const Root = ({ loginMode = 'user' }) => {
 // A portal user on a screen their ACL does not grant (or an account-only
 // screen, which has no key). A page, not a redirect: a redirect between two
 // screens that disagree about a key is a loop.
-const NoAccess = () => (
-  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 1, color: 'var(--theme-text-secondary)' }} data-testid="no-access">
-    <Typography variant="h6" sx={{ color: 'var(--theme-text-primary)' }}>Not available</Typography>
-    <Typography variant="body2">Your access does not include this screen.</Typography>
-  </Box>
-);
+const NoAccess = () => {
+  const { t } = useTranslation();
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 1, color: 'var(--theme-text-secondary)' }} data-testid="no-access">
+      <Typography variant="h6" sx={{ color: 'var(--theme-text-primary)' }}>{t('noAccess.title')}</Typography>
+      <Typography variant="body2">{t('noAccess.body')}</Typography>
+    </Box>
+  );
+};
 
 function AppContent() {
   // Define route guards INSIDE AppContent so they're guaranteed to be inside AuthProvider

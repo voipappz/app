@@ -1,12 +1,16 @@
 /**
  * Shared chip color/label utilities for consistent chip rendering across all screens.
+ * Labels are in the active language (common.json `chip.*`), read when called.
  */
+import i18n from '../i18n';
+
+const chipText = (key) => i18n.t(`common:chip.${key}`);
 
 /**
  * Enabled chip props: green "Yes" / grey "No"
  */
 export const getEnabledChipProps = (enabled) => ({
-  label: enabled ? 'Yes' : 'No',
+  label: chipText(enabled ? 'yes' : 'no'),
   color: enabled ? 'success' : 'default',
   size: 'small',
 });
@@ -16,19 +20,19 @@ export const getEnabledChipProps = (enabled) => ({
  */
 export const getStatusChipProps = (status) => {
   const map = {
-    active: { label: 'Active', color: 'success' },
-    suspended: { label: 'Suspended', color: 'warning' },
-    cancelled: { label: 'Cancelled', color: 'error' },
-    pending: { label: 'Pending', color: 'info' },
+    active: { key: 'active', color: 'success' },
+    suspended: { key: 'suspended', color: 'warning' },
+    cancelled: { key: 'cancelled', color: 'error' },
+    pending: { key: 'pending', color: 'info' },
     // Campaign-specific statuses
-    create: { label: 'Created', color: 'default' },
-    run: { label: 'Running', color: 'success' },
-    pause: { label: 'Paused', color: 'warning' },
-    stop: { label: 'Stopped', color: 'error' },
+    create: { key: 'created', color: 'default' },
+    run: { key: 'running', color: 'success' },
+    pause: { key: 'paused', color: 'warning' },
+    stop: { key: 'stopped', color: 'error' },
   };
   const found = map[status];
-  if (found) return { ...found, size: 'small' };
-  return { label: status || 'Unknown', color: 'default', size: 'small' };
+  if (found) return { label: chipText(found.key), color: found.color, size: 'small' };
+  return { label: status || chipText('unknown'), color: 'default', size: 'small' };
 };
 
 /**

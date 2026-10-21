@@ -58,7 +58,7 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
   const towardSidebar = isRtl ? 'right' : 'left';
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
 
-  const accountName = user?.fullName || user?.firstName || user?.email?.split('@')[0] || 'Account';
+  const accountName = user?.fullName || user?.firstName || user?.email?.split('@')[0] || t('accountFallback');
 
 
 

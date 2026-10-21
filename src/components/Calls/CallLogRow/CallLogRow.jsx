@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Box, Button, ButtonBase, Collapse, IconButton, Tooltip, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight as DetailsIcon, ContentCopy as CopyIcon, Phone as PhoneIcon } from '@mui/icons-material';
+import { Block as BlockIcon, ChevronRight as DetailsIcon, ContentCopy as CopyIcon, LockOpen as UnblockIcon, Phone as PhoneIcon } from '@mui/icons-material';
 import Bdi from '../../../i18n/Bdi';
 import AudioPreview from '../../common/AudioPreview/AudioPreview';
 import { isolated } from '../../Phone/isolated';
@@ -10,13 +10,15 @@ import { formatTime } from '../../../utils/dateUtils';
 import { useDialNow } from '../../../hooks/useDialNow';
 import CallDirectionIcon from './CallDirectionIcon';
 import { callFacts, recordingUrl, shortDuration } from './callDirection';
+import { useNumberBlock } from '../CallActions/CallActions';
 
 /**
  * One call in the phone's call history, on one line: direction, the other
  * party's number, how long it took and when. A tap opens the line in place
- * with what you do next: call back, play the recording, copy, or details.
+ * with what you do next: call back, play the recording, copy, block the
+ * number, or details.
  */
-export default function CallLogRow({ call, expanded, onToggle, onOpenDetails }) {
+export default function CallLogRow({ call, expanded, onToggle, onOpenDetails, onBlockChanged }) {
   const { t } = useTranslation('calls');
   const theme = useTheme();
   const { canDial, dialNow } = useDialNow();
@@ -25,6 +27,8 @@ export default function CallLogRow({ call, expanded, onToggle, onOpenDetails }) 
   const time = formatTime(call.created_at);
   const number = facts.number || t('mobile.unknown');
   const recording = recordingUrl(call);
+  const { blocked, toggle: toggleBlock } = useNumberBlock({ call, onChanged: onBlockChanged });
+  const blockLabel = blocked ? t('block.unblockNumber') : t('block.blockNumber');
   const label = facts.kind === 'unknown'
     ? `${t('mobile.kind.unknown')} ${isolated(number)}, ${time}`
     : t(`mobile.row.${facts.kind}`, { number: isolated(number), time });
@@ -73,6 +77,13 @@ export default function CallLogRow({ call, expanded, onToggle, onOpenDetails }) 
               <Tooltip title={copied ? t('mobile.actions.copied') : t('mobile.actions.copy')}>
                 <IconButton aria-label={t('mobile.actions.copy')} onClick={copy}>
                   <CopyIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {facts.number && (
+              <Tooltip title={blockLabel}>
+                <IconButton aria-label={blockLabel} onClick={toggleBlock} data-testid="call-log-block">
+                  {blocked ? <UnblockIcon fontSize="small" /> : <BlockIcon fontSize="small" color="error" />}
                 </IconButton>
               </Tooltip>
             )}

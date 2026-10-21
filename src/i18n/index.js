@@ -22,16 +22,20 @@ import enPhone from './locales/en/phone.json';
 import hePhone from './locales/he/phone.json';
 import enSearch from './locales/en/search.json';
 import heSearch from './locales/he/search.json';
+import enTour from './locales/en/tour.json';
+import heTour from './locales/he/tour.json';
+import enNotifications from './locales/en/notifications.json';
+import heNotifications from './locales/he/notifications.json';
 
 i18n.use(initReactI18next).init({
   resources: {
-    en: { common: enCommon, nav: enNav, auth: enAuth, extensions: enExtensions, calls: enCalls, callConditions: enCallConditions, routes: enRoutes, bridges: enBridges, phone: enPhone, search: enSearch },
-    he: { common: heCommon, nav: heNav, auth: heAuth, extensions: heExtensions, calls: heCalls, callConditions: heCallConditions, routes: heRoutes, bridges: heBridges, phone: hePhone, search: heSearch },
+    en: { common: enCommon, nav: enNav, auth: enAuth, extensions: enExtensions, calls: enCalls, callConditions: enCallConditions, routes: enRoutes, bridges: enBridges, phone: enPhone, search: enSearch, tour: enTour, notifications: enNotifications },
+    he: { common: heCommon, nav: heNav, auth: heAuth, extensions: heExtensions, calls: heCalls, callConditions: heCallConditions, routes: heRoutes, bridges: heBridges, phone: hePhone, search: heSearch, tour: heTour, notifications: heNotifications },
   },
   lng: readLanguage(), // start in the stored language, so text never flashes English
   fallbackLng: DEFAULT_LANGUAGE,
   supportedLngs: SUPPORTED_LANGUAGES,
-  ns: ['common', 'nav', 'auth', 'extensions', 'calls', 'callConditions', 'routes', 'bridges', 'phone', 'search'],
+  ns: ['common', 'nav', 'auth', 'extensions', 'calls', 'callConditions', 'routes', 'bridges', 'phone', 'search', 'tour', 'notifications'],
   defaultNS: 'common',
   interpolation: { escapeValue: false }, // React already escapes
   react: { useSuspense: false }, // a suspended translation inside Layout would reset its state

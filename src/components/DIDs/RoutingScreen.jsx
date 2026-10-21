@@ -23,8 +23,8 @@ export default function RoutingScreen() {
   const did = params.get('did');
 
   if (!did) return <DIDsList portalMode={portalMode} />;
-  // The workflow diagram is not offered on a phone. A typed or old link to it
-  // opens the route's details instead.
-  if (isPhone) return <Navigate to={`/routes?route=${encodeURIComponent(did)}`} replace />;
+  // The workflow diagram is an admin's, and is not offered on a phone either.
+  // A typed or old link to it opens the route's details instead.
+  if (isPhone || portalMode) return <Navigate to={`/routes?route=${encodeURIComponent(did)}`} replace />;
   return <PBXRouting onClose={() => setParams({}, { replace: true })} />;
 }

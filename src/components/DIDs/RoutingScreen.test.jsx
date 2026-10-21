@@ -5,8 +5,10 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import RoutingScreen from './RoutingScreen.jsx';
 import { pretendPhoneScreen } from '../../test/phoneScreen';
 
-vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: true }) }));
-vi.mock('../../context/UserAuthContext', () => ({ useUserAuth: () => ({ isAuthenticated: false }) }));
+// Who is signed in: an account (admin) unless a test signs in a portal user.
+const session = vi.hoisted(() => ({ admin: true }));
+vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: session.admin }) }));
+vi.mock('../../context/UserAuthContext', () => ({ useUserAuth: () => ({ isAuthenticated: !session.admin }) }));
 vi.mock('../PBXRouting/PBXRoutingView.jsx', () => ({ default: () => <div>workflow diagram</div> }));
 vi.mock('./DIDs.jsx', () => ({ default: () => <div>routes list</div> }));
 
@@ -26,7 +28,7 @@ const open = (url) => render(
 );
 
 let backToDesktop = () => {};
-afterEach(() => { backToDesktop(); backToDesktop = () => {}; });
+afterEach(() => { backToDesktop(); backToDesktop = () => {}; session.admin = true; });
 
 describe('/routes', () => {
   it('shows the list', async () => {
@@ -41,6 +43,14 @@ describe('/routes', () => {
 
   it("opens the route's details instead of the workflow on a phone", async () => {
     backToDesktop = pretendPhoneScreen();
+    open('/routes?did=r1');
+    expect(await screen.findByText('routes list')).toBeInTheDocument();
+    expect(screen.getByTestId('where')).toHaveTextContent('/routes?route=r1');
+    expect(screen.queryByText('workflow diagram')).not.toBeInTheDocument();
+  });
+
+  it("opens the route's details instead of the workflow for a portal user on a desktop", async () => {
+    session.admin = false;
     open('/routes?did=r1');
     expect(await screen.findByText('routes list')).toBeInTheDocument();
     expect(screen.getByTestId('where')).toHaveTextContent('/routes?route=r1');

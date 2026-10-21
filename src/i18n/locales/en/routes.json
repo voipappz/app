@@ -38,7 +38,6 @@
     "call": "Call {{number}}",
     "editNumber": "Edit Number",
     "editRoute": "Edit Route — opens its visual routing flow",
-    "routing": "Call routing — visual flow",
     "duplicate": "Duplicate Route",
     "delete": "Delete"
   },

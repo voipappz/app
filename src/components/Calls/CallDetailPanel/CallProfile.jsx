@@ -11,7 +11,7 @@ import { formatClock } from '../callFormat';
 // people read. Listed in reading order; any other key follows, sorted, under
 // its raw name — a field the API adds shows up without a release here.
 export const PROFILE_LABELS = [
-  'state', 'disposition', 'duration', 'caller', 'callee', 'caller_id_number',
+  'uuid', 'cid', 'state', 'disposition', 'duration', 'caller', 'callee', 'caller_id_number',
   'contact_name', 'user_name', 'extension_name', 'did_name', 'queue_name',
   'campaign_name', 'environment_name', 'provider_name', 'provider_status',
   'tariff_name', 'sip_call_id', 'sip_user_agent', 'sip_network_ip',
@@ -19,8 +19,9 @@ export const PROFILE_LABELS = [
   'rtp_audio_in_quality_percentage', 'timezone', 'domain',
 ];
 
-// Already shown in the rows above the section (Direction, Status, CID,
-// Contact, Provider, Hangup, Talk time) — listed once, not twice.
+// Already shown above the list by default (Direction, Status, CID, Contact,
+// Provider, Hangup, Talk time) — listed once, not twice. A caller that shows
+// other fields above passes its own set.
 const SHOWN_ABOVE = new Set(['direction', 'cause', 'cid', 'contact', 'provider', 'hangup_disposition', 'talk_duration']);
 
 // Never on screen: internal keys (leading underscore) and anything that
@@ -37,11 +38,11 @@ const display = (key, value) => {
 };
 
 // The visible rows of a call's profile: [{ key, label?, value, copyable }].
-export const profileRows = (profile) => {
+export const profileRows = (profile, shownElsewhere = SHOWN_ABOVE) => {
   if (!profile || typeof profile !== 'object') return [];
   const known = new Map(PROFILE_LABELS.map((key, index) => [key, index]));
   return Object.entries(profile)
-    .filter(([key, value]) => !SHOWN_ABOVE.has(key) && !HIDDEN(key)
+    .filter(([key, value]) => !shownElsewhere.has(key) && !HIDDEN(key)
       && value !== null && value !== undefined && String(value).trim() !== '')
     .sort(([a], [b]) => {
       const ia = known.has(a) ? known.get(a) : Infinity;
@@ -79,22 +80,23 @@ const CopyButton = ({ text, label }) => {
 };
 
 // The call's profile — what the switch recorded about it — as a compact
-// key/value list. Empty values are left out.
-const CallProfile = ({ profile }) => {
+// key/value list. Empty values are left out. `shownElsewhere`: the keys the
+// caller already shows; `heading={false}` when the caller titles the list.
+const CallProfile = ({ profile, shownElsewhere, heading = true }) => {
   const { t } = useTranslation('calls');
-  const rows = profileRows(profile);
+  const rows = profileRows(profile, shownElsewhere);
   if (!rows.length) return null;
 
   return (
     <>
-    <Divider sx={{ mt: 1 }} />
+    {heading && <Divider sx={{ mt: 1 }} />}
     <Box data-testid="call-profile" sx={{ px: 2, pb: 1 }}>
-      <Box sx={{ pt: 1.5, pb: 0.75, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+      {heading && <Box sx={{ pt: 1.5, pb: 0.75, display: 'flex', alignItems: 'center', gap: 0.75 }}>
         <TuneIcon sx={{ fontSize: 18, color: 'var(--text-secondary)' }} />
         <Typography variant="subtitle2" sx={{ fontWeight: 600, fontFamily: 'Rubik, sans-serif', color: 'var(--text-primary)' }}>
           {t('profile.title')}
         </Typography>
-      </Box>
+      </Box>}
       <Box
         component="dl"
         sx={{

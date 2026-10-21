@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import i18n from '../../../i18n';
 import CallLogRow from './CallLogRow';
+import { callsApi } from '../../../services/api/callsApi';
 
 const dialNow = vi.fn();
 let canDial = true;
 vi.mock('../../../hooks/useDialNow', () => ({ useDialNow: () => ({ canDial, dialNow }) }));
+vi.mock('../../../context/NotificationContext', () => ({ useNotification: () => ({ showNotification: vi.fn() }) }));
+vi.mock('../../../services/api/callsApi', () => ({ callsApi: { setNumberBlocked: vi.fn(async () => ({})) } }));
 
 const call = (profile, extra = {}) => ({ uuid: 'c1', created_at: '2026-10-13T11:05:00Z', profile, ...extra });
 const missed = call({ direction: 'incoming', cause: 'no_answer', caller: '0521234567', callee: '201' });
@@ -70,5 +73,20 @@ describe('CallLogRow', () => {
     expect(screen.getByRole('button', { name: /^שיחה שלא נענתה מ־/ })).toBeInTheDocument();
     expect(screen.getByText('0521234567').tagName).toBe('BDI');
     expect(screen.getByRole('button', { name: 'פרטים' })).toBeInTheDocument();
+  });
+
+  it('blocks the other party from the open line after asking, then asks for a refresh', async () => {
+    window.confirm = vi.fn(() => true);
+    const onBlockChanged = vi.fn();
+    renderRow({ call: missed, expanded: true, onBlockChanged });
+    fireEvent.click(screen.getByRole('button', { name: 'Block number' }));
+    await waitFor(() => expect(onBlockChanged).toHaveBeenCalled());
+    expect(callsApi.setNumberBlocked).toHaveBeenCalledWith('c1', true);
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('0521234567'));
+  });
+
+  it('offers Unblock when the server says the number is blocked', () => {
+    renderRow({ call: { ...missed, blacklisted: true }, expanded: true });
+    expect(screen.getByRole('button', { name: 'Unblock number' })).toBeInTheDocument();
   });
 });

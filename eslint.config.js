@@ -39,11 +39,6 @@ const PHYSICAL_SIDES_IN_SX = [
 const CONVERTED = [
   'src/i18n/**',
   'src/components/Extensions/**',
-  // MessageInput.jsx is an unused leftover with physical sides; not converted.
-  'src/components/Conversations/Conversation*.{js,jsx}',
-  'src/components/Conversations/ContactPanel.jsx',
-  'src/components/Conversations/SessionList.jsx',
-  'src/components/Conversations/useConversations.js',
   'src/components/Bridges/CallConditionBridge/**',
   // Routes (not the folder: DIDsList.jsx and DIDPanel.jsx are unused leftovers)
   'src/components/DIDs/DIDs.jsx',
@@ -75,11 +70,29 @@ const CONVERTED = [
   'src/components/Calls/CallDetailsScreen/**',
   'src/components/Calls/CallMobileView/**',
   'src/components/Calls/CallHistory/**',
+  // The Calls screen's table, panels and row menus
+  'src/components/Calls/callWords.js',
+  'src/components/Calls/CallIcons.jsx',
+  'src/components/Calls/CallDetailPanel/**',
+  'src/components/Calls/CallActions/**',
+  'src/components/Calls/ColumnSelector/**',
+  'src/components/Calls/CustomFooter/**',
+  'src/components/Calls/ColumnHandlers/**',
   // The phone menu (IVR) for users
   'src/components/Bridges/IvrMenu/**',
   'src/components/Login/**',
   'src/components/shared/ResponsiveTable/**',
   'src/components/ui/**',
+  // Shared pieces every user meets
+  'src/utils/chipStyles.js',
+  'src/hooks/useLayoutSize.js',
+  'src/components/Tour/TourOverlay.jsx',
+  'src/components/ErrorBoundary/**',
+  'src/components/TopBar/ToolDialog.jsx',
+  'src/components/Monitoring/MonitoringSidebar.jsx',
+  'src/components/Notifications/NotificationPanel/**',
+  'src/components/shared/RowEventsButton/**',
+  'src/components/common/ImportCSVDialog/**',
 ]
 
 export default [

@@ -1,5 +1,6 @@
 import { alpha } from '@mui/material/styles';
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -61,8 +62,8 @@ const ImportCSVDialog = ({
   open,
   onClose,
   onImport,
-  title = 'Import from CSV',
-  entityName = 'records',
+  title,
+  entityName: entityNameProp,
   environments = [],
   selectedEnvironment = '',
   requireEnvironment = true,
@@ -77,7 +78,9 @@ const ImportCSVDialog = ({
   validateRow = null,
   prepareRow = (row) => row,
 }) => {
-  const isNarrow = useMediaQuery((t) => t.breakpoints.down('sm'));
+  const { t } = useTranslation();
+  const entityName = entityNameProp ?? t('importCsv.entityName');
+  const isNarrow = useMediaQuery((theme) => theme.breakpoints.down('sm'));
   const [importFile, setImportFile] = useState(null);
   const [environmentUuid, setEnvironmentUuid] = useState(selectedEnvironment);
   const [loading, setLoading] = useState(false);
@@ -107,7 +110,7 @@ const ImportCSVDialog = ({
       skipEmptyLines: true,
       complete: (results) => {
         if (results.errors.length > 0) {
-          setError(`CSV parsing errors: ${results.errors.map(e => e.message).join(', ')}`);
+          setError(t('importCsv.parseErrors', { errors: results.errors.map(e => e.message).join(', ') }));
           setCsvPreviewData(null);
           setCsvHeaders([]);
           setShowPreview(false);
@@ -121,7 +124,7 @@ const ImportCSVDialog = ({
         setError(null);
       },
       error: (err) => {
-        setError(`Failed to parse CSV: ${err.message}`);
+        setError(t('importCsv.parseFailed', { message: err.message }));
         setCsvPreviewData(null);
         setCsvHeaders([]);
         setShowPreview(false);
@@ -200,15 +203,15 @@ const ImportCSVDialog = ({
 
   const handleImportSubmit = async () => {
     if (requireEnvironment && !environmentUuid) {
-      setError('Choose an application');
+      setError(t('importCsv.chooseApplication'));
       return;
     }
     if (badRows) {
-      setError(`Fix the ${badRows === 1 ? 'row' : `${badRows} rows`} marked in red first`);
+      setError(badRows === 1 ? t('importCsv.fixRow') : t('importCsv.fixRows', { n: badRows }));
       return;
     }
     if (!importFile && !csvPreviewData) {
-      setError('Please select a CSV file');
+      setError(t('importCsv.selectFile'));
       return;
     }
 
@@ -236,10 +239,15 @@ const ImportCSVDialog = ({
       const failed = Array.isArray(result?.failed) ? result.failed : [];
       if (result?.added?.length || !failed.length) onSuccess?.(result);
       if (failed.length) {
-        setError(`${result?.message || `${failed.length} failed`}. ${failed.map((f) => `Line ${f.line}${f.username ? ` (${f.username})` : ''}: ${f.error}`).join(' · ')}`);
+        const lines = failed.map((f) => (f.username
+          ? t('importCsv.failedLineUser', { line: f.line, username: f.username, error: f.error })
+          : t('importCsv.failedLine', { line: f.line, error: f.error })));
+        setError(`${result?.message || t('importCsv.failedCount', { n: failed.length })}. ${lines.join(' · ')}`);
         return;
       }
-      setSuccess(result?.message ? `${entityName}: ${result.message}` : `${entityName} imported`);
+      setSuccess(result?.message
+        ? t('importCsv.importedWithMessage', { entity: entityName, message: result.message })
+        : t('importCsv.imported', { entity: entityName }));
 
       // Close dialog after 2 seconds on success
       setTimeout(() => {
@@ -248,7 +256,7 @@ const ImportCSVDialog = ({
 
     } catch (err) {
       console.error('CSV import error:', err);
-      setError(err.message || `Failed to import ${entityName}`);
+      setError(err.message || t('importCsv.importFailed', { entity: entityName }));
     } finally {
       setLoading(false);
     }
@@ -312,7 +320,7 @@ const ImportCSVDialog = ({
       // tap one. Go full screen there and let the grid scroll.
       fullScreen={isNarrow}
     >
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle>{title ?? t('importCsv.title')}</DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -328,14 +336,14 @@ const ImportCSVDialog = ({
         {/* Environment Selection */}
         {requireEnvironment && environments.length > 0 && (
           <FormControl fullWidth sx={{ mb: 3, mt: 1 }}>
-            <InputLabel>Application</InputLabel>
+            <InputLabel>{t('importCsv.application')}</InputLabel>
             <Select
               value={environmentUuid}
               onChange={(e) => setEnvironmentUuid(e.target.value)}
-              label="Application"
+              label={t('importCsv.application')}
               disabled={loading}
             >
-              <MenuItem value="">Select Application...</MenuItem>
+              <MenuItem value="">{t('importCsv.selectApplication')}</MenuItem>
               {environments.map((env) => (
                 <MenuItem key={env.uuid} value={env.uuid}>
                   {env.name}
@@ -350,18 +358,18 @@ const ImportCSVDialog = ({
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="subtitle2" fontWeight={600}>
-                <VisibilityIcon sx={{ fontSize: 18, verticalAlign: 'text-bottom', mr: 0.5 }} />
-                CSV Preview
+                <VisibilityIcon sx={{ fontSize: 18, verticalAlign: 'text-bottom', me: 0.5 }} />
+                {t('importCsv.preview')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Chip
-                  label={`${csvPreviewData.length} row${csvPreviewData.length !== 1 ? 's' : ''}`}
+                  label={csvPreviewData.length === 1 ? t('importCsv.oneRow') : t('importCsv.rows', { n: csvPreviewData.length })}
                   size="small"
                   color="primary"
                   variant="outlined"
                 />
                 <Chip
-                  label={`${csvHeaders.length} column${csvHeaders.length !== 1 ? 's' : ''}`}
+                  label={csvHeaders.length === 1 ? t('importCsv.oneColumn') : t('importCsv.columns', { n: csvHeaders.length })}
                   size="small"
                   color="primary"
                   variant="outlined"
@@ -371,14 +379,14 @@ const ImportCSVDialog = ({
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="caption" color="text.secondary">
-                <EditIcon sx={{ fontSize: 12, verticalAlign: 'text-bottom' }} /> Click any cell to edit
+                <EditIcon sx={{ fontSize: 12, verticalAlign: 'text-bottom' }} /> {t('importCsv.clickToEdit')}
               </Typography>
               <Button
                 size="small"
                 variant="outlined"
                 onClick={handleChangeFile}
               >
-                Change File
+                {t('importCsv.changeFile')}
               </Button>
             </Box>
 
@@ -422,8 +430,8 @@ const ImportCSVDialog = ({
                             data-invalid={cellError ? 'true' : undefined}
                             sx={{
                               cursor: 'pointer',
-                              bgcolor: cellError ? (t) => alpha(t.palette.error.main, 0.08) : undefined,
-                              boxShadow: cellError ? (t) => `inset 0 0 0 1px ${t.palette.error.main}` : undefined,
+                              bgcolor: cellError ? (theme) => alpha(theme.palette.error.main, 0.08) : undefined,
+                              boxShadow: cellError ? (theme) => `inset 0 0 0 1px ${theme.palette.error.main}` : undefined,
                               '&:hover': { bgcolor: 'action.hover' }
                             }}
                           >
@@ -446,7 +454,7 @@ const ImportCSVDialog = ({
                         );
                       })}
                       <TableCell sx={{ width: 48 }}>
-                        <Tooltip title="Remove row">
+                        <Tooltip title={t('importCsv.removeRow')}>
                           <IconButton
                             size="small"
                             onClick={() => handleDeleteRow(rowIndex)}
@@ -470,14 +478,16 @@ const ImportCSVDialog = ({
                 disabled={loading || !csvHeaders.length}
                 data-testid="add-row"
               >
-                Add Row
+                {t('importCsv.addRow')}
               </Button>
               <Typography variant="caption" color="text.secondary">
-                {(csvPreviewData || []).length} row{(csvPreviewData || []).length === 1 ? '' : 's'} will be imported
+                {(csvPreviewData || []).length === 1
+                  ? t('importCsv.willImportOne')
+                  : t('importCsv.willImport', { n: (csvPreviewData || []).length })}
               </Typography>
               {badRows > 0 && (
                 <Typography variant="caption" color="error" data-testid="bad-rows">
-                  · {badRows} {badRows === 1 ? 'row needs' : 'rows need'} fixing
+                  {badRows === 1 ? t('importCsv.oneNeedsFixing') : t('importCsv.needFixing', { n: badRows })}
                 </Typography>
               )}
             </Box>
@@ -488,7 +498,7 @@ const ImportCSVDialog = ({
         {formatHint && !showPreview && (
           <Alert severity="info" sx={{ mb: 2 }}>
             <Typography variant="body2" component="div">
-              <strong>Format:</strong> {formatHint}
+              <strong>{t('importCsv.format')}</strong> {formatHint}
             </Typography>
           </Alert>
         )}
@@ -525,10 +535,10 @@ const ImportCSVDialog = ({
               />
               <CloudUploadIcon sx={{ fontSize: 48, color: importFile ? 'success.main' : 'grey.500', mb: 1 }} />
               <Typography variant="body1" color={importFile ? 'success.main' : 'text.secondary'}>
-                {importFile ? importFile.name : 'Drop CSV file here or click to select'}
+                {importFile ? importFile.name : t('importCsv.dropHere')}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Allowed extensions: .csv
+                {t('importCsv.allowed')}
               </Typography>
             </Box>
 
@@ -536,7 +546,7 @@ const ImportCSVDialog = ({
             {showTemplateOption && templateHeaders.length > 0 && templateData.length > 0 && (
               <Box sx={{ mt: 2, textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Or start with a ready-made template:
+                  {t('importCsv.orTemplate')}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                   <Button
@@ -545,7 +555,7 @@ const ImportCSVDialog = ({
                     disabled={loading}
                     startIcon={<EditIcon />}
                   >
-                    Use Template
+                    {t('importCsv.useTemplate')}
                   </Button>
                   <Button
                     variant="outlined"
@@ -554,7 +564,7 @@ const ImportCSVDialog = ({
                     startIcon={<DownloadIcon />}
                     data-testid="download-template"
                   >
-                    Download Template
+                    {t('importCsv.downloadTemplate')}
                   </Button>
                 </Box>
               </Box>
@@ -567,14 +577,14 @@ const ImportCSVDialog = ({
           <Box sx={{ mt: 2 }}>
             <LinearProgress />
             <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
-              Importing...
+              {t('importCsv.importing')}
             </Typography>
           </Box>
         )}
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={loading}>
-          Cancel
+          {t('importCsv.cancel')}
         </Button>
         <Button
           variant="contained"
@@ -582,7 +592,7 @@ const ImportCSVDialog = ({
           disabled={(requireEnvironment && !environmentUuid) || !importFile || loading || badRows > 0}
           startIcon={loading ? <CircularProgress size={20} /> : <UploadIcon />}
         >
-          {loading ? 'Importing...' : 'Import'}
+          {loading ? t('importCsv.importing') : t('importCsv.import')}
         </Button>
       </DialogActions>
     </Dialog>
