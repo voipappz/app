@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { callsApi } from './callsApi';
 import { apiService } from '../apiService';
 
-vi.mock('../apiService', () => ({ apiService: { get: vi.fn() }, toFormData: vi.fn() }));
+vi.mock('../apiService', () => ({ apiService: { get: vi.fn(), post: vi.fn() }, toFormData: vi.fn() }));
 
 // Braces matter: a function returned from beforeEach is run as its cleanup.
-beforeEach(() => { apiService.get.mockReset(); });
+beforeEach(() => { apiService.get.mockReset(); apiService.post.mockReset(); });
 
 describe('getTranscript', () => {
   it('returns the text', async () => {
@@ -45,5 +45,20 @@ describe('getCallHistory', () => {
   it('lets any other failure through', async () => {
     apiService.get.mockRejectedValue(Object.assign(new Error('boom'), { status: 500 }));
     await expect(callsApi.getCallHistory('c1')).rejects.toThrow('boom');
+  });
+});
+
+describe('requestTranscription', () => {
+  it('posts to the call\'s transcribe route', async () => {
+    apiService.post.mockResolvedValue({ requested: true, services: 1 });
+    expect(await callsApi.requestTranscription('c1')).toEqual({ requested: true, services: 1 });
+    expect(apiService.post.mock.calls[0][0]).toBe('/api/calls/c1/transcribe');
+  });
+
+  it('throws the server\'s reason', async () => {
+    const error = new Error('Failed requesting: HTTP 422: {"id":"unprocessable_entity","message":"This call has no recording"}');
+    error.status = 422;
+    apiService.post.mockRejectedValue(error);
+    await expect(callsApi.requestTranscription('c1')).rejects.toMatchObject({ message: 'This call has no recording', status: 422 });
   });
 });
