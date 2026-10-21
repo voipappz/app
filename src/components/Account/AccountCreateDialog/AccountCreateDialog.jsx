@@ -26,7 +26,7 @@ import { Close as CloseIcon, Visibility, VisibilityOff, CloudQueue as CloudIcon,
 import { useState, useEffect } from 'react';
 import { useCustomerEnvironment } from '../../../context/CustomerEnvironmentContext';
 import SecretField from '../../common/SecretField.jsx';
-import { PASSWORD_HINT, passwordPolicyError } from '../../../utils/passwordPolicy';
+import { passwordHint, passwordPolicyError, usePasswordPolicy } from '../../../utils/passwordPolicy';
 
 const icon = <CheckBoxOutlineBlank fontSize="small" />;
 const checkedIcon = <CheckBoxIcon fontSize="small" />;
@@ -53,6 +53,7 @@ const AccountCreateDialog = ({
   // Get currently selected environments from context to pre-select them
   const { selectedEnvironments } = useCustomerEnvironment();
 
+  const passwordPolicy = usePasswordPolicy();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -124,8 +125,8 @@ const AccountCreateDialog = ({
 
     if (!formData.password?.trim()) {
       newErrors.password = 'Password is required';
-    } else if (passwordPolicyError(formData.password)) {
-      newErrors.password = passwordPolicyError(formData.password);
+    } else if (passwordPolicyError(formData.password, passwordPolicy)) {
+      newErrors.password = passwordPolicyError(formData.password, passwordPolicy);
     }
 
     if (formData.selectedEnvironments.length === 0) {
@@ -287,7 +288,7 @@ const AccountCreateDialog = ({
               value={formData.password}
               onChange={(e) => handleChange('password', e.target.value)}
               error={!!errors.password}
-              helperText={errors.password || PASSWORD_HINT}
+              helperText={errors.password || passwordHint(passwordPolicy)}
               disabled={loading}
               required
               placeholder="Enter password"

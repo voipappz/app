@@ -15,7 +15,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { useLogin } from './Login';
 import Bdi from '../../i18n/Bdi';
 import LanguageLink from '../../i18n/LanguageLink';
-import { isPasswordValid } from '../../utils/passwordPolicy';
+import { isPasswordValid, passwordRuleMessage, usePasswordPolicy } from '../../utils/passwordPolicy';
 import './Login.css';
 
 // `switcher`: the User / Account toggle (SignIn), shown on the credentials step.
@@ -53,6 +53,7 @@ const Login = ({ switcher = null }) => {
     handleForgotResetSubmit
   } = useLogin();
   const { t } = useTranslation('auth');
+  const passwordPolicy = usePasswordPolicy();
   // The user sign-in is this host's `/`; shown as an address people recognise.
   const userSignInAddress = `${window.location.host}/`;
 
@@ -409,8 +410,7 @@ const Login = ({ switcher = null }) => {
               autoFocus
               autoComplete="new-password"
             />
-            <FormHelperText error={newPassword !== '' && !isPasswordValid(newPassword)} className="help-block">{t('error.passwordTooShort')}</FormHelperText>
-            <FormHelperText error={newPassword !== '' && !isPasswordValid(newPassword)} className="help-block">{t('error.passwordTooShort')}</FormHelperText>
+            <FormHelperText error={newPassword !== '' && !isPasswordValid(newPassword, passwordPolicy)} className="help-block">{passwordRuleMessage(t, passwordPolicy)}</FormHelperText>
           </FormControl>
 
           <FormControl fullWidth className="form-group">
@@ -451,7 +451,7 @@ const Login = ({ switcher = null }) => {
               variant="contained"
               className="login-button"
               data-testid="forgot-reset-submit-button"
-              disabled={loading || forgotSent || !isPasswordValid(newPassword) || newPassword !== confirmPassword}
+              disabled={loading || forgotSent || !isPasswordValid(newPassword, passwordPolicy) || newPassword !== confirmPassword}
               startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
             >
               {loading ? t('forgot.resetting') : t('forgot.reset')}

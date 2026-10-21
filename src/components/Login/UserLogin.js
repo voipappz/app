@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { getTokenExpiry } from '../../utils/jwt';
 import { logLoginDebug } from '../../utils/loginDebug';
-import { isPasswordValid } from '../../utils/passwordPolicy';
+import { isPasswordValid, passwordRuleMessage } from '../../utils/passwordPolicy';
 
 // The end-user (customer-facing) login — mirrors useLogin (Login.js) but
 // against the /auth/user_* surface. voipappz-api draws this line at the
@@ -113,7 +113,7 @@ export const useUserLogin = () => {
   const handleForgotResetSubmit = async (e) => {
     e.preventDefault();
     if (!isPasswordValid(newPassword)) {
-      setError(t('error.passwordTooShort'));
+      setError(passwordRuleMessage(t));
       return;
     }
     if (newPassword !== confirmPassword) {
