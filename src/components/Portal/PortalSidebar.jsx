@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next';
-import { Box, Drawer, IconButton, Tooltip, useTheme } from '@mui/material';
+import { Box, Drawer, IconButton, Tooltip } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { usePortalSidebar } from '../../context/PortalSidebarContext';
 import PhoneScreen from '../Phone/PhoneScreen.jsx';
 import CallDetailPanel from '../Calls/CallDetailPanel/CallDetailPanel.jsx';
 
 /**
- * The one sidebar, open on the right — in the portal and the account console.
+ * The one sidebar, open on the right (on the left in Hebrew) — in the portal
+ * and the account console. MUI's Drawer mirrors `anchor="right"` itself in a
+ * right-to-left theme; flipping it here as well put it back on the right.
  *
  * The phone opens here, and so does a call's details — same drawer, same edge,
  * so there is one place on the screen where things appear. Right, because the
@@ -19,7 +21,6 @@ export const SIDEBAR_WIDTH = 380;
 
 export default function PortalSidebar() {
   const { t } = useTranslation('phone');
-  const isRtl = useTheme().direction === 'rtl';
   const { view, params, close } = usePortalSidebar();
   const showingCall = view === 'call';
 
@@ -29,7 +30,7 @@ export default function PortalSidebar() {
 
   return (
     <Drawer
-      anchor={isRtl ? 'left' : 'right'} open={Boolean(view)} onClose={close} data-testid="portal-sidebar" keepMounted
+      anchor="right" open={Boolean(view)} onClose={close} data-testid="portal-sidebar" keepMounted
       PaperProps={{ sx: { width: { xs: '100vw', sm: SIDEBAR_WIDTH }, maxWidth: '100vw', border: 'none', display: 'flex', flexDirection: 'column' } }}
     >
       {/* The phone stays MOUNTED while a call's details are showing, and is

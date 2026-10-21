@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import i18n from '../../i18n';
-import { callFieldName, callStatusWord } from './callWords';
+import { callFieldName, callStatusWord, callValueName } from './callWords';
 
 afterEach(() => i18n.changeLanguage('en'));
 
@@ -15,6 +15,24 @@ describe('callFieldName', () => {
     expect(callFieldName('profile.talk_duration', 'Talk Duration')).toBe('משך שיחה');
     expect(callFieldName('environment', 'Environment')).toBe('אפליקציה');
     expect(callFieldName('profile.something_new', 'Something New')).toBe('Something New');
+  });
+
+  // The API filters a record by its uuid: campaign_uuid, queue_uuid, call.ivr_uuid.
+  it('names a filter on a record by the record, in Hebrew', async () => {
+    await i18n.changeLanguage('he');
+    expect(callFieldName('campaign_uuid', 'Campaign')).toBe('קמפיין');
+    expect(callFieldName('queue_uuid', 'Queue')).toBe('תור');
+    expect(callFieldName('call.ivr_uuid', 'IVR')).toBe('תפריט קולי');
+    expect(callFieldName('billing_duration', 'Billing Duration')).toBe('משך לחיוב');
+  });
+});
+
+describe('callValueName', () => {
+  it("keeps the API's name in English, says a known value in Hebrew, and keeps a record's name", async () => {
+    expect(callValueName('answer', 'answer')).toBe('answer');
+    await i18n.changeLanguage('he');
+    expect(callValueName('no_answer', 'no_answer')).toBe('לא נענתה');
+    expect(callValueName('5f1c-uuid', 'Sales queue')).toBe('Sales queue');
   });
 });
 

@@ -199,7 +199,9 @@
     "campaign": "קמפיין",
     "tariff": "תעריף",
     "meta": "תגית",
-    "uuid": "מזהה"
+    "uuid": "מזהה",
+    "ivr": "תפריט קולי",
+    "billing_duration": "משך לחיוב"
   },
   "status": {
     "available": "זמין",

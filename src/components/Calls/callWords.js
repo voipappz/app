@@ -7,12 +7,24 @@ import i18n from '../../i18n';
 // exactly as they arrive; Hebrew shows the app's own name for that field when
 // it has one, else the name as sent.
 
-const lastPart = (key) => String(key || '').split('.').pop();
+// 'call.campaign_uuid' -> 'campaign': the field after its last dot, and a
+// filter on a record's uuid named for the record.
+const fieldKey = (key) => String(key || '').split('.').pop().replace(/_uuid$/, '');
 
 /** A field's name, e.g. ('profile.talk_duration', 'Talk Duration'). */
 export function callFieldName(key, name) {
   if (i18n.language !== 'he') return name;
-  const textKey = `calls:fields.${lastPart(key)}`;
+  const textKey = `calls:fields.${fieldKey(key)}`;
+  return i18n.exists(textKey) ? i18n.t(textKey) : name;
+}
+
+/**
+ * One of a filter's choices (a cause, a direction…). English shows it as the
+ * API names it; Hebrew says a value the app knows, else the API's name.
+ */
+export function callValueName(value, name) {
+  if (i18n.language !== 'he') return name;
+  const textKey = `calls:status.${String(value).toLowerCase().replace(/-/g, '_')}`;
   return i18n.exists(textKey) ? i18n.t(textKey) : name;
 }
 

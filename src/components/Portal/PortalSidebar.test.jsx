@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import PortalSidebar from './PortalSidebar.jsx';
 
 let sidebar = { view: null, params: null, close: vi.fn() };
@@ -34,5 +35,14 @@ describe('the portal sidebar', () => {
     render(<PortalSidebar />);
     expect(screen.getByTestId('phone-screen')).toHaveAttribute('data-number', '0501234567');
     expect(screen.getByTestId('phone-screen')).toHaveAttribute('data-device', 'dev-1');
+  });
+
+  // The phone opens from the end of the top bar: the right, and the left in
+  // Hebrew. MUI mirrors the anchor itself; flipping it twice put it back on
+  // the right.
+  it.each([['ltr', 'Right'], ['rtl', 'Left']])('opens from the screen\'s end side (%s)', (direction, side) => {
+    sidebar = { view: 'phone', params: { tab: 'dialpad' }, close: vi.fn() };
+    render(<ThemeProvider theme={createTheme({ direction })}><PortalSidebar /></ThemeProvider>);
+    expect(document.querySelector('.MuiDrawer-paper')).toHaveClass(`MuiDrawer-paperAnchor${side}`);
   });
 });

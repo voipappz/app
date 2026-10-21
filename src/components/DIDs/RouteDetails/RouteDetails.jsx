@@ -85,7 +85,8 @@ export default function RouteDetails({
 
   return (
     <Drawer
-      anchor={theme.direction === 'rtl' ? 'left' : 'right'}
+      // On the left in Hebrew: MUI's Drawer mirrors the anchor itself.
+      anchor="right"
       open={open}
       onClose={onClose}
       PaperProps={{ className: 'route-details', 'data-testid': 'route-details', sx: { width: { xs: '100vw', sm: 440 } } }}

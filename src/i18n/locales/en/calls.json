@@ -199,7 +199,9 @@
     "campaign": "Campaign",
     "tariff": "Tariff",
     "meta": "Tag",
-    "uuid": "UUID"
+    "uuid": "UUID",
+    "ivr": "IVR",
+    "billing_duration": "Billing Duration"
   },
   "status": {
     "available": "Available",

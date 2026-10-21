@@ -52,7 +52,7 @@ import useNavBadges from '../../hooks/useNavBadges';
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined';
 import { formatClock, formatPercent } from './callFormat';
-import { callFieldName } from './callWords';
+import { callFieldName, callValueName } from './callWords';
 import { formatNumber } from '../../utils/numberUtils';
 
 // MUI Components
@@ -181,7 +181,15 @@ const Calls = () => {
   } = useCalls({ allTime: isMobile });
   // The filters' names as shown: the API names them in English (callWords.js).
   const shownSegments = useMemo(
-    () => (segments || []).map((segment) => ({ ...segment, label: callFieldName(segment.name || segment.field, segment.label) })),
+    () => (segments || []).map((segment) => ({
+      ...segment,
+      label: callFieldName(segment.name || segment.field, segment.label),
+      ...(Array.isArray(segment.data) && {
+        data: segment.data.map((option) => (option && typeof option === 'object'
+          ? { ...option, name: callValueName(option.value ?? option.uuid ?? option.id, option.name ?? option.label) }
+          : option)),
+      }),
+    })),
     [segments, t],
   );
 
