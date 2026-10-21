@@ -110,7 +110,10 @@
       "historyError": "Couldn't load the history",
       "history": "History with this number",
       "transcriptError": "Couldn't load the transcription",
-      "noHistory": "No other calls with this number"
+      "noHistory": "No other calls with this number",
+      "transcribe": "Transcribe",
+      "transcribeSent": "Transcription requested. It will show here when it is ready.",
+      "transcribeError": "Couldn't request a transcription"
     }
   },
   "stats": {

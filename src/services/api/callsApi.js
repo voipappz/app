@@ -126,6 +126,28 @@ export const callsApi = {
   },
 
   /**
+   * Ask the server to transcribe a call (the Transcribe button). The server
+   * runs the environment's transcribe service set to run on request; the text
+   * arrives later, through getTranscript.
+   * @param {string} callId - The call UUID
+   * @returns {Promise<Object>} - { requested: true, services }
+   * @throws {Error} - with the server's reason (no recording, no such service)
+   */
+  requestTranscription: async (callId) => {
+    try {
+      return await apiService.post(`/api/calls/${callId}/transcribe`, null, {}, `requesting a transcription for call ${callId}`, false);
+    } catch (error) {
+      // The reason is the JSON body after "HTTP <status>: ".
+      const body = String(error?.message || '').replace(/^[\s\S]*?HTTP \d+: /, '');
+      let reason = null;
+      try { reason = JSON.parse(body)?.message || null; } catch { /* not JSON */ }
+      const err = new Error(reason || error?.message || 'Transcription request failed');
+      err.status = error?.status;
+      throw err;
+    }
+  },
+
+  /**
    * The other calls with this call's number, as the server picks them. It also
    * decides what an unknown or hidden number means, so the app sends only the call.
    * @param {string} callId - The call UUID

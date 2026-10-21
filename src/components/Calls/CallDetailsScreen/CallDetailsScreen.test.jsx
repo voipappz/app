@@ -8,7 +8,7 @@ const dialNow = vi.fn();
 let canDial = true;
 vi.mock('../../../hooks/useDialNow', () => ({ useDialNow: () => ({ canDial, dialNow }) }));
 vi.mock('../../../services/api/callsApi', () => ({
-  callsApi: { getTranscript: vi.fn(), getCallHistory: vi.fn() },
+  callsApi: { getTranscript: vi.fn(), getCallHistory: vi.fn(), requestTranscription: vi.fn() },
 }));
 
 const call = {
@@ -60,6 +60,30 @@ describe('CallDetailsScreen', () => {
   it('has no summary section until the server sends one', () => {
     renderScreen();
     expect(screen.queryByTestId('call-details-summary')).toBeNull();
+  });
+
+  it('asks for a transcription when there is none', async () => {
+    callsApi.getTranscript.mockResolvedValue(null);
+    callsApi.requestTranscription.mockResolvedValue({ requested: true, services: 1 });
+    renderScreen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Transcribe' }));
+    expect(callsApi.requestTranscription).toHaveBeenCalledWith('c1');
+    expect(await screen.findByText(/Transcription requested/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Transcribe' })).toBeNull();
+  });
+
+  it('shows why a transcription could not be requested', async () => {
+    callsApi.getTranscript.mockResolvedValue(null);
+    callsApi.requestTranscription.mockRejectedValue(new Error('No transcribe service runs on request here'));
+    renderScreen();
+    fireEvent.click(await screen.findByRole('button', { name: 'Transcribe' }));
+    expect(await screen.findByText('No transcribe service runs on request here')).toBeInTheDocument();
+  });
+
+  it('offers no Transcribe button when the call has a transcription or no recording', async () => {
+    renderScreen();
+    await screen.findByText('Hello, I would like to book a table.');
+    expect(screen.queryByRole('button', { name: 'Transcribe' })).toBeNull();
   });
 
   it('says so when there is no transcription', async () => {
