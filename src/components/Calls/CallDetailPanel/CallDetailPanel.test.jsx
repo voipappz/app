@@ -15,7 +15,10 @@ vi.mock('./CallTimeline', () => ({ default: () => null }));
 vi.mock('../CallHistory/CallHistory', () => ({ default: () => <div>other calls</div> }));
 vi.mock('../../../context/NotificationContext', () => ({ useNotification: () => ({ showNotification: vi.fn() }) }));
 vi.mock('../../../hooks/useCallNumber', () => ({ useCallNumber: () => vi.fn() }));
-vi.mock('../../../services/api/callsApi', () => ({ callsApi: { setNumberBlocked: vi.fn(async () => ({})) } }));
+vi.mock('../../../services/api/callsApi', () => ({ callsApi: {
+  setNumberBlocked: vi.fn(async () => ({})), getTranscript: vi.fn(async () => null), requestTranscription: vi.fn(async () => ({})),
+} }));
+import conversationService from '../../../services/conversationService';
 
 import CallDetailPanel from './CallDetailPanel.jsx';
 
@@ -26,6 +29,9 @@ const call = {
 };
 
 afterEach(() => {
+  callsApi.getTranscript.mockReset().mockResolvedValue(null);
+  callsApi.requestTranscription.mockReset().mockResolvedValue({});
+  conversationService.getConversationByCallId.mockReset().mockResolvedValue(null);
   session.role = 'admin';
   permissions.logs = false;
   return i18n.changeLanguage('en');
@@ -103,5 +109,49 @@ describe('CallDetailPanel', () => {
     expect(screen.getByRole('tab', { name: 'סיכום' })).toBeInTheDocument();
     expect(screen.getByText('לא נענתה')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'סגירת פרטי השיחה' })).toBeInTheDocument();
+  });
+
+  describe('Transcription tab', () => {
+    const recorded = { ...call, recording: { url: 'https://files.example/call-1.wav' } };
+    const openTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Transcription' }));
+
+    it('shows the transcription the transcribe service published', async () => {
+      callsApi.getTranscript.mockResolvedValue('שלום, איך אפשר לעזור?');
+      render(<CallDetailPanel call={recorded} onClose={vi.fn()} />);
+      openTab();
+      expect(await screen.findByTestId('call-transcript')).toHaveTextContent('שלום, איך אפשר לעזור?');
+      expect(screen.getByTestId('call-transcript')).toHaveAttribute('dir', 'auto');
+      expect(screen.queryByRole('button', { name: 'Transcribe' })).not.toBeInTheDocument();
+    });
+
+    it('offers Transcribe on a recorded call with none, and asks the server', async () => {
+      render(<CallDetailPanel call={recorded} onClose={vi.fn()} />);
+      openTab();
+      fireEvent.click(await screen.findByRole('button', { name: 'Transcribe' }));
+      await waitFor(() => expect(callsApi.requestTranscription).toHaveBeenCalledWith('call-1'));
+      expect(await screen.findByRole('status')).toHaveTextContent('Transcription requested');
+    });
+
+    // The bug on switch: the old conversation read failed, the tab said the
+    // transcript was unavailable, and there was no button at all.
+    it('still offers Transcribe, and Retry, when reading fails', async () => {
+      callsApi.getTranscript.mockRejectedValue(new Error('Server error backoff'));
+      conversationService.getConversationByCallId.mockRejectedValue(new Error('boom'));
+      render(<CallDetailPanel call={recorded} onClose={vi.fn()} />);
+      openTab();
+      expect(await screen.findByRole('button', { name: 'Transcribe' })).toBeInTheDocument();
+      expect(screen.getByText(/temporarily unavailable/)).toBeInTheDocument();
+
+      callsApi.getTranscript.mockResolvedValue('back again');
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(await screen.findByTestId('call-transcript')).toHaveTextContent('back again');
+    });
+
+    it('has no Transcribe button on a call without a recording', async () => {
+      render(<CallDetailPanel call={call} onClose={vi.fn()} />);
+      openTab();
+      expect(await screen.findByText('No transcription for this call')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Transcribe' })).not.toBeInTheDocument();
+    });
   });
 });

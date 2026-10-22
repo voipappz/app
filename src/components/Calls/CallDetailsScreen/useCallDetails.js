@@ -10,11 +10,13 @@ const IDLE = { status: 'idle', error: null };
  * Opening another call reloads it; an answer for a call no longer shown is
  * dropped. `transcribe` asks the server for one (the Transcribe button);
  * `request` is { status: 'idle' | 'sending' | 'sent' | 'error', error }.
+ * `reload` reads the transcription again (Try again after a failed read).
  */
 export function useCallDetails(call) {
   const uuid = call?.uuid;
   const [transcript, setTranscript] = useState(LOADING);
   const [request, setRequest] = useState(IDLE);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!uuid) return undefined;
@@ -25,7 +27,9 @@ export function useCallDetails(call) {
       .then((text) => { if (current) setTranscript({ status: 'done', text }); })
       .catch(() => { if (current) setTranscript({ status: 'error', text: null }); });
     return () => { current = false; };
-  }, [uuid]);
+  }, [uuid, attempt]);
+
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
 
   const transcribe = useCallback(() => {
     if (!uuid) return;
@@ -35,5 +39,5 @@ export function useCallDetails(call) {
       .catch((error) => setRequest({ status: 'error', error: error?.message || null }));
   }, [uuid]);
 
-  return { transcript, request, transcribe };
+  return { transcript, request, transcribe, reload };
 }
