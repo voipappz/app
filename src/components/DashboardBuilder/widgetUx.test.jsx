@@ -1,6 +1,7 @@
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from '../../i18n';
 import { monitoringApi } from '../../services/api/monitoringApi';
 import { useWidgetValue } from './useWidgetValue';
 import { formatWidgetValue } from './widgetPresentation';
@@ -157,5 +158,20 @@ describe('dashboard widget UX', () => {
     expect(screen.getByText(/Settings changed/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Save', exact: true }));
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ title: 'Call count updated' }));
+  });
+});
+
+describe('the widget editor in Hebrew', () => {
+  afterEach(() => i18n.changeLanguage('en'));
+
+  it('speaks Hebrew and names a picked template in Hebrew, keeping a saved title', async () => {
+    await i18n.changeLanguage('he');
+    render(<WidgetEditor open initialDraft={widget} onSave={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByText('הוספת ווידג׳ט')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'כללי' })).toBeInTheDocument();
+    expect(screen.getByLabelText('כותרת')).toHaveValue('Call count');
+
+    await userEvent.click(screen.getByRole('button', { name: 'שיחות היום' }));
+    expect(screen.getByLabelText('כותרת')).toHaveValue('שיחות היום');
   });
 });

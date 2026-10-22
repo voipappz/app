@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
 import {
-  Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
+  Box, Button, Checkbox, Chip, DialogActions, DialogContent, DialogTitle,
   Divider, FormControlLabel, MenuItem, Slider, Stack, Tab, Tabs, TextField, Typography
 } from '@mui/material';
 import FieldSelect from './FieldSelect';
 import WidgetPreview from './WidgetPreview';
 import { ICON_NAMES } from './widgetPresentation';
-import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, WIDGET_TYPES, withDefaults } from './widgetTemplates';
+import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, WIDGET_TYPES, templateTitle, withDefaults } from './widgetTemplates';
 import { CALLS_METRICS, CDR_GROUPS, isCallsType } from './callsWidgets';
+import { useTranslation } from 'react-i18next';
+import { ResponsiveDialog as Dialog } from '../ui';
 
 // Filtered against WIDGET_TEMPLATES: a category listing a key that no longer
 // has a template used to throw on `.title` inside the map below and take the
 // whole dashboard down with it, which is far too much damage for a typo.
 const TEMPLATE_KEYS = Object.values(TEMPLATE_CATEGORIES).flat().filter((key) => WIDGET_TEMPLATES[key]);
-const WINDOWS = [
-  { label: 'Last hour', minutes: 60 },
-  { label: 'Last 6 hours', minutes: 360 },
-  { label: 'Last 24 hours', minutes: 1440 },
-  { label: 'Last 7 days', minutes: 10080 }
-];
+// Time windows in minutes; their words are widgets.json editor.windows.<minutes>.
+const WINDOWS = [60, 360, 1440, 10080];
 
 /**
  * WidgetEditor — tabbed widget dialog (General / Appearance / Thresholds).
@@ -26,6 +24,7 @@ const WINDOWS = [
  * (FieldSelect) instead of a fixed snapshot key.
  */
 export default function WidgetEditor({ open, widget, initialDraft, saving, onClose, onSave }) {
+  const { t } = useTranslation('widgets');
   const [tab, setTab] = useState(0);
   const [preview, setPreview] = useState(null);
   const [previewRun, setPreviewRun] = useState(0);
@@ -54,20 +53,20 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ 'data-testid': 'widget-editor', sx: { borderRadius: 3 } }}>
       <DialogTitle sx={{ fontWeight: 700 }}>
-        {widget?.uuid ? 'Edit widget' : 'Add widget'}
+        {widget?.uuid ? t('editor.titleEdit') : t('editor.titleAdd')}
       </DialogTitle>
 
       <DialogContent dividers>
         <Tabs value={tab} onChange={(_, next) => setTab(next)} variant="fullWidth" sx={{ mb: 2 }}>
-          <Tab label="General" />
-          <Tab label="Appearance" />
-          <Tab label="Thresholds" disabled={isTable || isExplorer || isCalls} />
+          <Tab label={t('editor.tabGeneral')} />
+          <Tab label={t('editor.tabAppearance')} />
+          <Tab label={t('editor.tabThresholds')} disabled={isTable || isExplorer || isCalls} />
         </Tabs>
 
         {tab === 0 && (
           <Stack spacing={2}>
             <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>Quick start</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>{t('editor.quickStart')}</Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {TEMPLATE_KEYS.map((key) => (
                   <Chip
@@ -75,7 +74,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
                     size="small"
                     variant="outlined"
                     color="primary"
-                    label={WIDGET_TEMPLATES[key].title}
+                    label={templateTitle(key)}
                     onClick={() => setDraft((prev) => applyTemplate(key, { uuid: prev.uuid, dashboard_uuid: prev.dashboard_uuid }))}
                   />
                 ))}
@@ -83,10 +82,10 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
             </Box>
             <Divider />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField fullWidth size="small" label="Title" value={draft.title} onChange={(e) => set('title', e.target.value)} />
-              <TextField fullWidth select size="small" label="Type" value={draft.type} onChange={(e) => set('type', e.target.value)}>
+              <TextField fullWidth size="small" label={t('editor.title')} value={draft.title} onChange={(e) => set('title', e.target.value)} />
+              <TextField fullWidth select size="small" label={t('editor.type')} value={draft.type} onChange={(e) => set('type', e.target.value)}>
                 {WIDGET_TYPES.filter((type) => type !== 'query').map((type) => (
-                  <MenuItem key={type} value={type}>{type}</MenuItem>
+                  <MenuItem key={type} value={type}>{t(`types.${type}`, { defaultValue: type })}</MenuItem>
                 ))}
               </TextField>
             </Stack>
@@ -94,26 +93,26 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
             {isCalls && !isLive && (
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 {draft.type === 'calls_stat' && (
-                  <TextField fullWidth select size="small" label="Show" value={draft.metric} onChange={(e) => set('metric', e.target.value)}>
-                    {CALLS_METRICS.map((m) => <MenuItem key={m.key} value={m.key}>{m.label}</MenuItem>)}
+                  <TextField fullWidth select size="small" label={t('editor.show')} value={draft.metric} onChange={(e) => set('metric', e.target.value)}>
+                    {CALLS_METRICS.map((metric) => <MenuItem key={metric} value={metric}>{t(`metrics.${metric}`)}</MenuItem>)}
                   </TextField>
                 )}
                 {!(draft.type === 'calls_stat' && draft.metric === 'answered') && (
-                  <TextField fullWidth select size="small" label="Split calls by" value={draft.groupBy} onChange={(e) => set('groupBy', e.target.value)}>
-                    {CDR_GROUPS.map((g) => <MenuItem key={g.key} value={g.key}>{g.label}</MenuItem>)}
+                  <TextField fullWidth select size="small" label={t('editor.splitBy')} value={draft.groupBy} onChange={(e) => set('groupBy', e.target.value)}>
+                    {CDR_GROUPS.map((group) => <MenuItem key={group} value={group}>{t(`groups.${group}`)}</MenuItem>)}
                   </TextField>
                 )}
               </Stack>
             )}
             {isLive && (
-              <Typography variant="body2" color="text.secondary">Calls in progress, incoming and outgoing right now, for the application selected in the top bar.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('editor.liveHint')}</Typography>
             )}
             {!isTable && !isLive && (
               <TextField
-                fullWidth select size="small" label="Time window"
+                fullWidth select size="small" label={t('editor.window')}
                 value={draft.minutes} onChange={(e) => set('minutes', Number(e.target.value))}
               >
-                {WINDOWS.map((w) => <MenuItem key={w.minutes} value={w.minutes}>{w.label}</MenuItem>)}
+                {WINDOWS.map((minutes) => <MenuItem key={minutes} value={minutes}>{t(`editor.windows.${minutes}`)}</MenuItem>)}
               </TextField>
             )}
           </Stack>
@@ -123,46 +122,46 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
           <Stack spacing={2}>
             {(isCounter || isGauge) && (
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <TextField fullWidth select size="small" label="Icon" value={draft.icon} onChange={(e) => set('icon', e.target.value)}>
+                <TextField fullWidth select size="small" label={t('editor.icon')} value={draft.icon} onChange={(e) => set('icon', e.target.value)}>
                   {ICON_NAMES.map((name) => <MenuItem key={name} value={name}>{name}</MenuItem>)}
                 </TextField>
                 <TextField
-                  fullWidth size="small" label="Unit" value={draft.unit} onChange={(e) => set('unit', e.target.value)}
-                  placeholder="calls, %, sec"
+                  fullWidth size="small" label={t('editor.unit')} value={draft.unit} onChange={(e) => set('unit', e.target.value)}
+                  placeholder={t('editor.unitPlaceholder')}
                 />
               </Stack>
             )}
             {(isCounter || isGauge) && (
               <TextField
-                fullWidth size="small" type="color" label="Accent colour"
+                fullWidth size="small" type="color" label={t('editor.accent')}
                 value={/^#/.test(draft.color) ? draft.color : '#1976d2'}
                 onChange={(e) => set('color', e.target.value)}
-                helperText="Pick a colour, or fall back to the theme."
+                helperText={t('editor.accentHint')}
               />
             )}
             {(isCounter || isGauge) && draft.color && (
-              <Button size="small" onClick={() => set('color', '')} sx={{ alignSelf: 'flex-start' }}>Use theme colour</Button>
+              <Button size="small" onClick={() => set('color', '')} sx={{ alignSelf: 'flex-start' }}>{t('editor.themeColour')}</Button>
             )}
             {isGauge && (
               <Stack direction="row" spacing={2}>
-                <TextField fullWidth size="small" type="number" label="Minimum" value={draft.min} onChange={(e) => set('min', Number(e.target.value))} />
-                <TextField fullWidth size="small" type="number" label="Maximum" value={draft.max} onChange={(e) => set('max', Number(e.target.value))} />
+                <TextField fullWidth size="small" type="number" label={t('editor.minimum')} value={draft.min} onChange={(e) => set('min', Number(e.target.value))} />
+                <TextField fullWidth size="small" type="number" label={t('editor.maximum')} value={draft.max} onChange={(e) => set('max', Number(e.target.value))} />
               </Stack>
             )}
             {!isCounter && !isGauge && !isTable && (
-              <Typography variant="body2" color="text.secondary">Chart and explorer widgets take their styling from the theme.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('editor.chartStyling')}</Typography>
             )}
             {isTable && (
-              <Typography variant="body2" color="text.secondary">The recent calls table has no appearance options.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('editor.tableNoAppearance')}</Typography>
             )}
           </Stack>
         )}
 
         {tab === 2 && !isTable && !isExplorer && (
           <Stack spacing={3}>
-            <Typography variant="body2" color="text.secondary">Values past these limits tint the tile amber, then red.</Typography>
+            <Typography variant="body2" color="text.secondary">{t('editor.thresholdsHint')}</Typography>
             <Box>
-              <Typography variant="body2" gutterBottom>Warning</Typography>
+              <Typography variant="body2" gutterBottom>{t('editor.warning')}</Typography>
               <Slider
                 value={Number(draft.thresholds?.warning) || 0} valueLabelDisplay="auto"
                 min={Number(draft.min) || 0} max={Number(draft.max) || 100}
@@ -171,7 +170,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
               />
             </Box>
             <Box>
-              <Typography variant="body2" gutterBottom>Critical</Typography>
+              <Typography variant="body2" gutterBottom>{t('editor.critical')}</Typography>
               <Slider
                 value={Number(draft.thresholds?.critical) || 0} valueLabelDisplay="auto"
                 min={Number(draft.min) || 0} max={Number(draft.max) || 100}
@@ -181,23 +180,23 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
             </Box>
             <FormControlLabel
               control={<Checkbox checked={!!draft.inverse} onChange={(e) => set('inverse', e.target.checked)} />}
-              label="Inverse — lower values are worse"
+              label={t('editor.inverse')}
             />
           </Stack>
         )}
         {!isTable && !isExplorer && !isCalls && <Box sx={{ mt: 2 }}>
-          <Button disabled={!draft.measurement || !draft.field} onClick={() => { setPreview({ ...draft }); setPreviewRun((run) => run + 1); }}>Run preview</Button>
+          <Button disabled={!draft.measurement || !draft.field} onClick={() => { setPreview({ ...draft }); setPreviewRun((run) => run + 1); }}>{t('editor.runPreview')}</Button>
           {preview && <>
-            {JSON.stringify(preview) !== JSON.stringify(draft) && <Typography color="text.secondary">Settings changed. Run preview again to update the results.</Typography>}
+            {JSON.stringify(preview) !== JSON.stringify(draft) && <Typography color="text.secondary">{t('editor.settingsChanged')}</Typography>}
             <WidgetPreview key={previewRun} widget={preview} />
           </>}
         </Box>}
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('editor.cancel')}</Button>
         <Button variant="contained" disabled={saving || !draft.title.trim() || (!isTable && !isCalls && (!draft.measurement || !draft.field))} onClick={() => onSave(draft)}>
-          Save
+          {t('editor.save')}
         </Button>
       </DialogActions>
     </Dialog>

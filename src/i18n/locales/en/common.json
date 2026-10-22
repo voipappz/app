@@ -205,5 +205,9 @@
     "goTo": "Go to page {{page}}",
     "clearFilter": "Clear Filter",
     "loading": "Loading..."
+  },
+  "chart": {
+    "noData": "No data for selected time range",
+    "threshold": "Threshold: {{value}}"
   }
 }

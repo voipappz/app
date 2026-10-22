@@ -106,6 +106,14 @@ const CONVERTED = [
   'src/components/Reports/SqlQueryEditor/**',
   'src/components/Reports/ReportsPanel/ReportsPanel.jsx',
   'src/components/Reports/ReportsPanel/ReportMap.jsx',
+  // Live, and the widget board it shares with the admin Dashboard
+  'src/components/LiveDashboard/**',
+  'src/components/Live/panels/LiveCallsPanel.jsx',
+  'src/components/Live/LiveChartStrip.jsx',
+  'src/components/Live/useLiveCalls.js',
+  'src/components/Monitoring/widgets/ChartPanel.jsx',
+  'src/components/DashboardBuilder/**',
+  'src/services/cable.js',
 ]
 
 export default [

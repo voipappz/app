@@ -12,21 +12,15 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import TuneIcon from '@mui/icons-material/Tune';
-import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, withDefaults } from './widgetTemplates';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '@mui/material/styles';
+import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, templateTitle, withDefaults } from './widgetTemplates';
 import { resolveIcon } from './widgetPresentation';
 
-const CATEGORY_LABELS = {
-  reports: 'Call reports',
-  calls: 'Calls',
-  live: 'Right now',
-  counters: 'Numbers',
-  gauges: 'Gauges',
-  trends: 'Charts',
-  tables: 'Tables',
-  explore: 'Explore'
-};
-
 export default function AddWidgetMenu({ onPick, disabled }) {
+  const { t } = useTranslation('widgets');
+  // The menu opens under the button, aligned to its end side.
+  const endSide = useTheme().direction === 'rtl' ? 'left' : 'right';
   const [anchor, setAnchor] = useState(null);
   const close = () => setAnchor(null);
 
@@ -42,26 +36,25 @@ export default function AddWidgetMenu({ onPick, disabled }) {
         onClick={(e) => setAnchor(e.currentTarget)} data-testid="add-widget"
         sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
       >
-        Add widget
+        {t('menu.add')}
       </Button>
 
       <Menu
         anchorEl={anchor} open={Boolean(anchor)} onClose={close}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: endSide }}
+        transformOrigin={{ vertical: 'top', horizontal: endSide }}
         slotProps={{ paper: { sx: { minWidth: 260, maxHeight: 460 } } }}
       >
         {Object.entries(TEMPLATE_CATEGORIES).map(([category, keys]) => [
           <MenuItem key={`${category}-label`} disabled sx={{ opacity: '1 !important' }}>
-            <Typography variant="overline" color="text.secondary">{CATEGORY_LABELS[category] || category}</Typography>
+            <Typography variant="overline" color="text.secondary">{t(`menu.category.${category}`, { defaultValue: category })}</Typography>
           </MenuItem>,
           ...keys.filter((key) => WIDGET_TEMPLATES[key]).map((key) => {
-            const template = WIDGET_TEMPLATES[key];
-            const Icon = resolveIcon(template.icon);
+            const Icon = resolveIcon(WIDGET_TEMPLATES[key].icon);
             return (
               <MenuItem key={key} onClick={() => pickTemplate(key)} data-testid={`widget-preset-${key}`}>
                 <ListItemIcon sx={{ color: 'primary.main' }}><Icon fontSize="small" /></ListItemIcon>
-                <ListItemText primary={template.title} />
+                <ListItemText primary={templateTitle(key)} />
               </MenuItem>
             );
           })
@@ -69,11 +62,11 @@ export default function AddWidgetMenu({ onPick, disabled }) {
 
         <Divider />
         <MenuItem
-          onClick={() => { close(); onPick(withDefaults({ title: 'New widget' })); }}
+          onClick={() => { close(); onPick(withDefaults({ title: t('menu.newWidget') })); }}
           data-testid="widget-preset-custom"
         >
           <ListItemIcon><TuneIcon fontSize="small" /></ListItemIcon>
-          <ListItemText primary="Custom widget…" secondary="Pick your own metric" />
+          <ListItemText primary={t('menu.custom')} secondary={t('menu.customHint')} />
         </MenuItem>
       </Menu>
     </>

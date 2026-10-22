@@ -6,6 +6,7 @@ import { currentLocaleTag } from '../i18n/formatLocale';
 // space form, fails outright in some browsers. Normalize to a real UTC instant.
 const toDate = (input) => {
   if (input instanceof Date) return input;
+  if (typeof input === 'number') return new Date(input); // epoch milliseconds
   if (input == null || input === '') return new Date(NaN);
   const str = String(input).trim();
   const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(str);
@@ -123,7 +124,7 @@ export const formatDayHeading = (dateInput) => {
  * @returns {string} The time, or '' if the input is invalid.
  */
 export const formatTime = (dateInput, withSeconds = false) => {
-  const date = typeof dateInput === 'number' ? new Date(dateInput) : toDate(dateInput);
+  const date = toDate(dateInput);
   if (isNaN(date.getTime())) return '';
   return date.toLocaleTimeString(currentLocaleTag(), {
     hour: '2-digit',

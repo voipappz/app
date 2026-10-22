@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { liveApi } from '../../services/api/liveApi';
+import i18n from '../../i18n';
+
+// This hook's own words (live.json liveCalls); the API's field names stay as sent.
+const say = (key) => i18n.t(`live:liveCalls.${key}`);
 
 /**
  * Custom hook for Live Calls/Sessions management
@@ -101,9 +105,9 @@ export const useLiveCalls = (enabled = false) => {
       if (status === 500 && (responseMsg.toLowerCase().includes('node') || responseMsg.toLowerCase().includes('switch') || responseMsg === '')) {
         // Server returns 500 when no FreeSwitch node is assigned — treat as configuration info, not error
         setIsNodeError(true);
-        setError('No FreeSwitch node configured for this customer.');
+        setError(say('noNodeConfigured'));
       } else {
-        setError(err.message || 'Failed to load live calls');
+        setError(err.message || say('loadFailed'));
       }
       setCalls([]);
       setTotalCount(0);
@@ -164,17 +168,12 @@ const getColumnWidth = (field) => {
 /**
  * Default columns (used when live_fields API fails)
  */
-const getDefaultColumns = () => [
-  { field: 'direction', headerName: 'Direction', width: 100 },
-  { field: 'cid_name', headerName: 'Caller Name', width: 140 },
-  { field: 'cid_num', headerName: 'Caller Number', width: 130 },
-  { field: 'dest', headerName: 'Destination', width: 130 },
-  { field: 'state', headerName: 'State', width: 100 },
-  { field: 'callstate', headerName: 'Call State', width: 110 },
-  { field: 'application', headerName: 'Application', width: 130 },
-  { field: 'ip_addr', headerName: 'IP Address', width: 130 },
-  { field: 'created', headerName: 'Created', width: 150 },
-  { field: 'accountcode', headerName: 'Account', width: 130 }
-];
+const DEFAULT_COLUMN_WIDTHS = {
+  direction: 100, cid_name: 140, cid_num: 130, dest: 130, state: 100,
+  callstate: 110, application: 130, ip_addr: 130, created: 150, accountcode: 130,
+};
+const getDefaultColumns = () => Object.entries(DEFAULT_COLUMN_WIDTHS).map(([field, width]) => ({
+  field, width, headerName: say(`fallbackColumns.${field}`),
+}));
 
 export default useLiveCalls;
