@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
@@ -24,7 +23,9 @@ import {
 } from '@mui/material';
 import SqlQueryEditor from '../SqlQueryEditor/SqlQueryEditor';
 import { reportsApi } from '../../../services/api/reportsApi';
-import { useConfirm } from '../../ui';
+import { ResponsiveDialog as Dialog, useConfirm } from '../../ui';
+import { useTranslation } from 'react-i18next';
+import { displayTypeName } from '../reportWords';
 
 /**
  * EditReportDialog — edit a saved report: its identity, its SQL, and its
@@ -37,6 +38,7 @@ import { useConfirm } from '../../ui';
  * already enforces a single read-only SELECT server-side.
  */
 const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
+  const { t } = useTranslation('reports');
   const confirm = useConfirm();
   const [tabValue, setTabValue] = useState(0);
   const [name, setName] = useState('');
@@ -89,7 +91,7 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
   useEffect(() => {
     if (!open || types.length) return;
     reportsApi.getTypes()
-      .then((t) => setTypes(Array.isArray(t) ? t : []))
+      .then((list) => setTypes(Array.isArray(list) ? list : []))
       .catch((e) => console.error('Failed to fetch report types:', e));
   }, [open, types.length]);
 
@@ -145,7 +147,7 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
         console.error('Failed to load report detail:', err);
         // Say so — a silent fallback looks like the report simply has no query
         // or params, which is indistinguishable from a load failure.
-        setError('Could not load the full report. Showing what we have — saving may overwrite fields you cannot see.');
+        setError(t('edit.partialLoad'));
         apply(report, { fields: [], params: [], groupColumns: [] });
       } finally {
         setLoading(false);
@@ -167,7 +169,7 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
-      setError('Report name is required');
+      setError(t('edit.nameRequired'));
       setTabValue(0);
       return;
     }
@@ -203,40 +205,40 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
       console.error('Error updating report:', err);
       const body = err?.response?.data || err?.body || err?.responseText;
       const msg = typeof body === 'string' ? body : body?.message || err.message;
-      setError(msg || 'Failed to update report');
+      setError(msg || t('edit.updateFailed'));
     } finally {
       setSaving(false);
     }
-  }, [name, type, enabled, notes, selectedQueryId, sqlQuery, rowLimit, timeoutMs, cacheTtl, report, onSave, onClose]);
+  }, [name, type, enabled, notes, selectedQueryId, sqlQuery, rowLimit, timeoutMs, cacheTtl, report, onSave, onClose, t]);
 
   const handleClose = useCallback(async () => {
-    if (isDirty && !(await confirm({ title: 'Discard changes', confirmLabel: 'Discard', description: null,
-                                     message: 'Discard your unsaved changes to this report?' }))) return;
+    if (isDirty && !(await confirm({ title: t('edit.discardTitle'), confirmLabel: t('edit.discard'), description: null,
+                                     message: t('edit.discardMessage') }))) return;
     setError(null);
     setSnapshot(null);
     onClose?.();
-  }, [confirm, isDirty, onClose]);
+  }, [confirm, isDirty, onClose, t]);
 
   const resolvedRows = [
-    { label: 'Columns', items: resolved.fields, hint: 'selected by the query' },
-    { label: 'Search params', items: resolved.params, hint: 'filter fields offered' },
-    { label: 'Group by', items: resolved.groupColumns, hint: 'GROUP BY columns' },
+    { label: t('edit.columns'), items: resolved.fields, hint: t('edit.columnsHint') },
+    { label: t('edit.params'), items: resolved.params, hint: t('edit.paramsHint') },
+    { label: t('edit.groupBy'), items: resolved.groupColumns, hint: t('edit.groupByHint') },
   ];
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth PaperProps={{ sx: { minHeight: '60vh' } }}>
       <DialogTitle sx={{ pb: 1 }}>
-        Edit Report
+        {t('edit.title')}
         {isDirty && (
-          <Chip label="unsaved" size="small" color="warning" variant="outlined" sx={{ ml: 1, height: 20, fontSize: 11 }} />
+          <Chip label={t('edit.unsaved')} size="small" color="warning" variant="outlined" sx={{ ms: 1, height: 20, fontSize: 11 }} />
         )}
       </DialogTitle>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
-        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} aria-label="edit report tabs">
-          <Tab label="Report" />
-          <Tab label="Query" />
-          <Tab label="Limits" />
+        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} aria-label={t('edit.tabsLabel')}>
+          <Tab label={t('edit.tabReport')} />
+          <Tab label={t('edit.tabQuery')} />
+          <Tab label={t('edit.tabLimits')} />
         </Tabs>
       </Box>
 
@@ -257,7 +259,7 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
             {tabValue === 0 && (
               <>
                 <TextField
-                  label="Report Name"
+                  label={t('edit.name')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   fullWidth
@@ -268,26 +270,26 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                   <FormControl size="small" sx={{ minWidth: 140 }}>
                     {/* "Display", not "Chart Type" — Table is one of the options */}
-                    <InputLabel>Display</InputLabel>
-                    <Select value={type} label="Display" onChange={(e) => setType(e.target.value)}>
+                    <InputLabel>{t('edit.display')}</InputLabel>
+                    <Select value={type} label={t('edit.display')} onChange={(e) => setType(e.target.value)}>
                       {/* The report's own type stays selectable even if the
                           server list hasn't arrived, so opening the dialog never
                           silently blanks it. */}
-                      {(types.length ? types : [type].filter(Boolean)).map((t) => (
-                        <MenuItem key={t} value={t}>
-                          {t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                      {(types.length ? types : [type].filter(Boolean)).map((displayType) => (
+                        <MenuItem key={displayType} value={displayType}>
+                          {displayTypeName(t, displayType)}
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                   <FormControlLabel
                     control={<Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />}
-                    label="Enabled"
+                    label={t('edit.enabled')}
                   />
                 </Box>
 
                 <TextField
-                  label="Notes"
+                  label={t('edit.notes')}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   fullWidth
@@ -301,7 +303,7 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
                     runs with were invisible while editing it. */}
                 <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'action.hover' }}>
                   <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 1 }}>
-                    Resolved settings
+                    {t('edit.resolved')}
                   </Typography>
                   {resolvedRows.map(({ label, items, hint }) => (
                     <Box key={label} sx={{ display: 'flex', gap: 1, alignItems: 'baseline', mb: 0.75, flexWrap: 'wrap' }}>
@@ -311,7 +313,7 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
                         </Typography>
                       </Tooltip>
                       {items.length === 0 ? (
-                        <Typography variant="caption" color="text.disabled">none</Typography>
+                        <Typography variant="caption" color="text.disabled">{t('edit.none')}</Typography>
                       ) : (
                         items.map((v) => (
                           <Chip key={v} label={v} size="small" variant="outlined" sx={{ height: 20, fontSize: 11 }} />
@@ -320,7 +322,7 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
                     </Box>
                   ))}
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                    From the query definition, or your saved override. Change grouping from the report toolbar.
+                    {t('edit.resolvedNote')}
                   </Typography>
                 </Paper>
               </>
@@ -330,14 +332,14 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
             {tabValue === 1 && (
               <>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Query Template</InputLabel>
+                  <InputLabel>{t('edit.template')}</InputLabel>
                   <Select
                     value={selectedQueryId}
-                    label="Query Template"
+                    label={t('edit.template')}
                     onChange={(e) => handleQuerySelect(e.target.value)}
                   >
                     <MenuItem value="">
-                      <em>Custom SQL (no template)</em>
+                      <em>{t('edit.custom')}</em>
                     </MenuItem>
                     {(queries || []).map((query) => (
                       <MenuItem key={query.uuid} value={query.uuid || query.name}>
@@ -359,14 +361,14 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
             {tabValue === 2 && (
               <>
                 <Typography variant="caption" color="text.secondary">
-                  Leave a field empty to use the engine default.
+                  {t('edit.limitsNote')}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                  <TextField label="Row limit" size="small" type="number" value={rowLimit}
+                  <TextField label={t('limits.rowLimit')} size="small" type="number" value={rowLimit}
                     onChange={(e) => setRowLimit(e.target.value)} placeholder="10000" sx={{ width: 130 }} />
-                  <TextField label="Timeout (ms)" size="small" type="number" value={timeoutMs}
+                  <TextField label={t('limits.timeout')} size="small" type="number" value={timeoutMs}
                     onChange={(e) => setTimeoutMs(e.target.value)} placeholder="15000" sx={{ width: 140 }} />
-                  <TextField label="Cache TTL (s)" size="small" type="number" value={cacheTtl}
+                  <TextField label={t('limits.cacheTtl')} size="small" type="number" value={cacheTtl}
                     onChange={(e) => setCacheTtl(e.target.value)} placeholder="60" sx={{ width: 140 }} />
                 </Box>
               </>
@@ -376,9 +378,9 @@ const EditReportDialog = ({ open, onClose, onSave, report, queries }) => {
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={handleClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleClose} disabled={saving}>{t('edit.cancel')}</Button>
         <Button onClick={handleSave} variant="contained" disabled={saving || loading || !name.trim()}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('edit.saving') : t('edit.save')}
         </Button>
       </DialogActions>
     </Dialog>

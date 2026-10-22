@@ -93,6 +93,19 @@ const CONVERTED = [
   'src/components/Notifications/NotificationPanel/**',
   'src/components/shared/RowEventsButton/**',
   'src/components/common/ImportCSVDialog/**',
+  // Reports (not ReportsPanel/ReportsStrip.jsx, unused, nor ScreenReports.jsx,
+  // the routing canvas's)
+  'src/components/Reports/Reports.jsx',
+  'src/components/Reports/reportWords.js',
+  'src/components/Reports/ReportsDashboards.jsx',
+  'src/components/Reports/ReportList/**',
+  'src/components/Reports/DateRangePicker/**',
+  'src/components/Reports/CreateReportDialog/**',
+  'src/components/Reports/EditReportDialog/**',
+  'src/components/Reports/ReportAuditDialog/**',
+  'src/components/Reports/SqlQueryEditor/**',
+  'src/components/Reports/ReportsPanel/ReportsPanel.jsx',
+  'src/components/Reports/ReportsPanel/ReportMap.jsx',
 ]
 
 export default [

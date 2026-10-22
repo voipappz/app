@@ -5,7 +5,8 @@ in `src/i18n/` and the responsive building blocks in `components/ui` and
 `components/shared/ResponsiveTable`. Converted so far: the shell (sidebar, top
 bar, sign-in pages), the shared search bar and date picker, Devices
 (`Extensions`), Routes and their editors, the phone, Calls (column and
-filter names from the API are shown through `Calls/callWords.js`), and the
+filter names from the API are shown through `Calls/callWords.js`), Reports
+(report, column and category names stay as the server sends them), and the
 shared pieces a user meets everywhere (Yes/No and status chips, the tour, the
 error and "Not available" pages, the notifications drawer, tool dialogs, the
 row Events button, the CSV import). Everything else converts the same way,
@@ -65,7 +66,7 @@ Playwright specs pass unchanged.
 ## Backlog, most used first
 
 Services, Users, Subscriptions, Dashboard, Live, Messages,
-Reports, Accounts, Templates, Tariffs, Settings, Events, Syslog, Monitoring,
+Accounts, Templates, Tariffs, Settings, Events, Syslog, Monitoring,
 Providers; then the dialogs they open (e.g. the device form in
 `Bridges/ExtensionBridge`). Also left: the search and breadcrumb names, the
 account-only top bar tools, and the physical sides still in `Calls`, `Sidebar`, `CentralizedSearch` and `EnhancedDateRangePicker`

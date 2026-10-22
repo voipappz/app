@@ -26,16 +26,22 @@ import enTour from './locales/en/tour.json';
 import heTour from './locales/he/tour.json';
 import enNotifications from './locales/en/notifications.json';
 import heNotifications from './locales/he/notifications.json';
+import enReports from './locales/en/reports.json';
+import heReports from './locales/he/reports.json';
+import enLive from './locales/en/live.json';
+import heLive from './locales/he/live.json';
+import enWidgets from './locales/en/widgets.json';
+import heWidgets from './locales/he/widgets.json';
 
 i18n.use(initReactI18next).init({
   resources: {
-    en: { common: enCommon, nav: enNav, auth: enAuth, extensions: enExtensions, calls: enCalls, callConditions: enCallConditions, routes: enRoutes, bridges: enBridges, phone: enPhone, search: enSearch, tour: enTour, notifications: enNotifications },
-    he: { common: heCommon, nav: heNav, auth: heAuth, extensions: heExtensions, calls: heCalls, callConditions: heCallConditions, routes: heRoutes, bridges: heBridges, phone: hePhone, search: heSearch, tour: heTour, notifications: heNotifications },
+    en: { common: enCommon, nav: enNav, auth: enAuth, extensions: enExtensions, calls: enCalls, callConditions: enCallConditions, routes: enRoutes, bridges: enBridges, phone: enPhone, search: enSearch, tour: enTour, notifications: enNotifications, reports: enReports, live: enLive, widgets: enWidgets },
+    he: { common: heCommon, nav: heNav, auth: heAuth, extensions: heExtensions, calls: heCalls, callConditions: heCallConditions, routes: heRoutes, bridges: heBridges, phone: hePhone, search: heSearch, tour: heTour, notifications: heNotifications, reports: heReports, live: heLive, widgets: heWidgets },
   },
   lng: readLanguage(), // start in the stored language, so text never flashes English
   fallbackLng: DEFAULT_LANGUAGE,
   supportedLngs: SUPPORTED_LANGUAGES,
-  ns: ['common', 'nav', 'auth', 'extensions', 'calls', 'callConditions', 'routes', 'bridges', 'phone', 'search', 'tour', 'notifications'],
+  ns: ['common', 'nav', 'auth', 'extensions', 'calls', 'callConditions', 'routes', 'bridges', 'phone', 'search', 'tour', 'notifications', 'reports', 'live', 'widgets'],
   defaultNS: 'common',
   interpolation: { escapeValue: false }, // React already escapes
   react: { useSuspense: false }, // a suspended translation inside Layout would reset its state

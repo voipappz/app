@@ -1,20 +1,23 @@
 import React from 'react';
 import { Box, Button, TextField, Typography, ButtonGroup } from '@mui/material';
 import { addDays, endOfDay, format, startOfDay } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import './DateRangePicker.css';
 
 const DateRangePicker = ({ dateRange, setDateRange }) => {
+  const { t } = useTranslation('reports');
+  // `key` is the range's identity; its words come from reports.json.
   const quickDateRanges = [
     {
-      label: 'Today',
+      key: 'today',
       range: () => [startOfDay(new Date()), endOfDay(new Date())],
     },
     {
-      label: '7 Days',
+      key: 'days7',
       range: () => [startOfDay(addDays(new Date(), -6)), endOfDay(new Date())],
     },
     {
-      label: '30 Days',
+      key: 'days30',
       range: () => [startOfDay(addDays(new Date(), -29)), endOfDay(new Date())],
     },
   ];
@@ -53,7 +56,7 @@ const DateRangePicker = ({ dateRange, setDateRange }) => {
             const isSelected = isDateRangeSelected(quickRange);
             return (
               <Button
-                key={quickRange.label}
+                key={quickRange.key}
                 onClick={() => handleQuickDateSelect(quickRange)}
                 variant={isSelected ? 'contained' : 'outlined'}
                 sx={{
@@ -65,7 +68,7 @@ const DateRangePicker = ({ dateRange, setDateRange }) => {
                   ...(isSelected && { fontWeight: 700 }),
                 }}
               >
-                {quickRange.label}
+                {t(`range.${quickRange.key}`)}
               </Button>
             );
           })}
@@ -74,7 +77,7 @@ const DateRangePicker = ({ dateRange, setDateRange }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
             <TextField
               size="small"
-              label="From"
+              label={t('range.from')}
               type="date"
               value={dateRange?.[0] ? format(new Date(dateRange[0]), 'yyyy-MM-dd') : ''}
               onChange={(e) => {
@@ -89,12 +92,12 @@ const DateRangePicker = ({ dateRange, setDateRange }) => {
             />
 
           <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-            to
+            {t('range.between')}
           </Typography>
 
             <TextField
               size="small"
-              label="To"
+              label={t('range.to')}
               type="date"
               value={dateRange?.[1] ? format(new Date(dateRange[1]), 'yyyy-MM-dd') : ''}
               onChange={(e) => {

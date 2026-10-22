@@ -82,6 +82,23 @@ export const dayKey = (dateInput) => {
 };
 
 /**
+ * A day and month ("29 Jun"), with the year when asked ("29 Jul 2026"): the
+ * ends of a date range.
+ * @param {string | Date} dateInput
+ * @param {{ withYear?: boolean }} [options]
+ * @returns {string} The date, or '-' if the input is invalid.
+ */
+export const formatDayMonth = (dateInput, { withYear = false } = {}) => {
+  const date = toDate(dateInput);
+  if (isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString(currentLocaleTag(), {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear ? { year: 'numeric' } : {}),
+  });
+};
+
+/**
  * A day as a heading: weekday, day and month ("Mon, 6 Oct"), with the year
  * only when it isn't this year.
  * @param {string | Date} dateInput

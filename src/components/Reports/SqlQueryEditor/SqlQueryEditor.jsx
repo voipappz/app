@@ -7,6 +7,8 @@ import SaveIcon from '@mui/icons-material/Save';
 import StorageIcon from '@mui/icons-material/Storage';
 import ShieldIcon from '@mui/icons-material/Shield';
 import { DataGrid } from '@mui/x-data-grid';
+import { useTranslation } from 'react-i18next';
+import { formatNumber } from '../../../utils/numberUtils';
 import { reportsApi } from '../../../services/api/reportsApi';
 
 // The main BI tables + the Mustache variables the engine always provides.
@@ -31,6 +33,7 @@ GROUP BY 1`;
  * component's own "Save as report" button.
  */
 const SqlQueryEditor = ({ onSave, onChange, initialStatement = '' }) => {
+  const { t } = useTranslation('reports');
   const [query, setQuery] = useState(initialStatement || DEFAULT_QUERY);
   const [result, setResult] = useState(null);
   const [running, setRunning] = useState(false);
@@ -78,7 +81,7 @@ const SqlQueryEditor = ({ onSave, onChange, initialStatement = '' }) => {
       if (res?.meta?.error || res?.error) throw new Error(res.meta?.error || res.error);
       setResult(res);
     } catch (e) {
-      setError(e.message || 'Query failed');
+      setError(e.message || t('sql.failed'));
     } finally {
       setRunning(false);
     }
@@ -93,26 +96,27 @@ const SqlQueryEditor = ({ onSave, onChange, initialStatement = '' }) => {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minHeight: 420 }}>
       {/* Guard notice + helpers */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Tooltip title="Read-only SELECT/WITH · single statement · 15s timeout · 10k row cap — enforced by the API">
-          <Chip size="small" icon={<ShieldIcon sx={{ fontSize: 14 }} />} label="read-only SQL" color="warning" variant="outlined" />
+        <Tooltip title={t('sql.guard')}>
+          <Chip size="small" icon={<ShieldIcon sx={{ fontSize: 14 }} />} label={t('sql.readOnly')} color="warning" variant="outlined" />
         </Tooltip>
-        <Typography variant="caption" color="text.secondary">tables:</Typography>
-        {TABLES.map((t) => (
-          <Chip key={t} size="small" variant="outlined" icon={<StorageIcon sx={{ fontSize: 12 }} />}
-            label={t} onClick={() => handleInsert(t)} sx={{ cursor: 'pointer', fontSize: '0.7rem' }} />
+        <Typography variant="caption" color="text.secondary">{t('sql.tables')}</Typography>
+        {TABLES.map((table) => (
+          <Chip key={table} size="small" variant="outlined" icon={<StorageIcon sx={{ fontSize: 12 }} />}
+            label={table} onClick={() => handleInsert(table)} sx={{ cursor: 'pointer', fontSize: '0.7rem' }} />
         ))}
       </Box>
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Typography variant="caption" color="text.secondary">variables:</Typography>
+        <Typography variant="caption" color="text.secondary">{t('sql.variables')}</Typography>
         {VARIABLES.map((v) => (
           <Chip key={v} size="small" variant="outlined" label={v}
             onClick={() => handleInsert(v)} sx={{ cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace' }} />
         ))}
       </Box>
 
-      {/* SQL editor */}
+      {/* SQL editor: code, so left to right in every language */}
       <TextField
         ref={textareaRef}
+        dir="ltr"
         fullWidth multiline rows={8}
         value={query}
         onChange={(e) => updateQuery(e.target.value)}
@@ -125,23 +129,25 @@ const SqlQueryEditor = ({ onSave, onChange, initialStatement = '' }) => {
         <Button variant="contained" size="small"
           startIcon={running ? <CircularProgress size={14} color="inherit" /> : <PlayArrowIcon />}
           onClick={handleRun} disabled={running || !query.trim()}>
-          Run
+          {t('sql.run')}
         </Button>
         {onSave && (
           <Button variant="outlined" size="small" startIcon={<SaveIcon />}
             onClick={() => onSave(query)} disabled={!query.trim()}>
-            Save as report
+            {t('sql.saveAsReport')}
           </Button>
         )}
         {result?.meta && (
           <Typography variant="caption" color="text.secondary">
-            {result.meta.count} rows{result.meta.limit ? ` · limit ${result.meta.limit}` : ''}
+            {result.meta.limit
+              ? t('sql.countWithLimit', { n: formatNumber(result.meta.count), limit: formatNumber(result.meta.limit) })
+              : t('sql.count', { n: formatNumber(result.meta.count) })}
           </Typography>
         )}
       </Box>
 
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
-      {result && rows.length === 0 && <Alert severity="info">No rows returned</Alert>}
+      {result && rows.length === 0 && <Alert severity="info">{t('sql.noRows')}</Alert>}
       {rows.length > 0 && (
         <Box sx={{ height: 300 }}>
           <DataGrid rows={rows} columns={cols} density="compact"
