@@ -56,7 +56,7 @@ const swaggerSx = (theme) => {
       color: muted,
     },
     '& .swagger-ui .opblock .opblock-section-header': {
-      background: p.surface.muted, boxShadow: 'none',
+      background: p.surface?.muted || p.action.hover, boxShadow: 'none',
     },
     '& .swagger-ui .opblock .opblock-section-header h4, & .swagger-ui .tab li, & .swagger-ui .opblock-title, & .swagger-ui label': {
       color: text, fontFamily: 'inherit',
