@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Button, IconButton, Tab, Tabs, Tooltip, Typography } from '@mui/material';
+import { Box, Button, IconButton, MenuItem, Select, Tab, Tabs, Tooltip, Typography } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import AddCommentIcon from '@mui/icons-material/AddComment';
@@ -8,7 +8,8 @@ import { useBuilderChat } from './useBuilderChat';
 
 const SUGGESTIONS = [
   { label: 'Find the call history screen', prompt: 'Find the component that renders the call history list and tell me its file and line.' },
-  { label: 'Explain the extensions screen', prompt: 'Explain how the extensions screen loads and shows its data.' }
+  { label: 'Explain the extensions screen', prompt: 'Explain how the extensions screen loads and shows its data.' },
+  { label: 'Add a search field', prompt: 'Add a search field above the extensions list that filters by name or number as I type.' }
 ];
 
 const STATUS_COLOR = { ok: 'var(--color-success)', error: 'var(--color-danger)', neutral: 'var(--theme-text-tertiary)' };
@@ -91,6 +92,21 @@ export default function BuilderApp({ info }) {
           <Typography sx={{ flex: 1, fontSize: '0.75rem', color: 'var(--theme-text-tertiary)', fontFamily: 'monospace' }} noWrap title={info.workspace}>
             {info.workspaceName}
           </Typography>
+          {chat.modes.available.length > 0 && (
+            <Tooltip title={chat.modes.available.find((m) => m.id === chat.modes.current)?.description || 'How the agent asks before acting'}>
+              <Select
+                size="small"
+                value={chat.modes.current || ''}
+                onChange={(event) => chat.setMode(event.target.value)}
+                inputProps={{ 'aria-label': 'Agent mode' }}
+                sx={{ fontSize: '0.75rem', height: 28 }}
+              >
+                {chat.modes.available.map((mode) => (
+                  <MenuItem key={mode.id} value={mode.id} sx={{ fontSize: '0.8rem' }}>{mode.name}</MenuItem>
+                ))}
+              </Select>
+            </Tooltip>
+          )}
           <Tooltip title="New conversation">
             <span>
               <IconButton size="small" onClick={chat.newSession} disabled={chat.busy}><AddCommentIcon fontSize="small" /></IconButton>

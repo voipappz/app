@@ -4,6 +4,9 @@ import { openAcp } from './acpConnection';
 import { addUserMessage, applyUpdate, finishTurn } from './chatState';
 
 const AUTH_REQUIRED = -32000;
+// Builder works in its own worktree, so file edits need no prompt there;
+// commands and anything outside still ask.
+const PREFERRED_MODE = 'acceptEdits';
 
 function socketUrl(info) {
   const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -30,6 +33,7 @@ export function useBuilderChat(info) {
   const [status, setStatus] = useState({ tone: 'neutral', label: 'Connecting…' });
   const [busy, setBusy] = useState(false);
   const [permission, setPermission] = useState(null);
+  const [modes, setModes] = useState({ current: null, available: [] });
   const acpRef = useRef(null);
   const sessionRef = useRef(null);
 
@@ -37,6 +41,13 @@ export function useBuilderChat(info) {
     const acp = acpRef.current;
     const session = await acp.request('session/new', { cwd: '', mcpServers: [] });
     sessionRef.current = session.sessionId;
+    const available = session.modes?.availableModes || [];
+    let current = session.modes?.currentModeId || null;
+    if (current !== PREFERRED_MODE && available.some((m) => m.id === PREFERRED_MODE)) {
+      await acp.request('session/set_mode', { sessionId: session.sessionId, modeId: PREFERRED_MODE });
+      current = PREFERRED_MODE;
+    }
+    setModes({ current, available });
     setMessages([]);
     setStatus({ tone: 'ok', label: 'Ready' });
   }, []);
@@ -52,6 +63,10 @@ export function useBuilderChat(info) {
         acpRef.current = await openAcp(socket, {
           onNotification: (method, params) => {
             if (method === 'session/update' && params?.sessionId === sessionRef.current) {
+              if (params.update?.sessionUpdate === 'current_mode_update') {
+                setModes((m) => ({ ...m, current: params.update.currentModeId }));
+                return;
+              }
               setMessages((current) => applyUpdate(current, params.update));
             }
           },
@@ -112,5 +127,12 @@ export function useBuilderChat(info) {
     startSession().catch((error) => setStatus({ tone: 'error', label: describeError(error) }));
   }, [busy, startSession]);
 
-  return { messages, status, busy, permission, send, stop, newSession, answerPermission };
+  const setMode = useCallback((modeId) => {
+    if (!acpRef.current || !sessionRef.current) return;
+    acpRef.current.request('session/set_mode', { sessionId: sessionRef.current, modeId })
+      .then(() => setModes((m) => ({ ...m, current: modeId })))
+      .catch((error) => setStatus({ tone: 'error', label: describeError(error) }));
+  }, []);
+
+  return { messages, status, busy, permission, modes, setMode, send, stop, newSession, answerPermission };
 }
