@@ -10,6 +10,20 @@ export const getCreatableProviderTypes = (types = []) => types.filter(
  * Handles all provider-related API operations including nested tariffs
  */
 export const providersApi = {
+  testConnection: (id) => apiService.post(`/api/providers/${encodeURIComponent(id)}/simulate`,
+    {}, {}, 'testing provider connection', false),
+
+  searchNumbers: async (id, { country, type, area }) => {
+    const query = new URLSearchParams({ action: 'numbers', country: country.trim().toUpperCase(), type });
+    if (area.trim()) query.set('area', area.trim());
+    const url = `/api/providers/${encodeURIComponent(id)}?${query}`;
+    apiService.clearCache(url);
+    return apiService.get(url, {}, 'searching available numbers', false);
+  },
+
+  buyNumber: (data) => apiService.post('/api/routes', toFormData({ ...data, buy: 'true' }),
+    { retryNetworkErrors: false }, 'buying number', false),
+
   /**
    * Get all providers
    * @param {Object} params - Query parameters (customer_uuid, protocol, etc.)
