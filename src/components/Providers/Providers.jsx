@@ -44,6 +44,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { getTypeChipColor } from '../../utils/chipStyles';
 import TariffSelect from '../common/TariffSelect/TariffSelect';
 import DynamicProfileEditor from '../common/DynamicProfileEditor/DynamicProfileEditor';
+import ProviderNumbersDialog from './ProviderNumbersDialog.jsx';
 import CreateProviderDialog from './CreateProviderDialog.jsx';
 import { providersApi } from '../../services/api/providersApi';
 import CentralizedSearch from '../shared/CentralizedSearch/CentralizedSearch.jsx';
@@ -414,6 +415,7 @@ const Providers = () => {
 
   const navigate = useNavigate();
   // Creation uses the selected type's server-provided fields.
+  const [numbersProvider, setNumbersProvider] = useState(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Register search segments with GlobalSearchContext
@@ -660,6 +662,9 @@ const Providers = () => {
                           </TableCell>
                           <TableCell align="center">
                             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+                              {provider.type === 'sip' && String(provider.profile?.service || '').trim().toLowerCase() === 'telnyx' && (
+                                <Button size="small" onClick={() => setNumbersProvider(provider)}>Numbers / Test</Button>
+                              )}
                               {canWrite && (
                                 <Tooltip title="Edit">
                                   <IconButton
@@ -709,6 +714,7 @@ const Providers = () => {
 
       </Box>
 
+      {numbersProvider && <ProviderNumbersDialog provider={numbersProvider} onClose={() => setNumbersProvider(null)} />}
       {/* Create/Edit Dialog */}
       {/* Creation shows only the selected type's server-provided fields. */}
       <CreateProviderDialog
