@@ -1,7 +1,7 @@
 import { Box, Button, Chip, CircularProgress, IconButton, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import { ArrowBack as BackIcon, Block as BlockIcon, Subtitles as TranscribeIcon, Download as DownloadIcon, LockOpen as UnblockIcon, Phone as PhoneIcon, Timeline as EventsIcon } from '@mui/icons-material';
+import { ArrowBack as BackIcon, Block as BlockIcon, Download as DownloadIcon, LockOpen as UnblockIcon, Phone as PhoneIcon, Timeline as EventsIcon } from '@mui/icons-material';
 import { ResponsiveDialog } from '../../ui';
 import Bdi from '../../../i18n/Bdi';
 import { formatDate } from '../../../utils/dateUtils';
@@ -10,6 +10,7 @@ import CallDirectionIcon from '../CallLogRow/CallDirectionIcon';
 import { callFacts, recordingUrl, shortDuration } from '../CallLogRow/callDirection';
 import { callSummary } from './callSummary';
 import { useCallDetails } from './useCallDetails';
+import TranscribeAction from './TranscribeAction';
 import CallHistory from '../CallHistory/CallHistory';
 import { useNumberBlock } from '../CallActions/CallActions';
 
@@ -136,19 +137,7 @@ export default function CallDetailsScreen({ call, open, onClose, onOpenCall, can
             ? <Typography variant="body2" dir="auto" sx={{ whiteSpace: 'pre-wrap' }}>{transcript.text}</Typography>
             : <Typography variant="body2" color="text.secondary">{t('mobile.details.noTranscript')}</Typography>)}
           {transcript.status === 'done' && !transcript.text && recording && (
-            request.status === 'sent'
-              ? <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{t('mobile.details.transcribeSent')}</Typography>
-              : (
-                <Box sx={{ mt: 1 }}>
-                  <Button size="small" variant="outlined" startIcon={request.status === 'sending' ? <CircularProgress size={16} /> : <TranscribeIcon />}
-                    disabled={request.status === 'sending'} onClick={transcribe}>
-                    {t('mobile.details.transcribe')}
-                  </Button>
-                  {request.status === 'error' && (
-                    <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>{request.error || t('mobile.details.transcribeError')}</Typography>
-                  )}
-                </Box>
-              )
+            <TranscribeAction request={request} onTranscribe={transcribe} />
           )}
         </Section>
 

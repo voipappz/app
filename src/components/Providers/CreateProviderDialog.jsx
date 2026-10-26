@@ -27,6 +27,7 @@ export default function CreateProviderDialog({ open, onClose, onSave, loading, p
   const service = selectedType?.services?.[form.profile[serviceField]];
   const fields = [...new Map([...(selectedType?.fields || []), ...(service?.fields || [])]
     .map((field) => [field.key, field])).values()];
+  const telnyx = form.type === 'sip' && form.profile.service === 'telnyx';
   const hasTariff = ['sip', 'did'].includes(form.type);
 
   const chooseType = (value) => {
@@ -52,7 +53,7 @@ export default function CreateProviderDialog({ open, onClose, onSave, loading, p
     if (!form.name.trim()) next.name = 'Enter a provider name';
     if (serviceField && !service) next[serviceField] = 'Choose a service';
     fields.forEach((field) => {
-      if (field.required && !String(form.profile[field.key] ?? '').trim()) next[field.key] = `${field.label || field.key} is required`;
+      if ((field.required || (telnyx && ['api_key', 'connection_id'].includes(field.key))) && !String(form.profile[field.key] ?? '').trim()) next[field.key] = `${field.label || field.key} is required`;
     });
     setErrors(next);
     if (Object.keys(next).length) return;
@@ -90,9 +91,19 @@ export default function CreateProviderDialog({ open, onClose, onSave, loading, p
               ))}
             </TextField>
           )}
+          {telnyx && <Alert severity="info">Enter your Telnyx API key and the ID of an existing Telnyx connection
+            that sends incoming calls to VoipAppz. Set its destination number format to digits without +.
+            Saving this provider does not buy a number.</Alert>}
           {fields.map((field) => (
+            form.type === 'sip' && field.key === 'service' ? (
+              <TextField key={field.key} select fullWidth label="Numbers provider" value={form.profile.service || ''}
+                disabled={loading} onChange={(event) => setForm({ ...form, profile: { ...form.profile, service: event.target.value } })}>
+                <MenuItem value="">None — SIP only</MenuItem>
+                <MenuItem value="telnyx">Telnyx</MenuItem>
+              </TextField>
+            ) :
             <TextField key={`${form.type}-${field.key}`} fullWidth label={field.label || field.key}
-              required={Boolean(field.required)} disabled={loading} value={form.profile[field.key] ?? ''}
+              required={Boolean(field.required || (telnyx && ['api_key', 'connection_id'].includes(field.key)))} disabled={loading} value={form.profile[field.key] ?? ''}
               type={field.secret || field.type === 'password' ? 'password' : field.type === 'number' ? 'number' : 'text'}
               multiline={field.type === 'text'} minRows={field.type === 'text' ? 2 : undefined}
               autoComplete={field.secret ? 'new-password' : 'off'}

@@ -25,6 +25,8 @@ import { usePermissions } from '../../../hooks/usePermissions';
 import { useSessionRole } from '../../../hooks/useIsUserSession';
 import { useDialNow } from '../../../hooks/useDialNow';
 import conversationService from '../../../services/conversationService';
+import { useCallDetails } from '../CallDetailsScreen/useCallDetails';
+import TranscribeAction from '../CallDetailsScreen/TranscribeAction';
 import { useAuth } from '../../../context/AuthContext';
 import { apiService } from '../../../services/apiService';
 import { formatPhoneNumber } from '../../../utils/phoneUtils';
@@ -83,6 +85,9 @@ const CallDetailPanel = ({ call, onClose, onViewEvents, onCallBack, onOpenCall, 
   const [copied, setCopied] = useState(false);
 
   const callUuid = call?.uuid;
+  // The transcription the transcribe service publishes (CallTranscribed), and
+  // the Transcribe button that asks for one.
+  const { transcript: transcribed, request, transcribe, reload: reloadTranscript } = useCallDetails(call);
   const { blocked, toggle: toggleBlock } = useNumberBlock({ call, onChanged: onBlockChanged });
   // The call's events show to whichever session's ACL grants `logs`; "Open in
   // Events" inside the tab appears only where the screen can open them.
@@ -300,13 +305,33 @@ const CallDetailPanel = ({ call, onClose, onViewEvents, onCallBack, onOpenCall, 
 
         {tab === 'transcription' && (
           <Box sx={{ flex: 1, minHeight: 240, display: 'flex', flexDirection: 'column' }}>
-            <ConversationMessages
-              messages={transcript}
-              loading={transcriptLoading}
-              error={transcriptError}
-              onRetry={() => setTranscriptAttempt((attempt) => attempt + 1)}
-              emptyMessage={t('detail.noTranscription')}
-            />
+            {transcribed.status === 'done' && transcribed.text ? (
+              <Typography variant="body2" dir="auto" data-testid="call-transcript"
+                sx={{ px: 2, py: 1.5, whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+                {transcribed.text}
+              </Typography>
+            ) : transcript.length > 0 || transcriptLoading || transcribed.status === 'loading' ? (
+              <ConversationMessages
+                messages={transcript}
+                loading={transcriptLoading || transcribed.status === 'loading'}
+                error={null}
+                emptyMessage={t('detail.noTranscription')}
+              />
+            ) : (
+              // Nothing yet. A failed read of either source must not hide the
+              // button: the transcription is asked for, not read.
+              <Box sx={{ px: 2, py: 3 }}>
+                <Typography variant="body2" color={transcriptError && transcribed.status === 'error' ? 'error' : 'text.secondary'}>
+                  {transcriptError && transcribed.status === 'error' ? transcriptError : t('detail.noTranscription')}
+                </Typography>
+                {recording && <TranscribeAction request={request} onTranscribe={transcribe} />}
+                {transcriptError && transcribed.status === 'error' && (
+                  <Button size="small" sx={{ mt: 1 }} onClick={() => { reloadTranscript(); setTranscriptAttempt((attempt) => attempt + 1); }}>
+                    {t('conversation.retry')}
+                  </Button>
+                )}
+              </Box>
+            )}
           </Box>
         )}
 

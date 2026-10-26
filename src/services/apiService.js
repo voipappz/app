@@ -814,7 +814,7 @@ class ApiService {
         }
 
         // Handle network errors with retry logic
-        if (this.shouldRetry(error, retries)) {
+        if (options.retryNetworkErrors !== false && this.shouldRetry(error, retries)) {
           const delay = this.retryConfig.retryDelay * Math.pow(this.retryConfig.retryMultiplier, retries);
 
           this.log('warn', `Retrying ${context} in ${delay}ms (attempt ${retries + 1}/${this.retryConfig.maxRetries + 1})`);
