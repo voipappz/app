@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  conditionToForm, emptyForm, formToRules, savedSegmentIndex, segmentKey, tidyName, validateForm, weekRuns,
+  conditionToForm, emptyForm, formToRules, isValidName, savedSegmentIndex, segmentKey, tidyName, validateForm, weekRuns,
 } from './callConditionSchedule';
 
 const queue = { type: 'queue', uuid: 'q-1' };
@@ -133,6 +133,21 @@ describe('savedSegmentIndex', () => {
     const condition = { resources: [resource(queue, [['s-1', 'time.weekday', 'IN', ['1', '0']]])] };
     const index = savedSegmentIndex(condition);
     expect(index.get(segmentKey({ field: 'time.weekday', operator: 'IN', value: ['1', '0'] }))).toBe('s-1');
+  });
+});
+
+describe('isValidName', () => {
+  it('takes English and Hebrew letters, digits, - and _', () => {
+    ['office_hours', 'Night-2', 'שעות_פעילות', 'סניף-3', 'מוקד_A'].forEach((name) => expect(isValidName(name)).toBe(true));
+  });
+
+  it('refuses spaces and other characters', () => {
+    ['office hours', 'שעות פעילות', 'sales!', 'a.b', 'שעות?', 'café'].forEach((name) => expect(isValidName(name)).toBe(false));
+  });
+
+  it('turns spaces into _ as the name is typed, so a Hebrew name with spaces is valid', () => {
+    expect(tidyName('שעות  פעילות')).toBe('שעות_פעילות');
+    expect(isValidName(tidyName('שעות פעילות'))).toBe(true);
   });
 });
 

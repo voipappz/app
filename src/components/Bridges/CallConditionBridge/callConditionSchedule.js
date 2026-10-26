@@ -16,7 +16,8 @@
  */
 
 export const DAYS = [0, 1, 2, 3, 4, 5, 6];
-export const NAME_PATTERN = /^[0-9a-zA-Z_-]+$/;
+// A name: English or Hebrew letters, digits, - and _ (spaces become _).
+export const NAME_PATTERN = /^[0-9a-zA-Z\p{Script=Hebrew}_-]+$/u;
 export const MAX_RANGES_PER_DAY = 3;
 
 // Destination types a RULE may send to (the API's resource list; `que` is
