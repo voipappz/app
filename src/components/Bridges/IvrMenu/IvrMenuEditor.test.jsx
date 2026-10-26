@@ -4,8 +4,9 @@ import i18n from '../../../i18n';
 import IvrMenuEditor from './IvrMenuEditor';
 import { ivrApi } from '../../../services/api/ivrApi';
 
-let canDo = () => true;
-vi.mock('../../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: (...args) => canDo(...args) }) }));
+// The routes write grant (usePermissions' canWriteDestinations).
+let routesWrite = true;
+vi.mock('../../../hooks/usePermissions', () => ({ usePermissions: () => ({ canWriteDestinations: routesWrite }) }));
 vi.mock('../../common/AudioPreview/AudioPreview.jsx', () => ({ default: ({ uuid }) => <span>player {uuid}</span> }));
 vi.mock('../NumberBridge/NumberSelector.jsx', () => ({
   NumberSelector: ({ label, onChange }) => <button type="button" onClick={() => onChange('route-1')}>{label} box</button>,
@@ -36,7 +37,7 @@ const saved = {
 };
 
 beforeEach(() => {
-  canDo = () => true;
+  routesWrite = true;
   ITEMS.queue = [{ uuid: 'q-1', name: 'Sales team' }];
   offered = ['extension', 'queue', 'ivr', 'announcement', 'call_condition', 'vml', 'conference', 'number'];
   vi.clearAllMocks();
@@ -142,8 +143,8 @@ describe('IvrMenuEditor', () => {
     expect(types).toEqual(['Device', 'Queue']);
   });
 
-  it('makes a new one only where the role can write it', async () => {
-    canDo = (key, action) => action === 'read';
+  it('makes a new one only with the routes write grant', async () => {
+    routesWrite = false;
     renderEditor();
     fireEvent.click(await loaded());
     await within(dialog()).findByText('Sales team');

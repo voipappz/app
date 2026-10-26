@@ -126,25 +126,26 @@ describe('menuHints', () => {
   });
 });
 
-// `can` as usePermissions gives it, from an ACL of { key: [permissions] }.
-const canFrom = (acl) => (key, action = 'read') => (acl[key] || []).includes(action);
-
 describe('destinationChoices', () => {
   it("offers what the server offers, in the picker's order", () => {
-    expect(destinationChoices(['number', 'extension', 'que'], canFrom({})).map((d) => d.type))
+    expect(destinationChoices(['number', 'extension', 'que'], false).map((d) => d.type))
       .toEqual(['extension', 'queue', 'number']);
   });
 
   it('keeps a type this editor does not know, with a plain icon', () => {
-    const [other] = destinationChoices(['user_login'], canFrom({ user_login: ['read', 'write'] }));
+    const [other] = destinationChoices(['user_login'], true);
     expect(other).toMatchObject({ type: 'user_login', canCreate: false });
     expect(other.icon).toBeTruthy();
   });
 
-  it('lets a person make a new one only where the role can write it', () => {
-    const can = canFrom({ queue: ['read'], announcement: ['read', 'write'], extension: ['read', 'write'] });
-    const byType = Object.fromEntries(destinationChoices(['queue', 'announcement', 'extension'], can).map((d) => [d.type, d.canCreate]));
-    expect(byType).toEqual({ extension: false, queue: false, announcement: true });
+  // Every destination follows the routes grant; only types with an editor
+  // can be made new.
+  it('lets a person make a new one of any creatable type with routes write', () => {
+    const choices = (canWrite) => Object.fromEntries(
+      destinationChoices(['queue', 'announcement', 'call_condition', 'extension'], canWrite).map((d) => [d.type, d.canCreate]),
+    );
+    expect(choices(true)).toEqual({ extension: false, queue: true, announcement: true, call_condition: true });
+    expect(choices(false)).toEqual({ extension: false, queue: false, announcement: false, call_condition: false });
   });
 });
 

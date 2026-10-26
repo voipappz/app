@@ -44,9 +44,6 @@ const BRIDGE_OPTIONS = ['number', 'announcement', 'vml', 'call_condition', 'que'
 const NO_RESOURCES = ['queue', 'ivr', 'announcement', 'vml', 'call_condition', 'bot'];
 // Types the route wizard has an editor for, so a new one can be made from here.
 const CREATABLE_BRIDGES = ['announcement', 'vml', 'call_condition', 'queue', 'ivr', 'bot'];
-// A destination type's capability in the ACL, where the names differ: the API's
-// ACL lists only `call_conditions` (queue, ivr, vml… have their own keys).
-const ACL_KEYS = { call_condition: 'call_conditions' };
 
 // The bridge type select's options, in capitals as ever.
 const bridgeOptionLabel = (t, type) => (BRIDGE_OPTIONS.includes(type)
@@ -104,13 +101,11 @@ const DIDForm = forwardRef(({
   const { selectedEnvironments } = useCustomerEnvironment();
   // A portal user has one environment, their own: it is set, never a field.
   const userSession = useIsUserSession();
-  const { can } = usePermissions();
+  const { can, canWriteDestinations } = usePermissions();
   const canEditProviders = can('providers', 'write');
-  // Editing or making a destination: a user needs the ACL's write grant on
-  // that type (an account's ACL names screens, not destination types).
-  const canWriteBridge = (type) => !userSession || can(ACL_KEYS[type] || type, 'write');
-  // A new one also needs an editor the route wizard can open.
-  const canCreateBridge = (type) => CREATABLE_BRIDGES.includes(type) && canWriteBridge(type);
+  // Editing or making a destination follows the routes grant, user or
+  // account; a new one also needs an editor the route wizard can open.
+  const canCreateBridge = (type) => CREATABLE_BRIDGES.includes(type) && canWriteDestinations;
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -670,7 +665,7 @@ const DIDForm = forwardRef(({
                   {errors.bridge_uuid || t('form.destinationHelp')}
                 </FormHelperText>
               </FormControl>
-              {formData.bridge_uuid && onDrillDown && canWriteBridge(formData.bridge_type) && (
+              {formData.bridge_uuid && onDrillDown && canWriteDestinations && (
                 <Tooltip title={t('form.editType', { type: getBridgeTypeLabel(formData.bridge_type) })}>
                   <IconButton
                     size="small"
