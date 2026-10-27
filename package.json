@@ -101,7 +101,7 @@
     "wait-on": "^9.5.1"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.9.6"
+    "@rollup/rollup-linux-x64-gnu": "^4.65.0"
   },
   "overrides": {
     "path-to-regexp": "0.1.13",
