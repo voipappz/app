@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import i18n from '../i18n';
-import { formatDate, formatOnlyDate } from './dateUtils';
+import { formatDate, formatDayMonth, formatOnlyDate } from './dateUtils';
 
 afterEach(() => i18n.changeLanguage('en'));
 
@@ -36,5 +36,25 @@ describe('formatOnlyDate', () => {
   it("returns '-' for empty or invalid input", () => {
     expect(formatOnlyDate('')).toBe('-');
     expect(formatOnlyDate('not a date')).toBe('-');
+  });
+});
+
+describe('formatDayMonth', () => {
+  it('names the day and month, and the year only when asked', () => {
+    const day = new Date(2026, 6, 29, 12);
+    expect(formatDayMonth(day)).toMatch(/29/);
+    expect(formatDayMonth(day)).not.toMatch(/2026/);
+    expect(formatDayMonth(day, { withYear: true })).toMatch(/2026/);
+  });
+
+  it('follows Hebrew when it is the active language', async () => {
+    const day = new Date(2026, 6, 29, 12);
+    const english = formatDayMonth(day);
+    await i18n.changeLanguage('he');
+    expect(formatDayMonth(day)).not.toBe(english);
+  });
+
+  it("returns '-' for invalid input", () => {
+    expect(formatDayMonth('not a date')).toBe('-');
   });
 });

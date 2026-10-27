@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { monitoringApi } from '../../services/api/monitoringApi';
 import { cdrQueryReady, hasScope, scopeParams } from './cdrReport';
+import i18n from '../../i18n';
 
-export const REPORT_UNAVAILABLE = 'Call reports aren’t available on this server yet — its API needs the update that adds call reports.';
+/** What to say when this server's API has no call reports yet. */
+export const reportUnavailable = () => i18n.t('widgets:errors.reportUnavailable');
 
 // What to tell people when a report fails: a 404 is an API without the report
 // endpoint, a 422 carries the API's own reason (e.g. a range too long).
 export function reportError(err) {
-  if (err?.status === 404) return REPORT_UNAVAILABLE;
+  if (err?.status === 404) return reportUnavailable();
   const message = String(err?.message || '');
   const reason = message.match(/"(?:error|message)"\s*:\s*"([^"]+)"/)?.[1];
   if (reason) return reason;
-  return message.replace(/^Failed [^:]*:\s*/, '') || 'The report failed. Try again.';
+  return message.replace(/^Failed [^:]*:\s*/, '') || i18n.t('widgets:errors.reportFailed');
 }
 
 // Runs a CDR report through the API for the top bar's scope. `runKey` re-runs

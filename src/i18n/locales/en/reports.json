@@ -1,0 +1,204 @@
+{
+  "title": "Reports",
+  "view": {
+    "visual": "Visual",
+    "editor": "Editor"
+  },
+  "loadingList": "Loading reports list...",
+  "listError": "Error loading reports: {{error}}",
+  "loadingData": "Loading report data...",
+  "dataError": "Error loading report data: {{error}}",
+  "untitled": "Report Details",
+  "chartKind": {
+    "table": "Table",
+    "line": "Line chart",
+    "bar": "Bar chart",
+    "pie": "Pie chart",
+    "scatter": "Scatter chart",
+    "map": "Map chart",
+    "other": "{{type}} chart"
+  },
+  "toolbar": {
+    "run": "Run",
+    "edit": "Edit",
+    "editLabel": "Edit report",
+    "fork": "Fork",
+    "forkLabel": "Fork report",
+    "forkTemplate": "Fork template to edit",
+    "forkCopy": "Fork report (editable copy)",
+    "history": "History",
+    "historyLabel": "Report history",
+    "sqlShow": "SQL editor",
+    "sqlHide": "Hide SQL editor",
+    "sql": "SQL",
+    "table": "Table",
+    "tableLabel": "table view",
+    "chart": "Chart",
+    "chartLabel": "chart view",
+    "exportCsv": "Export CSV",
+    "export": "Export",
+    "columns": "Select Columns"
+  },
+  "params": {
+    "title": "Parameters",
+    "any": "Any"
+  },
+  "builder": {
+    "fields": "Fields",
+    "groupBy": "Group By",
+    "orderBy": "Order By",
+    "none": "None"
+  },
+  "chartConfig": {
+    "labelField": "Label Field: <field/> (automatically selected)",
+    "dataFields": "Data Fields (select chart series)",
+    "noNumeric": "This report has no numeric columns to chart — showing the table instead.",
+    "selected": "Selected: {{n}} field(s)"
+  },
+  "grid": {
+    "noRows": "No data found for the selected date range",
+    "loadingMore": "Loading more data..."
+  },
+  "empty": {
+    "noChartTitle": "No Data Available",
+    "noChartBody": "Please select a report with data to display the chart.",
+    "hiddenColumns": "No data to display for the selected columns, or all columns are hidden. Use the settings icon to select columns.",
+    "unsupported": "Select a report to view its data or this report type is not yet supported for display.",
+    "selectReport": "Please select a report from the list to view details."
+  },
+  "list": {
+    "newReport": "New Report",
+    "search": "Search…",
+    "noMatch": "No match",
+    "empty": "No reports yet",
+    "fork": "Fork as editable report",
+    "forkNamed": "Fork {{name}}",
+    "delete": "Delete",
+    "deleteNamed": "Delete {{name}}",
+    "template": "template"
+  },
+  "types": {
+    "table": "table",
+    "line": "line",
+    "bar": "bar",
+    "pie": "pie",
+    "scatter": "scatter",
+    "map": "map",
+    "counter": "counter",
+    "gauge": "gauge"
+  },
+  "display": {
+    "table": "Table",
+    "line": "Line",
+    "bar": "Bar",
+    "pie": "Pie",
+    "scatter": "Scatter",
+    "map": "Map",
+    "counter": "Counter",
+    "gauge": "Gauge"
+  },
+  "dashboards": {
+    "loadError": "Failed to load dashboards",
+    "empty": "No report dashboards defined",
+    "emptyHint": "Add a report with a :category: to queries.yml and it appears here.",
+    "tab": "{{name}} ({{n}})"
+  },
+  "panel": {
+    "refresh": "Refresh",
+    "loadError": "Failed to load reports",
+    "noReports": "No reports defined for this screen yet.",
+    "rows": "{{n}} rows",
+    "noData": "No data in this period: {{names}}",
+    "target": "Target"
+  },
+  "map": {
+    "noData": "No valid geographic data returned.",
+    "label": "Report geographic map"
+  },
+  "range": {
+    "today": "Today",
+    "days7": "7 Days",
+    "days30": "30 Days",
+    "from": "From",
+    "to": "To",
+    "between": "to"
+  },
+  "audit": {
+    "title": "Report run history",
+    "empty": "No recorded runs for this report yet.",
+    "loadError": "Failed to load report history",
+    "when": "When",
+    "status": "Status",
+    "user": "User",
+    "rows": "Rows",
+    "duration": "Duration",
+    "params": "Parameters",
+    "failed": "Failed",
+    "completed": "Completed",
+    "ms": "{{n}} ms",
+    "refresh": "Refresh",
+    "close": "Close"
+  },
+  "limits": {
+    "rowLimit": "Row limit",
+    "timeout": "Timeout (ms)",
+    "cacheTtl": "Cache TTL (s)"
+  },
+  "create": {
+    "title": "New Report",
+    "name": "Report name",
+    "display": "Display",
+    "template": "Start from template",
+    "templateHint": "queries.yml catalog",
+    "blank": "Blank query",
+    "nameRequired": "Report name is required",
+    "queryRequired": "Query cannot be empty",
+    "saveFailed": "Failed to save",
+    "cancel": "Cancel"
+  },
+  "sql": {
+    "guard": "Read-only SELECT/WITH · single statement · 15s timeout · 10k row cap — enforced by the API",
+    "readOnly": "read-only SQL",
+    "tables": "tables:",
+    "variables": "variables:",
+    "run": "Run",
+    "saveAsReport": "Save as report",
+    "count": "{{n}} rows",
+    "countWithLimit": "{{n}} rows · limit {{limit}}",
+    "failed": "Query failed",
+    "noRows": "No rows returned"
+  },
+  "edit": {
+    "title": "Edit Report",
+    "unsaved": "unsaved",
+    "tabsLabel": "edit report tabs",
+    "tabReport": "Report",
+    "tabQuery": "Query",
+    "tabLimits": "Limits",
+    "name": "Report Name",
+    "display": "Display",
+    "enabled": "Enabled",
+    "notes": "Notes",
+    "resolved": "Resolved settings",
+    "columns": "Columns",
+    "columnsHint": "selected by the query",
+    "params": "Search params",
+    "paramsHint": "filter fields offered",
+    "groupBy": "Group by",
+    "groupByHint": "GROUP BY columns",
+    "none": "none",
+    "resolvedNote": "From the query definition, or your saved override. Change grouping from the report toolbar.",
+    "template": "Query Template",
+    "custom": "Custom SQL (no template)",
+    "limitsNote": "Leave a field empty to use the engine default.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "nameRequired": "Report name is required",
+    "partialLoad": "Could not load the full report. Showing what we have — saving may overwrite fields you cannot see.",
+    "updateFailed": "Failed to update report",
+    "discardTitle": "Discard changes",
+    "discard": "Discard",
+    "discardMessage": "Discard your unsaved changes to this report?"
+  }
+}

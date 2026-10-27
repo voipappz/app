@@ -1,8 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
+  DialogTitle, DialogContent, DialogActions,
   Button, TextField, Box, Alert, MenuItem,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import { ResponsiveDialog as Dialog } from '../../ui';
+import { displayTypeName } from '../reportWords';
 import SqlQueryEditor from '../SqlQueryEditor/SqlQueryEditor';
 import { reportsApi } from '../../../services/api/reportsApi';
 
@@ -17,6 +20,7 @@ const parseFields = (sql) => {
 };
 
 const CreateReportDialog = ({ open, onClose, onSave, queries = [] }) => {
+  const { t } = useTranslation('reports');
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -52,8 +56,8 @@ const CreateReportDialog = ({ open, onClose, onSave, queries = [] }) => {
   }, [templates]);
 
   const handleSave = useCallback(async (statement) => {
-    if (!name.trim()) { setError('Report name is required'); return; }
-    if (!statement?.trim()) { setError('Query cannot be empty'); return; }
+    if (!name.trim()) { setError(t('create.nameRequired')); return; }
+    if (!statement?.trim()) { setError(t('create.queryRequired')); return; }
 
     setSaving(true);
     setError(null);
@@ -76,11 +80,11 @@ const CreateReportDialog = ({ open, onClose, onSave, queries = [] }) => {
       handleClose();
     } catch (err) {
       const body = err?.response?.data || err?.body;
-      setError(typeof body === 'string' ? body : body?.message || err.message || 'Failed to save');
+      setError(typeof body === 'string' ? body : body?.message || err.message || t('create.saveFailed'));
     } finally {
       setSaving(false);
     }
-  }, [name, type, templateName, rowLimit, timeoutMs, cacheTtl, onSave]);
+  }, [name, type, templateName, rowLimit, timeoutMs, cacheTtl, onSave, t]);
 
   const handleClose = useCallback(() => {
     setName('');
@@ -94,41 +98,41 @@ const CreateReportDialog = ({ open, onClose, onSave, queries = [] }) => {
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth
       PaperProps={{ sx: { height: '85vh' } }}>
-      <DialogTitle>New Report</DialogTitle>
+      <DialogTitle>{t('create.title')}</DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden', pb: 0 }}>
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
           <TextField
-            label="Report name" size="small" value={name}
+            label={t('create.name')} size="small" value={name}
             onChange={e => setName(e.target.value)}
             sx={{ width: 260 }}
           />
-          <TextField select label="Display" size="small" value={type}
+          <TextField select label={t('create.display')} size="small" value={type}
             onChange={e => setType(e.target.value)} sx={{ width: 140 }}>
             {(types.length ? types : [type]).map((displayType) => (
               <MenuItem key={displayType} value={displayType}>
-                {displayType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                {displayTypeName(t, displayType)}
               </MenuItem>
             ))}
           </TextField>
           {templates.length > 0 && (
             <TextField
-              select label="Start from template" size="small" value={templateName}
+              select label={t('create.template')} size="small" value={templateName}
               onChange={e => handleTemplate(e.target.value)}
               sx={{ width: 220 }}
-              helperText="queries.yml catalog"
+              helperText={t('create.templateHint')}
             >
-              <MenuItem value=""><em>Blank query</em></MenuItem>
+              <MenuItem value=""><em>{t('create.blank')}</em></MenuItem>
               {templates.map((q) => (
                 <MenuItem key={q.name} value={q.name}>{q.name}</MenuItem>
               ))}
             </TextField>
           )}
           {/* Limits / TTL — per-report guardrail overrides */}
-          <TextField label="Row limit" size="small" type="number" value={rowLimit}
+          <TextField label={t('limits.rowLimit')} size="small" type="number" value={rowLimit}
             onChange={e => setRowLimit(e.target.value)} placeholder="10000" sx={{ width: 120 }} />
-          <TextField label="Timeout (ms)" size="small" type="number" value={timeoutMs}
+          <TextField label={t('limits.timeout')} size="small" type="number" value={timeoutMs}
             onChange={e => setTimeoutMs(e.target.value)} placeholder="15000" sx={{ width: 130 }} />
-          <TextField label="Cache TTL (s)" size="small" type="number" value={cacheTtl}
+          <TextField label={t('limits.cacheTtl')} size="small" type="number" value={cacheTtl}
             onChange={e => setCacheTtl(e.target.value)} placeholder="60" sx={{ width: 130 }} />
         </Box>
         {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
@@ -137,7 +141,7 @@ const CreateReportDialog = ({ open, onClose, onSave, queries = [] }) => {
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleClose} disabled={saving}>{t('create.cancel')}</Button>
       </DialogActions>
     </Dialog>
   );

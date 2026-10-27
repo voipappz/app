@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { createConsumer, ConnectionMonitor } from '@rails/actioncable';
 import { config } from '../config.js';
+import i18n from '../i18n';
 import { cableToken, cableUrlFor, redactCableUrl, tokenExpiresAt } from '../utils/cableToken.js';
 
 /**
@@ -145,6 +146,9 @@ export function useCable() {
   };
 }
 
+// The verdict's words, in the active language (live.json cable.verdict).
+const say = (key, values) => i18n.t(`live:cable.verdict.${key}`, values);
+
 /**
  * One verdict for the connection and a subscription on it — pure, so every
  * branch is pinned by a test without a socket.
@@ -153,48 +157,46 @@ export function useCable() {
  */
 export function cableVerdict(conn, sub, now = Date.now()) {
   if (!conn.configured) {
-    return { level: 'error', label: 'Not configured', hint: 'No cable URL: set VITE_WS_URL (dev) or config.ws.cable.' };
+    return { level: 'error', label: say('notConfigured'), hint: say('notConfiguredHint') };
   }
   if (!conn.tokenSource) {
-    return { level: 'error', label: 'No session', hint: 'Sign in — the cable authenticates with the session token.' };
+    return { level: 'error', label: say('noSession'), hint: say('noSessionHint') };
   }
   if (conn.tokenExpiresAt && conn.tokenExpiresAt <= now) {
-    return { level: 'error', label: 'Token expired', hint: 'The node refuses an expired token. Sign in again.' };
+    return { level: 'error', label: say('tokenExpired'), hint: say('tokenExpiredHint') };
   }
   if (conn.disconnectReason === 'unauthorized') {
     return {
       level: 'error',
-      label: 'Token refused',
-      hint: conn.tokenSource === 'override'
-        ? 'The va_cable_token override does not verify with this node’s SECRET_KEY.'
-        : 'The node’s SECRET_KEY is not the key that signed this login.',
+      label: say('tokenRefused'),
+      hint: say(conn.tokenSource === 'override' ? 'overrideRefusedHint' : 'tokenRefusedHint'),
     };
   }
   if (sub?.status === 'rejected') {
-    return {
-      level: 'error',
-      label: 'Subscription rejected',
-      hint: 'The node would not open this environment for this session — not its tenant, or it could not resolve it (broker link down).',
-    };
+    return { level: 'error', label: say('subscriptionRejected'), hint: say('subscriptionRejectedHint') };
   }
   if (conn.state === 'open' && conn.welcomedAt) {
     const quiet = now - (conn.pingedAt || conn.welcomedAt);
     if (quiet > STALE_AFTER_MS) {
-      return { level: 'warn', label: `Stale — no ping for ${Math.round(quiet / 1000)}s`, hint: 'The link looks dead; the client will reopen it.' };
+      return { level: 'warn', label: say('stale', { s: Math.round(quiet / 1000) }), hint: say('staleHint') };
     }
-    if (!sub || sub.status === 'idle') return { level: 'ok', label: 'Connected', hint: null };
-    if (sub.status === 'confirmed') return { level: 'ok', label: 'Live', hint: null };
-    return { level: 'warn', label: 'Subscribing…', hint: null };
+    if (!sub || sub.status === 'idle') return { level: 'ok', label: say('connected'), hint: null };
+    if (sub.status === 'confirmed') return { level: 'ok', label: say('live'), hint: null };
+    return { level: 'warn', label: say('subscribing'), hint: null };
   }
-  if (conn.state === 'idle') return { level: 'idle', label: 'Not connected', hint: null };
+  if (conn.state === 'idle') return { level: 'idle', label: say('notConnected'), hint: null };
   if (conn.state === 'closed' && !conn.monitorRunning && !conn.welcomedAt) {
-    return { level: 'error', label: 'Refused', hint: 'The node closed the socket before accepting it — usually the token.' };
+    return { level: 'error', label: say('refused'), hint: say('refusedHint') };
   }
   if (conn.state === 'closed' && !conn.monitorRunning) {
-    return { level: 'error', label: 'Disconnected', hint: 'The client stopped reconnecting. Reload to try again.' };
+    return { level: 'error', label: say('disconnected'), hint: say('disconnectedHint') };
   }
-  const attempt = conn.reconnectAttempts ? ` (attempt ${conn.reconnectAttempts})` : '';
-  return { level: 'warn', label: conn.state === 'connecting' && !conn.lastCloseAt ? 'Connecting…' : `Reconnecting${attempt}`, hint: null };
+  if (conn.state === 'connecting' && !conn.lastCloseAt) return { level: 'warn', label: say('connecting'), hint: null };
+  return {
+    level: 'warn',
+    label: conn.reconnectAttempts ? say('reconnectingAttempt', { n: conn.reconnectAttempts }) : say('reconnecting'),
+    hint: null,
+  };
 }
 
 // Test seam.

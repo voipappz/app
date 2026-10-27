@@ -3,14 +3,9 @@
 // and always runs through voipappz-api (/monitoring/influxdb/query), which
 // checks every tag against the measurement and applies the tenant scope.
 export const AGGREGATIONS = ['mean', 'sum', 'count', 'max', 'min', 'last', 'first'];
-export const RANGES = [
-  { minutes: 15, label: 'Past 15 minutes' },
-  { minutes: 60, label: 'Past hour' },
-  { minutes: 360, label: 'Past 6 hours' },
-  { minutes: 1440, label: 'Past 24 hours' },
-  { minutes: 10080, label: 'Past 7 days' },
-  { minutes: 43200, label: 'Past 30 days' },
-];
+// The time ranges a query can cover, in minutes; their words are widgets.json
+// ranges.<minutes>.
+export const RANGES = [15, 60, 360, 1440, 10080, 43200];
 export const VIEWS = ['line', 'bar', 'number', 'table'];
 
 // Rows come back as { time, value, <tag>? } — one per time bucket and series.

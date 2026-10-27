@@ -4,6 +4,19 @@
 // dashboard's editor and every 'cdr' widget share this query shape:
 //   { measures: [], dimensions: [], bucket, minutes, where: { dim: 'a,b' }, view, order, limit }
 
+import i18n from '../../i18n';
+import { formatNumber } from '../../utils/numberUtils';
+
+// This module's words (widgets.json), in the active language.
+const say = (key, values) => i18n.t(`widgets:${key}`, values);
+
+// A catalog entry's name as people read it. The catalog (the API's, or the
+// fallback below) names measures and dimensions in English: English shows
+// that name as sent, Hebrew the app's own name for the key when it has one.
+const named = (group, entry) => (i18n.language === 'he' && i18n.exists(`widgets:${group}.${entry.key}`)
+  ? say(`${group}.${entry.key}`)
+  : entry.label);
+
 // Used until /cdr/catalog answers (and if it cannot): the API's own lists.
 export const FALLBACK_CATALOG = {
   dimensions: [
@@ -24,27 +37,26 @@ export const FALLBACK_CATALOG = {
   buckets: ['5m', '15m', '1h', '1d'],
 };
 
-export const CDR_RANGES = [
-  { minutes: 15, label: 'Past 15 minutes' },
-  { minutes: 60, label: 'Past hour' },
-  { minutes: 360, label: 'Past 6 hours' },
-  { minutes: 1440, label: 'Past 24 hours' },
-  { minutes: 4320, label: 'Past 3 days' },
-  { minutes: 10080, label: 'Past 7 days' },
-];
-export const BUCKET_LABELS = { '': 'No — totals', '5m': '5 minutes', '15m': '15 minutes', '1h': 'Hour', '1d': 'Day' };
+// The windows a report can cover, in minutes; their words are widgets.json
+// ranges.<minutes>.
+export const CDR_RANGES = [15, 60, 360, 1440, 4320, 10080];
+// The buckets a report can run over time in ('' = totals); their words are
+// widgets.json bucket.<key> ('none' for '').
+export const BUCKETS = ['', '5m', '15m', '1h', '1d'];
 export const CDR_VIEWS = ['table', 'bar', 'line', 'pie', 'number'];
-export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const NEW_CDR_QUERY = {
   title: '', type: 'cdr', measures: ['calls', 'answer_rate', 'billsec', 'avg_talk'], dimensions: ['environment'],
   bucket: '', minutes: 1440, where: {}, view: 'table', order: '', limit: 50,
 };
 
-export const measureOf = (catalog, key) => (catalog?.measures || []).find((m) => m.key === key)
-  || FALLBACK_CATALOG.measures.find((m) => m.key === key) || { key, label: key, unit: 'count' };
-export const dimensionLabel = (catalog, key) => ((catalog?.dimensions || []).find((d) => d.key === key)
-  || FALLBACK_CATALOG.dimensions.find((d) => d.key === key) || { label: key }).label;
+export const measureOf = (catalog, key) => {
+  const measure = (catalog?.measures || []).find((m) => m.key === key)
+    || FALLBACK_CATALOG.measures.find((m) => m.key === key) || { key, label: key, unit: 'count' };
+  return { ...measure, label: named('measures', measure) };
+};
+export const dimensionLabel = (catalog, key) => named('dimensions', (catalog?.dimensions || []).find((d) => d.key === key)
+  || FALLBACK_CATALOG.dimensions.find((d) => d.key === key) || { key, label: key });
 
 // 3725 → "1h 2m", 85 → "1m 25s", 42 → "42s".
 export function formatSeconds(value) {
@@ -52,33 +64,33 @@ export function formatSeconds(value) {
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  if (h) return `${h.toLocaleString()}h ${m}m`;
-  if (m) return `${m}m ${s}s`;
-  return `${s}s`;
+  if (h) return say('duration.hours', { h: formatNumber(h), m });
+  if (m) return say('duration.minutes', { m, s });
+  return say('duration.seconds', { s });
 }
 
 export function formatMeasure(unit, value) {
   if (value === null || value === undefined || value === '') return '—';
   const n = Number(value);
   if (!Number.isFinite(n)) return String(value);
-  if (unit === 'percent') return `${n.toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
+  if (unit === 'percent') return `${formatNumber(n, { maximumFractionDigits: 1 })}%`;
   if (unit === 'seconds') return formatSeconds(n);
-  if (unit === 'money') return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (unit === 'score') return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  return n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+  if (unit === 'money') return formatNumber(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (unit === 'score') return formatNumber(n, { maximumFractionDigits: 2 });
+  return formatNumber(n, { maximumFractionDigits: 1 });
 }
 
 // A dimension value as people read it: environment/customer names from the
-// API's labels, weekday names, "unknown" as it is.
+// API's labels, weekday names (0 = Sunday), "unknown" for no value.
 export function dimensionText(dim, value, labels = {}) {
-  if (value === null || value === undefined) return 'unknown';
-  if (dim === 'weekday') return WEEKDAYS[Number(value)] || String(value);
+  if (value === null || value === undefined) return say('cdr.unknown');
+  if (dim === 'weekday') return /^[0-6]$/.test(String(value)) ? say(`weekdays.${value}`) : String(value);
   if (dim === 'hour') return `${String(value).padStart(2, '0')}:00`;
   return labels?.[dim]?.[value] || String(value).replace(/_/g, ' ');
 }
 
 // A row's group name: its dimension values joined ("Sales · incoming").
-export const groupName = (row, dimensions, labels) => dimensions.map((d) => dimensionText(d, row[d], labels)).join(' · ') || 'All calls';
+export const groupName = (row, dimensions, labels) => dimensions.map((d) => dimensionText(d, row[d], labels)).join(' · ') || say('cdr.allCalls');
 
 // Bucketed rows → one entry per time, a column per group (split) or per
 // measure (no split), which is what a line or stacked bar wants.

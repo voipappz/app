@@ -9,6 +9,7 @@ import { VMLBridge } from '../../Bridges/VMLBridge/VMLBridge.jsx';
 import { CallConditionBridge } from '../../Bridges/CallConditionBridge/CallConditionBridge.jsx';
 import { BotBridge } from '../../Bridges/BotBridge/BotBridge.jsx';
 import { ExtensionBridge } from '../../Bridges/ExtensionBridge/ExtensionBridge.jsx';
+import { refreshRoutingChains } from '../DIDDialog/RoutingChain';
 
 /**
  * WizardViewRenderer
@@ -41,7 +42,13 @@ const WizardViewRenderer = ({
     onCancel(result);
   };
   const close = () => finish(null);
-  const save = (savedData) => finish(savedData);
+  // Every editor here saves through the API itself, then calls this. The
+  // route form and details behind it show the destination's routing chain,
+  // which must load the saved version, whatever the API sent back.
+  const save = (savedData) => {
+    refreshRoutingChains();
+    finish(savedData);
+  };
   if (!view) return null;
 
   const { type, mode, data, environmentUuid } = view;

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Box, Chip, Typography, CircularProgress, Alert } from '@mui/material';
 import { ChartPanel } from '../Monitoring/widgets';
 import { useLiveCharts } from './useLiveCharts';
+import LtrIsland from '../../i18n/LtrIsland';
 
 /**
  * Transforms API response format into flat array for ChartPanel:
@@ -70,11 +71,11 @@ const LiveChartStrip = ({ chartType, series, title, uuid = null, autoSeries = fa
 
   return (
     <Box sx={{ mb: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
         <Typography variant="subtitle2" sx={{ color: 'var(--mui-palette-text-secondary)', fontWeight: 600 }}>
           {title}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
+        <Box sx={{ display: 'flex', gap: 0.5, ms: 'auto' }}>
           {TIME_WINDOWS.map((tw) => (
             <Chip
               key={tw.label}
@@ -95,14 +96,17 @@ const LiveChartStrip = ({ chartType, series, title, uuid = null, autoSeries = fa
         </Alert>
       )}
 
-      <ChartPanel
-        title=""
-        data={flatData}
-        series={effectiveSeries}
-        timeRange={timeWindow.minutes <= 60 ? 'hour' : timeWindow.minutes <= 240 ? 'day' : 'week'}
-        chartType="area"
-        loading={loading}
-      />
+      {/* Time runs left to right in every language. */}
+      <LtrIsland>
+        <ChartPanel
+          title=""
+          data={flatData}
+          series={effectiveSeries}
+          timeRange={timeWindow.minutes <= 60 ? 'hour' : timeWindow.minutes <= 240 ? 'day' : 'week'}
+          chartType="area"
+          loading={loading}
+        />
+      </LtrIsland>
     </Box>
   );
 };

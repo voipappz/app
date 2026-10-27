@@ -5,7 +5,7 @@
   },
   "name": {
     "label": "Name",
-    "help": "English letters, numbers, - and _",
+    "help": "English or Hebrew letters, numbers, - and _",
     "placeholder": "office_hours"
   },
   "application": "Application",
@@ -136,7 +136,7 @@
   },
   "errors": {
     "nameRequired": "Enter a name",
-    "nameFormat": "Use English letters, numbers, - or _ (no spaces)",
+    "nameFormat": "Use letters, numbers, - or _",
     "noHours": "Add hours or close this day",
     "endBeforeStart": "The end must be after the start",
     "destinationRequired": "Choose where calls go",

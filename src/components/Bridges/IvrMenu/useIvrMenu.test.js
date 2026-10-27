@@ -8,7 +8,7 @@ vi.mock('../../../services/api/ivrApi', () => ({
   ivrApi: { getIVR: vi.fn(), createIVR: vi.fn(), updateIVR: vi.fn() },
 }));
 vi.mock('../../../services/api/bridgeApi', () => ({ bridgeApi: { getBridgeResources: vi.fn(), getBridgeTypes: vi.fn() } }));
-vi.mock('../../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: () => false }) }));
+vi.mock('../../../hooks/usePermissions', () => ({ usePermissions: () => ({ canWriteDestinations: false }) }));
 
 const saved = {
   uuid: 'ivr-1', name: 'Main menu', environment_uuid: 'env-9', announcement_uuid: 'ann-1',

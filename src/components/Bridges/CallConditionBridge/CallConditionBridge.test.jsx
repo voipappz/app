@@ -99,6 +99,34 @@ describe('creating a call condition', () => {
     expect(createSegment).not.toHaveBeenCalled();
   });
 
+  // The reason a Save stopped must be in view: the page goes to the first
+  // problem and puts the cursor in it.
+  it('takes you to the first missing field when Create stops', async () => {
+    renderPage();
+    fireEvent.click(screen.getByTestId('call-condition-save'));
+    const name = screen.getByRole('textbox', { name: /^Name/ });
+    await waitFor(() => expect(name).toHaveFocus());
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('says a name it cannot take is wrong while it is typed', () => {
+    renderPage();
+    fireEvent.change(screen.getByRole('textbox', { name: /^Name/ }), { target: { value: 'sales!' } });
+    expect(screen.getByText('Use letters, numbers, - or _')).toBeInTheDocument();
+  });
+
+  it('saves a Hebrew name, spaces turned into _', async () => {
+    renderPage();
+    const name = screen.getByRole('textbox', { name: /^Name/ });
+    fireEvent.change(name, { target: { value: 'שעות פעילות' } });
+    expect(name).toHaveValue('שעות_פעילות');
+    expect(name).not.toHaveAttribute('aria-invalid', 'true');
+    // No open days: only "otherwise" needs a destination.
+    await chooseDestination('target-otherwise', 'VML script', 'Voicemail');
+    fireEvent.click(screen.getByTestId('call-condition-save'));
+    await waitFor(() => expect(createCallCondition).toHaveBeenCalledWith(expect.objectContaining({ name: 'שעות_פעילות' })));
+  });
+
   it('offers no application to a user, and still sends their own', async () => {
     userSession = true;
     const { onSave } = renderPage();

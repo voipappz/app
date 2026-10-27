@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { Box, Paper, Typography, Chip, Skeleton, IconButton, Tooltip, Button } from '@mui/material';
 import {
   Phone as PhoneIcon,
@@ -396,10 +396,32 @@ const SimpleCard = ({ type, data, onEditBridge }) => (
   </Paper>
 );
 
+/* ── Fresh after an edit ── */
+
+// A chain shows what its destination held when it loaded, and editing a
+// destination keeps its uuid, so nothing in the chain's props changes. The
+// route wizard keeps the route form (and the details page stays) open behind
+// the editor, so the chain must be told: every save of a destination counts
+// here, and every chain on screen loads again.
+let savedDestinations = 0;
+const chainListeners = new Set();
+
+/** Call when a destination (queue, IVR, call condition...) has been saved. */
+export const refreshRoutingChains = () => {
+  savedDestinations += 1;
+  chainListeners.forEach((listener) => listener());
+};
+
+const useSavedDestinations = () => useSyncExternalStore(
+  (listener) => { chainListeners.add(listener); return () => chainListeners.delete(listener); },
+  () => savedDestinations,
+);
+
 /* ── Main orchestrator ── */
 
 const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge }) => {
   const { t } = useTranslation('routes');
+  const saved = useSavedDestinations();
   const [bridgeInfo, setBridgeInfo] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -546,7 +568,9 @@ const RoutingChain = ({ bridgeType, bridgeUuid, environmentUuid, onEditBridge })
     } finally {
       setLoading(false);
     }
-  }, [bridgeType, bridgeUuid, environmentUuid, t]);
+  // `saved` is not read here: it is a dependency so the chain loads again
+  // after a destination is saved.
+  }, [bridgeType, bridgeUuid, environmentUuid, t, saved]);
 
   useEffect(() => { buildChain(); }, [buildChain]);
 

@@ -2,7 +2,9 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   Box, Typography, Alert, Button, IconButton, Tooltip, Menu, MenuItem,
   ListItemIcon, ListItemText, Paper, TextField, InputAdornment, Chip,
+  DialogTitle, DialogContent, useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { DataGrid } from '@mui/x-data-grid';
 import HearingIcon from '@mui/icons-material/Hearing';
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
@@ -21,6 +23,10 @@ import { liveApi } from '../../../services/api/liveApi';
 import { useNotification } from '../../../context/NotificationContext';
 import { stripedDataGridSx } from '../../shared/tableTheme.jsx';
 import LiveChartStrip from '../LiveChartStrip';
+import ResponsiveTable from '../../shared/ResponsiveTable/ResponsiveTable';
+import { ResponsiveDialog } from '../../ui';
+import { usePermissions } from '../../../hooks/usePermissions';
+import { useTranslation } from 'react-i18next';
 
 const gridSx = {
   ...stripedDataGridSx,
@@ -34,31 +40,83 @@ const gridSx = {
 
 const getRowId = (row) => row.id || row.uuid || row.call_uuid || `row-${Math.random().toString(36).slice(2, 11)}`;
 
-// Fields worth grouping the live calls by (columns FreeSWITCH reports)
-const GROUP_BY_OPTIONS = [
-  { key: 'direction', label: 'Direction' },
-  { key: 'callstate', label: 'State' },
-  { key: 'application', label: 'Application' },
-  { key: 'dest', label: 'Destination' },
-];
+// Fields worth grouping the live calls by (columns FreeSWITCH reports);
+// their names are in live.json liveCalls.group.
+const GROUP_BY_FIELDS = ['direction', 'callstate', 'application', 'dest'];
 
-/** Events-style detail reveal: a key/value list for a single live call. */
-const LiveRowDetail = ({ row, onClose }) => (
-  <Paper elevation={0} sx={{ width: 300, flexShrink: 0, border: '1px solid var(--mui-palette-divider)', borderRadius: 2, p: 2, backgroundColor: 'var(--mui-palette-background-paper)', overflowY: 'auto' }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'var(--mui-palette-text-primary)', flexGrow: 1 }}>Call Detail</Typography>
-      <IconButton size="small" onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
+// On a phone a call is a card: the caller on top, where it goes under it,
+// then a few labelled values. A column not named here is in the details.
+const CARD_PRIORITY = { cid_name: 'primary', dest: 'secondary', cid_num: 'meta', direction: 'meta', callstate: 'meta', created: 'meta' };
+const cardPriority = (field, index, fields) => CARD_PRIORITY[field]
+  || (index === 0 && !fields.some((f) => CARD_PRIORITY[f] === 'primary') ? 'primary' : 'desktopOnly');
+
+/** A live call's fields, as FreeSWITCH names them, one per line. */
+const LiveRowFields = ({ row }) => Object.entries(row)
+  .filter(([, v]) => v !== null && v !== undefined && v !== '' && typeof v !== 'object')
+  .map(([k, v]) => (
+    <Box key={k} sx={{ display: 'flex', py: 0.5, borderBottom: '1px solid var(--mui-palette-divider)' }}>
+      <Typography variant="caption" sx={{ width: 110, flexShrink: 0, color: 'var(--mui-palette-text-secondary)', fontFamily: 'monospace', fontSize: 11, fontWeight: 600 }}>{k}</Typography>
+      <Typography variant="caption" sx={{ color: 'text.primary', wordBreak: 'break-all' }}>{String(v)}</Typography>
     </Box>
-    {Object.entries(row)
-      .filter(([, v]) => v !== null && v !== undefined && v !== '' && typeof v !== 'object')
-      .map(([k, v]) => (
-        <Box key={k} sx={{ display: 'flex', py: 0.5, borderBottom: '1px solid var(--mui-palette-divider)' }}>
-          <Typography variant="caption" sx={{ width: 110, flexShrink: 0, color: 'var(--mui-palette-text-secondary)', fontFamily: 'monospace', fontSize: 11, fontWeight: 600 }}>{k}</Typography>
-          <Typography variant="caption" sx={{ color: '#111', wordBreak: 'break-all' }}>{String(v)}</Typography>
-        </Box>
+  ));
+
+/**
+ * Events-style detail reveal for a single live call: beside the grid on a
+ * desktop, full screen on a phone.
+ */
+const LiveRowDetail = ({ row, onClose, asDialog }) => {
+  const { t } = useTranslation('live');
+  if (asDialog) {
+    return (
+      <ResponsiveDialog open onClose={onClose} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box component="span" sx={{ flexGrow: 1 }}>{t('liveCalls.detail')}</Box>
+          <IconButton onClick={onClose} aria-label={t('liveCalls.closeDetail')}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent dividers><LiveRowFields row={row} /></DialogContent>
+      </ResponsiveDialog>
+    );
+  }
+  return (
+    <Paper elevation={0} sx={{ width: 300, flexShrink: 0, border: '1px solid var(--mui-palette-divider)', borderRadius: 2, p: 2, backgroundColor: 'var(--mui-palette-background-paper)', overflowY: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'var(--mui-palette-text-primary)', flexGrow: 1 }}>{t('liveCalls.detail')}</Typography>
+        <IconButton size="small" onClick={onClose} aria-label={t('liveCalls.closeDetail')}><CloseIcon fontSize="small" /></IconButton>
+      </Box>
+      <LiveRowFields row={row} />
+    </Paper>
+  );
+};
+
+// Listen, whisper, barge, hang up, and the rest under "more". Small in the
+// grid; finger-sized on a phone card.
+const SPY_ACTIONS = [
+  { action: 'listen', Icon: HearingIcon, color: '#2196f3' },
+  { action: 'whisper', Icon: RecordVoiceOverIcon, color: '#ff9800' },
+  { action: 'barge', Icon: GroupsIcon, color: '#9c27b0' },
+  { action: 'hangup', Icon: CallEndIcon, color: '#f44336' },
+];
+const CallActionButtons = ({ uuid, large, onAction, onMore }) => {
+  const { t } = useTranslation('live');
+  const size = large ? 'medium' : 'small';
+  const stop = (fn) => (e) => { e.stopPropagation(); fn(e); };
+  return (
+    <Box sx={{ display: 'flex', gap: large ? 1 : 0.25 }}>
+      {SPY_ACTIONS.map(({ action, Icon, color }) => (
+        <Tooltip key={action} title={t(`liveCalls.${action}`)}>
+          <IconButton size={size} aria-label={t(`liveCalls.${action}`)} onClick={stop(() => onAction(uuid, action))} sx={{ color }}>
+            <Icon fontSize={size} />
+          </IconButton>
+        </Tooltip>
       ))}
-  </Paper>
-);
+      <Tooltip title={t('liveCalls.more')}>
+        <IconButton size={size} aria-label={t('liveCalls.more')} onClick={stop((e) => onMore(e.currentTarget, uuid))} sx={{ color: 'var(--mui-palette-text-secondary)' }}>
+          <MoreVertIcon fontSize={size} />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+};
 
 /**
  * LiveCallsPanel — self-contained live-calls monitor. Extracted from the Home
@@ -66,6 +124,10 @@ const LiveRowDetail = ({ row, onClose }) => (
  * actions + live chart; row click reveals an Events-style detail panel.
  */
 const LiveCallsPanel = ({ open = true }) => {
+  const { t } = useTranslation('live');
+  const isPhone = useMediaQuery(useTheme().breakpoints.down('md'));
+  // The actions change a call: the ACL's calls write grant, user or account.
+  const canAct = usePermissions().can('calls', 'write');
   const { calls, columns: callColumns, loading, error, isNodeError, totalCount, refresh } = useLiveCalls(open);
   const { showSuccess, showError } = useNotification();
   const [search, setSearch] = useState('');
@@ -87,36 +149,40 @@ const LiveCallsPanel = ({ open = true }) => {
 
   const handleCallAction = useCallback(async (uuid, action) => {
     try {
-      if (action === 'hangup') { await liveApi.hangupCall(uuid); showSuccess('Call terminated'); }
-      else if (['listen', 'whisper', 'barge'].includes(action)) { await liveApi.spyCall(uuid, action); showSuccess(`Spy (${action}) initiated`); }
-      else { await liveApi.callAction(uuid, action); showSuccess(`Action "${action}" executed`); }
+      if (action === 'hangup') { await liveApi.hangupCall(uuid); showSuccess(t('liveCalls.terminated')); }
+      else if (['listen', 'whisper', 'barge'].includes(action)) { await liveApi.spyCall(uuid, action); showSuccess(t('liveCalls.spyStarted', { action: t(`liveCalls.${action}`) })); }
+      else { await liveApi.callAction(uuid, action); showSuccess(t('liveCalls.actionDone', { action: t(`liveCalls.${action}`) })); }
       setTimeout(() => refresh(), 1000);
     } catch (err) {
-      showError(`Action failed: ${err.message}`);
+      showError(t('liveCalls.actionFailed', { message: err.message }));
     }
     setActionAnchor(null);
     setActionUuid(null);
-  }, [refresh, showSuccess, showError]);
+  }, [refresh, showSuccess, showError, t]);
+
+  const openMore = useCallback((anchor, uuid) => { setActionAnchor(anchor); setActionUuid(uuid); }, []);
+  const actionsFor = useCallback((row, large) => {
+    const uuid = row.uuid || row.call_uuid;
+    return uuid ? <CallActionButtons uuid={uuid} large={large} onAction={handleCallAction} onMore={openMore} /> : null;
+  }, [handleCallAction, openMore]);
 
   const actionsColumn = useMemo(() => ({
-    field: '_actions', headerName: 'Actions', width: 180, sortable: false, filterable: false,
-    renderCell: (params) => {
-      const uuid = params.row.uuid || params.row.call_uuid;
-      if (!uuid) return null;
-      const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
-      return (
-        <Box sx={{ display: 'flex', gap: 0.25 }}>
-          <Tooltip title="Listen"><IconButton size="small" onClick={stop(() => handleCallAction(uuid, 'listen'))} sx={{ color: '#2196f3' }}><HearingIcon fontSize="small" /></IconButton></Tooltip>
-          <Tooltip title="Whisper"><IconButton size="small" onClick={stop(() => handleCallAction(uuid, 'whisper'))} sx={{ color: '#ff9800' }}><RecordVoiceOverIcon fontSize="small" /></IconButton></Tooltip>
-          <Tooltip title="Barge"><IconButton size="small" onClick={stop(() => handleCallAction(uuid, 'barge'))} sx={{ color: '#9c27b0' }}><GroupsIcon fontSize="small" /></IconButton></Tooltip>
-          <Tooltip title="Hangup"><IconButton size="small" onClick={stop(() => handleCallAction(uuid, 'hangup'))} sx={{ color: '#f44336' }}><CallEndIcon fontSize="small" /></IconButton></Tooltip>
-          <Tooltip title="More"><IconButton size="small" onClick={(e) => { e.stopPropagation(); setActionAnchor(e.currentTarget); setActionUuid(uuid); }} sx={{ color: 'var(--mui-palette-text-secondary)' }}><MoreVertIcon fontSize="small" /></IconButton></Tooltip>
-        </Box>
-      );
-    },
-  }), [handleCallAction]);
+    field: '_actions', headerName: t('liveCalls.actions'), width: 180, sortable: false, filterable: false,
+    renderCell: (params) => actionsFor(params.row, false),
+  }), [actionsFor, t]);
 
-  const columns = useMemo(() => [actionsColumn, ...callColumns], [actionsColumn, callColumns]);
+  const columns = useMemo(() => (canAct ? [actionsColumn, ...callColumns] : callColumns), [canAct, actionsColumn, callColumns]);
+
+  // The phone's cards: the same columns, placed by CARD_PRIORITY (the rest
+  // are in the call's details), the actions along the bottom.
+  const cardColumns = useMemo(() => [
+    ...callColumns.map((column, index, all) => ({
+      id: column.field,
+      label: column.headerName,
+      priority: cardPriority(column.field, index, all.map((c) => c.field)),
+    })),
+    ...(canAct ? [{ id: '_actions', label: t('liveCalls.actions'), priority: 'action', render: (row) => actionsFor(row, true) }] : []),
+  ], [callColumns, canAct, actionsFor, t]);
 
   const filtered = useMemo(() => {
     let rows = calls;
@@ -152,32 +218,32 @@ const LiveCallsPanel = ({ open = true }) => {
     <Box>
       <LiveChartStrip
         chartType="live_calls"
-        title="Live Calls Over Time"
+        title={t('liveCalls.chartTitle')}
         series={[
-          { field: 'incoming', name: 'Incoming', color: '#10b981' },
-          { field: 'outgoing', name: 'Outgoing', color: '#8b5cf6' },
+          { field: 'incoming', name: t('liveCalls.incoming'), color: '#10b981' },
+          { field: 'outgoing', name: t('liveCalls.outgoing'), color: '#8b5cf6' },
         ]}
       />
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 2, flexWrap: 'wrap' }}>
         <TextField
           size="small"
-          placeholder="Filter live calls..."
+          placeholder={t('liveCalls.filter')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{ width: { xs: '100%', sm: 320 } }}
           InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ color: 'var(--mui-palette-text-secondary)' }} /></InputAdornment>) }}
         />
-        <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)', fontWeight: 600, ml: 1 }}>Group by</Typography>
-        {GROUP_BY_OPTIONS.map((opt) => (
+        <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)', fontWeight: 600, ms: 1 }}>{t('liveCalls.groupBy')}</Typography>
+        {GROUP_BY_FIELDS.map((field) => (
           <Chip
-            key={opt.key}
-            label={opt.label}
+            key={field}
+            label={t(`liveCalls.group.${field}`)}
             size="small"
-            variant={groupBy === opt.key ? 'filled' : 'outlined'}
-            color={groupBy === opt.key ? 'primary' : 'default'}
-            onClick={() => setGroupBy((prev) => (prev === opt.key ? null : opt.key))}
-            sx={{ cursor: 'pointer', fontWeight: groupBy === opt.key ? 600 : 400 }}
+            variant={groupBy === field ? 'filled' : 'outlined'}
+            color={groupBy === field ? 'primary' : 'default'}
+            onClick={() => setGroupBy((prev) => (prev === field ? null : field))}
+            sx={{ cursor: 'pointer', fontWeight: groupBy === field ? 600 : 400 }}
           />
         ))}
       </Box>
@@ -189,7 +255,7 @@ const LiveCallsPanel = ({ open = true }) => {
           {groupCounts.map(([value, count]) => (
             <Chip
               key={value}
-              label={`${value}: ${count}`}
+              label={t('liveCalls.groupCount', { value, n: count })}
               size="small"
               variant={groupFilter === value ? 'filled' : 'outlined'}
               color={groupFilter === value ? 'secondary' : 'default'}
@@ -201,23 +267,31 @@ const LiveCallsPanel = ({ open = true }) => {
       )}
 
       {error && (
-        <Alert severity={isNodeError ? 'info' : 'error'} sx={{ mb: 2 }} action={!isNodeError && <Button color="inherit" size="small" onClick={refresh}>Retry</Button>}>
-          {isNodeError ? 'No switch node is assigned to this customer. Assign a FreeSwitch node (Home → Live Calls) to enable live monitoring.' : error}
+        <Alert severity={isNodeError ? 'info' : 'error'} sx={{ mb: 2 }} action={!isNodeError && <Button color="inherit" size="small" onClick={refresh}>{t('liveCalls.retry')}</Button>}>
+          {isNodeError ? t('liveCalls.noNode') : error}
         </Alert>
       )}
 
       <Box sx={{ display: 'flex', gap: 2 }}>
-        <Box sx={{ flexGrow: 1 }}>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           {!loading && filtered.length === 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 8, color: 'var(--mui-palette-text-secondary)', border: '1px dashed var(--mui-palette-divider)', borderRadius: 2, backgroundColor: 'var(--mui-palette-background-paper)' }}>
               <PhoneInTalkIcon sx={{ fontSize: 48, mb: 1, opacity: 0.35 }} />
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {search ? 'No live calls match your filter' : 'No active calls right now'}
+                {search ? t('liveCalls.noMatch') : t('liveCalls.noCalls')}
               </Typography>
               <Typography variant="body2" sx={{ mt: 0.5, color: '#bbb' }}>
-                New calls appear here automatically · refreshes every 30s
+                {t('liveCalls.emptyHint')}
               </Typography>
             </Box>
+          ) : isPhone ? (
+            <ResponsiveTable
+              columns={cardColumns}
+              rows={filtered}
+              loading={loading}
+              getRowId={getRowId}
+              onRowClick={setSelectedRow}
+            />
           ) : (
             <Box sx={{ height: 'calc(100vh - 320px)', minHeight: 300 }}>
               <DataGrid
@@ -235,17 +309,19 @@ const LiveCallsPanel = ({ open = true }) => {
             </Box>
           )}
           <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)', mt: 0.5, display: 'block' }}>
-            {search ? `Showing ${filtered.length} of ${totalCount}` : `${totalCount} live call${totalCount === 1 ? '' : 's'}`} · auto-refreshes every 30s
+            {search
+              ? t('liveCalls.showing', { n: filtered.length, total: totalCount })
+              : totalCount === 1 ? t('liveCalls.countOne') : t('liveCalls.count', { n: totalCount })}
           </Typography>
         </Box>
-        {selectedRow && <LiveRowDetail row={selectedRow} onClose={() => setSelectedRow(null)} />}
+        {selectedRow && <LiveRowDetail row={selectedRow} asDialog={isPhone} onClose={() => setSelectedRow(null)} />}
       </Box>
 
       <Menu anchorEl={actionAnchor} open={Boolean(actionAnchor)} onClose={() => setActionAnchor(null)}>
-        <MenuItem onClick={() => handleCallAction(actionUuid, 'mute')}><ListItemIcon><MicOffIcon fontSize="small" /></ListItemIcon><ListItemText>Mute</ListItemText></MenuItem>
-        <MenuItem onClick={() => handleCallAction(actionUuid, 'unmute')}><ListItemIcon><MicIcon fontSize="small" /></ListItemIcon><ListItemText>Unmute</ListItemText></MenuItem>
-        <MenuItem onClick={() => handleCallAction(actionUuid, 'hold')}><ListItemIcon><PauseIcon fontSize="small" /></ListItemIcon><ListItemText>Hold</ListItemText></MenuItem>
-        <MenuItem onClick={() => handleCallAction(actionUuid, 'unhold')}><ListItemIcon><PlayArrowIcon fontSize="small" /></ListItemIcon><ListItemText>Unhold</ListItemText></MenuItem>
+        <MenuItem onClick={() => handleCallAction(actionUuid, 'mute')}><ListItemIcon><MicOffIcon fontSize="small" /></ListItemIcon><ListItemText>{t('liveCalls.mute')}</ListItemText></MenuItem>
+        <MenuItem onClick={() => handleCallAction(actionUuid, 'unmute')}><ListItemIcon><MicIcon fontSize="small" /></ListItemIcon><ListItemText>{t('liveCalls.unmute')}</ListItemText></MenuItem>
+        <MenuItem onClick={() => handleCallAction(actionUuid, 'hold')}><ListItemIcon><PauseIcon fontSize="small" /></ListItemIcon><ListItemText>{t('liveCalls.hold')}</ListItemText></MenuItem>
+        <MenuItem onClick={() => handleCallAction(actionUuid, 'unhold')}><ListItemIcon><PlayArrowIcon fontSize="small" /></ListItemIcon><ListItemText>{t('liveCalls.unhold')}</ListItemText></MenuItem>
       </Menu>
     </Box>
   );

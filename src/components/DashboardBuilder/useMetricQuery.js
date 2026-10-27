@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { monitoringApi } from '../../services/api/monitoringApi';
 import { queryReady } from './metricQuery';
+import i18n from '../../i18n';
 
 // Runs a builder query through the API. `runKey` re-runs on demand; a
 // refreshInterval > 0 polls. Only the newest request may land.
@@ -23,11 +24,11 @@ export function useMetricQuery(query, { runKey = 0, refreshInterval = 0, minutes
       if (mine !== seq.current) return;
       setState({
         rows: Array.isArray(res?.rows) ? res.rows : [], influxql: res?.influxql || '', loading: false,
-        error: res?.unavailable ? 'This measurement has no data here.' : null, tookMs: Math.round(performance.now() - started),
+        error: res?.unavailable ? i18n.t('widgets:errors.noDataHere') : null, tookMs: Math.round(performance.now() - started),
       });
     } catch (err) {
       if (mine !== seq.current) return;
-      setState((s) => ({ ...s, loading: false, error: err?.message || 'The query failed.' }));
+      setState((s) => ({ ...s, loading: false, error: err?.message || i18n.t('widgets:errors.queryFailed') }));
     }
   }, [ready, measurement, field, aggregation, minutes, override, whereKey, splitBy, environmentUuid]);
   useEffect(() => {

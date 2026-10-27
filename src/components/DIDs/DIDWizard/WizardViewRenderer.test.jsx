@@ -1,13 +1,26 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import WizardViewRenderer from './WizardViewRenderer.jsx';
+import { refreshRoutingChains } from '../DIDDialog/RoutingChain';
 
+// A stand-in editor: its name, and Save / Cancel the way every real one ends.
+const { editor } = vi.hoisted(() => ({
+  editor: (name) => function FakeEditor({ onSave, onClose }) {
+    return <>
+      <p>{name}</p>
+      <button onClick={() => { onSave({ uuid: `${name}-1` }); onClose(); }}>{`Save ${name}`}</button>
+      <button onClick={onClose}>{`Cancel ${name}`}</button>
+    </>;
+  },
+}));
+
+vi.mock('../DIDDialog/RoutingChain', () => ({ refreshRoutingChains: vi.fn() }));
 vi.mock('../DIDDialog/DIDForm', () => ({ default: () => null }));
-vi.mock('../../Bridges/IVRBridge/IVRBridge', () => ({ IVRBridge: () => <p>Admin IVR form</p> }));
-vi.mock('../../Bridges/IvrMenu/IvrMenuEditor', () => ({ default: () => <p>Phone menu editor</p> }));
+vi.mock('../../Bridges/IVRBridge/IVRBridge', () => ({ IVRBridge: editor('Admin IVR form') }));
+vi.mock('../../Bridges/IvrMenu/IvrMenuEditor', () => ({ default: editor('Phone menu editor') }));
 let userSession = false;
 vi.mock('../../../hooks/useIsUserSession', () => ({ useIsUserSession: () => userSession }));
-vi.mock('../../Bridges/QueueBridge/QueueBridge', () => ({ QueueBridge: () => null }));
+vi.mock('../../Bridges/QueueBridge/QueueBridge', () => ({ QueueBridge: editor('queue') }));
 vi.mock('../../Bridges/AnnouncementBridge/AnnouncementBridge.jsx', () => ({
   AnnouncementBridge: ({ onSave, onClose }) => <>
     <button onClick={() => { onSave({ uuid: 'ann-1' }); onClose(); }}>Create announcement</button>
@@ -19,8 +32,8 @@ vi.mock('../../Bridges/CallConditionBridge/CallConditionBridge.jsx', () => ({
     <button onClick={onClose}>Cancel condition</button>
   </>,
 }));
-vi.mock('../../Bridges/BotBridge/BotBridge.jsx', () => ({ BotBridge: () => null }));
-vi.mock('../../Bridges/ExtensionBridge/ExtensionBridge.jsx', () => ({ ExtensionBridge: () => null }));
+vi.mock('../../Bridges/BotBridge/BotBridge.jsx', () => ({ BotBridge: editor('bot') }));
+vi.mock('../../Bridges/ExtensionBridge/ExtensionBridge.jsx', () => ({ ExtensionBridge: editor('device') }));
 vi.mock('../../Bridges/VMLBridge/VMLBridge.jsx', () => ({
   VMLBridge: ({ onSave, onClose }) => <>
     <button onClick={() => { onSave({ uuid: 'vml-1' }); onClose(); }}>Update VML</button>
@@ -81,5 +94,34 @@ describe('the IVR step', () => {
   it('keeps the full IVR form for an account', () => {
     render(<WizardViewRenderer view={{ type: 'ivr', mode: 'create' }} onCancel={vi.fn()} />);
     expect(screen.getByText('Admin IVR form')).toBeInTheDocument();
+  });
+});
+
+// The route form and details behind the wizard show the destination's routing
+// chain; saving any destination must make it load the saved version.
+describe('saving a destination reloads the routing chains behind it', () => {
+  beforeEach(() => { vi.mocked(refreshRoutingChains).mockClear(); });
+  afterEach(() => { userSession = false; });
+
+  it.each([
+    ['queue', 'Save queue', false],
+    ['ivr', 'Save Admin IVR form', false],
+    ['ivr', 'Save Phone menu editor', true],
+    ['announcement', 'Create announcement', false],
+    ['vml', 'Update VML', false],
+    ['call_condition', 'Save condition', false],
+    ['bot', 'Save bot', false],
+    ['extension', 'Save device', false],
+  ])('%s: %s', (type, saveButton, asUser) => {
+    userSession = asUser;
+    render(<WizardViewRenderer view={{ type, mode: 'edit' }} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: saveButton }));
+    expect(refreshRoutingChains).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reload when an editor is cancelled', () => {
+    render(<WizardViewRenderer view={{ type: 'queue', mode: 'edit' }} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel queue' }));
+    expect(refreshRoutingChains).not.toHaveBeenCalled();
   });
 });

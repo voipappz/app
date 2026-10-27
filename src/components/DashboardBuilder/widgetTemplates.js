@@ -10,6 +10,7 @@
  * (Postgres, via useDashboardSnapshot) — InfluxDB has no row-level call data.
  */
 import { isCallsType } from './callsWidgets';
+import i18n from '../../i18n';
 
 export const WIDGET_TYPES = ['counter', 'gauge', 'stat', 'trend', 'line', 'bar', 'pie', 'table', 'explorer',
   // Calls widgets (callsWidgets.js): the calls chart split by a CDR tag, and live calls.
@@ -230,6 +231,11 @@ export const TEMPLATE_CATEGORIES = {
   explore: ['metricExplorer']
 };
 
+/** A template's title in the active language (widgets.json templates.<key>). */
+export const templateTitle = (templateKey) => i18n.t(`widgets:templates.${templateKey}`, {
+  defaultValue: WIDGET_TEMPLATES[templateKey]?.title || templateKey,
+});
+
 /**
  * Merge a template over the defaults. `overrides` (e.g. the widget's uuid and
  * dashboard_uuid) survive the merge so applying a template to an existing
@@ -241,6 +247,10 @@ export function applyTemplate(templateKey, overrides = {}) {
   return {
     ...DEFAULT_WIDGET,
     ...template,
+    // The new widget's own words, in the language it is made in; once saved
+    // they are the person's to edit, like any title.
+    title: templateTitle(templateKey),
+    unit: template.unit ? i18n.t(`widgets:units.${template.unit}`, { defaultValue: template.unit }) : (template.unit ?? DEFAULT_WIDGET.unit),
     // 'today' is a symbolic window — resolve it to real minutes at the moment
     // the widget is created (see minutesSinceMidnight).
     minutes: template.minutes === 'today' ? minutesSinceMidnight() : (template.minutes ?? DEFAULT_WIDGET.minutes),

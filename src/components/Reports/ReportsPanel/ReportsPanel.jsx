@@ -13,6 +13,10 @@ import { endOfDay, startOfDay } from 'date-fns';
 import { reportsApi } from '../../../services/api/reportsApi';
 import DateRangePicker from '../DateRangePicker/DateRangePicker.jsx';
 import ReportMap from './ReportMap.jsx';
+import { useTranslation } from 'react-i18next';
+import LtrIsland from '../../../i18n/LtrIsland';
+import { formatDayMonth } from '../../../utils/dateUtils';
+import { formatNumber } from '../../../utils/numberUtils';
 
 const SERIES_COLORS = ['#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#3b82f6', '#ec4899', '#84cc16'];
 
@@ -30,13 +34,11 @@ export const linkedColumnUrl = (template, value) => {
  */
 export const formatRange = (startSec, endSec) => {
   if (!startSec || !endSec) return '';
-  const opts = { day: 'numeric', month: 'short' };
   const start = new Date(startSec * 1000);
   const end = new Date(endSec * 1000);
-  const sameDay = start.toDateString() === end.toDateString();
-  const fmt = (d, withYear) =>
-    d.toLocaleDateString(undefined, withYear ? { ...opts, year: 'numeric' } : opts);
-  return sameDay ? fmt(end, true) : `${fmt(start, start.getFullYear() !== end.getFullYear())} – ${fmt(end, true)}`;
+  const last = formatDayMonth(end, { withYear: true });
+  if (start.toDateString() === end.toDateString()) return last;
+  return `${formatDayMonth(start, { withYear: start.getFullYear() !== end.getFullYear() })} – ${last}`;
 };
 
 /** queries.yml column keys → readable series names: count_answered_calls → "Answered Calls". */
@@ -95,7 +97,16 @@ const ReportTable = ({ columns, rows, linkedColumns = {} }) => (
   </TableContainer>
 );
 
-export const ReportChart = ({ chart, columns, rows, height = 280 }) => {
+// A chart runs left to right in every language (time and axes); its labels
+// are the report's own column names.
+export const ReportChart = (props) => (
+  <LtrIsland>
+    <ReportChartBody {...props} />
+  </LtrIsland>
+);
+
+const ReportChartBody = ({ chart, columns, rows, height = 280 }) => {
+  const { t } = useTranslation('reports');
   if (chart === 'map') return <ReportMap columns={columns} rows={rows} height={height} />;
 
   if (chart === 'scatter') {
@@ -155,7 +166,7 @@ export const ReportChart = ({ chart, columns, rows, height = 280 }) => {
             : <Bar key={c} dataKey={c} fill={SERIES_COLORS[i % SERIES_COLORS.length]} maxBarSize={48} />
         )}
         {targetKey && (
-          <Line type="monotone" dataKey={targetKey} name="Target" stroke="#ef4444"
+          <Line type="monotone" dataKey={targetKey} name={t('panel.target')} stroke="#ef4444"
             strokeDasharray="7 4" strokeWidth={2} dot={false} connectNulls />
         )}
       </ComposedChart>
@@ -171,6 +182,7 @@ export const ReportChart = ({ chart, columns, rows, height = 280 }) => {
  * with no admin change. Used by the per-screen "Reports" pop-out drawers.
  */
 const ReportsPanel = ({ category, open = true, homeStyle = false }) => {
+  const { t } = useTranslation('reports');
   const [dateRange, setDateRange] = useState(() => [startOfDay(new Date()), endOfDay(new Date())]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -189,11 +201,11 @@ const ReportsPanel = ({ category, open = true, homeStyle = false }) => {
       const res = await reportsApi.runDashboardCategory(category, { startDate: start, endDate: end });
       setReports(res?.reports || []);
     } catch (err) {
-      setError(err.message || 'Failed to load reports');
+      setError(err.message || t('panel.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [category, dateRange]);
+  }, [category, dateRange, t]);
 
   useEffect(() => {
     if (open) fetchReports();
@@ -208,14 +220,14 @@ const ReportsPanel = ({ category, open = true, homeStyle = false }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
         <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
         {range && (
-          <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)', ml: 0.5 }}>
+          <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)', ms: 0.5 }}>
             {formatRange(range.start, range.end)}
           </Typography>
         )}
         <Box sx={{ flexGrow: 1 }} />
-        <Tooltip title="Refresh">
+        <Tooltip title={t('panel.refresh')}>
           <span>
-            <IconButton size="small" onClick={fetchReports} disabled={loading} sx={{ color: 'var(--mui-palette-text-secondary)' }}>
+            <IconButton size="small" onClick={fetchReports} aria-label={t('panel.refresh')} disabled={loading} sx={{ color: 'var(--mui-palette-text-secondary)' }}>
               <RefreshIcon fontSize="small" />
             </IconButton>
           </span>
@@ -260,7 +272,7 @@ const ReportsPanel = ({ category, open = true, homeStyle = false }) => {
 
       {!loading && !error && reports.length === 0 && (
         <Typography variant="body2" sx={{ color: 'var(--mui-palette-text-secondary)', textAlign: 'center', py: 4 }}>
-          No reports defined for this screen yet.
+          {t('panel.noReports')}
         </Typography>
       )}
 
@@ -269,7 +281,7 @@ const ReportsPanel = ({ category, open = true, homeStyle = false }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'var(--mui-palette-text-primary)' }}>{report.name}</Typography>
             <Chip label={report.chart || report.type} size="small" variant="outlined" sx={{ fontSize: 11 }} />
-            <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)' }}>{report.rows.length} rows</Typography>
+            <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)' }}>{t('panel.rows', { n: formatNumber(report.rows.length) })}</Typography>
           </Box>
           {/* Blazer layout: the chart first, the full result table underneath —
               never one instead of the other. A report the server typed as
@@ -285,7 +297,7 @@ const ReportsPanel = ({ category, open = true, homeStyle = false }) => {
 
       {!loading && empty.length > 0 && (
         <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)', display: 'block', mb: 1 }}>
-          No data in this period: {empty.map((r) => r.name).join(', ')}
+          {t('panel.noData', { names: empty.map((r) => r.name).join(', ') })}
         </Typography>
       )}
       {!loading && failed.map((r) => (

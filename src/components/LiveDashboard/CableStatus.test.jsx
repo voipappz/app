@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import i18n from '../../i18n';
 import CableStatus, { ago } from './CableStatus';
 
 const NOW = 1_800_000_000_000;
@@ -57,5 +58,21 @@ describe('ago', () => {
     expect(ago(NOW - 5000, NOW)).toBe('5s ago');
     expect(ago(NOW - 125000, NOW)).toBe('2m 5s ago');
     expect(ago(NOW - 3_660_000, NOW)).toBe('1h 1m ago');
+  });
+});
+
+describe('CableStatus in Hebrew', () => {
+  it('speaks Hebrew, keeping the endpoint as it is', async () => {
+    await i18n.changeLanguage('he');
+    try {
+      render(<CableStatus conn={live} sub={confirmed} now={NOW} />);
+      expect(screen.getByText('ערוץ זמן אמת: חי')).toBeInTheDocument();
+      fireEvent.click(screen.getByLabelText('פרטי הערוץ'));
+      expect(screen.getByText('כתובת')).toBeInTheDocument();
+      expect(screen.getByText('ws://localhost:14000/cable?token=***')).toBeInTheDocument();
+      expect(ago(NOW - 5000, NOW)).toBe('לפני 5 שנ׳');
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });

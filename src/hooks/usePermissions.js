@@ -27,10 +27,14 @@ import { hasPermission, canAccessScreen, allowedRouteTypes } from '../utils/jwt'
  *   routeTypes                  -> the allowed list, or null for no limit
  *   canRouteType('src','write') -> the `routes` grant AND the type allowed
  *
+ * Destinations (bridges): canWriteDestinations is the `routes` write grant,
+ * for every bridge type alike.
+ *
  * @returns {{ can: (screen: string, action?: string) => boolean,
  *            canAccess: (screen: string) => boolean,
  *            routeTypes: string[] | null,
- *            canRouteType: (type: string, action?: string) => boolean }}
+ *            canRouteType: (type: string, action?: string) => boolean,
+ *            canWriteDestinations: boolean }}
  */
 export function usePermissions() {
   const { acl: adminAcl, isAuthenticated: adminAuthenticated } = useAuth();
@@ -57,5 +61,13 @@ export function usePermissions() {
     [acl, routeTypes]
   );
 
-  return useMemo(() => ({ can, canAccess, routeTypes, canRouteType }), [can, canAccess, routeTypes, canRouteType]);
+  // Every destination a route can send calls to (queue, IVR, announcement,
+  // call condition, VML, bot, device...) is part of routing: making or
+  // editing one follows the routes grant, never a key of the type's own.
+  const canWriteDestinations = useMemo(() => hasPermission(acl, 'routes', 'write'), [acl]);
+
+  return useMemo(
+    () => ({ can, canAccess, routeTypes, canRouteType, canWriteDestinations }),
+    [can, canAccess, routeTypes, canRouteType, canWriteDestinations]
+  );
 }
