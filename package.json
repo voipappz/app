@@ -34,9 +34,9 @@
     "@monaco-editor/react": "^4.7.0",
     "@mui/icons-material": "^7.3.11",
     "@mui/material": "^7.3.11",
-    "@mui/x-data-grid": "^8.29.3",
-    "@mui/x-date-pickers": "^8.29.4",
-    "@mui/x-date-pickers-pro": "^8.29.4",
+    "@mui/x-data-grid": "^8.29.5",
+    "@mui/x-date-pickers": "^8.29.5",
+    "@mui/x-date-pickers-pro": "^8.29.5",
     "@rails/actioncable": "^8.1.400",
     "@remix-run/router": "^1.23.4",
     "@sentry/react": "^11.6.0",
@@ -78,6 +78,7 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
+    "@agentclientprotocol/claude-agent-acp": "0.94.0",
     "@eslint/js": "^9.25.0",
     "@playwright/test": "^1.64.1",
     "@testing-library/dom": "^10.4.2",
@@ -100,7 +101,7 @@
     "wait-on": "^9.5.1"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.9.6"
+    "@rollup/rollup-linux-x64-gnu": "^4.65.0"
   },
   "overrides": {
     "path-to-regexp": "0.1.13",

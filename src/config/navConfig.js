@@ -15,6 +15,8 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import ChatIcon from '@mui/icons-material/Chat';
 import BoltIcon from '@mui/icons-material/Bolt';
 import SubjectIcon from '@mui/icons-material/Subject';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import { canAccessScreen } from '../utils/jwt';
 
 // Sidebar — kept deliberately simple. The Studio is the landing/home and
@@ -24,6 +26,12 @@ import { canAccessScreen } from '../utils/jwt';
 export const NAV_ITEMS = [
   { text: 'Routes', labelKey: 'nav:routes',          path: '/routes',          iconComponent: SchemaIcon,                aclKey: 'routes',          alwaysShow: true, group: 'MANAGE'   },
   { text: 'Services', labelKey: 'nav:services',      path: '/services',       iconComponent: MiscellaneousServicesIcon, aclKey: 'services',                       group: 'MANAGE'   },
+  // Bots and Campaigns had routes (/bots, /campaigns, each behind its ACL key)
+  // but no rail entry: Bots was reachable only through ⌘K search and Campaigns
+  // only by typing the URL, so both read as missing. They sit under Services,
+  // the other things an application builds.
+  { text: 'Bots', labelKey: 'nav:bots',             path: '/bots',           iconComponent: SmartToyIcon,              aclKey: 'bots',                           group: 'MANAGE'   },
+  { text: 'Campaigns', labelKey: 'nav:campaigns',   path: '/campaigns',      iconComponent: CampaignIcon,              aclKey: 'campaigns',                      group: 'MANAGE'   },
   { text: 'Devices', labelKey: 'nav:devices',       path: '/extensions',     iconComponent: DevicesIcon,               aclKey: 'extensions',                     group: 'MANAGE'   },
   { text: 'Subscriptions', labelKey: 'nav:subscriptions', path: '/subscriptions',  iconComponent: LoyaltyIcon,               aclKey: 'subscriptions',                  group: 'MANAGE'   },
   // Tariffs sit next to Subscriptions: they're the rate books subscriptions
