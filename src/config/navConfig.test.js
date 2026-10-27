@@ -96,3 +96,21 @@ describe('navConfig Calls and Messages', () => {
     expect(items.find((item) => item.path === '/messages')).toMatchObject({ text: 'Messages', aclKey: 'messages' });
   });
 });
+
+// Bots and Campaigns had routes but no rail entry (Bots: ⌘K search only;
+// Campaigns: URL only), so both looked missing from the console.
+describe('navConfig Bots and Campaigns', () => {
+  const acl = { data: { bots: { main: ['read'] }, campaigns: { main: ['read'] } } };
+
+  it('lists both in the sidebar for an account with their ACL', () => {
+    const items = getPermittedNavItems(acl);
+    expect(items.find((item) => item.path === '/bots')).toMatchObject({ text: 'Bots', aclKey: 'bots', labelKey: 'nav:bots' });
+    expect(items.find((item) => item.path === '/campaigns')).toMatchObject({ text: 'Campaigns', aclKey: 'campaigns', labelKey: 'nav:campaigns' });
+  });
+
+  it('hides each from an account whose ACL does not grant it', () => {
+    const paths = getPermittedNavItems({ data: { calls: { main: ['read'] } } }).map((item) => item.path);
+    expect(paths).not.toContain('/bots');
+    expect(paths).not.toContain('/campaigns');
+  });
+});

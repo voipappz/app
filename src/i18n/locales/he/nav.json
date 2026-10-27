@@ -16,5 +16,7 @@
   "events": "אירועים",
   "syslog": "יומן מערכת",
   "monitoring": "ניטור",
-  "providers": "ספקים"
+  "providers": "ספקים",
+  "bots": "בוטים",
+  "campaigns": "קמפיינים"
 }
