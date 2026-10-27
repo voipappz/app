@@ -87,13 +87,14 @@ dev: ## [PORT=3000 DOCKER=1] Check the login token, then start the dev server
 	@$(LOGIN)
 	@if [ -n "$(DOCKER)" ]; then $(DC) up app; else $(NPM) run dev -- --port $(PORT); fi
 
-test: ## [SPEC=users HEADED=1 DOCKER=1] Check the login token, then run Playwright specs
+test: ## [SPEC=users PORT=3000 HEADED=1 DOCKER=1] Check the login token, then run Playwright specs
 	@$(LOGIN)
 	@if [ -n "$(DOCKER)" ]; then \
 	   $(DC) run --rm -T test; \
 	 else \
 	   $(NPM) exec -- playwright install $(BROWSER) >/dev/null; \
 	   $(SERVE); \
+	   PLAYWRIGHT_BASE_URL="$${PLAYWRIGHT_BASE_URL:-http://localhost:$(PORT)}" \
 	   $(NPM) exec -- playwright test $(if $(SPEC),tests/$(SPEC).spec.ts,) \
 	     --project=$(BROWSER) $(if $(HEADED),--headed,--reporter=line); \
 	   status=$$?; $(STOP); exit $$status; \
