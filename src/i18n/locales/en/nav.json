@@ -16,5 +16,7 @@
   "events": "Events",
   "syslog": "Syslog",
   "monitoring": "Monitoring",
-  "providers": "Providers"
+  "providers": "Providers",
+  "bots": "Bots",
+  "campaigns": "Campaigns"
 }
