@@ -12,6 +12,9 @@ vi.mock('../../hooks/useLiveEntities', () => ({
 vi.mock('../../hooks/usePermissions', () => ({ usePermissions: () => ({ can: () => true }) }));
 const auth = vi.fn(() => ({ isRoot: false, accountUuid: 'acct-1' }));
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => auth() }));
+vi.mock('../../services/api/identityReportApi', () => ({
+  identityReportApi: { runReport: vi.fn(), getCatalog: vi.fn().mockResolvedValue(null) },
+}));
 vi.mock('../../services/api/monitoringApi', () => ({
   monitoringApi: {
     runCdrReport: vi.fn(),
@@ -36,81 +39,81 @@ vi.mock('recharts', () => {
   };
 });
 import { monitoringApi } from '../../services/api/monitoringApi';
+import { identityReportApi } from '../../services/api/identityReportApi';
 
 const scope = vi.fn();
 vi.mock('../../context/CustomerEnvironmentContext.jsx', () => ({ useCustomerEnvironment: () => scope() }));
 
 import AdminDashboard, { DASHBOARD_SEED } from './AdminDashboard.jsx';
 
-// The CDR report answers by what it was asked: totals for the KPI tiles, one
-// row per environment, status per hour, top callers/callees.
+// The identities report answers by what it was asked: totals for the tiles,
+// one row per type, events per hour, top events, busiest hours.
 const report = async ({ dimensions = [], bucket = '' }) => {
-  if (!dimensions.length) return { rows: [{ calls: 40, answer_rate: 75, billsec: 3725, avg_talk: 85, avg_wait: 9, service_level: 60 }], labels: {}, sql: 'SELECT COUNT(*) AS a_calls FROM cdr' };
-  if (dimensions[0] === 'environment') return { rows: [{ environment: 'env-1', calls: 40, answered: 30, answer_rate: 75, billsec: 3725 }], labels: { environment: { 'env-1': 'Main office' } }, sql: '' };
-  if (bucket) return { rows: [{ status: 'answer', time: '2026-09-28T10:00:00', calls: 30 }], labels: {}, sql: '' };
-  return { rows: [{ [dimensions[0]]: '0241432120', calls: 12, billsec: 600, answer_rate: 50 }], labels: {}, sql: '' };
+  if (!dimensions.length) return { rows: [{ events: 1234, identities: 56 }], labels: {}, sql: 'SELECT COUNT(*) AS a0 FROM identities' };
+  if (bucket) return { rows: [{ type: 'queue', time: '2026-10-28T10:00:00', events: 30 }], labels: {}, sql: '' };
+  if (dimensions[0] === 'type') return { rows: [{ type: 'queue', events: 300, identities: 4 }, { type: 'user', events: 200, identities: 9 }], labels: {}, sql: '' };
+  return { rows: [{ [dimensions[0]]: dimensions[0] === 'hour' ? 9 : 'user.answer', events: 120 }], labels: {}, sql: '' };
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   auth.mockReturnValue({ isRoot: false, accountUuid: 'acct-1' });
-  monitoringApi.runCdrReport.mockImplementation(report);
+  identityReportApi.runReport.mockImplementation(report);
 });
 
 describe('AdminDashboard', () => {
-  it('is the board: call reports on it, the report builder behind Build widget', async () => {
+  it('is the activity board: identity reports on it, no call reports, no InfluxDB', async () => {
     scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [{ uuid: 'env-1', name: 'main' }] });
     render(<AdminDashboard />);
 
-    const page = screen.getByTestId('admin-dashboard-page');
-    expect(page).toHaveTextContent('Activity for acme · all applications');
-    expect(screen.queryByTestId('cdr-editor')).not.toBeInTheDocument();
+    expect(screen.getByTestId('admin-dashboard-page')).toHaveTextContent('Activity for acme · all applications');
     const grid = await screen.findByTestId('widget-grid');
-    for (const title of ['Today at a glance', 'Calls by environment', 'Status over time', 'Top callers', 'Top callees']) {
+    for (const title of ['Activity today', 'Activity by type', 'Activity over time', 'Top events', 'Busiest hours']) {
       expect(within(grid).getByText(title)).toBeInTheDocument();
     }
-    // The reports plus the board's own starter widgets, every one editable.
-    expect(within(grid).getAllByRole('button', { name: 'Widget actions' }).length).toBeGreaterThanOrEqual(DASHBOARD_SEED.widgets.length);
-  });
-
-  it('builds a call report widget from Build widget', async () => {
-    scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [] });
-    const user = userEvent.setup();
-    render(<AdminDashboard />);
-    await screen.findByText('Top callees');
-
-    await user.click(screen.getByTestId('build-widget'));
-    await user.click(screen.getByRole('menuitem', { name: /Call report/ }));
-    const builder = await screen.findByTestId('cdr-editor');
-    await user.type(within(builder).getByLabelText('Widget title'), 'Calls per site');
-    await user.click(within(builder).getByRole('button', { name: 'Save as widget' }));
-
-    await waitFor(() => expect(screen.queryByTestId('cdr-editor')).not.toBeInTheDocument());
-    expect(within(screen.getByTestId('widget-grid')).getByText('Calls per site')).toBeInTheDocument();
-  });
-
-  it('says the server lacks call reports instead of a raw 404', async () => {
-    scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [] });
-    monitoringApi.runCdrReport.mockRejectedValue(Object.assign(new Error('Failed running CDR report: HTTP 404: {}'), { status: 404 }));
-    render(<AdminDashboard />);
-
-    expect((await screen.findAllByText(/Call reports aren’t available on this server yet/)).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/HTTP 404/)).not.toBeInTheDocument();
+    expect(within(grid).getAllByRole('button', { name: 'Widget actions' })).toHaveLength(DASHBOARD_SEED.widgets.length);
+    await waitFor(() => expect(identityReportApi.runReport).toHaveBeenCalled());
+    expect(monitoringApi.runCdrReport).not.toHaveBeenCalled();
+    expect(monitoringApi.runInfluxQuery).not.toHaveBeenCalled();
   });
 
   it('reads the reports for the selected customer and shows real numbers', async () => {
     scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [{ uuid: 'env-1', name: 'main' }] });
     render(<AdminDashboard />);
 
-    await waitFor(() => expect(monitoringApi.runCdrReport).toHaveBeenCalledWith(expect.objectContaining({
-      dimensions: ['environment'], customerUuid: 'c-1',
+    await waitFor(() => expect(identityReportApi.runReport).toHaveBeenCalledWith(expect.objectContaining({
+      dimensions: ['type'], customerUuid: 'c-1',
     })));
     const grid = await screen.findByTestId('widget-grid');
-    // Answer rate on the KPI tiles and in the per-environment table.
-    expect((await within(grid).findAllByText('75%')).length).toBeGreaterThanOrEqual(2);
-    expect(within(grid).getAllByText('1h 2m').length).toBeGreaterThanOrEqual(1);
-    expect(await within(grid).findByText('Main office')).toBeInTheDocument();
+    expect(await within(grid).findByText('1,234')).toBeInTheDocument();
+    expect(await within(grid).findByText('queue')).toBeInTheDocument();
+  });
+
+  it('builds an activity report from Build widget, and offers no call report', async () => {
+    scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [] });
+    const user = userEvent.setup();
+    render(<AdminDashboard />);
+    await screen.findByText('Busiest hours');
+
+    await user.click(screen.getByTestId('build-widget'));
+    expect(screen.queryByRole('menuitem', { name: /Call report/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: /Activity report/ }));
+    const builder = await screen.findByTestId('cdr-editor');
+    await user.type(within(builder).getByLabelText('Widget title'), 'Queue activity');
+    await user.click(within(builder).getByRole('button', { name: 'Save as widget' }));
+
+    await waitFor(() => expect(screen.queryByTestId('cdr-editor')).not.toBeInTheDocument());
+    expect(within(screen.getByTestId('widget-grid')).getByText('Queue activity')).toBeInTheDocument();
+  });
+
+  it('says the server lacks activity reports instead of a raw 404', async () => {
+    scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [] });
+    identityReportApi.runReport.mockRejectedValue(Object.assign(new Error('Failed running identities report: HTTP 404: {}'), { status: 404 }));
+    render(<AdminDashboard />);
+
+    expect((await screen.findAllByText(/Activity reports aren’t available on this server yet/)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/HTTP 404/)).not.toBeInTheDocument();
   });
 
   it('reports on every customer for a root admin with no selection', async () => {
@@ -118,9 +121,9 @@ describe('AdminDashboard', () => {
     scope.mockReturnValue({ selectedCustomer: null, selectedEnvironments: [] });
     render(<AdminDashboard />);
 
-    await waitFor(() => expect(monitoringApi.runCdrReport).toHaveBeenCalled());
-    expect(monitoringApi.runCdrReport.mock.calls[0][0]).not.toHaveProperty('customerUuid');
-    expect(monitoringApi.runCdrReport.mock.calls[0][0].environmentUuids).toEqual([]);
+    await waitFor(() => expect(identityReportApi.runReport).toHaveBeenCalled());
+    expect(identityReportApi.runReport.mock.calls[0][0]).not.toHaveProperty('customerUuid');
+    expect(identityReportApi.runReport.mock.calls[0][0].environmentUuids).toEqual([]);
     expect(screen.getByText(/Every customer/)).toBeInTheDocument();
   });
 
@@ -129,22 +132,25 @@ describe('AdminDashboard', () => {
     render(<AdminDashboard />);
 
     expect((await screen.findAllByText('Select a customer or application in the top bar.')).length).toBeGreaterThan(0);
-    expect(monitoringApi.runCdrReport).not.toHaveBeenCalled();
+    expect(identityReportApi.runReport).not.toHaveBeenCalled();
   });
 
-  it('adds the starter reports once: a deleted one stays deleted', async () => {
+  it('starts its own board, and adds the starter reports once: a deleted one stays deleted', async () => {
+    localStorage.setItem('dashboard-definitions:admin-metrics:acct-1', JSON.stringify({ widgets: { default: [{ uuid: 'old', type: 'cdr', title: 'Old call report', measures: ['calls'] }] }, seeded: [] }));
     scope.mockReturnValue({ selectedCustomer: { uuid: 'c-1', name: 'acme' }, selectedEnvironments: [] });
     const { unmount } = render(<AdminDashboard />);
-    await screen.findByText('Top callees');
+    await screen.findByText('Busiest hours');
+    // The old board stays where it was: it is the Monitoring page's Metrics tab now.
+    expect(screen.queryByText('Old call report')).not.toBeInTheDocument();
     unmount();
 
-    const key = 'dashboard-definitions:admin-metrics:acct-1';
+    const key = 'dashboard-definitions:admin-identities:acct-1';
     const store = JSON.parse(localStorage.getItem(key));
-    store.widgets.default = store.widgets.default.filter((w) => w.title !== 'Top callees');
+    store.widgets.default = store.widgets.default.filter((w) => w.title !== 'Busiest hours');
     localStorage.setItem(key, JSON.stringify(store));
 
     render(<AdminDashboard />);
-    await screen.findByText('Top callers');
-    expect(screen.queryByText('Top callees')).not.toBeInTheDocument();
+    await screen.findByText('Top events');
+    expect(screen.queryByText('Busiest hours')).not.toBeInTheDocument();
   });
 });

@@ -17,11 +17,12 @@ export const WIDGET_TYPES = ['counter', 'gauge', 'stat', 'trend', 'line', 'bar',
   'calls_stat', 'calls_chart', 'calls_outcome', 'live_calls',
   // Built in the widget builder: a metric query with tag filters and a split.
   'query',
-  // Saved from the dashboard's query editor: a CDR report (cdrReport.js).
-  'cdr'];
+  // Saved from the report editor: a CDR report (cdrReport.js, Monitoring) or
+  // an activity report over identities (reportSources.js, the Dashboard).
+  'cdr', 'identity'];
 
 // Widget type → whether it's a live Influx metric query or the calls table.
-export const isInfluxType = (type) => type !== 'table' && !isCallsType(type);
+export const isInfluxType = (type) => type !== 'table' && type !== 'identity' && type !== 'cdr' && !isCallsType(type);
 
 /** Blank widget — every field the editor can touch, so merges are total. */
 export const DEFAULT_WIDGET = {
@@ -186,6 +187,29 @@ export const WIDGET_TEMPLATES = {
   },
   // CDR report widgets — the dashboard's call-centre KPIs, from the query
   // editor's report (InfluxDB `cdr`, grouped by any CDR field).
+  // The Dashboard: the live stream's history from Postgres `identities`
+  // (/api/identities/report). Fixed measures only — a deployment that has not
+  // seen a delta yet has no discovered field:/incr: keys to name.
+  idActivity: {
+    title: 'Activity today', type: 'identity', view: 'number', minutes: 1440,
+    measures: ['events', 'identities'], dimensions: []
+  },
+  idByType: {
+    title: 'Activity by type', type: 'identity', view: 'table', minutes: 1440, limit: 20,
+    measures: ['events', 'identities'], dimensions: ['type']
+  },
+  idOverTime: {
+    title: 'Activity over time', type: 'identity', view: 'line', minutes: 1440, bucket: '1h',
+    measures: ['events'], dimensions: ['type']
+  },
+  idTopEvents: {
+    title: 'Top events', type: 'identity', view: 'bar', minutes: 1440, limit: 10,
+    measures: ['events'], dimensions: ['event']
+  },
+  idByHour: {
+    title: 'Busiest hours', type: 'identity', view: 'bar', minutes: 10080, limit: 24,
+    measures: ['events'], dimensions: ['hour']
+  },
   cdrKpis: {
     title: 'Today at a glance', type: 'cdr', view: 'number', minutes: 1440,
     measures: ['calls', 'answer_rate', 'billsec', 'avg_talk', 'avg_wait', 'service_level'], dimensions: []
@@ -221,6 +245,7 @@ export const WIDGET_TEMPLATES = {
 
 /** Template keys grouped for the editor's quick-start chip row. */
 export const TEMPLATE_CATEGORIES = {
+  identities: ['idActivity', 'idByType', 'idOverTime', 'idTopEvents', 'idByHour'],
   reports: ['cdrKpis', 'cdrByEnvironment', 'cdrStatusOverTime', 'cdrTopCallers', 'cdrTopCallees', 'cdrByHour'],
   calls: ['liveCalls', 'callsTotal', 'callsAnswered', 'callsGroups', 'callsBusiest', 'callsByDirection', 'callsOutcome'],
   live: ['callsInProgress'],

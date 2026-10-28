@@ -17,7 +17,7 @@ import { useTheme } from '@mui/material/styles';
 import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, templateTitle, withDefaults } from './widgetTemplates';
 import { resolveIcon } from './widgetPresentation';
 
-export default function AddWidgetMenu({ onPick, disabled }) {
+export default function AddWidgetMenu({ onPick, disabled, categories = null, custom = true }) {
   const { t } = useTranslation('widgets');
   // The menu opens under the button, aligned to its end side.
   const endSide = useTheme().direction === 'rtl' ? 'left' : 'right';
@@ -45,7 +45,7 @@ export default function AddWidgetMenu({ onPick, disabled }) {
         transformOrigin={{ vertical: 'top', horizontal: endSide }}
         slotProps={{ paper: { sx: { minWidth: 260, maxHeight: 460 } } }}
       >
-        {Object.entries(TEMPLATE_CATEGORIES).map(([category, keys]) => [
+        {Object.entries(TEMPLATE_CATEGORIES).filter(([category]) => (categories ? categories.includes(category) : category !== 'identities')).map(([category, keys]) => [
           <MenuItem key={`${category}-label`} disabled sx={{ opacity: '1 !important' }}>
             <Typography variant="overline" color="text.secondary">{t(`menu.category.${category}`, { defaultValue: category })}</Typography>
           </MenuItem>,
@@ -60,14 +60,14 @@ export default function AddWidgetMenu({ onPick, disabled }) {
           })
         ])}
 
-        <Divider />
-        <MenuItem
+        {custom && <Divider />}
+        {custom && <MenuItem
           onClick={() => { close(); onPick(withDefaults({ title: t('menu.newWidget') })); }}
           data-testid="widget-preset-custom"
         >
           <ListItemIcon><TuneIcon fontSize="small" /></ListItemIcon>
           <ListItemText primary={t('menu.custom')} secondary={t('menu.customHint')} />
-        </MenuItem>
+        </MenuItem>}
       </Menu>
     </>
   );

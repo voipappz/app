@@ -20,6 +20,10 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AppsIcon from '@mui/icons-material/Apps';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import YabedaMetricViewer from './YabedaMetricViewer.jsx';
+import InsightsIcon from '@mui/icons-material/Insights';
+import WidgetBoard from '../DashboardBuilder/WidgetBoard';
+import useBoardScope from '../DashboardBuilder/useBoardScope';
+import { useAuth } from '../../context/AuthContext';
 import GatusHealthPanel from './GatusHealthPanel.jsx';
 import MonitoringNodes from './MonitoringNodes.jsx';
 import useGatusHealth from '../../hooks/useGatusHealth';
@@ -130,9 +134,14 @@ const Monitoring = () => {
 
   const { canAccess } = usePermissions();
   const canReadLogs = canAccess('logs');
-  // 'status' (health, metrics, log volume) or 'logs' (the log lines themselves).
+  // 'status' (health, metrics, log volume), 'metrics' (the operator's widget
+  // board: call reports from InfluxDB `cdr`, any InfluxDB measurement — the
+  // board the Dashboard had before it moved to identities) or 'logs'.
   const [view, setView] = useState('status');
   const showLogs = view === 'logs' && canReadLogs;
+  const showMetrics = view === 'metrics';
+  const { accountUuid } = useAuth();
+  const boardScope = useBoardScope();
 
   // The MOTHERSHIP's Gatus: what this box watches (data layer, API, gateway,
   // SBC, and the voip node's own /health/node). Its summary feeds the Health
@@ -156,19 +165,16 @@ const Monitoring = () => {
         {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {canReadLogs ? (
-              <Paper sx={{ flexShrink: 0, backgroundColor: 'var(--mui-palette-background-paper)', border: '1px solid var(--mui-palette-divider)', borderRadius: 2 }}>
+            <Paper sx={{ flexShrink: 0, backgroundColor: 'var(--mui-palette-background-paper)', border: '1px solid var(--mui-palette-divider)', borderRadius: 2 }}>
                 <SectionTabs value={view} onChange={(_, v) => setView(v)} aria-label="Monitoring view" sx={{ borderBottom: 'none' }}>
                   <Tab value="status" label="Status" icon={<MonitorHeartIcon />} iconPosition="start" />
-                  <Tab value="logs" label="Logs" icon={<ArticleIcon />} iconPosition="start" />
+                  <Tab value="metrics" label="Metrics" icon={<InsightsIcon />} iconPosition="start" />
+                  {canReadLogs && <Tab value="logs" label="Logs" icon={<ArticleIcon />} iconPosition="start" />}
                 </SectionTabs>
               </Paper>
-            ) : (
-              <Typography variant="h5" sx={{ fontWeight: 600, color: 'var(--theme-text-primary)' }}>Status</Typography>
-            )}
-            {!showLogs && <HostSelector hosts={hosts} value={selectedHost} onChange={setSelectedHost} />}
+            {!showLogs && !showMetrics && <HostSelector hosts={hosts} value={selectedHost} onChange={setSelectedHost} />}
           </Box>
-          {!showLogs && <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {!showLogs && !showMetrics && <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               {Object.entries(TIME_RANGES).map(([key, { label }]) => (
                 <Chip key={key} label={label} size="small"
@@ -190,7 +196,9 @@ const Monitoring = () => {
           </Box>}
         </Box>
 
-        {showLogs ? (
+        {showMetrics ? (
+          accountUuid && <WidgetBoard key={accountUuid} storageScope={`admin-metrics:${accountUuid}`} callsScope={boardScope} heading={false} />
+        ) : showLogs ? (
           <Suspense fallback={null}>
             <Box sx={{ flex: 1, minHeight: 0 }}>
               <LogsScreen />

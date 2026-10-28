@@ -15,20 +15,22 @@ import { useCustomerEnvironment } from '../../context/CustomerEnvironmentContext
 import { usePermissions } from '../../hooks/usePermissions';
 import PageHeader from '../common/PageHeader.jsx';
 import WidgetBoard from '../DashboardBuilder/WidgetBoard';
+import useBoardScope from '../DashboardBuilder/useBoardScope';
 import { applyTemplate } from '../DashboardBuilder/widgetTemplates';
 
-// The starter board, placed on top once (dashboardWidgetsApi.seedWidgets) —
-// call-centre reports from the CDR report, the same data the query editor
-// reads. Boards that already carry the older calls panels keep them below.
+// The starter board, placed once (dashboardWidgetsApi.seedWidgets): activity
+// reports over identities — the live stream's history in Postgres. The
+// Dashboard shows identities only; call reports and InfluxDB metrics are the
+// Monitoring page's Metrics tab, which keeps the board this page used to have.
 // Layout is in board units: 4 columns, 120px rows.
 export const DASHBOARD_SEED = {
-  key: 'cdr-reports-v1',
+  key: 'identity-reports-v1',
   widgets: [
-    { key: 'cdrKpis', layout: { x: 0, y: 0, col: 4, row: 2 } },
-    { key: 'cdrByEnvironment', layout: { x: 0, y: 2, col: 2, row: 3 } },
-    { key: 'cdrStatusOverTime', layout: { x: 2, y: 2, col: 2, row: 3 } },
-    { key: 'cdrTopCallers', layout: { x: 0, y: 5, col: 2, row: 3 } },
-    { key: 'cdrTopCallees', layout: { x: 2, y: 5, col: 2, row: 3 } },
+    { key: 'idActivity', layout: { x: 0, y: 0, col: 4, row: 2 } },
+    { key: 'idByType', layout: { x: 0, y: 2, col: 2, row: 3 } },
+    { key: 'idOverTime', layout: { x: 2, y: 2, col: 2, row: 3 } },
+    { key: 'idTopEvents', layout: { x: 0, y: 5, col: 2, row: 3 } },
+    { key: 'idByHour', layout: { x: 2, y: 5, col: 2, row: 3 } },
   ],
 };
 const seed = {
@@ -49,14 +51,7 @@ export default function AdminDashboard() {
   const subtitle = scopeName ? `Activity for ${scopeName}`
     : fleet ? 'Every customer — select one in the top bar to narrow it'
     : 'Select a customer or application in the top bar';
-  // A customer covers every one of its applications; one application is
-  // passed down only when no customer is selected (and to live calls).
-  const callsScope = {
-    customerUuid: selectedCustomer?.uuid || null,
-    environmentUuid: environment?.uuid || null,
-    environmentUuids: (selectedEnvironments || []).map((env) => env?.uuid).filter(Boolean),
-    fleet,
-  };
+  const callsScope = useBoardScope();
 
   return (
     <Box data-testid="admin-dashboard-page" sx={{ p: { xs: 2, md: 3 }, width: '100%', boxSizing: 'border-box' }}>
@@ -66,7 +61,7 @@ export default function AdminDashboard() {
         actions={can('calls', 'read') ? <Button variant="outlined" onClick={() => navigate('/calls')}>View call history</Button> : null}
       />
       {accountUuid && (
-        <WidgetBoard key={accountUuid} storageScope={`admin-metrics:${accountUuid}`} callsScope={callsScope} seed={seed} heading={false} />
+        <WidgetBoard key={accountUuid} mode="dashboard" storageScope={`admin-identities:${accountUuid}`} callsScope={callsScope} seed={seed} heading={false} />
       )}
     </Box>
   );

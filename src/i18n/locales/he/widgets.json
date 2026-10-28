@@ -19,7 +19,9 @@
     "callsError": "לא ניתן היה לטעון את רשומות השיחות. נסו לרענן.",
     "saveError": "לא ניתן היה לשמור את הווידג׳טים",
     "empty": "הוסיפו ווידג׳ט כדי להתחיל את הלוח.",
-    "copyTitle": "{{title}} עותק"
+    "copyTitle": "{{title}} עותק",
+    "buildIdentityReport": "דוח פעילות",
+    "buildIdentityReportHint": "אירועים וישויות לאורך זמן, לפי סוג, אירוע או כל שדה חי"
   },
   "menu": {
     "add": "הוספת ווידג׳ט",
@@ -34,7 +36,8 @@
       "gauges": "מדים",
       "trends": "גרפים",
       "tables": "טבלאות",
-      "explore": "חקירה"
+      "explore": "חקירה",
+      "identities": "פעילות"
     }
   },
   "templates": {
@@ -62,7 +65,12 @@
     "cdrTopCallers": "המתקשרים המובילים",
     "cdrTopCallees": "הנמענים המובילים",
     "cdrByHour": "שיחות לפי שעה ביום",
-    "metricExplorer": "סייר מדדים"
+    "metricExplorer": "סייר מדדים",
+    "idActivity": "הפעילות היום",
+    "idByType": "פעילות לפי סוג",
+    "idOverTime": "פעילות לאורך זמן",
+    "idTopEvents": "האירועים הנפוצים",
+    "idByHour": "השעות העמוסות"
   },
   "units": {
     "calls": "שיחות"
@@ -107,7 +115,8 @@
     "noRows": "עדיין אין שורות",
     "openCall": "פתיחת שיחה {{id}}",
     "callDetails": "פרטי השיחה",
-    "close": "סגירה"
+    "close": "סגירה",
+    "kindIdentity": "פעילות"
   },
   "editor": {
     "titleEdit": "עריכת ווידג׳ט",
@@ -364,6 +373,23 @@
     "queryFailed": "השאילתה נכשלה.",
     "queryFailedShort": "השאילתה נכשלה",
     "reportUnavailable": "דוחות שיחות עדיין לא זמינים בשרת הזה — ה-API שלו צריך את העדכון שמוסיף דוחות שיחות.",
-    "reportFailed": "הדוח נכשל. נסו שוב."
+    "reportFailed": "הדוח נכשל. נסו שוב.",
+    "identityUnavailable": "דוחות פעילות עדיין לא זמינים בשרת הזה — ה-API שלו צריך את העדכון שמוסיף ישויות."
+  },
+  "identity": {
+    "titleBuild": "בניית דוח פעילות",
+    "all": "הכול"
+  },
+  "identityMeasures": {
+    "events": "אירועים",
+    "identities": "ישויות"
+  },
+  "identityDimensions": {
+    "type": "סוג",
+    "event": "אירוע",
+    "environment": "סביבה",
+    "identity": "ישות",
+    "hour": "שעה ביום",
+    "weekday": "יום בשבוע"
   }
 }
