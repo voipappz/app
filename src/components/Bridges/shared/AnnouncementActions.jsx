@@ -14,8 +14,10 @@ export default function AnnouncementActions({ uuid, onEdit }) {
   const { t } = useTranslation('bridges');
   if (!uuid) return null;
 
+  // From `sm` up it keeps room for the player as it opens, so the row does not
+  // jump; a phone has no room to spare, and the select beside it needs it.
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, minWidth: 160 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, minWidth: { xs: 0, sm: 160 } }}>
       <AudioPreview key={uuid} uuid={uuid} />
       {onEdit && (
         <Tooltip title={t('queue.editAnnouncement')}>

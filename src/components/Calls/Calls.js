@@ -93,6 +93,9 @@ const useCalls = ({ allTime = false } = {}) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [errorColumns, setErrorColumns] = useState(null);
   const [errorCalls, setErrorCalls] = useState(null);
+  // Whether the calls request has answered at least once (with calls, none,
+  // or an error). Until then an empty list is not "no calls": it is loading.
+  const [callsAnswered, setCallsAnswered] = useState(false);
   // Initialize with today's date range
   const [dateRange, setDateRange] = useState(() => (allTime ? allTimeRange() : todayRange()));
   const [currentPage, setCurrentPage] = useState(1);
@@ -451,8 +454,14 @@ const useCalls = ({ allTime = false } = {}) => {
     } finally {
       setLoadingCalls(false);
       setLoadingMore(false);
+      setCallsAnswered(true);
     }
   }, [dateRange, commonHeaders, perPage, buildSearchQueryParams, fetchAggregate]);
+
+  // The calls are not known yet: the first request (which waits for the
+  // columns) has not answered, or a new search is loading. A screen shows
+  // "loading" then, and "no calls" only once an answer came back empty.
+  const waitingForCalls = loadingCalls || (!callsAnswered && !errorColumns);
 
   // Use a ref to always have the latest currentPage without re-creating callbacks
   const currentPageRef = useRef(currentPage);
@@ -554,6 +563,7 @@ const useCalls = ({ allTime = false } = {}) => {
     totalRecords,
     loadingColumns,
     loadingCalls,
+    waitingForCalls,
     loadingMore,
     errorColumns,
     errorCalls,

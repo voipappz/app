@@ -987,7 +987,8 @@ export const QueueBridge = ({
             {t('queue.agents.registeredCount', { registered: allAgents.filter(a => isExtRegistered(agentExtName(a))).length, total: allAgents.length })}
           </Typography>
         </Box>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+        {/* Available and assigned agents: side by side from `sm` up, one above the other on a phone. */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
 
           {/* Left: available agents — search, multi-select, add */}
           <Box>
@@ -1074,32 +1075,36 @@ export const QueueBridge = ({
                 selectedAgents.map(agent => {
                   const ext = getAgentExtName(agent.uuid);
                   return (
+                    // The controls stay beside the name while both fit, and
+                    // wrap under it as one group when they do not.
                     <Box key={agent.uuid}
-                      sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.6,
+                      sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 0.75, rowGap: 0.5, px: 1.25, py: 0.6,
                         borderBottom: '1px solid', borderColor: 'divider' }}
                     >
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Box sx={{ flex: '1 1 8rem', minWidth: 0 }}>
                         <Typography noWrap sx={{ fontSize: '0.82rem', fontWeight: 500 }}>{agent.agent_name || getAgentDisplayName(agent.uuid)}</Typography>
                         <Typography noWrap sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>{ext ? <Trans t={t} i18nKey="queue.agents.ext" components={{ ext: <Bdi>{ext}</Bdi> }} /> : t('queue.agents.noExtension')}</Typography>
                       </Box>
-                      <RegBadge extName={ext} />
-                      <Tooltip title={t('queue.agents.level')}>
-                        <Select value={agent.tier.level} size="small"
-                          onChange={(e) => handleUpdateAgent(agent.uuid, 'tier_level', e.target.value)}
-                          sx={{ fontSize: '0.72rem', '& .MuiSelect-select': { py: 0.25, ps: 0.75, pe: '20px !important' } }}>
-                          {TIER_OPTIONS.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.78rem' }}>{t('queue.agents.levelOption', { n: v })}</MenuItem>)}
-                        </Select>
-                      </Tooltip>
-                      <Tooltip title={t('queue.agents.position')}>
-                        <Select value={agent.tier.position} size="small"
-                          onChange={(e) => handleUpdateAgent(agent.uuid, 'tier_position', e.target.value)}
-                          sx={{ fontSize: '0.72rem', '& .MuiSelect-select': { py: 0.25, ps: 0.75, pe: '20px !important' } }}>
-                          {TIER_OPTIONS.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.78rem' }}>{t('queue.agents.positionOption', { n: v })}</MenuItem>)}
-                        </Select>
-                      </Tooltip>
-                      <IconButton size="small" onClick={() => handleRemoveAgent(agent.uuid)} color="error" sx={{ p: 0.5 }}>
-                        <DeleteIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ms: 'auto' }}>
+                        <RegBadge extName={ext} />
+                        <Tooltip title={t('queue.agents.level')}>
+                          <Select value={agent.tier.level} size="small"
+                            onChange={(e) => handleUpdateAgent(agent.uuid, 'tier_level', e.target.value)}
+                            sx={{ fontSize: '0.72rem', '& .MuiSelect-select': { py: 0.25, ps: 0.75, pe: '20px !important' } }}>
+                            {TIER_OPTIONS.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.78rem' }}>{t('queue.agents.levelOption', { n: v })}</MenuItem>)}
+                          </Select>
+                        </Tooltip>
+                        <Tooltip title={t('queue.agents.position')}>
+                          <Select value={agent.tier.position} size="small"
+                            onChange={(e) => handleUpdateAgent(agent.uuid, 'tier_position', e.target.value)}
+                            sx={{ fontSize: '0.72rem', '& .MuiSelect-select': { py: 0.25, ps: 0.75, pe: '20px !important' } }}>
+                            {TIER_OPTIONS.map(v => <MenuItem key={v} value={v} sx={{ fontSize: '0.78rem' }}>{t('queue.agents.positionOption', { n: v })}</MenuItem>)}
+                          </Select>
+                        </Tooltip>
+                        <IconButton size="small" onClick={() => handleRemoveAgent(agent.uuid)} color="error" sx={{ p: 0.5 }}>
+                          <DeleteIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Box>
                     </Box>
                   );
                 })

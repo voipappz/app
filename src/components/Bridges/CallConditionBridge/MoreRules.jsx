@@ -140,7 +140,7 @@ function RuleDialog({ rule, onSave, onClose, types, destinations, environmentUui
                 label={t('ruleDialog.allDay')}
               />
               {!draft.allDay && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                   <HourSelect value={draft.from} hours={FROM_HOURS} layer={layer} label={t('hours.from')} onChange={(from) => set({ from })} />
                   <Typography component="span" aria-hidden>–</Typography>
                   <HourSelect value={draft.to} hours={TO_HOURS} layer={layer} label={t('hours.to')} onChange={(to) => set({ to })}
@@ -228,10 +228,10 @@ export default function MoreRules({ rules, onChange, errors = {}, types, destina
               onClick={() => setEditing(index)}
               sx={{ flex: 1, minWidth: 0, display: 'block', textAlign: 'start', p: 1.5 }}
             >
-              <Typography variant="body2" color={kept ? 'text.secondary' : 'text.primary'}>
+              <Typography variant="body2" color={kept ? 'text.secondary' : 'text.primary'} sx={{ overflowWrap: 'anywhere' }}>
                 {describeRule(t, rule)}
               </Typography>
-              <Typography variant="body2" fontWeight={600}>{t('rules.goesTo', { destination: destination || '—' })}</Typography>
+              <Typography variant="body2" fontWeight={600} sx={{ overflowWrap: 'anywhere' }}>{t('rules.goesTo', { destination: destination || '—' })}</Typography>
             </ButtonBase>
             <Box sx={{ display: 'flex', flexShrink: 0 }}>
               <Tooltip title={t('rules.moveUp')}>

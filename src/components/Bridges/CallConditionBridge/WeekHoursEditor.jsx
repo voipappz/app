@@ -87,7 +87,10 @@ export default function WeekHoursEditor({ week, onChange, errors = {}, layer, on
             key={dayIndex}
             role="listitem"
             data-testid={`day-row-${dayIndex}`}
-            sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, py: 1, borderBottom: 1, borderColor: 'divider' }}
+            // Day, switch, hours and copy share the line while one set of
+            // hours fits (13rem); on a narrower screen the hours and the copy
+            // button wrap under the day. A closed day's word always fits.
+            sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 1, py: 1, borderBottom: 1, borderColor: 'divider' }}
           >
             <Typography sx={{ width: 40, flexShrink: 0, pt: 1, fontWeight: 600 }}>{dayName}</Typography>
             <Switch
@@ -96,7 +99,7 @@ export default function WeekHoursEditor({ week, onChange, errors = {}, layer, on
               slotProps={{ input: { role: 'switch', 'aria-label': t('hours.openSwitch', { day: dayName }) } }}
               sx={{ flexShrink: 0 }}
             />
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ flex: day.open ? '1 1 13rem' : '1 1 auto', minWidth: 0 }}>
               {!day.open ? (
                 <Typography color="text.secondary" sx={{ pt: 1 }}>{t('hours.closed')}</Typography>
               ) : (

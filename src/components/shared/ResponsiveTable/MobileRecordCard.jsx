@@ -22,22 +22,23 @@ export default function MobileRecordCard({ row, columns, selected, onClick }) {
       sx={{ mb: 1, cursor: onClick ? 'pointer' : 'default', borderColor: selected ? 'primary.main' : undefined }}
     >
       <CardContent sx={{ pb: actions.length ? 1 : 2 }}>
-        {primary && <Typography variant="subtitle1" sx={{ fontWeight: 600 }} component="div">{cell(primary)}</Typography>}
-        {secondary && <Typography variant="body2" color="text.secondary" component="div">{cell(secondary)}</Typography>}
+        {/* A long unbroken value (a SIP username, a URL) breaks rather than leaving the card. */}
+        {primary && <Typography variant="subtitle1" sx={{ fontWeight: 600, overflowWrap: 'anywhere' }} component="div">{cell(primary)}</Typography>}
+        {secondary && <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} component="div">{cell(secondary)}</Typography>}
 
         {meta.length > 0 && (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5, mt: 1 }}>
             {meta.map((column) => (
               <Box key={column.id} sx={{ minWidth: 0 }}>
                 <Typography variant="caption" color="text.secondary" component="div">{column.cardLabel ?? column.label}</Typography>
-                <Typography variant="body2" component="div">{cell(column)}</Typography>
+                <Typography variant="body2" component="div" sx={{ overflowWrap: 'anywhere' }}>{cell(column)}</Typography>
               </Box>
             ))}
           </Box>
         )}
 
         {actions.length > 0 && (
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 1 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 0.5, mt: 1 }}>
             {actions.map((column) => <Box key={column.id}>{cell(column)}</Box>)}
           </Box>
         )}
