@@ -1,5 +1,5 @@
 import { render, screen, within, fireEvent } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The Calls screen rendered for real; the data hook, handlers and heavy panels
 // are stubbed so what is under test is the layout and the counters.
@@ -200,5 +200,27 @@ describe('Calls counters and insights', () => {
     ['total', 'answered', 'noAnswer', 'outgoing', 'incoming', 'avgDuration'].forEach((key) => {
       expect(chip(key)).toHaveTextContent('—');
     });
+  });
+});
+
+describe('Calls on a phone', () => {
+  const realMatchMedia = window.matchMedia;
+  beforeEach(() => {
+    window.matchMedia = (query) => ({
+      matches: true, media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    });
+  });
+  afterEach(() => { window.matchMedia = realMatchMedia; });
+
+  it('a user gets the period and the counters above the list, no chart', () => {
+    mocks.userSession = true;
+    render(<Calls />);
+    const summary = screen.getByTestId('calls-mobile-summary');
+    const period = within(summary).getByRole('group', { name: 'Period' });
+    expect(within(period).getAllByRole('button').map((b) => b.textContent)).toEqual(['All', 'Today', '24h', '7d', '30d']);
+    expect(chip('total')).not.toBeNull();
+    expect(chip('incoming')).not.toBeNull();
+    expect(screen.queryByTestId('calls-chart')).toBeNull();
   });
 });
