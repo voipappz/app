@@ -161,6 +161,18 @@ describe('dashboard widget UX', () => {
   });
 });
 
+describe('the InfluxDB widget editor and identity widgets', () => {
+  it('offers no identity template or type: those run on /api/identities, not Influx', async () => {
+    const user = userEvent.setup();
+    render(<WidgetEditor open initialDraft={widget} onSave={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByRole('button', { name: 'Run preview' });
+    expect(screen.queryByRole('button', { name: 'Activity today' })).not.toBeInTheDocument();
+    await user.click(screen.getByLabelText('Type'));
+    expect(screen.queryByRole('option', { name: 'Identity' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'counter' })).toBeInTheDocument();
+  });
+});
+
 describe('the widget editor in Hebrew', () => {
   afterEach(() => i18n.changeLanguage('en'));
 

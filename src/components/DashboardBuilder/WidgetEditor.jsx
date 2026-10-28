@@ -14,7 +14,12 @@ import { ResponsiveDialog as Dialog } from '../ui';
 // Filtered against WIDGET_TEMPLATES: a category listing a key that no longer
 // has a template used to throw on `.title` inside the map below and take the
 // whole dashboard down with it, which is far too much damage for a typo.
-const TEMPLATE_KEYS = Object.values(TEMPLATE_CATEGORIES).flat().filter((key) => WIDGET_TEMPLATES[key]);
+// Identity widgets run on /api/identities through the report editor, never
+// on Influx, so this editor offers neither their templates nor their type.
+const TEMPLATE_KEYS = Object.entries(TEMPLATE_CATEGORIES)
+  .filter(([category]) => category !== 'identities')
+  .flatMap(([, keys]) => keys)
+  .filter((key) => WIDGET_TEMPLATES[key]);
 // Time windows in minutes; their words are widgets.json editor.windows.<minutes>.
 const WINDOWS = [60, 360, 1440, 10080];
 
@@ -84,7 +89,7 @@ export default function WidgetEditor({ open, widget, initialDraft, saving, onClo
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField fullWidth size="small" label={t('editor.title')} value={draft.title} onChange={(e) => set('title', e.target.value)} />
               <TextField fullWidth select size="small" label={t('editor.type')} value={draft.type} onChange={(e) => set('type', e.target.value)}>
-                {WIDGET_TYPES.filter((type) => type !== 'query').map((type) => (
+                {WIDGET_TYPES.filter((type) => type !== 'query' && type !== 'identity').map((type) => (
                   <MenuItem key={type} value={type}>{t(`types.${type}`, { defaultValue: type })}</MenuItem>
                 ))}
               </TextField>
