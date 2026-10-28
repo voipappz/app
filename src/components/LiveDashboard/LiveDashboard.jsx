@@ -7,6 +7,9 @@ import PeopleIcon from '@mui/icons-material/People';
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { useTranslation } from 'react-i18next';
+import ResponsiveTable from '../shared/ResponsiveTable/ResponsiveTable';
+import { formatTime } from '../../utils/dateUtils';
 
 import { summarize } from '../../services/api/liveDashboardApi';
 import { useCable } from '../../services/cable';
@@ -15,6 +18,7 @@ import useLiveEntities from '../../hooks/useLiveEntities';
 import { useLiveEnvironment } from './useLiveEnvironment';
 import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import WidgetBoard from '../DashboardBuilder/WidgetBoard';
 import LiveCallsPanel from '../Live/panels/LiveCallsPanel.jsx';
 import {
@@ -51,7 +55,7 @@ import {
 function clockTime(value) {
   const n = Number(value);
   if (!value || !Number.isFinite(n) || n <= 0) return '-';
-  return new Date(n * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return formatTime(n * 1000, true);
 }
 
 /** Seconds since a unix timestamp, formatted HH:MM:SS — the deployed dashboard's format. */
@@ -68,13 +72,14 @@ function renderCount(value) {
   return value === null || value === undefined || value === '' ? '-' : String(value);
 }
 
+// A headline number. Two to a row on a phone, four on a wider screen.
 function StatTile({ icon, value, label }) {
   return (
-    <Paper variant="outlined" sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, flex: '1 1 180px' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 2, bgcolor: 'action.hover' }}>
+    <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, display: 'flex', alignItems: 'center', gap: { xs: 1.25, sm: 2 }, minWidth: 0 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, width: { xs: 36, sm: 44 }, height: { xs: 36, sm: 44 }, borderRadius: 2, bgcolor: 'action.hover' }}>
         {icon}
       </Box>
-      <Box>
+      <Box sx={{ minWidth: 0 }}>
         <Typography variant="h5" sx={{ fontWeight: 600, lineHeight: 1.1 }}>{value}</Typography>
         <Typography variant="body2" color="text.secondary">{label}</Typography>
       </Box>
@@ -82,16 +87,23 @@ function StatTile({ icon, value, label }) {
   );
 }
 
-// The environment document's three live-call lists, and how they read.
+// The environment document's three live-call lists, and their words in live.json.
 const CALL_LISTS = [
-  { key: 'live_calls_incoming', label: 'Incoming' },
-  { key: 'live_calls_outgoing', label: 'Outgoing' },
-  { key: 'live_calls_local', label: 'Extension to extension' },
+  { key: 'live_calls_incoming', labelKey: 'calls.incoming' },
+  { key: 'live_calls_outgoing', labelKey: 'calls.outgoing' },
+  { key: 'live_calls_local', labelKey: 'calls.local' },
 ];
 
-const NOT_LIVE = 'Not live — the cable is not delivering; see Realtime cable above.';
+// Status and state values the app has words for; any other shows as sent.
+const KNOWN_STATUSES = new Set(['available', 'on_break', 'logged_out']);
+const KNOWN_STATES = new Set(['waiting', 'receiving', 'ringing', 'answer', 'in_a_queue_call']);
+
+// The agents table's place on a phone card: name on top, then status.
+const CARD_PRIORITY = { user_name: 'primary', status: 'secondary' };
 
 const LiveDashboard = () => {
+  const { t } = useTranslation('live');
+  const notLive = t('notLive');
   // One environment at a time: a portal user's own, or the one an account
   // picks here (useLiveEnvironment).
   const liveEnvironment = useLiveEnvironment();
@@ -107,6 +119,8 @@ const LiveDashboard = () => {
   const { user: portalUser } = useUserAuth();
   const { accountUuid } = useAuth();
   const boardOwner = portalUser?.uuid || accountUuid || '';
+  // Users and accounts see the same screen; the ACL decides what is on it.
+  const { can } = usePermissions();
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -131,9 +145,9 @@ const LiveDashboard = () => {
   // node has not identified yet shows blank name and extension until it does.
   const agentRows = live.byScope('user');
   const liveEnv = live.byScope('environment')[0];
-  const callCounts = CALL_LISTS.map(({ key, label }) => ({
+  const callCounts = CALL_LISTS.map(({ key, labelKey }) => ({
     key,
-    label,
+    label: t(labelKey),
     count: Array.isArray(liveEnv?.[key]) ? liveEnv[key].length : 0,
   }));
   const activeCalls = liveEnv ? callCounts.reduce((n, c) => n + c.count, 0) : null;
@@ -155,12 +169,13 @@ const LiveDashboard = () => {
         // logged_out) and keys the colour; `status_name` is what the tenant
         // called it ("Lunch"), and is what the operator recognises.
         const c = statusColor(value, settings);
-        return <Chip size="small" label={row.status_name || value} sx={{ bgcolor: c || undefined, color: c ? '#fff' : undefined, fontWeight: 500 }} />;
+        const word = KNOWN_STATUSES.has(value) ? t(`status.${value}`) : value;
+        return <Chip size="small" label={row.status_name || word} sx={{ bgcolor: c || undefined, color: c ? '#fff' : undefined, fontWeight: 500 }} />;
       }
       case 'state': {
         if (!value) return '-';
         const c = stateColor(value, settings);
-        return <Chip size="small" label={value} sx={{ bgcolor: c || undefined, color: c ? '#fff' : undefined, fontWeight: 500 }} />;
+        return <Chip size="small" label={KNOWN_STATES.has(value) ? t(`state.${value}`) : value} sx={{ bgcolor: c || undefined, color: c ? '#fff' : undefined, fontWeight: 500 }} />;
       }
       default:
         return value === '' || value === null || value === undefined ? '-' : String(value);
@@ -168,18 +183,20 @@ const LiveDashboard = () => {
   };
 
   return (
-    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>Live Dashboard</Typography>
+    // The shell's content area is fixed-height and clips: the screen scrolls
+    // itself, and its sections keep their full height instead of shrinking.
+    <Box sx={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', p: { xs: 2, md: 3 }, display: 'flex', flexDirection: 'column', gap: { xs: 2, md: 2.5 }, '& > *': { flexShrink: 0 } }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, flexWrap: 'wrap' }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>{t('title')}</Typography>
         {liveEnvironment.pickable ? (
           <TextField
-            select size="small" label="Environment" value={environmentUuid}
+            select size="small" label={t('environment.label')} value={environmentUuid}
             onChange={(e) => liveEnvironment.pick(e.target.value)}
-            sx={{ minWidth: 240 }}
+            sx={{ minWidth: { sm: 240 }, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}
             SelectProps={{ displayEmpty: true, inputProps: { 'data-testid': 'live-environment' } }}
             InputLabelProps={{ shrink: true }}
           >
-            <MenuItem value="" disabled>Pick an environment to monitor</MenuItem>
+            <MenuItem value="" disabled>{t('environment.pick')}</MenuItem>
             {liveEnvironment.choices.map((e) => <MenuItem key={e.uuid} value={e.uuid}>{e.name || e.uuid}</MenuItem>)}
           </TextField>
         ) : environmentName && (
@@ -199,32 +216,32 @@ const LiveDashboard = () => {
       />
 
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        <Chip label={`${stats.available} Available`} sx={{ bgcolor: statusColor('available', settings), color: '#fff', fontWeight: 600 }} />
-        <Chip label={`${stats.onCall} On Call`} sx={{ bgcolor: stateColor('in_a_queue_call', settings), color: '#fff', fontWeight: 600 }} />
-        <Chip label={`${stats.onBreak} On Break`} sx={{ bgcolor: statusColor('on_break', settings), color: '#fff', fontWeight: 600 }} />
-        <Chip label={`${stats.waiting} Waiting`} sx={{ bgcolor: stateColor('waiting', settings), color: '#fff', fontWeight: 600 }} />
+        <Chip label={t('summary.available', { n: stats.available })} sx={{ bgcolor: statusColor('available', settings), color: '#fff', fontWeight: 600 }} />
+        <Chip label={t('summary.onCall', { n: stats.onCall })} sx={{ bgcolor: stateColor('in_a_queue_call', settings), color: '#fff', fontWeight: 600 }} />
+        <Chip label={t('summary.onBreak', { n: stats.onBreak })} sx={{ bgcolor: statusColor('on_break', settings), color: '#fff', fontWeight: 600 }} />
+        <Chip label={t('summary.waiting', { n: stats.waiting })} sx={{ bgcolor: stateColor('waiting', settings), color: '#fff', fontWeight: 600 }} />
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <StatTile icon={<PeopleIcon color="primary" />} value={stats.total} label="Total Online" />
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' }, gap: { xs: 1.5, sm: 2 } }}>
+        <StatTile icon={<PeopleIcon color="primary" />} value={stats.total} label={t('tiles.totalOnline')} />
         <StatTile
           icon={<PhoneInTalkIcon color="error" />}
           value={activeCalls === null ? '—' : activeCalls}
-          label="Active Calls"
+          label={t('tiles.activeCalls')}
         />
-        <StatTile icon={<CheckCircleIcon color="success" />} value={stats.available} label="Available" />
-        <StatTile icon={<TrendingUpIcon color="secondary" />} value={`${stats.utilization}%`} label="Utilization" />
+        <StatTile icon={<CheckCircleIcon color="success" />} value={stats.available} label={t('tiles.available')} />
+        <StatTile icon={<TrendingUpIcon color="secondary" />} value={`${stats.utilization}%`} label={t('tiles.utilization')} />
       </Box>
 
       <Box>
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-          Live calls {activeCalls ? `(${activeCalls})` : ''}
+          {activeCalls ? t('calls.titleCount', { n: activeCalls }) : t('calls.title')}
         </Typography>
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
             <TableHead>
               <TableRow>
-                {['Direction', 'In progress'].map((h) => (
+                {[t('calls.direction'), t('calls.inProgress')].map((h) => (
                   <TableCell key={h} sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</TableCell>
                 ))}
               </TableRow>
@@ -233,7 +250,7 @@ const LiveDashboard = () => {
               {!liveEnv && (
                 <TableRow>
                   <TableCell colSpan={2} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                    {live.connected ? 'No calls in progress' : NOT_LIVE}
+                    {live.connected ? t('calls.none') : notLive}
                   </TableCell>
                 </TableRow>
               )}
@@ -250,48 +267,35 @@ const LiveDashboard = () => {
 
       {/* Calls in progress, one row each, with listen / whisper / barge /
           hang up: what the Calls screen's "Live now" tab used to show. It
-          polls the API (the cable carries counts, not calls), so it is the
-          account console's: a portal user sees the counts above only. */}
-      {accountUuid && !portalUser && (
+          polls the API (the cable carries counts, not calls) with whoever is
+          signed in: anyone whose ACL reads calls, user or account. */}
+      {can('calls') && (
         <Box data-testid="live-calls-panel">
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>Calls in progress</Typography>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>{t('callsInProgress')}</Typography>
           <Paper variant="outlined" sx={{ p: 2 }}>
             <LiveCallsPanel open />
           </Paper>
         </Box>
       )}
 
-      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Agents</Typography>
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              {columns.map((c) => (
-                <TableCell key={c.key} sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{c.label}</TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {agentRows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={columns.length} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                  {live.connected ? 'No agents in this environment' : NOT_LIVE}
-                </TableCell>
-              </TableRow>
-            )}
-            {agentRows.map((row) => (
-              <TableRow key={row.id} hover>
-                {columns.map((c) => (
-                  <TableCell key={c.key} sx={{ whiteSpace: 'nowrap' }}>{cell(row, c)}</TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('agents.title')}</Typography>
+      {/* Headers by column key: a saved column list keeps English labels. */}
+      <Paper variant="outlined">
+        <ResponsiveTable
+          columns={columns.map((c) => ({
+            id: c.key,
+            label: t(`columns.${c.key}`, { defaultValue: c.label }),
+            render: (row) => cell(row, c),
+            priority: CARD_PRIORITY[c.key] || 'meta',
+          }))}
+          rows={agentRows}
+          getRowId={(row) => row.id}
+          emptyMessage={live.connected ? t('agents.none') : notLive}
+        />
+      </Paper>
 
       <Typography variant="caption" color="text.secondary">
-        Live over the cable. Counters and first-call times reset at the environment's midnight.
+        {t('footer')}
       </Typography>
 
       {/* The one deliberate second source here: saved Influx widgets, each

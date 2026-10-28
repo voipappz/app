@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Box, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 const WIDTH = 720;
 const HEIGHT = 320;
@@ -97,13 +98,14 @@ const pathData = (coordinates, closed) => {
  * and GeoJSON conventions. It intentionally uses an equirectangular world
  * projection so reports work without a Mapbox account or another data source. */
 const ReportMap = ({ columns, rows, height = 320 }) => {
+  const { t } = useTranslation('reports');
   const shapes = useMemo(() => extractMapShapes(columns, rows), [columns, rows]);
   if (!shapes.points.length && !shapes.paths.length) {
-    return <Typography variant="body2" color="text.secondary">No valid geographic data returned.</Typography>;
+    return <Typography variant="body2" color="text.secondary">{t('map.noData')}</Typography>;
   }
 
   return (
-    <Box role="img" aria-label="Report geographic map" sx={{ width: '100%', height, minHeight: 220 }}>
+    <Box role="img" aria-label={t('map.label')} sx={{ width: '100%', height, minHeight: 220 }}>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
         <rect width={WIDTH} height={HEIGHT} rx="8" fill="#f4f8fb" stroke="#cbd5e1" />
         {[-120, -60, 0, 60, 120].map((longitude) => {

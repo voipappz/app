@@ -20,7 +20,7 @@ import OptionDialog, { DestinationFields } from './OptionDialog';
  */
 export default function IvrMenuEditor({ ivr, mode, environmentUuid, onSave, onClose, onDrillDown }) {
   const { t } = useTranslation('bridges');
-  const { can } = usePermissions();
+  const { canWriteDestinations } = usePermissions();
   const editor = useIvrMenu({ ivr, mode, environmentUuid, onSave });
   const { menu, errors, change, putOption, setFallback } = editor;
   const resources = useBridgeResources(editor.environmentUuid);
@@ -129,7 +129,7 @@ export default function IvrMenuEditor({ ivr, mode, environmentUuid, onSave, onCl
           resources={resources}
           error={errorText('greeting')}
           onEdit={leaveFor && ((uuid) => leaveFor('announcement', uuid, () => {}))}
-          onCreate={leaveFor && can('announcement', 'write')
+          onCreate={leaveFor && canWriteDestinations
             ? () => leaveFor('announcement', null, (uuid) => { if (uuid) change({ greeting: uuid }); })
             : undefined}
         />

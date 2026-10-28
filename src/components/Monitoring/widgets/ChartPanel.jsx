@@ -6,7 +6,8 @@ import {
   XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from 'recharts';
-import { formatDate } from '../../../utils/dateUtils';
+import { formatDate, formatDayMonth, formatTime } from '../../../utils/dateUtils';
+import { useTranslation } from 'react-i18next';
 
 /** Color palette for multi-series lines */
 const HOST_COLORS = [
@@ -23,10 +24,9 @@ const tooltipStyle = {
 /** Format x-axis tick based on time range */
 const formatXAxis = (timeRange) => (tickItem) => {
   if (!tickItem) return '';
-  const date = new Date(tickItem);
-  if (isNaN(date.getTime())) return tickItem;
-  if (timeRange === 'week' || timeRange === 'month') return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (!formatTime(tickItem)) return tickItem;
+  if (timeRange === 'week' || timeRange === 'month') return formatDayMonth(tickItem);
+  return formatTime(tickItem);
 };
 
 /** Format bytes to human readable */
@@ -58,6 +58,7 @@ const ChartPanel = ({
   yUnit = '', yDomain, threshold, loading,
   formatter, chartType, groupBy, onEditQuery,
 }) => {
+  const { t } = useTranslation();
   const xAxisFormatter = useMemo(() => formatXAxis(timeRange), [timeRange]);
 
   // Pivot data by groupBy field when provided (multi-host line chart)
@@ -101,7 +102,7 @@ const ChartPanel = ({
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {threshold != null && (
-            <Chip label={`Threshold: ${threshold}${yUnit}`} size="small" color="warning" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+            <Chip label={t('chart.threshold', { value: `${threshold}${yUnit}` })} size="small" color="warning" variant="outlined" sx={{ fontSize: '0.7rem' }} />
           )}
           {onEditQuery && (
             <MuiTooltip title="Edit this chart's InfluxQL query">
@@ -119,7 +120,7 @@ const ChartPanel = ({
         </Box>
       ) : isEmpty ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
-          <Typography variant="body2" color="text.secondary">No data for selected time range</Typography>
+          <Typography variant="body2" color="text.secondary">{t('chart.noData')}</Typography>
         </Box>
       ) : groupKeys.length > 0 ? (
         /* Multi-group line chart */

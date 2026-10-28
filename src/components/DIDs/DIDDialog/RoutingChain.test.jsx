@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import RoutingChain from './RoutingChain.jsx';
+import RoutingChain, { refreshRoutingChains } from './RoutingChain.jsx';
 import { bridgeApi } from '../../../services/api/bridgeApi';
 import { queuesApi } from '../../../services/api/queuesApi';
 import { getCallCondition } from '../../../services/api/callConditionsApi';
@@ -91,5 +91,31 @@ describe('a call condition in the route preview', () => {
     // The pencil beside a destination edits that destination.
     fireEvent.click(screen.getByRole('button', { name: 'Edit Device: Front desk' }));
     expect(onEditBridge).toHaveBeenCalledWith('extension', { uuid: 'e-1' });
+  });
+});
+
+// The route wizard keeps the route form open behind a destination's editor,
+// and the details page stays open behind the wizard: after a save, the chain
+// they show must load the saved version, though its uuid has not changed.
+describe('a routing chain after its destination is saved', () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it('loads the saved hours when a destination is saved', async () => {
+    const condition = (hours) => ({
+      uuid: 'cc-1', name: 'office_hours', fallback_bridge_type: 'vml', fallback_bridge_uuid: 'v-1',
+      resources: [{ name: 'open_1', bridge_type: 'queue', bridge_uuid: 'q-1', segments: [
+        { uuid: 's1', field: 'time.weekday', operator: 'IN', val: ['0', '1', '2', '3', '4'] },
+        { uuid: 's2', field: 'time.hour', operator: 'BETWEEN', val: hours },
+      ] }],
+    });
+    getCallCondition.mockResolvedValue(condition(['9', '16']));
+    bridgeApi.getBridgeResource.mockResolvedValue({ name: 'Support' });
+    render(<RoutingChain bridgeType="call_condition" bridgeUuid="cc-1" environmentUuid="env-1" />);
+    expect(await screen.findByTestId('week-summary')).toHaveTextContent('Sun–Thu 09:00–17:00');
+
+    getCallCondition.mockResolvedValue(condition(['8', '19']));
+    act(() => refreshRoutingChains());
+    await waitFor(() => expect(screen.getByTestId('week-summary')).toHaveTextContent('Sun–Thu 08:00–20:00'));
+    expect(getCallCondition).toHaveBeenCalledTimes(2);
   });
 });

@@ -53,10 +53,13 @@ import HelpButton from '../common/HelpButton';
 import { GUIDE_URLS } from '../../utils/guides';
 import SqlQueryEditor from './SqlQueryEditor/SqlQueryEditor';
 import { usePermissions } from '../../hooks/usePermissions';
+import { Trans, useTranslation } from 'react-i18next';
+import { chartKindName } from './reportWords';
 
 
 
 const Reports = () => {
+  const { t } = useTranslation('reports');
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Screen view: 'visual' (Blazer-style dashboards, the landing view) or
@@ -404,7 +407,7 @@ const Reports = () => {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Loading reports list...</Typography>
+        <Typography sx={{ ms: 2 }}>{t('loadingList')}</Typography>
       </Box>
     );
   }
@@ -412,7 +415,7 @@ const Reports = () => {
   if (errorReports) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">Error loading reports: {errorReports}</Alert>
+        <Alert severity="error">{t('listError', { error: errorReports })}</Alert>
       </Box>
     );
   }
@@ -501,10 +504,10 @@ const Reports = () => {
       <Box className="reports-container" data-testid="reports-container"
         sx={{ p: { xs: 1, sm: 2, md: 3 }, height: '100%', overflowY: 'auto' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>Reports</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>{t('title')}</Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <Chip label="Visual" color="primary" size="small" sx={{ fontWeight: 600 }} />
-          <Chip label="Editor" variant="outlined" size="small" onClick={() => setScreenView('editor')} sx={{ cursor: 'pointer' }} />
+          <Chip label={t('view.visual')} color="primary" size="small" sx={{ fontWeight: 600 }} />
+          <Chip label={t('view.editor')} variant="outlined" size="small" onClick={() => setScreenView('editor')} sx={{ cursor: 'pointer' }} />
         </Box>
         <ReportsDashboards />
       </Box>
@@ -538,8 +541,8 @@ const Reports = () => {
         }}>
         {/* Back to the Blazer-style visual dashboards */}
         <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
-          <Chip label="Visual" variant="outlined" size="small" onClick={() => setScreenView('visual')} sx={{ cursor: 'pointer' }} />
-          <Chip label="Editor" color="primary" size="small" sx={{ fontWeight: 600 }} />
+          <Chip label={t('view.visual')} variant="outlined" size="small" onClick={() => setScreenView('visual')} sx={{ cursor: 'pointer' }} />
+          <Chip label={t('view.editor')} color="primary" size="small" sx={{ fontWeight: 600 }} />
         </Box>
         <ReportList
           reports={reports}
@@ -593,8 +596,8 @@ const Reports = () => {
         {loadingReportData && (
           <Box sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <CircularProgress size={20} sx={{ mr: 1 }} />
-              <Typography variant="body2" color="text.secondary">Loading report data...</Typography>
+              <CircularProgress size={20} sx={{ me: 1 }} />
+              <Typography variant="body2" color="text.secondary">{t('loadingData')}</Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               {[...Array(5)].map((_, index) => (
@@ -611,7 +614,7 @@ const Reports = () => {
         )}
         {errorReportData && !loadingReportData && (
           <Box sx={{ p: 3 }}>
-            <Alert severity="error">Error loading report data: {errorReportData}</Alert>
+            <Alert severity="error">{t('dataError', { error: errorReportData })}</Alert>
           </Box>
         )}
         {!loadingReportData && !errorReportData && selectedReportData && (
@@ -620,10 +623,10 @@ const Reports = () => {
               <Grid size={{ xs: 12, sm: 'grow' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Typography variant="h5" gutterBottom sx={{ mb: { xs: 1, sm: 0 } }}>
-                    {selectedReportData.name || reports.find(r => r.uuid === selectedReportData.report_uuid)?.name || 'Report Details'}
+                    {selectedReportData.name || reports.find(r => r.uuid === selectedReportData.report_uuid)?.name || t('untitled')}
                   </Typography>
                   <Chip size="small" variant="outlined"
-                    label={detectedChartType === 'table' ? 'Table' : `${detectedChartType.replace(/\b\w/g, c => c.toUpperCase())} chart`} />
+                    label={chartKindName(t, detectedChartType)} />
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, md: 'auto' }}>
@@ -635,31 +638,31 @@ const Reports = () => {
                     onClick={handleRunSelectedReport}
                     disabled={loadingReportData || !selectedReportData?.report_uuid}
                   >
-                    Run
+                    {t('toolbar.run')}
                   </Button>
                   {canWrite && selectedReportEntry?.editable !== false && (
-                    <Button size="small" variant="outlined" aria-label="Edit report"
-                      startIcon={<EditIcon />} onClick={handleEditDialogOpen}>Edit</Button>
+                    <Button size="small" variant="outlined" aria-label={t('toolbar.editLabel')}
+                      startIcon={<EditIcon />} onClick={handleEditDialogOpen}>{t('toolbar.edit')}</Button>
                   )}
                   {canWrite && (
-                    <Tooltip title={selectedReportEntry?.editable === false ? 'Fork template to edit' : 'Fork report (editable copy)'}>
+                    <Tooltip title={selectedReportEntry?.editable === false ? t('toolbar.forkTemplate') : t('toolbar.forkCopy')}>
                       <span>
-                        <Button size="small" variant="outlined" aria-label="Fork report"
-                          startIcon={<ContentCopyIcon />} onClick={handleForkReport} disabled={forking}>Fork</Button>
+                        <Button size="small" variant="outlined" aria-label={t('toolbar.forkLabel')}
+                          startIcon={<ContentCopyIcon />} onClick={handleForkReport} disabled={forking}>{t('toolbar.fork')}</Button>
                       </span>
                     </Tooltip>
                   )}
-                  <Button size="small" variant="outlined" aria-label="Report history"
-                    startIcon={<HistoryIcon />} onClick={() => setAuditDialogOpen(true)}>History</Button>
-                  <Tooltip title={showQueryBuilder ? 'Hide SQL editor' : 'SQL editor'}>
+                  <Button size="small" variant="outlined" aria-label={t('toolbar.historyLabel')}
+                    startIcon={<HistoryIcon />} onClick={() => setAuditDialogOpen(true)}>{t('toolbar.history')}</Button>
+                  <Tooltip title={showQueryBuilder ? t('toolbar.sqlHide') : t('toolbar.sqlShow')}>
                     <ToggleButton
                       value="queryBuilder"
                       selected={showQueryBuilder}
                       onChange={() => setShowQueryBuilder(prev => !prev)}
                       size="small"
-                      sx={{ mr: 1 }}
+                      sx={{ me: 1 }}
                     >
-                      <BuildIcon fontSize="small" sx={{ mr: 0.5 }} /> SQL
+                      <BuildIcon fontSize="small" sx={{ me: 0.5 }} /> {t('toolbar.sql')}
                     </ToggleButton>
                   </Tooltip>
                   {allAvailableFields.length > 0 && (
@@ -671,14 +674,14 @@ const Reports = () => {
                         onChange={(event, newMode) => newMode && setViewMode(newMode)}
                         size="small"
                       >
-                        <ToggleButton value="table" aria-label="table view">
-                          <TableViewIcon fontSize="small" sx={{ mr: 0.5 }} /> Table
+                        <ToggleButton value="table" aria-label={t('toolbar.tableLabel')}>
+                          <TableViewIcon fontSize="small" sx={{ me: 0.5 }} /> {t('toolbar.table')}
                         </ToggleButton>
-                        <ToggleButton value="chart" aria-label="chart view">
-                          <BarChartIcon fontSize="small" sx={{ mr: 0.5 }} /> Chart
+                        <ToggleButton value="chart" aria-label={t('toolbar.chartLabel')}>
+                          <BarChartIcon fontSize="small" sx={{ me: 0.5 }} /> {t('toolbar.chart')}
                         </ToggleButton>
                       </ToggleButtonGroup>
-                      <Tooltip title="Export CSV">
+                      <Tooltip title={t('toolbar.exportCsv')}>
                         <Button
                           onClick={handleExportBackend}
                           size="small"
@@ -686,14 +689,15 @@ const Reports = () => {
                           startIcon={<DownloadIcon />}
                           disabled={!selectedReportData?.report_uuid}
                         >
-                          Export
+                          {t('toolbar.export')}
                         </Button>
                       </Tooltip>
                       <IconButton
                         className="column-selector-button"
                         onClick={handleColumnSelectorOpen}
                         size="small"
-                        title="Select Columns"
+                        title={t('toolbar.columns')}
+                        aria-label={t('toolbar.columns')}
                       >
                         <SettingsIcon />
                       </IconButton>
@@ -711,7 +715,7 @@ const Reports = () => {
             {/* Custom Mustache variable inputs */}
             {Object.keys(customVariables).length > 0 && (
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
-                <Chip label="Parameters" size="small" color="primary" variant="outlined" />
+                <Chip label={t('params.title')} size="small" color="primary" variant="outlined" />
                 {Object.entries(customVariables).map(([varName, varValue]) => {
                   // A smart variable resolves to labelled options — pick "Sales"
                   // instead of typing a raw uuid. Everything else stays a text box.
@@ -728,7 +732,7 @@ const Reports = () => {
                       sx={{ minWidth: 160, maxWidth: 260 }}
                     >
                       <MenuItem value="">
-                        <em>Any</em>
+                        <em>{t('params.any')}</em>
                       </MenuItem>
                       {options.map(opt => (
                         <MenuItem key={opt.value} value={opt.value}>{opt.label || opt.value}</MenuItem>
@@ -755,7 +759,7 @@ const Reports = () => {
                     }
                   }}
                 >
-                  Run
+                  {t('toolbar.run')}
                 </Button>
               </Box>
             )}
@@ -764,8 +768,8 @@ const Reports = () => {
               <Paper variant="outlined" sx={{ p: 1.5, mb: 2 }}>
                 {/* Fields — toggle chips */}
                 <Box sx={{ mb: 1 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mr: 1 }}>
-                    Fields
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, me: 1 }}>
+                    {t('builder.fields')}
                   </Typography>
                   <Box sx={{ display: 'inline-flex', gap: 0.5, flexWrap: 'wrap' }}>
                     {availableFields.map((f) => {
@@ -794,8 +798,8 @@ const Reports = () => {
                   {/* Group By — toggle chips */}
                   {availableGroups.length > 0 && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mr: 0.5 }}>
-                        Group By
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, me: 0.5 }}>
+                        {t('builder.groupBy')}
                       </Typography>
                       {availableGroups.map((g) => {
                         const isOn = groupByFields.includes(g);
@@ -825,14 +829,14 @@ const Reports = () => {
                   {/* Order By — dropdown */}
                   {availableOrders.length > 0 && (
                     <FormControl size="small" sx={{ minWidth: 160 }}>
-                      <InputLabel>Order By</InputLabel>
+                      <InputLabel>{t('builder.orderBy')}</InputLabel>
                       <Select
                         value={orderByFields[0] || ''}
-                        label="Order By"
+                        label={t('builder.orderBy')}
                         onChange={(e) => setOrderByFields(e.target.value ? [e.target.value] : [])}
                       >
                         <MenuItem value="">
-                          <em>None</em>
+                          <em>{t('builder.none')}</em>
                         </MenuItem>
                         {availableOrders.map((o) => (
                           <MenuItem key={o} value={o}>
@@ -854,7 +858,7 @@ const Reports = () => {
                       }
                     }}
                   >
-                    Run
+                    {t('toolbar.run')}
                   </Button>
                 </Box>
               </Paper>
@@ -905,17 +909,17 @@ const Reports = () => {
                   <Grid container spacing={2} alignItems="center">
                     <Grid size={{ xs: 12, sm: 4 }}>
                       <Typography variant="body2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary' }}>
-                        Label Field: <strong>{chartLabelField?.name || '—'}</strong> (automatically selected)
+                        <Trans t={t} i18nKey="chartConfig.labelField" components={{ field: <strong>{chartLabelField?.name || '—'}</strong> }} />
                       </Typography>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 8 }}>
                       <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
-                        Data Fields (select chart series)
+                        {t('chartConfig.dataFields')}
                       </Typography>
                       <Box className="chart-field-buttons" sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
                         {chartNumericFields.length === 0 && (
                           <Typography variant="caption" color="text.secondary">
-                            This report has no numeric columns to chart — showing the table instead.
+                            {t('chartConfig.noNumeric')}
                           </Typography>
                         )}
                         {chartNumericFields.map((field) => {
@@ -954,7 +958,7 @@ const Reports = () => {
                         })}
                       </Box>
                       <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                        Selected: {chartDataFields.length} field(s)
+                        {t('chartConfig.selected', { n: chartDataFields.length })}
                       </Typography>
                     </Grid>
                   </Grid>
@@ -1000,7 +1004,7 @@ const Reports = () => {
                   onRowsScrollEnd={handleRowsScrollEnd}
                   rowBuffer={10}
                   columnBuffer={0}
-                  localeText={{ noRowsLabel: 'No data found for the selected date range' }}
+                  localeText={{ noRowsLabel: t('grid.noRows') }}
                   sx={{
                     ...stripedDataGridSx,
                     '& .MuiDataGrid-columnHeader': {
@@ -1020,13 +1024,12 @@ const Reports = () => {
                     p: 2,
                     position: 'absolute',
                     bottom: 0,
-                    left: 0,
-                    right: 0,
+                    insetInline: 0,
                     backgroundColor: 'rgba(255, 255, 255, 0.9)',
                     zIndex: 1
                   }}>
-                    <CircularProgress size={20} sx={{ mr: 1 }} />
-                    <Typography variant="body2" color="text.secondary">Loading more data...</Typography>
+                    <CircularProgress size={20} sx={{ me: 1 }} />
+                    <Typography variant="body2" color="text.secondary">{t('grid.loadingMore')}</Typography>
                   </Box>
                 )}
               </Box>
@@ -1055,23 +1058,23 @@ const Reports = () => {
             ) : viewMode === 'chart' ? (
               <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography variant="h6" color="text.secondary" gutterBottom>
-                  No Data Available
+                  {t('empty.noChartTitle')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Please select a report with data to display the chart.
+                  {t('empty.noChartBody')}
                 </Typography>
               </Box>
             ) : (
                columns.length === 0 && visibleFieldKeys.length > 0 ?
-               <Typography>No data to display for the selected columns, or all columns are hidden. Use the settings icon to select columns.</Typography> :
-               <Typography>Select a report to view its data or this report type is not yet supported for display.</Typography>
+               <Typography>{t('empty.hiddenColumns')}</Typography> :
+               <Typography>{t('empty.unsupported')}</Typography>
             )}
           </>
         )}
         {!loadingReportData && !selectedReportData && !errorReportData && (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%' }}>
             <Typography variant="h6" color="text.secondary">
-              Please select a report from the list to view details.
+              {t('empty.selectReport')}
             </Typography>
           </Box>
         )}

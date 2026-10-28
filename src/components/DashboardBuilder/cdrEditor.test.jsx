@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { monitoringApi } from '../../services/api/monitoringApi';
 import CdrEditor from './CdrEditor';
-import { formatMeasure, formatSeconds, scopeParams, timeSeries } from './cdrReport';
-import { REPORT_UNAVAILABLE, reportError } from './useCdrReport';
+import i18n from '../../i18n';
+import { dimensionLabel, dimensionText, formatMeasure, formatSeconds, measureOf, scopeParams, timeSeries } from './cdrReport';
+import { reportError, reportUnavailable } from './useCdrReport';
 
 vi.mock('../../services/api/monitoringApi', () => ({ monitoringApi: {
   runCdrReport: vi.fn(), getCdrCatalog: vi.fn(), runCdrSql: vi.fn(),
@@ -50,7 +51,7 @@ describe('CDR report helpers', () => {
   });
 
   it('explains a failed report in words', () => {
-    expect(reportError({ status: 404, message: 'Failed running CDR report: HTTP 404: {}' })).toBe(REPORT_UNAVAILABLE);
+    expect(reportError({ status: 404, message: 'Failed running CDR report: HTTP 404: {}' })).toBe(reportUnavailable());
     expect(reportError({ status: 422, message: 'Failed running CDR report: HTTP 422: {"error":"Too much data for this time range"}' }))
       .toBe('Too much data for this time range');
   });
@@ -128,5 +129,28 @@ describe('CdrEditor', () => {
     render(<CdrEditor scope={{}} />);
     expect(screen.getByText('Select a customer or application in the top bar.')).toBeInTheDocument();
     expect(monitoringApi.runCdrReport).not.toHaveBeenCalled();
+  });
+});
+
+describe('call report words in Hebrew', () => {
+  const catalog = {
+    measures: [{ key: 'calls', label: 'Calls', unit: 'count' }, { key: 'custom_measure', label: 'Custom measure', unit: 'count' }],
+    dimensions: [{ key: 'caller', label: 'Caller' }],
+  };
+
+  it('names the catalog as the API sends it in English, by key in Hebrew', async () => {
+    expect(measureOf(catalog, 'calls').label).toBe('Calls');
+    await i18n.changeLanguage('he');
+    try {
+      expect(measureOf(catalog, 'calls').label).toBe('שיחות');
+      expect(dimensionLabel(catalog, 'caller')).toBe('מתקשר');
+      // A key the app has no name for keeps the API's.
+      expect(measureOf(catalog, 'custom_measure').label).toBe('Custom measure');
+      expect(dimensionText('weekday', 0)).toBe('ראשון');
+      expect(dimensionText('status', null)).toBe('לא ידוע');
+      expect(formatSeconds(85)).toBe('1 דק׳ 25 שנ׳');
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });

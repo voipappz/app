@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { monitoringApi } from '../../services/api/monitoringApi';
+import i18n from '../../i18n';
 
 // A request belongs to one effect, so old responses cannot replace a new metric.
 export function useWidgetValue(widget, { refreshInterval = 30_000, refreshKey = 0, minutes: windowMinutes, environmentUuid = '' } = {}) {
@@ -24,9 +25,9 @@ export function useWidgetValue(widget, { refreshInterval = 30_000, refreshKey = 
           : numbers.length && aggregation === 'min' ? Math.min(...numbers)
           : last === null || last === undefined || last === '' ? null : Number(last);
         setState({ series, value: Number.isFinite(value) ? value : null, loading: false,
-          error: result?.unavailable ? 'This measurement is unavailable.' : null, updatedAt: Date.now(), influxql: result?.influxql });
+          error: result?.unavailable ? i18n.t('widgets:errors.measurementUnavailable') : null, updatedAt: Date.now(), influxql: result?.influxql });
       } catch (err) {
-        if (active) setState((previous) => ({ ...previous, loading: false, error: err?.message || 'Query failed' }));
+        if (active) setState((previous) => ({ ...previous, loading: false, error: err?.message || i18n.t('widgets:errors.queryFailedShort') }));
       } finally { pending = false; }
     };
     load();

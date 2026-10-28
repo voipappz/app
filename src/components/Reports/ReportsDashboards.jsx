@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Paper, Tab, Typography, CircularProgress, Alert } from '@mui/material';
 import SectionTabs from '../shared/SectionTabs.jsx';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -26,6 +27,7 @@ import { reportsApi } from '../../services/api/reportsApi';
  * use, so a report added to queries.yml shows up here with no admin change.
  */
 const ReportsDashboards = () => {
+  const { t } = useTranslation('reports');
   const [dashboards, setDashboards] = useState([]);
   const [category, setCategory] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ const ReportsDashboards = () => {
         setDashboards(list);
         setCategory((prev) => prev || list[0]?.category || null);
       })
-      .catch((err) => { if (!cancelled) setError(err.message || 'Failed to load dashboards'); })
+      .catch((err) => { if (!cancelled) setError(err.message || t('dashboards.loadError')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -61,9 +63,9 @@ const ReportsDashboards = () => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, color: 'var(--mui-palette-text-secondary)' }}>
         <AssessmentIcon sx={{ fontSize: 48, mb: 1, opacity: 0.4 }} />
-        <Typography variant="body1" sx={{ fontWeight: 500 }}>No report dashboards defined</Typography>
+        <Typography variant="body1" sx={{ fontWeight: 500 }}>{t('dashboards.empty')}</Typography>
         <Typography variant="body2" sx={{ mt: 0.5, color: '#bbb' }}>
-          Add a report with a :category: to queries.yml and it appears here.
+          {t('dashboards.emptyHint')}
         </Typography>
       </Box>
     );
@@ -82,7 +84,7 @@ const ReportsDashboards = () => {
             value={d.category}
             icon={CATEGORY_ICONS[d.category] || <AssessmentIcon />}
             iconPosition="start"
-            label={`${d.category} (${d.count})`}
+            label={t('dashboards.tab', { name: d.category, n: d.count })}
           />
         ))}
       </SectionTabs>

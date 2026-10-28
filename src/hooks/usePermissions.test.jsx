@@ -79,3 +79,19 @@ describe('usePermissions route types', () => {
     expect(perms.canRouteType('anything', 'write')).toBe(true);
   });
 });
+
+describe('usePermissions destinations', () => {
+  const as = (session, acl) => {
+    admin.mockReturnValue(session === 'account' ? { acl, isAuthenticated: true } : { acl: null, isAuthenticated: false });
+    portal.mockReturnValue(session === 'user' ? { acl, isAuthenticated: true } : { acl: null, isAuthenticated: false });
+    return renderHook(() => usePermissions()).result.current;
+  };
+
+  // Every bridge type follows the routes grant, for a user and an account.
+  it.each(['user', 'account'])('lets a %s write destinations with routes write, whatever the type keys say', (session) => {
+    expect(as(session, aclWith('routes')).canWriteDestinations).toBe(true);
+    expect(as(session, { data: { dids: { main: ['read', 'write'] } } }).canWriteDestinations).toBe(true);
+    expect(as(session, { data: { routes: { main: ['read'] }, queue: { main: ['read', 'write'] } } }).canWriteDestinations).toBe(false);
+    expect(as(session, aclWith('queue', 'ivr', 'announcement', 'call_conditions')).canWriteDestinations).toBe(false);
+  });
+});

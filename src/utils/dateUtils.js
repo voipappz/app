@@ -6,6 +6,7 @@ import { currentLocaleTag } from '../i18n/formatLocale';
 // space form, fails outright in some browsers. Normalize to a real UTC instant.
 const toDate = (input) => {
   if (input instanceof Date) return input;
+  if (typeof input === 'number') return new Date(input); // epoch milliseconds
   if (input == null || input === '') return new Date(NaN);
   const str = String(input).trim();
   const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(str);
@@ -82,6 +83,23 @@ export const dayKey = (dateInput) => {
 };
 
 /**
+ * A day and month ("29 Jun"), with the year when asked ("29 Jul 2026"): the
+ * ends of a date range.
+ * @param {string | Date} dateInput
+ * @param {{ withYear?: boolean }} [options]
+ * @returns {string} The date, or '-' if the input is invalid.
+ */
+export const formatDayMonth = (dateInput, { withYear = false } = {}) => {
+  const date = toDate(dateInput);
+  if (isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString(currentLocaleTag(), {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear ? { year: 'numeric' } : {}),
+  });
+};
+
+/**
  * A day as a heading: weekday, day and month ("Mon, 6 Oct"), with the year
  * only when it isn't this year.
  * @param {string | Date} dateInput
@@ -106,7 +124,7 @@ export const formatDayHeading = (dateInput) => {
  * @returns {string} The time, or '' if the input is invalid.
  */
 export const formatTime = (dateInput, withSeconds = false) => {
-  const date = typeof dateInput === 'number' ? new Date(dateInput) : toDate(dateInput);
+  const date = toDate(dateInput);
   if (isNaN(date.getTime())) return '';
   return date.toLocaleTimeString(currentLocaleTag(), {
     hour: '2-digit',

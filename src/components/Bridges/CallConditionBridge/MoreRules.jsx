@@ -221,7 +221,7 @@ export default function MoreRules({ rules, onChange, errors = {}, types, destina
         const destination = targetText(rule.target, destinations);
         const kept = rule.kind === 'kept';
         return (
-          <Paper key={rule.id} variant="outlined" data-testid="rule-card"
+          <Paper key={rule.id} variant="outlined" data-testid="rule-card" data-problem={errors[`rule${index}`] ? true : undefined}
             sx={{ display: 'flex', alignItems: 'center', mb: 1, borderColor: errors[`rule${index}`] ? 'error.main' : 'divider' }}>
             <ButtonBase
               disabled={kept}

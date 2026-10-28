@@ -12,6 +12,9 @@ import { getWidgets, createWidget, updateWidget, deleteWidget, updateWidgetLayou
 import { monitoringApi } from '../../services/api/monitoringApi';
 import { mapCdrCall } from '../Dashboard/useDashboardSnapshot';
 import { GRID_COLS, ROW_HEIGHT, layoutFor, layoutChanges } from './widgetLayout';
+import { useTranslation } from 'react-i18next';
+import LtrIsland from '../../i18n/LtrIsland';
+import { useTheme } from '@mui/material/styles';
 
 // Reuses the dashboard's existing definitions, editor and card actions.
 // Metric endpoints scope to the authenticated account; `environmentUuid`
@@ -23,6 +26,8 @@ import { GRID_COLS, ROW_HEIGHT, layoutFor, layoutChanges } from './widgetLayout'
 // the CDR report for `callsScope`) or a metric from any InfluxDB measurement
 // (WidgetBuilder); editing a widget reopens the builder that made it.
 export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true }) {
+  const { t } = useTranslation('widgets');
+  const pageDirection = useTheme().direction;
   const [widgets, setWidgets] = useState([]);
   const [draft, setDraft] = useState(null);
   // The query widget open in the builder: {} for a new one, the widget to edit.
@@ -39,8 +44,10 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
   const [callsError, setCallsError] = useState(null);
   const { width, containerRef } = useContainerWidth();
   // One column on a phone; the grid clamps saved placements into it, and
-  // nothing seen there is saved back.
+  // nothing seen there is saved back. So a phone neither drags nor resizes:
+  // a finger on a widget scrolls the page.
   const cols = width < 720 ? 1 : GRID_COLS;
+  const arranging = cols === GRID_COLS;
   const layout = useMemo(() => layoutFor(widgets), [widgets]);
   const reload = async () => {
     setDashboardStorageScope(storageScope);
@@ -66,7 +73,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
       try {
         const result = await monitoringApi.getInfluxRows({ measurement: 'cdr', minutes: minutes || 1440, limit: 100, environmentUuid });
         if (active) { setCalls((result?.rows || []).map(mapCdrCall)); setCallsError(null); }
-      } catch { if (active) { setCalls([]); setCallsError('Could not load call records. Try refreshing.'); } }
+      } catch { if (active) { setCalls([]); setCallsError(t('board.callsError')); } }
     };
     load();
     const timer = auto ? setInterval(load, 30000) : null;
@@ -76,7 +83,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
     setSaving(true); setError(null);
     setDashboardStorageScope(storageScope);
     try { await action(); await reload(); setDraft(null); setBuilding(null); setEditingCdr(null); }
-    catch (err) { setError(err.message || 'Could not save widgets'); }
+    catch (err) { setError(err.message || t('board.saveError')); }
     finally { setSaving(false); }
   };
   const persistLayout = (next) => {
@@ -99,52 +106,57 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
   const pickTemplate = (item) => (item.type === 'cdr' ? mutate(() => createWidget(item)) : setDraft(item));
   return <Box sx={{ mt: heading ? 3 : 0, width: '100%' }}>
     {heading && <>
-      <Typography variant="h6">Your widgets</Typography>
+      <Typography variant="h6">{t('board.title')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {environmentUuid
-          ? 'Metrics follow the environment shown above. Drag a widget by its title to move it, and its corner to resize; the layout is saved in this browser.'
-          : 'Metrics cover your account’s accessible data. The customer/application picker above does not filter these widgets. Drag a widget by its title to move it, and its corner to resize; the layout is saved in this browser.'}
+        {environmentUuid ? t('board.scopeEnvironment') : t('board.scopeAccount')}
+        {arranging && ` ${t('board.arrangeHint')}`}
       </Typography>
     </>}
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
       <AddWidgetMenu onPick={pickTemplate} disabled={saving} />
-      <Button variant="outlined" size="small" onClick={(event) => setBuildMenu(event.currentTarget)} disabled={saving} data-testid="build-widget" sx={{ textTransform: 'none' }}>Build widget</Button>
+      <Button variant="outlined" size="small" onClick={(event) => setBuildMenu(event.currentTarget)} disabled={saving} data-testid="build-widget" sx={{ textTransform: 'none' }}>{t('board.build')}</Button>
       <Menu anchorEl={buildMenu} open={Boolean(buildMenu)} onClose={() => setBuildMenu(null)}>
         <MenuItem onClick={() => { setBuildMenu(null); setEditingCdr({}); }}>
-          <ListItemText primary="Call report" secondary="Calls, answer rate, billed time… by environment, caller, status" />
+          <ListItemText primary={t('board.buildCallReport')} secondary={t('board.buildCallReportHint')} />
         </MenuItem>
         <MenuItem onClick={() => { setBuildMenu(null); setBuilding({}); }}>
-          <ListItemText primary="Metric" secondary="Any InfluxDB measurement, with filters and a split" />
+          <ListItemText primary={t('board.buildMetric')} secondary={t('board.buildMetricHint')} />
         </MenuItem>
       </Menu>
-      <TextField select size="small" label="Widget time range" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} sx={{ minWidth: 190 }}>
-        <MenuItem value={0}>Each widget’s time range</MenuItem><MenuItem value={60}>Last hour</MenuItem><MenuItem value={1440}>Last 24 hours</MenuItem><MenuItem value={10080}>Last 7 days</MenuItem>
+      <TextField select size="small" label={t('board.timeRange')} value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} sx={{ minWidth: 190, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
+        <MenuItem value={0}>{t('board.eachWidget')}</MenuItem>
+        <MenuItem value={60}>{t('board.lastHour')}</MenuItem>
+        <MenuItem value={1440}>{t('board.last24Hours')}</MenuItem>
+        <MenuItem value={10080}>{t('board.last7Days')}</MenuItem>
       </TextField>
-      <FormControlLabel control={<Switch checked={auto} onChange={(_, checked) => setAuto(checked)} />} label="Refresh every 30 seconds" />
-      <Button onClick={() => setRefreshKey((key) => key + 1)}>Refresh widgets</Button>
+      <FormControlLabel control={<Switch checked={auto} onChange={(_, checked) => setAuto(checked)} />} label={t('board.autoRefresh')} />
+      <Button onClick={() => setRefreshKey((key) => key + 1)}>{t('board.refresh')}</Button>
     </Box>
     {error && <Alert severity="error">{error}</Alert>}
     {callsError && <Alert severity="error">{callsError}</Alert>}
-    {!widgets.length && <Alert severity="info">Add a widget to start your dashboard.</Alert>}
-    <Box ref={containerRef} data-testid="widget-grid">
+    {!widgets.length && <Alert severity="info">{t('board.empty')}</Alert>}
+    {/* The grid places widgets by left offset and drags in screen pixels, so
+        it is laid out left to right in every language; each widget's own
+        content keeps the page direction. */}
+    <LtrIsland ref={containerRef} data-testid="widget-grid">
       <ReactGridLayout
         width={width}
         layout={layout}
         gridConfig={{ cols, rowHeight: ROW_HEIGHT, margin: [16, 16], containerPadding: [0, 0] }}
-        dragConfig={{ enabled: true, handle: '.widget-drag-handle' }}
-        resizeConfig={{ enabled: true }}
+        dragConfig={{ enabled: arranging, handle: '.widget-drag-handle' }}
+        resizeConfig={{ enabled: arranging }}
         onLayoutChange={persistLayout}
       >
         {widgets.map((widget) => (
-          <div key={widget.uuid}>
+          <div key={widget.uuid} dir={pageDirection}>
             <BuilderWidget widget={widget} snapshot={{ recent_calls: calls }} saving={saving} callsScope={callsScope}
               queryOptions={{ minutes: minutes || undefined, refreshKey, refreshInterval: auto ? 30000 : 0, environmentUuid }}
               onEdit={editWidget} onDelete={(item) => mutate(() => deleteWidget(item.uuid))}
-              onDuplicate={(item) => mutate(() => { const { uuid: _uuid, layout: _layout, ...copy } = item; return createWidget({ ...copy, title: `${copy.title} copy` }); })} />
+              onDuplicate={(item) => mutate(() => { const { uuid: _uuid, layout: _layout, ...copy } = item; return createWidget({ ...copy, title: t('board.copyTitle', { title: copy.title }) }); })} />
           </div>
         ))}
       </ReactGridLayout>
-    </Box>
+    </LtrIsland>
     {/* Mounted only while open: the builder asks the API for its catalog, and
         a board that nobody is building on (Live) must not call the API. */}
     {editingCdr && (

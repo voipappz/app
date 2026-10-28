@@ -205,5 +205,9 @@
     "goTo": "מעבר לעמוד {{page}}",
     "clearFilter": "ניקוי סינון",
     "loading": "טוען..."
+  },
+  "chart": {
+    "noData": "אין נתונים לטווח הזמן שנבחר",
+    "threshold": "סף: {{value}}"
   }
 }

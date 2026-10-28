@@ -159,15 +159,15 @@ const destinationType = (type) => DESTINATION_TYPES.find((d) => d.type === type)
 
 /**
  * The picker's choices: the types the server offers this person (GET
- * /api/assets/bridge_types already keeps only what the role can read), known
- * ones first in the usual order. A new one may be made where the role can
- * write the key of the type's own name, as the API checks it.
+ * /api/assets/bridge_types), known ones first in the usual order. A new one
+ * may be made of a creatable type when `canWrite` (the routes write grant,
+ * usePermissions' canWriteDestinations).
  */
-export function destinationChoices(offered, can) {
+export function destinationChoices(offered, canWrite) {
   const types = [...new Set(offered.map(typeOf))];
   const known = DESTINATION_TYPES.filter((d) => types.includes(d.type));
   const others = types.filter((type) => !destinationType(type)).map((type) => ({ type, icon: OtherIcon, creatable: false }));
-  return [...known, ...others].map((d) => ({ ...d, canCreate: d.creatable && can(d.type, 'write') }));
+  return [...known, ...others].map((d) => ({ ...d, canCreate: d.creatable && Boolean(canWrite) }));
 }
 
 // What a person calls a place: its name, or a number's number.

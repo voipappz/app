@@ -93,6 +93,27 @@ const CONVERTED = [
   'src/components/Notifications/NotificationPanel/**',
   'src/components/shared/RowEventsButton/**',
   'src/components/common/ImportCSVDialog/**',
+  // Reports (not ReportsPanel/ReportsStrip.jsx, unused, nor ScreenReports.jsx,
+  // the routing canvas's)
+  'src/components/Reports/Reports.jsx',
+  'src/components/Reports/reportWords.js',
+  'src/components/Reports/ReportsDashboards.jsx',
+  'src/components/Reports/ReportList/**',
+  'src/components/Reports/DateRangePicker/**',
+  'src/components/Reports/CreateReportDialog/**',
+  'src/components/Reports/EditReportDialog/**',
+  'src/components/Reports/ReportAuditDialog/**',
+  'src/components/Reports/SqlQueryEditor/**',
+  'src/components/Reports/ReportsPanel/ReportsPanel.jsx',
+  'src/components/Reports/ReportsPanel/ReportMap.jsx',
+  // Live, and the widget board it shares with the admin Dashboard
+  'src/components/LiveDashboard/**',
+  'src/components/Live/panels/LiveCallsPanel.jsx',
+  'src/components/Live/LiveChartStrip.jsx',
+  'src/components/Live/useLiveCalls.js',
+  'src/components/Monitoring/widgets/ChartPanel.jsx',
+  'src/components/DashboardBuilder/**',
+  'src/services/cable.js',
 ]
 
 export default [

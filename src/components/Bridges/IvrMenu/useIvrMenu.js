@@ -123,7 +123,7 @@ export function useBridgeResources(environmentUuid) {
  * role, as picker choices. null until the server answers.
  */
 export function useDestinationChoices() {
-  const { can } = usePermissions();
+  const { canWriteDestinations } = usePermissions();
   const [offered, setOffered] = useState(null);
 
   useEffect(() => {
@@ -132,5 +132,5 @@ export function useDestinationChoices() {
     return () => { current = false; };
   }, []);
 
-  return useMemo(() => (offered ? destinationChoices(offered, can) : null), [offered, can]);
+  return useMemo(() => (offered ? destinationChoices(offered, canWriteDestinations) : null), [offered, canWriteDestinations]);
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import i18n from '../../i18n';
 import LiveDashboard from './LiveDashboard';
 
 /**
@@ -46,6 +47,11 @@ vi.mock('../../context/CustomerEnvironmentContext', () => ({
 let accountUuid = null;
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ accountUuid }) }));
 vi.mock('../Live/panels/LiveCallsPanel.jsx', () => ({ default: () => <div>calls in progress panel</div> }));
+// The ACL grants, as `screen:action` (usePermissions' `can`).
+let grants = [];
+vi.mock('../../hooks/usePermissions', () => ({
+  usePermissions: () => ({ can: (screen, action = 'read') => grants.includes(`${screen}:${action}`) }),
+}));
 
 // A user document as the node writes it: identity from the mothership, the
 // rest from the switch.
@@ -161,19 +167,25 @@ describe('LiveDashboard', () => {
   });
 
   // The Calls screen's former "Live now" tab: calls in progress with their
-  // actions, for an account only (it polls the API; a portal user gets counts).
-  it('shows the calls-in-progress panel to an account, not to a portal user', () => {
+  // actions. Users and accounts alike: the ACL's calls grant decides.
+  it('shows the calls-in-progress panel to whoever the ACL lets read calls', () => {
     liveRows = [agent(), environment()];
     const { unmount } = render(<LiveDashboard />);
     expect(screen.queryByTestId('live-calls-panel')).not.toBeInTheDocument();
     unmount();
 
-    portalUser = null;
-    accountUuid = 'acct-1';
+    grants = ['calls:read'];
     try {
-      render(<LiveDashboard />);
+      const { unmount: unmountUser } = render(<LiveDashboard />);
       expect(screen.getByTestId('live-calls-panel')).toHaveTextContent('calls in progress panel');
+      unmountUser();
+
+      portalUser = null;
+      accountUuid = 'acct-1';
+      render(<LiveDashboard />);
+      expect(screen.getByTestId('live-calls-panel')).toBeInTheDocument();
     } finally {
+      grants = [];
       portalUser = PORTAL_USER;
       accountUuid = null;
     }
@@ -213,5 +225,29 @@ describe('LiveDashboard', () => {
 
     expect(screen.getByText('Realtime cable: No session')).toBeInTheDocument();
     expect(screen.getByText('Subscription')).toBeInTheDocument();
+  });
+});
+
+describe('LiveDashboard in Hebrew', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    liveStatus = 'confirmed';
+  });
+
+  it("speaks Hebrew, keeping names and the tenant's own status names", async () => {
+    liveRows = [agent(), agent({ id: 'a2', user_name: 'Dana', status: 'logged_out', status_name: undefined }), environment()];
+    await i18n.changeLanguage('he');
+    try {
+      render(<LiveDashboard />);
+      expect(screen.getByText('לוח בזמן אמת')).toBeInTheDocument();
+      expect(screen.getByText('1 זמינים')).toBeInTheDocument();
+      expect(screen.getByText('שיחות פעילות (3)')).toBeInTheDocument();
+      expect(screen.getByText('20 Noam')).toBeInTheDocument();
+      // The tenant named this status; only a bare status type is translated.
+      expect(screen.getByText('Available')).toBeInTheDocument();
+      expect(screen.getByText('מנותק')).toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });

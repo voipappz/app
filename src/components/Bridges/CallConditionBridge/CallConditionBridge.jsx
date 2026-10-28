@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert, Box, Button, CircularProgress, DialogActions, DialogContent, DialogTitle, Divider, FormControl,
   IconButton, InputLabel, Link, MenuItem, Select, Skeleton, Snackbar, TextField, Typography,
@@ -13,7 +13,23 @@ import WeekHoursEditor, { WeekSummary } from './WeekHoursEditor';
 import DestinationPicker from './DestinationPicker';
 import MoreRules from './MoreRules';
 import { saveCallCondition, useCallConditionForm, useDestinations } from './useCallConditionForm';
-import { tidyName, validateForm } from './callConditionSchedule';
+import { isValidName, tidyName, validateForm } from './callConditionSchedule';
+
+// What marks a problem on the page: an invalid field, a field's error text,
+// a rule card or a save message flagged with data-problem.
+const PROBLEM = '[aria-invalid="true"], .Mui-error, [data-problem]';
+const TYPABLE = 'input:not([type="hidden"]):not([aria-hidden="true"]), textarea, [role="combobox"]';
+
+// Brings the first problem on the page into view and puts the cursor in it,
+// so a Save that could not go through never leaves its reason off screen.
+function showFirstProblem(container) {
+  const first = container?.querySelector(PROBLEM);
+  if (!first) return;
+  first.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  const box = first.closest('.MuiFormControl-root, [data-problem]') || first;
+  const field = box.matches(TYPABLE) ? box : box.querySelector(TYPABLE);
+  field?.focus({ preventScroll: true });
+}
 
 /**
  * A call condition, edited as business hours: which days and hours you are
@@ -49,6 +65,10 @@ export const CallConditionBridge = ({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [copiedDay, setCopiedDay] = useState(null);
+  const bodyRef = useRef(null);
+  // Counts the Saves that stopped on a problem; each one shows the problem.
+  const [stopped, setStopped] = useState(0);
+  useEffect(() => { if (stopped) showFirstProblem(bodyRef.current); }, [stopped]);
 
   // Reset when the page opens. Only the first application's uuid is watched:
   // the list itself can be a new array on every render, and re-running this
@@ -67,15 +87,20 @@ export const CallConditionBridge = ({
   }, [saved]);
 
   const destinations = useDestinations(environment);
-  const errors = tried ? validateForm(form) : {};
+  // A name the API cannot take says so while it is typed, not only on Save.
+  const errors = tried
+    ? validateForm(form)
+    : (form.name && !isValidName(form.name) ? { name: 'errors.nameFormat' } : {});
   const set = (changes) => setForm((prev) => ({ ...prev, ...changes }));
   const anyOpen = form.week.some((day) => day.open);
 
   const handleSave = async () => {
     setTried(true);
-    if (Object.keys(validateForm(form)).length > 0) return;
+    const stop = () => setStopped((n) => n + 1);
+    if (Object.keys(validateForm(form)).length > 0) { stop(); return; }
     if (!environment) {
       setSaveError(t('errors.noApplication'));
+      stop();
       return;
     }
     setSaving(true);
@@ -92,6 +117,7 @@ export const CallConditionBridge = ({
       onClose?.();
     } catch (error) {
       setSaveError(t('errors.save', { message: error?.message || '' }));
+      stop();
     } finally {
       setSaving(false);
     }
@@ -106,7 +132,7 @@ export const CallConditionBridge = ({
       <Skeleton variant="rounded" height={72} />
     </Box>
   ) : (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Box ref={bodyRef} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {loadFailed && <Alert severity="error">{t('errors.load')}</Alert>}
 
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -197,7 +223,7 @@ export const CallConditionBridge = ({
       />
 
       {tried && Object.keys(errors).length > 0 && <Alert severity="warning">{t('errors.fixFirst')}</Alert>}
-      {saveError && <Alert severity="error" onClose={() => setSaveError('')}>{saveError}</Alert>}
+      {saveError && <Alert severity="error" data-problem onClose={() => setSaveError('')}>{saveError}</Alert>}
 
       <Snackbar
         open={copiedDay !== null}

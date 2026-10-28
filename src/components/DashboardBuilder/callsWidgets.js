@@ -3,23 +3,19 @@
 // splits by a CDR tag (/api/monitoring/charts?type=calls_volume&group_by=…)
 // and follow the customer/application picked in the top bar. `live_calls`
 // reads the environment's live state from the node's cable.
+import i18n from '../../i18n';
+
 export const CALLS_TYPES = ['calls_stat', 'calls_chart', 'calls_outcome', 'live_calls'];
 export const isCallsType = (type) => CALLS_TYPES.includes(type);
 
-export const CDR_GROUPS = [
-  { key: 'direction', label: 'Direction' },
-  { key: 'disposition', label: 'Disposition' },
-  { key: 'type', label: 'Type' },
-  { key: 'hangup_disposition', label: 'Hangup disposition' },
-];
-export const groupLabel = (key) => CDR_GROUPS.find((group) => group.key === key)?.label || String(key || '').replace(/_/g, ' ');
+// The CDR tags a calls widget can split by, and what a stat widget shows;
+// their words are widgets.json groups.<key> and metrics.<key>.
+export const CDR_GROUPS = ['direction', 'disposition', 'type', 'hangup_disposition'];
+export const groupLabel = (key) => (CDR_GROUPS.includes(key)
+  ? i18n.t(`widgets:groups.${key}`)
+  : String(key || '').replace(/_/g, ' '));
 
-export const CALLS_METRICS = [
-  { key: 'total', label: 'Calls' },
-  { key: 'answered', label: 'Answered %' },
-  { key: 'groups', label: 'Number of groups' },
-  { key: 'busiest', label: 'Busiest group' },
-];
+export const CALLS_METRICS = ['total', 'answered', 'groups', 'busiest'];
 
 export const ANSWERED = /^(answer|answered|contact_answer|normal_clearing)$/i;
 

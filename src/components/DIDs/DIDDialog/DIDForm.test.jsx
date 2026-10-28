@@ -26,8 +26,13 @@ vi.mock('../../../hooks/useIsUserSession', () => ({ useIsUserSession: () => mock
 let canEditProviders = true;
 // The user's ACL write grants on destination types (unset: none).
 let writable = [];
+// The routes write grant (usePermissions' canWriteDestinations).
+let routesWrite = true;
 vi.mock('../../../hooks/usePermissions', () => ({
-  usePermissions: () => ({ can: (key, action) => (key === 'providers' ? canEditProviders : action === 'write' && writable.includes(key)) }),
+  usePermissions: () => ({
+    can: (key, action) => (key === 'providers' ? canEditProviders : action === 'write' && writable.includes(key)),
+    canWriteDestinations: routesWrite,
+  }),
 }));
 
 import DIDForm from './DIDForm.jsx';
@@ -62,7 +67,7 @@ const pick = (label, option) => {
   fireEvent.click(screen.getByRole('option', { name: option }));
 };
 
-beforeEach(() => { vi.clearAllMocks(); mockUserSession = false; canEditProviders = true; writable = []; });
+beforeEach(() => { vi.clearAllMocks(); mockUserSession = false; canEditProviders = true; writable = []; routesWrite = true; });
 
 describe('DIDForm', () => {
   it('puts Enabled on top, then asks for the type, in words', () => {
@@ -272,27 +277,22 @@ describe('creating a destination from the route', () => {
   const queueRoute = () => route('dst', { bridge_type: 'queue', bridge_uuid: '' });
   const createButton = () => screen.queryByRole('button', { name: 'Create New Queue' });
 
-  it('lets an account create one', () => {
-    renderForm({ did: queueRoute(), bridgeTypes: ['queue'], onDrillDown: vi.fn() });
-    expect(createButton()).toBeInTheDocument();
-  });
-
-  it("lets a user create one only where the user's ACL grants write", () => {
-    mockUserSession = true;
+  // A destination follows the routes grant, never a key of its own type,
+  // for a user and an account alike.
+  it.each([['an account', false], ['a user', true]])('lets %s create one with routes write, and only then', (_who, user) => {
+    mockUserSession = user;
     const { unmount } = renderForm({ did: queueRoute(), bridgeTypes: ['queue'], onDrillDown: vi.fn() });
-    expect(createButton()).toBeNull();
+    expect(createButton()).toBeInTheDocument();
     unmount();
 
-    writable = ['queue'];
+    routesWrite = false;
+    writable = ['queue', 'queues'];
     renderForm({ did: queueRoute(), bridgeTypes: ['queue'], onDrillDown: vi.fn() });
-    expect(createButton()).toBeInTheDocument();
+    expect(createButton()).toBeNull();
   });
 
-  // The type is `call_condition`; the API's ACL names the capability
-  // `call_conditions`. Asking for the type's own name hid the button for good.
-  it("lets a user create a call condition when the ACL grants call_conditions", () => {
+  it('lets a user create a call condition with routes write alone', () => {
     mockUserSession = true;
-    writable = ['call_conditions'];
     renderForm({ did: route('dst', { bridge_type: 'call_condition', bridge_uuid: '' }), bridgeTypes: ['call_condition'], onDrillDown: vi.fn() });
     expect(screen.getByRole('button', { name: /^Create New/ })).toBeInTheDocument();
   });
@@ -303,19 +303,15 @@ describe('editing the destination from the route', () => {
   const props = { bridgeTypes: ['queue'], bridgeResources: { queue: [{ uuid: 'q-1', name: 'Sales' }] }, onDrillDown: vi.fn() };
   const editButton = () => screen.queryByRole('button', { name: 'Edit Queue' });
 
-  it('lets an account edit it', () => {
-    renderForm({ did: queueRoute(), ...props });
-    expect(editButton()).toBeInTheDocument();
-  });
-
-  it("lets a user edit it only where the user's ACL grants write", () => {
-    mockUserSession = true;
+  it.each([['an account', false], ['a user', true]])('lets %s edit it with routes write, and only then', (_who, user) => {
+    mockUserSession = user;
     const { unmount } = renderForm({ did: queueRoute(), ...props });
-    expect(editButton()).toBeNull();
+    expect(editButton()).toBeInTheDocument();
     unmount();
 
-    writable = ['queue'];
+    routesWrite = false;
+    writable = ['queue', 'queues'];
     renderForm({ did: queueRoute(), ...props });
-    expect(editButton()).toBeInTheDocument();
+    expect(editButton()).toBeNull();
   });
 });
