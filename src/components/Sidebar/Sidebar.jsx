@@ -30,7 +30,7 @@ import { getPermittedNavItems, navLabel } from '../../config/navConfig';
 import { useLocale } from '../../i18n/LocaleContext';
 import useNavBadges from '../../hooks/useNavBadges';
 import './Sidebar.css';
-import SidebarCustomerSwitcher from './CustomerSwitcher/SidebarCustomerSwitcher.jsx';
+import SidebarCustomerSwitcher, { SidebarUserCustomer } from './CustomerSwitcher/SidebarCustomerSwitcher.jsx';
 
 
 // `wide`: the phone drawer, with each label beside its icon instead of under it.
@@ -135,13 +135,14 @@ const Sidebar = ({ collapsed, onNavigate, wide = false }) => {
   return (
     <Box className={`sidebar-container ${collapsed ? 'collapsed' : ''} ${wide ? 'sidebar-container--wide' : ''}`}>
 
-      {/* The customer — an account's only. A user has one environment and no
-          selectors. */}
-      {!userSession && (
-        <Box className="sidebar-top">
-          <SidebarCustomerSwitcher expanded={!collapsed} />
-        </Box>
-      )}
+      {/* The customer. An account's tile opens the customer menu; a user has
+          one customer and one application, so its tile only names them (the
+          login payload's customer and environment) and opens nothing. */}
+      <Box className="sidebar-top">
+        {userSession
+          ? <SidebarUserCustomer user={userAuth.user} expanded={!collapsed} />
+          : <SidebarCustomerSwitcher expanded={!collapsed} />}
+      </Box>
 
       {/* Day-to-day navigation — flat list, no groups */}
       <List className="sidebar-nav-list">

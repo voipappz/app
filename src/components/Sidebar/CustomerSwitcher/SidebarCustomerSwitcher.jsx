@@ -189,4 +189,27 @@ const SidebarCustomerSwitcher = ({ expanded = false }) => {
   );
 };
 
+/**
+ * A user's customer, as the same tile, read-only: the customer and, under it,
+ * the user's one application. Nothing to switch to and nothing a user may
+ * manage, so it is not a button.
+ */
+export const SidebarUserCustomer = ({ user, expanded = false }) => {
+  const name = user?.customer?.name || user?.environment?.name || 'Customer';
+  const detail = user?.customer?.name ? (user?.environment?.name || '') : '';
+  return (
+    <Tooltip title={expanded ? '' : name} placement="right" arrow>
+      <Box className={`scs-trigger scs-trigger--static ${expanded ? 'scs-trigger--expanded' : ''}`} data-testid="sidebar-user-customer">
+        <Box className="scs-avatar">{initial(name)}</Box>
+        {expanded && (
+          <Box className="scs-trigger-meta">
+            <Typography className="scs-trigger-name" noWrap data-testid="sidebar-customer-name">{name}</Typography>
+            {detail && <Typography className="scs-trigger-detail" noWrap>{detail}</Typography>}
+          </Box>
+        )}
+      </Box>
+    </Tooltip>
+  );
+};
+
 export default SidebarCustomerSwitcher;

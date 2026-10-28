@@ -20,6 +20,7 @@
   },
   "period": {
     "label": "Period",
+    "all": "All",
     "today": "Today",
     "to": "to"
   },
