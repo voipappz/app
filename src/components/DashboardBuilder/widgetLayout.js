@@ -8,7 +8,7 @@ const WIDE_TYPES = new Set(['trend', 'line', 'bar', 'pie', 'table']);
 
 // A Live section's size: the agents table is wide and tall, the counters a row.
 const LIVE_SIZES = { summary: { w: GRID_COLS, h: 1 }, tiles: { w: GRID_COLS, h: 2 }, callCounts: { w: 2, h: 2 },
-  callsInProgress: { w: 2, h: 3 }, agents: { w: GRID_COLS, h: 4 } };
+  callsInProgress: { w: 2, h: 3 }, agents: { w: GRID_COLS, h: 4 }, queues: { w: GRID_COLS, h: 3 } };
 
 export function defaultSize(type, section) {
   if (type === 'live') return LIVE_SIZES[section] || { w: 2, h: 2 };

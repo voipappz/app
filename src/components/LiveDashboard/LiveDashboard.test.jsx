@@ -429,6 +429,51 @@ describe('an agent\'s history, from its live row', () => {
   });
 });
 
+// Queues, the same way: a live widget off the cable, and a row opens the
+// queue's history from identities.
+describe('queues on Live', () => {
+  const queue = (over = {}) => ({ scope: 'queue', id: 'q-1', environment_uuid: 'env-906', call_count: 7, answer_count: 5, abandoned_count: 1, ...over });
+  beforeEach(() => {
+    localStorage.clear(); liveStatus = 'confirmed'; selectedEnvironments = [];
+    mockReport.mockReset(); mockReport.mockResolvedValue({ rows: [], labels: {} });
+  });
+
+  const addQueues = async (user) => {
+    render(<LiveDashboard />);
+    await screen.findByText('Agents');
+    await user.click(screen.getByTestId('add-widget'));
+    await user.click(screen.getByTestId('widget-preset-liveQueues'));
+    return screen.findByText('Queues');
+  };
+
+  it('is a live widget from the menu: counters off the cable, named from the agents when they say', async () => {
+    liveRows = [queue(), agent({ queue_uuid: 'q-1', queue_name: 'Sales line' }), environment()];
+    const user = userEvent.setup();
+    await addQueues(user);
+    expect(await screen.findByText('Sales line')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(mockApiGet).not.toHaveBeenCalled();
+  });
+
+  it('a queue row opens its history, filtered to that queue', async () => {
+    liveRows = [queue({ id: 'q-2' }), environment()];
+    const user = userEvent.setup();
+    await addQueues(user);
+    await user.click(await screen.findByText('q-2'));
+    await screen.findByRole('dialog', { name: /q-2/ });
+    await vi.waitFor(() => expect(mockReport).toHaveBeenCalledWith(expect.objectContaining({
+      where: { type: ['queue'], identity: ['q-2'] }, environmentUuids: ['env-906'],
+    })));
+  });
+
+  it('says when there are no queues, only once the cable is live', async () => {
+    liveRows = [environment()];
+    const user = userEvent.setup();
+    await addQueues(user);
+    expect(await screen.findByText('No queues in this environment')).toBeInTheDocument();
+  });
+});
+
 describe('an agent\'s history in Hebrew', () => {
   it('translates the status and state values, as the agents table does', async () => {
     localStorage.clear(); liveStatus = 'confirmed'; selectedEnvironments = [];

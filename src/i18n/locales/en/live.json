@@ -203,5 +203,14 @@
     "countersHint": "Change per interval, not the current total.",
     "noCounters": "No counters recorded yet.",
     "countersUnavailable": "Counters are not available right now."
+  },
+  "queues": {
+    "queue": "Queue",
+    "call_count": "Calls",
+    "answer_count": "Answered",
+    "abandoned_count": "Abandoned",
+    "no_answer_count": "No answer",
+    "timeout_count": "Timed out",
+    "none": "No queues in this environment"
   }
 }

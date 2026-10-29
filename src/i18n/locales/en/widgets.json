@@ -76,7 +76,8 @@
     "liveTiles": "At a glance",
     "liveCallCounts": "Calls by direction",
     "liveCallsInProgress": "Calls in progress",
-    "liveAgents": "Agents"
+    "liveAgents": "Agents",
+    "liveQueues": "Queues"
   },
   "units": {
     "calls": "calls"

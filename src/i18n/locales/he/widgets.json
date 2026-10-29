@@ -76,7 +76,8 @@
     "liveTiles": "במבט מהיר",
     "liveCallCounts": "שיחות לפי כיוון",
     "liveCallsInProgress": "שיחות פעילות",
-    "liveAgents": "נציגים"
+    "liveAgents": "נציגים",
+    "liveQueues": "תורים"
   },
   "units": {
     "calls": "שיחות"

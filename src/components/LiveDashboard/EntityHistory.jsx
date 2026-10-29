@@ -8,7 +8,7 @@ import { useCdrCatalog } from '../DashboardBuilder/CdrEditor';
 import { LIVE_RANGES } from '../DashboardBuilder/LiveWidgetEditor';
 
 // Fields of the live document that are bookkeeping, not something to read.
-const HIDDEN = new Set(['scope', 'id', 'environment_uuid', 'status_name']);
+const HIDDEN = new Set(['scope', 'id', 'environment_uuid', 'status_name', 'name']);
 const KNOWN_STATUSES = new Set(['available', 'on_break', 'logged_out']);
 const KNOWN_STATES = new Set(['waiting', 'receiving', 'ringing', 'answer', 'in_a_queue_call']);
 
@@ -60,7 +60,7 @@ export default function EntityHistory({ entity, onClose }) {
           <Box component="dl" sx={{ m: 0, display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, minmax(0, 1fr))' }, gap: 1 }}>
             {fields.map(([k, v]) => (
               <Box key={k} sx={{ minWidth: 0 }}>
-                <Typography component="dt" variant="caption" color="text.secondary" noWrap>{t(`columns.${k}`, { defaultValue: k.replace(/_/g, ' ') })}</Typography>
+                <Typography component="dt" variant="caption" color="text.secondary" noWrap>{t(`columns.${k}`, { defaultValue: t(`queues.${k}`, { defaultValue: k.replace(/_/g, ' ') }) })}</Typography>
                 <Typography component="dd" variant="body2" sx={{ m: 0, overflowWrap: 'anywhere' }}>{String(word(k, v))}</Typography>
               </Box>
             ))}
