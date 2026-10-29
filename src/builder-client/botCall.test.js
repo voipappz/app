@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { fromPcm16, PACKET_SAMPLES, SAMPLE_RATE, toPcm16 } from './botCall';
+import { fromPcm16, MAX_UTTERANCE_SAMPLES, PACKET_SAMPLES, SAMPLE_RATE, toPcm16 } from './botCall';
 
 describe('bot call audio', () => {
   it('uses Earshot native framing: 20 ms packets at 16 kHz', () => {
     expect(SAMPLE_RATE).toBe(16000);
     expect(PACKET_SAMPLES / SAMPLE_RATE).toBe(0.02);
+    // The bot drops a call whose utterance passes 20 s.
+    expect(MAX_UTTERANCE_SAMPLES).toBeLessThan(SAMPLE_RATE * 20);
   });
 
   it('turns float samples into PCM16 and back, clipping out-of-range values', () => {

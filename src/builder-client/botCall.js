@@ -5,6 +5,8 @@
 
 export const SAMPLE_RATE = 16000;
 export const PACKET_SAMPLES = 320; // 20 ms
+// The bot ends a call whose utterance passes 20 s; stop just before.
+export const MAX_UTTERANCE_SAMPLES = SAMPLE_RATE * 19;
 
 // Float samples [-1, 1] to little-endian PCM16.
 export function toPcm16(samples) {
@@ -23,47 +25,47 @@ export function fromPcm16(buffer) {
   return out;
 }
 
-// Collects the microphone into 20 ms packets on the audio thread.
-const CAPTURE_WORKLET = `
-class Capture extends AudioWorkletProcessor {
-  constructor() { super(); this.buf = new Float32Array(${PACKET_SAMPLES}); this.n = 0; }
-  process(inputs) {
-    const ch = inputs[0] && inputs[0][0];
-    if (ch) for (let i = 0; i < ch.length; i++) {
-      this.buf[this.n++] = ch[i];
-      if (this.n === ${PACKET_SAMPLES}) { this.port.postMessage(this.buf.slice()); this.n = 0; }
-    }
-    return true;
-  }
-}
-registerProcessor('builder-capture', Capture);
-`;
-
-export async function createBotCall(url, { onError, onClose }) {
-  // The context runs at 16 kHz: the browser resamples the microphone in and
-  // the bot's audio out.
-  const context = new AudioContext({ sampleRate: SAMPLE_RATE });
-  const module = URL.createObjectURL(new Blob([CAPTURE_WORKLET], { type: 'application/javascript' }));
-  await context.audioWorklet.addModule(module);
-  URL.revokeObjectURL(module);
-
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-  });
-  const source = context.createMediaStreamSource(stream);
-  const capture = new AudioWorkletNode(context, 'builder-capture');
-  source.connect(capture);
-
+function openSocket(url) {
   const socket = new WebSocket(url);
   socket.binaryType = 'arraybuffer';
-  await new Promise((resolve, reject) => {
-    socket.onopen = resolve;
+  return new Promise((resolve, reject) => {
+    socket.onopen = () => resolve(socket);
     socket.onerror = () => reject(new Error('Could not reach the bot through Builder.'));
   });
+}
+
+// `onLimit` runs when an utterance reaches the bot's limit and was ended here.
+export async function createBotCall(url, { onError, onClose, onLimit }) {
+  let context;
+  let stream;
+  let socket;
+  try {
+    // The context runs at 16 kHz: the browser resamples the microphone in and
+    // the bot's audio out.
+    context = new AudioContext({ sampleRate: SAMPLE_RATE });
+    await context.audioWorklet.addModule(new URL('./captureWorklet.js', import.meta.url).href);
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    });
+    socket = await openSocket(url);
+  } catch (error) {
+    stream?.getTracks().forEach((track) => track.stop());
+    context?.close().catch(() => {});
+    throw error;
+  }
+
+  const capture = new AudioWorkletNode(context, 'builder-capture');
+  context.createMediaStreamSource(stream).connect(capture);
 
   let speaking = false;
+  let sent = 0;
+  let closed = false;
   let playAt = 0;
   const playing = new Set();
+
+  const sendEvent = (type) => {
+    if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type }));
+  };
 
   const clearPlayback = () => {
     for (const node of playing) { try { node.stop(); } catch { /* already ended */ } }
@@ -71,8 +73,20 @@ export async function createBotCall(url, { onError, onClose }) {
     playAt = 0;
   };
 
+  const stopSpeaking = () => {
+    if (!speaking) return;
+    speaking = false;
+    sendEvent('speech_stopped');
+  };
+
   capture.port.onmessage = ({ data }) => {
-    if (speaking && socket.readyState === WebSocket.OPEN) socket.send(toPcm16(data).buffer);
+    if (!speaking || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(toPcm16(data).buffer);
+    sent += data.length;
+    if (sent >= MAX_UTTERANCE_SAMPLES) {
+      stopSpeaking();
+      onLimit?.();
+    }
   };
 
   socket.onmessage = ({ data }) => {
@@ -98,6 +112,8 @@ export async function createBotCall(url, { onError, onClose }) {
   };
 
   const close = () => {
+    if (closed) return;
+    closed = true;
     speaking = false;
     clearPlayback();
     try { socket.close(); } catch { /* closed */ }
@@ -106,23 +122,17 @@ export async function createBotCall(url, { onError, onClose }) {
   };
   socket.onclose = () => { close(); onClose?.(); };
 
-  const sendEvent = (type) => {
-    if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type }));
-  };
-
   return {
-    get open() { return socket.readyState === WebSocket.OPEN; },
+    get open() { return !closed && socket.readyState === WebSocket.OPEN; },
     startSpeaking() {
       if (context.state === 'suspended') context.resume();
       // Talking over the bot interrupts it, as on a phone line.
       clearPlayback();
+      sent = 0;
       speaking = true;
       sendEvent('speech_started');
     },
-    stopSpeaking() {
-      speaking = false;
-      sendEvent('speech_stopped');
-    },
+    stopSpeaking,
     close
   };
 }

@@ -41,7 +41,12 @@ export default function BotPanel({ bot, secret }) {
   const [log, setLog] = useState('');
   const [talking, setTalking] = useState(false);
   const [note, setNote] = useState('');
+  // The open call, the one being set up, which setup is current (a restart
+  // or unmount moves it on), and whether the button is held right now.
   const call = useRef(null);
+  const pending = useRef(null);
+  const generation = useRef(0);
+  const held = useRef(false);
   const logBox = useRef(null);
 
   const loadLog = useCallback(async () => {
@@ -55,11 +60,19 @@ export default function BotPanel({ bot, secret }) {
   }, [bot.logPath, secret]);
 
   useEffect(() => { loadLog(); }, [loadLog]);
-  useEffect(() => () => call.current?.close(), []);
-
-  const restart = async () => {
+  const hangUp = useCallback(() => {
+    generation.current += 1;
+    pending.current = null;
+    held.current = false;
     call.current?.close();
     call.current = null;
+    setTalking(false);
+  }, []);
+
+  useEffect(() => hangUp, [hangUp]);
+
+  const restart = async () => {
+    hangUp();
     setRestarting(true);
     setNote('');
     try {
@@ -75,31 +88,54 @@ export default function BotPanel({ bot, secret }) {
     }
   };
 
-  const ensureCall = async () => {
-    if (call.current?.open) return call.current;
+  // One call at a time: presses while it connects share the same setup, and
+  // a setup that finishes after a restart or unmount is closed, not kept.
+  const ensureCall = () => {
+    if (call.current?.open) return Promise.resolve(call.current);
+    if (pending.current) return pending.current;
+    const mine = generation.current;
     const socket = new URL(bot.socketPath, window.location.href);
     socket.protocol = socket.protocol === 'https:' ? 'wss:' : 'ws:';
     socket.searchParams.set('secret', secret);
-    call.current = await createBotCall(socket.toString(), {
+    let created = null;
+    const setup = createBotCall(socket.toString(), {
       onError: (message) => setNote(message),
-      onClose: () => { call.current = null; setTalking(false); }
+      onLimit: () => {
+        held.current = false;
+        setTalking(false);
+        setNote('That was the longest a caller can speak at once (about 20 s); it was sent. Hold again to go on.');
+      },
+      onClose: () => {
+        if (call.current === created) { call.current = null; setTalking(false); }
+      }
+    }).then((active) => {
+      created = active;
+      if (mine !== generation.current) { active.close(); throw new Error('cancelled'); }
+      call.current = active;
+      return active;
+    }).finally(() => {
+      if (pending.current === setup) pending.current = null;
     });
-    return call.current;
+    pending.current = setup;
+    return setup;
   };
 
   const startTalking = async () => {
+    held.current = true;
     setNote('');
     try {
       const active = await ensureCall();
+      // Released while it connected: nothing to send.
+      if (!held.current) return;
       active.startSpeaking();
       setTalking(true);
     } catch (error) {
-      setNote(error?.message || String(error));
+      if (error?.message !== 'cancelled') setNote(error?.message || String(error));
     }
   };
 
   const stopTalking = () => {
-    if (!talking) return;
+    held.current = false;
     setTalking(false);
     call.current?.stopSpeaking();
   };
@@ -127,6 +163,8 @@ export default function BotPanel({ bot, secret }) {
           onPointerDown={startTalking}
           onPointerUp={stopTalking}
           onPointerLeave={stopTalking}
+          onPointerCancel={stopTalking}
+          onBlur={stopTalking}
           sx={{ px: 4, py: 1.5, borderRadius: 6 }}
         >
           {talking ? 'Listening… release to send' : 'Hold to talk'}
