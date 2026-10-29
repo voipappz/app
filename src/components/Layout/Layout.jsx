@@ -7,6 +7,7 @@ import TopBar from '../TopBar/TopBar.jsx';
 import { useAuth } from '../../context/AuthContext';
 import { useUserAuth } from '../../context/UserAuthContext';
 import PortalSidebar from '../Portal/PortalSidebar.jsx';
+import CallDock from '../Phone/CallDock.jsx';
 import { PortalSidebarProvider } from '../../context/PortalSidebarContext';
 import { GlobalSearchProvider } from '../../context/GlobalSearchContext';
 import { RecentPagesProvider } from '../../context/RecentPagesContext';
@@ -144,6 +145,8 @@ const Layout = ({ children }) => {
             </Box>
           </Box>
           <PortalSidebar />
+          {/* Incoming and current calls, above every page and dialog. */}
+          <CallDock />
           </RecentPagesProvider>
           </PortalSidebarProvider>
         </GlobalSearchProvider>

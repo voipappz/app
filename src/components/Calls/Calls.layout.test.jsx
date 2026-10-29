@@ -105,6 +105,24 @@ describe('Calls layout', () => {
     expect(within(chart).getByRole('button', { name: '7d' })).toBeInTheDocument();
   });
 
+  // The phone's statistics fold; the desktop keeps every counter and its own
+  // chart chevron, which still folds the chart and is remembered as before.
+  it('keeps all the counters on the desktop, and the chart chevron folds and remembers', () => {
+    localStorage.removeItem('reportsStrip:calls:collapsed');
+    const first = render(<Calls />);
+    expect(screen.queryByTestId('calls-stats-toggle')).toBeNull();
+    ['total', 'answered', 'noAnswer', 'outgoing', 'incoming', 'avgDuration'].forEach((key) => expect(chip(key)).not.toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide chart' }));
+    expect(screen.getByRole('button', { name: 'Show chart' })).toBeInTheDocument();
+    expect(localStorage.getItem('reportsStrip:calls:collapsed')).toBe('1');
+
+    first.unmount();
+    render(<Calls />);
+    expect(screen.getByRole('button', { name: 'Show chart' })).toBeInTheDocument();
+    localStorage.removeItem('reportsStrip:calls:collapsed');
+  });
+
   it('counters are the quick filters: Answered writes search[call.cause][IS]=answer; Total clears', () => {
     const { unmount } = render(<Calls />);
     fireEvent.click(chip('answered'));
@@ -222,5 +240,42 @@ describe('Calls on a phone', () => {
     expect(chip('total')).not.toBeNull();
     expect(chip('incoming')).not.toBeNull();
     expect(screen.queryByTestId('calls-chart')).toBeNull();
+  });
+
+  // Open by default; folded, only the first box (Total) stays beside the
+  // arrow, the period stays, and the choice is remembered in this browser.
+  it('folds the statistics to the first box and remembers it', () => {
+    localStorage.removeItem('calls:mobileStats:collapsed');
+    const first = render(<Calls />);
+    const toggle = screen.getByTestId('calls-stats-toggle');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(chip('total')).not.toBeNull();
+
+    expect(chip('incoming')).not.toBeNull();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAccessibleName('Show statistics');
+    expect(chip('total')).not.toBeNull();
+    expect(chip('incoming')).toBeNull();
+    expect(within(screen.getByTestId('calls-mobile-summary')).getByRole('group', { name: 'Period' })).toBeInTheDocument();
+
+    first.unmount();
+    render(<Calls />);
+    expect(screen.getByTestId('calls-stats-toggle')).toHaveAttribute('aria-expanded', 'false');
+    expect(chip('total')).not.toBeNull();
+    expect(chip('answered')).toBeNull();
+    localStorage.removeItem('calls:mobileStats:collapsed');
+  });
+
+  // A filter in use stays in sight when the statistics are folded.
+  it('keeps the box of a filter in use when folded', () => {
+    localStorage.setItem('calls:mobileStats:collapsed', '1');
+    hookState.params = { 'search[call.cause][IS]': ['answer'] };
+    render(<Calls />);
+    expect(chip('total')).not.toBeNull();
+    expect(chip('answered')).toHaveAttribute('aria-pressed', 'true');
+    expect(chip('incoming')).toBeNull();
+    localStorage.removeItem('calls:mobileStats:collapsed');
   });
 });

@@ -76,8 +76,10 @@ export default function PhonePresence({ userUuid, doNotDisturb, onDoNotDisturbCh
         renderValue={(v) => (v === DND ? t('presence.doNotDisturb') : (statuses[v] || String(v).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())))}
         variant="standard"
         disableUnderline
+        // At most the header's width: a long status ends in "…" instead of
+        // running under the icons beside it.
         sx={{
-          mt: 0.5, fontSize: '0.72rem', fontWeight: 700, color: '#fff', borderRadius: 1, px: 1, py: 0.1,
+          mt: 0.5, maxWidth: '100%', fontSize: '0.72rem', fontWeight: 700, color: '#fff', borderRadius: 1, px: 1, py: 0.1,
           bgcolor: pillColor(value),
           '& .MuiSelect-select': { py: 0.2, pe: '20px !important' },
           '& .MuiSvgIcon-root': { color: '#fff' }

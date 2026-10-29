@@ -116,6 +116,19 @@ const TOOLBAR_GROUP_SX = {
 };
 const TOOLBAR_PICKER_SX = { width: 170, '& .MuiOutlinedInput-root': { height: 36, minHeight: 36, borderRadius: '8px' } };
 
+// A panel's open/closed choice, remembered in this browser under `key`
+// (false, open, until someone closes it). Storage may be unavailable.
+function useRememberedFlag(key) {
+  const [on, setOn] = useState(() => {
+    try { return localStorage.getItem(key) === '1'; } catch { return false; }
+  });
+  const toggle = () => setOn((current) => {
+    try { localStorage.setItem(key, current ? '0' : '1'); } catch { /* storage unavailable */ }
+    return !current;
+  });
+  return [on, toggle];
+}
+
 const Calls = () => {
   const { t } = useTranslation('calls');
   const [quickSearchText, setQuickSearchText] = React.useState('');
@@ -162,7 +175,7 @@ const Calls = () => {
     currentPage,
     totalPages,
     totalRecords,
-    loadingCalls,
+    waitingForCalls,
     loadingMore,
     errorCalls,
     fetchCalls,
@@ -605,13 +618,9 @@ const Calls = () => {
     return list.length ? list : staticOptions;
   }, [shownSegments, t]);
   const [aggGrouping, setAggGrouping] = useState(null);   // null=auto | 'hour' | 'day' | 'week'
-  const [stripCollapsed, setStripCollapsed] = useState(() => {
-    try { return localStorage.getItem('reportsStrip:calls:collapsed') === '1'; } catch { return false; }
-  });
-  const toggleStripCollapsed = () => setStripCollapsed((c) => {
-    try { localStorage.setItem('reportsStrip:calls:collapsed', c ? '0' : '1'); } catch { /* storage unavailable */ }
-    return !c;
-  });
+  const [stripCollapsed, toggleStripCollapsed] = useRememberedFlag('reportsStrip:calls:collapsed');
+  // The phone's statistics boxes: open until folded away, and remembered.
+  const [statsCollapsed, toggleStatsCollapsed] = useRememberedFlag('calls:mobileStats:collapsed');
   // Legend names in plain words; an unknown key is shown humanised.
   const seriesLabel = useCallback((key) => {
     const known = {
@@ -790,7 +799,26 @@ const Calls = () => {
       {isMobile && (
         <Box data-testid="calls-mobile-summary" sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 0.75 }}>
           <Box sx={{ display: 'flex', '& > .MuiButtonGroup-root': { flex: 1 } }}>{periodButtons}</Box>
-          <StatChips items={counterItems} />
+          {/* The statistics, and the arrow that folds them at their top-end
+              corner, in the same place open or folded. Folded, the first box
+              (Total) stays, with any box whose filter is on, so a filter in
+              use is never out of sight; the list gets the rest of the room. */}
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+            <StatChips
+              items={statsCollapsed ? counterItems.filter((item, index) => index === 0 || item.active) : counterItems}
+              sx={{ flex: 1, minWidth: 0 }}
+            />
+            <Tooltip title={statsCollapsed ? t('mobile.showStats') : t('mobile.hideStats')}>
+              <IconButton
+                size="small" onClick={toggleStatsCollapsed} data-testid="calls-stats-toggle"
+                aria-label={statsCollapsed ? t('mobile.showStats') : t('mobile.hideStats')}
+                aria-expanded={!statsCollapsed}
+                sx={{ flexShrink: 0, mt: 0.25, color: 'var(--theme-text-secondary)' }}
+              >
+                {statsCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
       )}
       {/* THE chart of the screen. One toolbar row above it, every control
@@ -978,6 +1006,9 @@ const Calls = () => {
         (
           <CallMobileView
             rows={displayRows}
+            loading={waitingForCalls}
+            error={errorCalls}
+            onRetry={handleRefresh}
             hasNextPage={hasNextPage}
             loadingMore={loadingMore}
             onLoadMore={() => loadMoreCalls(dateRange)}
@@ -1003,7 +1034,8 @@ const Calls = () => {
             <DataGrid
               rows={displayRows}
               columns={gridColumns}
-              loading={loadingCalls}
+              // Loading until the first answer, not "No rows" before any request.
+              loading={waitingForCalls}
               error={errorCalls}
               onRowsScrollEnd={handleRowsScrollEnd}
               onRowClick={(params) => setSelectedCall(params.row)}

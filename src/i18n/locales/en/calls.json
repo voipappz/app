@@ -45,6 +45,9 @@
     "user": "User"
   },
   "mobile": {
+    "loading": "Loading calls…",
+    "loadError": "Couldn't load the calls.",
+    "retry": "Try again",
     "empty": "No call data available.",
     "emptyHint": "Try adjusting your filters or date range.",
     "end": "No more calls to load",
@@ -116,7 +119,9 @@
       "transcribe": "Transcribe",
       "transcribeSent": "Transcription requested. It will show here when it is ready.",
       "transcribeError": "Couldn't request a transcription"
-    }
+    },
+    "showStats": "Show statistics",
+    "hideStats": "Hide statistics"
   },
   "stats": {
     "total": "Total",

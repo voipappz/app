@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import { Box, Button, Typography, CircularProgress } from '@mui/material';
 import { useInView } from 'react-intersection-observer';
 import CallLogRow from '../CallLogRow/CallLogRow';
 import CallDetailsScreen from '../CallDetailsScreen/CallDetailsScreen';
@@ -19,7 +19,12 @@ const groupByDay = (rows) => {
   return groups;
 };
 
-const CallMobileView = ({ rows, hasNextPage, loadingMore, onLoadMore, canViewEvents, onViewEvents, onBlockChanged }) => {
+/**
+ * The calls on a phone: one line each, by day. With none to show it says
+ * which state that is: still loading, the request failed (with Try again),
+ * or the answer had no calls.
+ */
+const CallMobileView = ({ rows, loading = false, error = null, onRetry, hasNextPage, loadingMore, onLoadMore, canViewEvents, onViewEvents, onBlockChanged }) => {
   const { t } = useTranslation('calls');
   // One line open at a time, like a phone's call history.
   const [openUuid, setOpenUuid] = useState(null);
@@ -47,6 +52,24 @@ const CallMobileView = ({ rows, hasNextPage, loadingMore, onLoadMore, canViewEve
       onLoadMore();
     }
   }, [inView, hasNextPage, loadingMore, onLoadMore]);
+
+  if ((!rows || rows.length === 0) && loading) {
+    return (
+      <Box role="status" data-testid="calls-loading" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, mt: 6, px: 2 }}>
+        <CircularProgress size={28} />
+        <Typography variant="body2" color="text.secondary">{t('mobile.loading')}</Typography>
+      </Box>
+    );
+  }
+
+  if ((!rows || rows.length === 0) && error) {
+    return (
+      <Box role="alert" sx={{ textAlign: 'center', mt: 4, px: 2 }}>
+        <Typography variant="h6" color="text.secondary">{t('mobile.loadError')}</Typography>
+        {onRetry && <Button onClick={onRetry} sx={{ mt: 1 }}>{t('mobile.retry')}</Button>}
+      </Box>
+    );
+  }
 
   if (!rows || rows.length === 0) {
     return (

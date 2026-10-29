@@ -28,7 +28,7 @@ import { usePortalSidebar } from '../../context/PortalSidebarContext';
 import { defaultSipSettings } from '../../lib/sip/sipSettings';
 import SipSettingsForm from './SipSettingsForm.jsx';
 import PhoneSignIn from './PhoneSignIn.jsx';
-import CallToast from './CallToast.jsx';
+import { useCallTimer, useHold } from './callHooks';
 import TransferControls from './TransferControls.jsx';
 import PhoneCallsTab from './PhoneCallsTab.jsx';
 import PhonePresence from './PhonePresence.jsx';
@@ -37,23 +37,10 @@ import { ACCENT, GREEN, MUTED, PANEL, PANEL_HEADER } from './panelTheme.js';
 // Calls · Dialpad along the bottom; Settings is the gear in the header.
 // Calls remain in the shared Calls screen; the phone lives in the drawer.
 const TABS = ['calls', 'dialpad'];
-import { requestIncomingCallNotifications, useIncomingCallAlerts } from '../../lib/sip/useIncomingCallAlerts.js';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
 const DOT = { registered: '#22c55e', connecting: '#f59e0b', failed: '#ef4444', unregistered: '#94a3b8', idle: '#94a3b8', unavailable: '#ef4444' };
 const LOG_COLOR = { error: '#f87171', warn: '#fbbf24', debug: '#94a3b8', log: '#cbd5e1' };
-
-function useCallTimer(connectedAt) {
-  const [secs, setSecs] = useState(0);
-  useEffect(() => {
-    if (!connectedAt) { setSecs(0); return; }
-    const t0 = connectedAt;
-    setSecs(Math.max(0, Math.floor((Date.now() - t0) / 1000)));
-    const id = setInterval(() => setSecs(Math.floor((Date.now() - t0) / 1000)), 1000);
-    return () => clearInterval(id);
-  }, [connectedAt]);
-  return `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
-}
 
 // `embedded` renders inside PhoneDock's drawer, filling the panel edge to edge.
 // `device` (an account session only): sign the phone in as this device.
@@ -61,8 +48,8 @@ function useCallTimer(connectedAt) {
 export default function PhoneScreen({ embedded = false, initialTab, device, initialNumber }) {
   const {
     status, connected, call, muted, held, doNotDisturb, networkAvailable, lastError,
-    dial, answer, hangup, sendDtmf, setMuted, setHeld, setDoNotDisturb,
-    transfer, consult, settings, logs = [], clearLogs, disconnect, updateSettings
+    dial, hangup, sendDtmf, setMuted, setDoNotDisturb,
+    settings, logs = [], clearLogs, disconnect, updateSettings
   } = useSoftphone();
   const { t } = useTranslation('phone');
   const sidebar = usePortalSidebar();
@@ -91,18 +78,16 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
   }, [initialNumber]);
   const [logsOpen, setLogsOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
-  const [holdPending, setHoldPending] = useState(false);
   const [dialError, setDialError] = useState(null);
   const logEndRef = useRef(null);
 
-  useEffect(() => { void requestIncomingCallNotifications(); }, []);
   useEffect(() => { if (logsOpen) logEndRef.current?.scrollIntoView({ block: 'end' }); }, [logs, logsOpen]);
 
   const inCall = call && call.state !== 'ended';
-  const incoming = call && call.direction === 'inbound' && call.state === 'ringing';
+  // An incoming call rings in the call dock (CallDock.jsx), above every page.
   // A live transfer owns the hold state and keeps the panel on screen.
-  const transferBusy = Boolean(transfer) || Boolean(consult && consult.state !== 'ended');
-  useIncomingCallAlerts(call);
+  const hold = useHold();
+  const { transferBusy } = hold;
   const timer = useCallTimer(call?.state === 'active' ? call.connectedAt : null);
 
   const ext = settings?.username || '—';
@@ -119,13 +104,6 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
   const press = (k) => {
     if (call?.state === 'active') sendDtmf(k);
     else setNumber((n) => n + k);
-  };
-  // setHeld resolves only when the PBX answers the re-INVITE, so keep the button
-  // disabled for the round trip rather than letting it flip and flip back.
-  const toggleHold = async () => {
-    setHoldPending(true);
-    try { await setHeld(!held); } catch { /* surfaced via lastError */ }
-    finally { setHoldPending(false); }
   };
   const startCall = async (target) => {
     const n = (target || number).trim();
@@ -158,7 +136,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
       >
         {/* Header — avatar, name / ext, ready status */}
         <Box sx={{ bgcolor: PANEL_HEADER, px: 1.5, py: 1.25, display: 'flex', gap: 1.25, alignItems: 'flex-start' }}>
-          <Avatar sx={{ width: 44, height: 44, bgcolor: '#5b6675', fontSize: '1.1rem' }}>{initial}</Avatar>
+          <Avatar sx={{ width: 44, height: 44, flexShrink: 0, bgcolor: '#5b6675', fontSize: '1.1rem' }}>{initial}</Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.2 }} noWrap>
               {name} <Box component="span" sx={{ color: MUTED, fontWeight: 400 }}>• <Bdi>{ext}</Bdi></Box>
@@ -245,7 +223,7 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
               <Typography variant="overline" sx={{ color: MUTED }}>
                 {call.direction === 'inbound' ? t('call.incoming') : t('call.calling')}
               </Typography>
-              <Typography variant="h6" sx={{ direction: 'ltr', color: '#fff' }}>{call.remote}</Typography>
+              <Typography variant="h6" sx={{ direction: 'ltr', color: '#fff', overflowWrap: 'anywhere' }}>{call.remote}</Typography>
               <Typography variant="body2" sx={{ mb: 2, color: MUTED }}>
                 {call.state === 'active' ? <Bdi>{timer}</Bdi> : call.state === 'ringing' ? t('call.ringing') : t('call.connecting')}
               </Typography>
@@ -257,8 +235,8 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
                   <span>
                     <IconButton
                       data-testid="phone-hold"
-                      disabled={call.state !== 'active' || holdPending || transferBusy}
-                      onClick={toggleHold}
+                      disabled={hold.disabled}
+                      onClick={hold.toggle}
                       sx={{ color: held ? ACCENT : '#fff', bgcolor: 'rgba(255,255,255,0.08)' }}
                     >
                       {held ? <PlayArrowIcon /> : <PauseIcon />}
@@ -351,15 +329,6 @@ export default function PhoneScreen({ embedded = false, initialTab, device, init
         )}
       </Paper>
 
-      {/* Global incoming-call toast */}
-      <CallToast
-        open={Boolean(incoming)}
-        title={t('call.incomingTitle')}
-        number={call?.remote}
-        onAnswer={() => answer()}
-        onReject={() => hangup()}
-        onClose={() => hangup()}
-      />
     </Box>
   );
 }
