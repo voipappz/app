@@ -200,7 +200,7 @@ export const WIDGET_TEMPLATES = {
   liveCallsInProgress: { title: 'Calls in progress', type: 'live', section: 'callsInProgress' },
   liveAgents: { title: 'Agents', type: 'live', section: 'agents' },
   idActivity: {
-    title: 'Activity, last 24 hours', type: 'identity', view: 'number', minutes: 1440,
+    title: 'Activity', type: 'identity', view: 'number', minutes: 1440,
     measures: ['events', 'identities'], dimensions: []
   },
   idByType: {
@@ -301,7 +301,11 @@ export function applyTemplate(templateKey, overrides = {}) {
 }
 
 /** The title to show: the person's own, or the template's in today's language. */
+// A title that is none of the template's own names (in any language) was
+// typed by someone, whichever editor saved it.
+const templateNames = (key) => ['en', 'he'].map((lng) => i18n.t(`widgets:templates.${key}`, { lng, defaultValue: WIDGET_TEMPLATES[key]?.title || key }));
 export const displayTitle = (widget = {}) => (!widget.customTitle && widget.template && WIDGET_TEMPLATES[widget.template]
+  && (!widget.title || templateNames(widget.template).includes(widget.title))
   ? templateTitle(widget.template) : widget.title);
 
 /** Fill a stored (possibly older/partial) definition out to the full shape. */

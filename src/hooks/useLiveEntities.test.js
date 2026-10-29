@@ -262,6 +262,19 @@ describe('useLiveEntities', () => {
       expect(result.current.byScope('user').map((r) => r.user_name)).toEqual(['Dana']);
     });
 
+    // ActionCable flags `reconnected` only on the FIRST subscription confirmed
+    // after a reconnect; every environment must still drop its old snapshot.
+    it('a reconnect refreshes every environment, flagged or not', () => {
+      const { result } = renderHook(() => useLiveEntities(['env-1', 'env-2']));
+      act(() => { subFor('env-1').callbacks.connected(); subFor('env-2').callbacks.connected(); });
+      deliverTo('env-1', frame('user', 'a1', { user_name: 'Noam' }));
+      deliverTo('env-2', frame('user', 'a2', { user_name: 'Dana' }));
+      act(() => { subFor('env-1').callbacks.disconnected({ willAttemptReconnect: true }); subFor('env-2').callbacks.disconnected({ willAttemptReconnect: true }); });
+      act(() => { subFor('env-1').callbacks.connected({ reconnected: true }); subFor('env-2').callbacks.connected(); });
+      act(() => { vi.advanceTimersByTime(300); });
+      expect(result.current.byScope('user')).toEqual([]);
+    });
+
     it('unsubscribes all of them when the screen goes away', () => {
       const { unmount } = renderHook(() => useLiveEntities(['env-1', 'env-2']));
       unmount();

@@ -76,15 +76,19 @@ export default function useLiveEntities(environmentUuids, scope = null) {
     const setStatus = (env, update) => setStatuses((all) => ({ ...all, [env]: update(all[env] || { status: 'pending', confirmedAt: null }) }));
     setStatuses(Object.fromEntries(identifiers.map((id) => [id.environment_uuid, { status: 'pending', confirmedAt: null }])));
 
+    // ActionCable flags `reconnected` on the first subscription confirmed after
+    // a reconnect only; any environment confirmed before is re-delivering too.
+    const confirmedBefore = new Set();
     const subs = identifiers.map((identifier) => {
       const env = identifier.environment_uuid;
       return consumer.subscriptions.create(identifier, {
         connected({ reconnected } = {}) {
-          if (reconnected) {
+          if (reconnected || confirmedBefore.has(env)) {
             // This environment's snapshot comes again; the others keep theirs.
             for (const key of entities.current.keys()) if (key.startsWith(`${env}|`)) entities.current.delete(key);
             flush();
           }
+          confirmedBefore.add(env);
           setStatus(env, (s) => ({ ...s, status: 'confirmed', confirmedAt: Date.now() }));
         },
         disconnected({ willAttemptReconnect } = {}) {

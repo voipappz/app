@@ -212,7 +212,7 @@ const LiveDashboard = () => {
     switch (widget.section) {
       case 'summary':
         return (
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: { xs: 'nowrap', sm: 'wrap' }, overflowX: { xs: 'auto', sm: 'visible' } }}>
             <Chip label={t('summary.available', { n: stats.available })} sx={{ bgcolor: statusColor('available', settings), color: '#fff', fontWeight: 600 }} />
             <Chip label={t('summary.onCall', { n: stats.onCall })} sx={{ bgcolor: stateColor('in_a_queue_call', settings), color: '#fff', fontWeight: 600 }} />
             <Chip label={t('summary.onBreak', { n: stats.onBreak })} sx={{ bgcolor: statusColor('on_break', settings), color: '#fff', fontWeight: 600 }} />
@@ -306,7 +306,7 @@ const LiveDashboard = () => {
       />
 
       {boardOwner && (
-        <WidgetBoard key={boardOwner} mode="live" storageScope={`live:${boardOwner}`} heading={false}
+        <WidgetBoard key={`${boardOwner}|${uuids.join(',')}`} mode="live" storageScope={`live:${boardOwner}`} heading={false}
           callsScope={{ environmentUuids: uuids }} seed={seed} renderLive={renderLive} />
       )}
 

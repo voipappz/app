@@ -8,6 +8,8 @@ import WidgetBoard from './WidgetBoard';
 import { useCdrReport } from './useCdrReport';
 import { reportSource } from './reportSources';
 import { useCdrCatalog } from './CdrEditor';
+import { applyTemplate, displayTitle } from './widgetTemplates';
+import i18n from '../../i18n';
 import { setDynamicApiBaseUrl } from '../../config';
 
 vi.mock('../../services/api/monitoringApi', () => ({ monitoringApi: {
@@ -77,6 +79,25 @@ describe('the identities catalog cache', () => {
       renderHook(() => useCdrCatalog('identity', { customerUuid: 'c-ttl' }));
       await waitFor(() => expect(identitiesApi.getCatalog).toHaveBeenCalledTimes(2));
     } finally { now.mockRestore(); }
+  });
+});
+
+describe('template titles', () => {
+  it('follow the language until renamed, whichever editor renamed it', async () => {
+    const made = applyTemplate('idOverTime');
+    expect(displayTitle(made)).toBe('Activity over time');
+    await i18n.changeLanguage('he');
+    try { expect(displayTitle(made)).not.toBe('Activity over time'); } finally { await i18n.changeLanguage('en'); }
+    // Monitoring's editors save a new title without a customTitle flag.
+    expect(displayTitle({ ...made, title: 'Queue traffic' })).toBe('Queue traffic');
+  });
+});
+
+describe('the identities catalog with no environments', () => {
+  it('is not asked for at all: no scope must never mean every environment', async () => {
+    renderHook(() => useCdrCatalog('identity', { environmentUuids: [] }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(identitiesApi.getCatalog).not.toHaveBeenCalled();
   });
 });
 

@@ -67,7 +67,7 @@
     "cdrTopCallees": "Top callees",
     "cdrByHour": "Calls by hour of day",
     "metricExplorer": "Metric explorer",
-    "idActivity": "Activity, last 24 hours",
+    "idActivity": "Activity",
     "idByType": "Activity by type",
     "idOverTime": "Activity over time",
     "idTopEvents": "Top events",

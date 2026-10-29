@@ -124,7 +124,7 @@ export default function BuilderWidget({ widget: storedWidget, snapshot, saving, 
       <Stack direction="row" spacing={1} alignItems="center" className="widget-drag-handle" sx={{ px: 1.75, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover', cursor: 'grab' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 750 }} noWrap>{displayTitle(widget)}</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{isCalls ? t('widget.kindCalls') : widget.type === 'live' ? t('widget.kindLive') : widget.type === 'cdr' ? t('widget.kindReport') : widget.type === 'identity' ? t('widget.kindIdentity') : widget.type === 'query' ? `${widget.measurement} · ${widget.field}` : t(`types.${widget.type}`, { defaultValue: widget.type })}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{isCalls ? t('widget.kindCalls') : widget.type === 'live' ? t('widget.kindLive') : widget.type === 'cdr' ? t('widget.kindReport') : widget.type === 'identity' ? (t(`liveEditor.ranges.${widget.minutes}`, { defaultValue: '' }) || t('widget.kindIdentity')) : widget.type === 'query' ? `${widget.measurement} · ${widget.field}` : t(`types.${widget.type}`, { defaultValue: widget.type })}</Typography>
         </Box>
         <IconButton size="small" disabled={saving} aria-label={t('widget.actions')} onClick={(event) => setMenuAnchor(event.currentTarget)}>
           <MoreVertIcon fontSize="small" />

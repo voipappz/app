@@ -289,6 +289,21 @@ describe('LiveDashboard', () => {
     expect(screen.queryByText('Activity over time')).not.toBeInTheDocument();
   });
 
+  it('names a history widget\'s range on the widget, so a changed range is never mislabelled', async () => {
+    const user = userEvent.setup();
+    render(<LiveDashboard />);
+    await screen.findByText('Activity over time');
+    const card = screen.getByText('Activity over time').closest('[data-testid^="builder-widget-"]');
+    expect(within(card).getByText(/Last 24 hours/)).toBeInTheDocument();
+    await user.click(within(card).getByRole('button', { name: 'Widget actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit widget' }));
+    await user.click(within(await screen.findByRole('dialog')).getByLabelText('Range'));
+    await user.click(screen.getByRole('option', { name: 'Last 30 days' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }));
+    const again = (await screen.findByText('Activity over time')).closest('[data-testid^="builder-widget-"]');
+    expect(await within(again).findByText(/Last 30 days/)).toBeInTheDocument();
+  });
+
   it('renames a widget without a builder: title and range only', async () => {
     const user = userEvent.setup();
     render(<LiveDashboard />);
