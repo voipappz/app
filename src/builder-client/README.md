@@ -12,6 +12,8 @@ imports anything from here.
 | `useBuilderChat.js` | One chat with the agent: session, messages, busy state, permission requests, modes |
 | `acpConnection.js` | ACP (Agent Client Protocol) as raw JSON-RPC over the server's `acp:` channel |
 | `phoenixSocket.js` | Minimal Phoenix v2 websocket client for that channel |
+| `BotPanel.jsx` | The Bot tab, when Builder runs a voice bot: status, restart, log, hold to talk |
+| `botCall.js` | One call to the bot through Builder's bridge, in Earshot's native framing (PCM16 16 kHz, 20 ms packets, `speech_started`/`speech_stopped`, `clear`) |
 | `chatState.js` | Maps ACP `session/update` notifications onto the chat-ui message shape (tested in `chatState.test.js`) |
 
 ## Rules

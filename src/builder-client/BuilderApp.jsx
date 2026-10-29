@@ -5,11 +5,19 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import AddCommentIcon from '@mui/icons-material/AddComment';
 import { ChatView } from '@voipappz/chat-ui';
 import { useBuilderChat } from './useBuilderChat';
+import BotPanel from './BotPanel';
 
 const SUGGESTIONS = [
   { label: 'Find the call history screen', prompt: 'Find the component that renders the call history list and tell me its file and line.' },
   { label: 'Explain the extensions screen', prompt: 'Explain how the extensions screen loads and shows its data.' },
   { label: 'Add a search field', prompt: 'Add a search field above the extensions list that filters by name or number as I type.' }
+];
+
+// With a voice bot, the agent changes the bot rather than the app.
+const BOT_SUGGESTIONS = [
+  { label: 'Explain this bot', prompt: 'Explain how this voice bot works: its pipeline, where the prompt and greeting live, and how to run its tests.' },
+  { label: 'Change the greeting', prompt: 'Change the greeting to a short, friendly English greeting, run make test, and tell me when to restart the bot.' },
+  { label: 'Run the tests', prompt: 'Run make test for this bot and summarize the result.' }
 ];
 
 const STATUS_COLOR = { ok: 'var(--color-success)', error: 'var(--color-danger)', neutral: 'var(--theme-text-tertiary)' };
@@ -38,28 +46,40 @@ function PermissionBar({ permission, onAnswer }) {
   );
 }
 
-function Previews({ previews }) {
-  const [role, setRole] = useState('admin');
+function Previews({ previews, bot, secret }) {
+  const [role, setRole] = useState(bot ? 'bot' : 'admin');
   const [reloadKey, setReloadKey] = useState(0);
   const url = previews[role];
+  const isBot = role === 'bot';
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, borderLeft: '1px solid var(--theme-border)' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', px: 1, borderBottom: '1px solid var(--theme-border)', backgroundColor: 'var(--theme-bg-secondary)' }}>
         <Tabs value={role} onChange={(_, value) => setRole(value)} sx={{ minHeight: 40, '& .MuiTab-root': { minHeight: 40 } }}>
+          {bot && <Tab value="bot" label="Bot" />}
           <Tab value="admin" label="Admin" />
           <Tab value="user" label="User" />
         </Tabs>
         <Typography sx={{ flex: 1, ml: 2, fontSize: '0.75rem', color: 'var(--theme-text-tertiary)', fontFamily: 'monospace' }} noWrap>
-          {url}
+          {isBot ? bot.name : url}
         </Typography>
-        <Tooltip title="Reload preview">
-          <IconButton size="small" onClick={() => setReloadKey((k) => k + 1)}><RefreshIcon fontSize="small" /></IconButton>
-        </Tooltip>
-        <Tooltip title="Open in a new tab">
-          <IconButton size="small" component="a" href={url} target="_blank" rel="noreferrer"><OpenInNewIcon fontSize="small" /></IconButton>
-        </Tooltip>
+        {!isBot && (
+          <>
+            <Tooltip title="Reload preview">
+              <IconButton size="small" onClick={() => setReloadKey((k) => k + 1)}><RefreshIcon fontSize="small" /></IconButton>
+            </Tooltip>
+            <Tooltip title="Open in a new tab">
+              <IconButton size="small" component="a" href={url} target="_blank" rel="noreferrer"><OpenInNewIcon fontSize="small" /></IconButton>
+            </Tooltip>
+          </>
+        )}
       </Box>
+      {/* Stays mounted, so a call keeps going while you look at the previews. */}
+      {bot && (
+        <Box sx={{ flex: 1, display: isBot ? 'flex' : 'none', minHeight: 0 }}>
+          <BotPanel bot={bot} secret={secret} />
+        </Box>
+      )}
       {/* Both stay mounted so each keeps its own login while switching tabs. */}
       {['admin', 'user'].map((name) => (
         <Box
@@ -131,14 +151,16 @@ export default function BuilderApp({ info }) {
             onStop={chat.stop}
             emptyState={{
               title: 'What should we build?',
-              description: `The agent works in ${info.workspaceName}. Changes show in the previews.`,
-              suggestions: SUGGESTIONS,
+              description: info.bot
+                ? `The agent works on the ${info.bot.name} bot in ${info.workspaceName}. Talk to it in the Bot tab.`
+                : `The agent works in ${info.workspaceName}. Changes show in the previews.`,
+              suggestions: info.bot ? BOT_SUGGESTIONS : SUGGESTIONS,
               onSuggestion: send
             }}
           />
         </Box>
       </Box>
-      <Previews previews={info.previews} />
+      <Previews previews={info.previews} bot={info.bot} secret={info.secret} />
     </Box>
   );
 }
