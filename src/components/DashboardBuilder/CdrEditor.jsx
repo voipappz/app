@@ -44,11 +44,11 @@ export function useCdrCatalog(type = 'cdr', scope = {}) {
     let active = true;
     source.catalog(JSON.parse(scopeKey)).then((c) => {
       if (c?.dimensions?.length) {
-        const next = { ...c, source: source.type };
+        const next = { ...c, source: source.type, loaded: true };
         catalogCache[cacheKey] = { at: Date.now(), catalog: next };
         if (active) setCatalog(next);
       }
-    }).catch(() => {});
+    }).catch(() => { if (active) setCatalog({ ...source.fallback, failed: true }); });
     return () => { active = false; };
   }, [cacheKey]);
   return catalog;

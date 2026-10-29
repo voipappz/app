@@ -49,8 +49,9 @@ vi.mock('../../context/CustomerEnvironmentContext', () => ({
 }));
 // History widgets read /api/identities; live widgets read only the cable.
 const mockReport = vi.fn();
+const mockCatalog = vi.fn(async () => ({ dimensions: [] }));
 vi.mock('../../services/api/identityReportApi', () => ({
-  identityReportApi: { runReport: (...a) => mockReport(...a), getCatalog: vi.fn(async () => ({ dimensions: [] })) },
+  identityReportApi: { runReport: (...a) => mockReport(...a), getCatalog: (...a) => mockCatalog(...a) },
 }));
 vi.mock('react-grid-layout', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -333,6 +334,115 @@ describe('LiveDashboard', () => {
 
     expect(screen.getByText('Realtime cable: No session')).toBeInTheDocument();
     expect(screen.getByText('Subscription')).toBeInTheDocument();
+  });
+});
+
+// The connection between the two: an agent's live row opens that agent's own
+// history from identities — same type, same id, same environment.
+describe('an agent\'s history, from its live row', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    liveStatus = 'confirmed';
+    selectedEnvironments = [];
+    mockReport.mockReset();
+    mockReport.mockResolvedValue({ rows: [], labels: {} });
+    mockCatalog.mockResolvedValue({
+      dimensions: [{ key: 'type', label: 'Type' }, { key: 'event', label: 'Event' }],
+      measures: [{ key: 'events', label: 'Events', unit: 'count' }, { key: 'incr:call_incoming_count', label: 'Call incoming count', unit: 'count' }],
+      buckets: ['5m', '15m', '1h', '1d'],
+    });
+  });
+
+  // The catalog is cached per environment for five minutes: a test that needs
+  // a different one uses its own environment.
+  const openNoam = async (user, env = 'env-906') => {
+    liveRows = [agent({ environment_uuid: env }), environment()];
+    render(<LiveDashboard />);
+    await user.click(await screen.findByText('20 Noam'));
+    return screen.findByRole('dialog', { name: /20 Noam/ });
+  };
+
+  it('opens a panel with the live document and its history filtered to that agent', async () => {
+    const user = userEvent.setup();
+    const panel = await openNoam(user);
+    expect(within(panel).getByText('211')).toBeInTheDocument();
+    await vi.waitFor(() => expect(mockReport).toHaveBeenCalledWith(expect.objectContaining({
+      where: { type: ['user'], identity: ['a1'] }, environmentUuids: ['env-906'], minutes: 1440,
+    })));
+  });
+
+  it('switches the range for every history view', async () => {
+    const user = userEvent.setup();
+    const panel = await openNoam(user);
+    await user.click(within(panel).getByRole('button', { name: 'Last 7 days' }));
+    await vi.waitFor(() => expect(mockReport).toHaveBeenCalledWith(expect.objectContaining({
+      where: { type: ['user'], identity: ['a1'] }, minutes: 10080,
+    })));
+  });
+
+  it('charts a counter the catalog discovered, as change per interval', async () => {
+    const user = userEvent.setup();
+    const panel = await openNoam(user);
+    await user.click(await within(panel).findByRole('button', { name: 'Call incoming count' }));
+    await vi.waitFor(() => expect(mockReport).toHaveBeenCalledWith(expect.objectContaining({
+      measures: ['incr:call_incoming_count'], where: { type: ['user'], identity: ['a1'] },
+    })));
+    expect(within(panel).getByText(/change per interval/i)).toBeInTheDocument();
+  });
+
+  it('keeps the panel\'s "now" live as the cable updates the agent', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<LiveDashboard />);
+    liveRows = [agent({ environment_uuid: 'env-906' }), environment()];
+    rerender(<LiveDashboard />);
+    await user.click(await screen.findByText('20 Noam'));
+    const panel = await screen.findByRole('dialog', { name: /20 Noam/ });
+    expect(within(panel).getByText('Available')).toBeInTheDocument();
+    liveRows = [agent({ environment_uuid: 'env-906', status: 'on_break', status_name: 'Lunch' }), environment()];
+    rerender(<LiveDashboard />);
+    expect(await within(screen.getByRole('dialog', { name: /20 Noam/ })).findByText('Lunch')).toBeInTheDocument();
+  });
+
+  it('opens from the keyboard too', async () => {
+    const user = userEvent.setup();
+    liveRows = [agent({ environment_uuid: 'env-906' }), environment()];
+    render(<LiveDashboard />);
+    const row = (await screen.findByText('20 Noam')).closest('[tabindex="0"]');
+    row.focus();
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('dialog', { name: /20 Noam/ })).toBeInTheDocument();
+  });
+
+  it('does not claim "no counters" when the catalog could not be read', async () => {
+    mockCatalog.mockRejectedValue(new Error('down'));
+    const user = userEvent.setup();
+    const panel = await openNoam(user, 'env-down');
+    expect(await within(panel).findByText('Counters are not available right now.')).toBeInTheDocument();
+    expect(within(panel).queryByText('No counters recorded yet.')).not.toBeInTheDocument();
+  });
+
+  it('says so when no counters were recorded yet', async () => {
+    mockCatalog.mockResolvedValue({ dimensions: [{ key: 'type', label: 'Type' }], measures: [{ key: 'events', label: 'Events' }] });
+    const user = userEvent.setup();
+    const panel = await openNoam(user, 'env-quiet');
+    expect(await within(panel).findByText('No counters recorded yet.')).toBeInTheDocument();
+  });
+});
+
+describe('an agent\'s history in Hebrew', () => {
+  it('translates the status and state values, as the agents table does', async () => {
+    localStorage.clear(); liveStatus = 'confirmed'; selectedEnvironments = [];
+    mockReport.mockResolvedValue({ rows: [], labels: {} });
+    liveRows = [agent({ environment_uuid: 'env-he', status: 'logged_out', status_name: undefined, state: 'waiting' }), environment()];
+    await i18n.changeLanguage('he');
+    try {
+      const user = userEvent.setup();
+      render(<LiveDashboard />);
+      await user.click(await screen.findByText('20 Noam'));
+      const panel = await screen.findByRole('dialog', { name: /20 Noam/ });
+      expect(within(panel).getByText('מנותק')).toBeInTheDocument();
+      expect(within(panel).queryByText('logged_out')).not.toBeInTheDocument();
+    } finally { await i18n.changeLanguage('en'); }
   });
 });
 
