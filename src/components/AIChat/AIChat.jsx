@@ -45,7 +45,10 @@ const toSession = (s) => ({ id: s.session_id, title: s.session_name || 'Chat Ses
  */
 // `initialQuestion`: a question to send as soon as the assistant is ready —
 // the command palette's Ask row hands the typed text over this way.
-const AIChat = ({ initialQuestion = null }) => {
+// `compact`: for a narrow panel (the bot editor's 400px column). The session
+// list is 256px wide, so open it would leave the chat ~140px and clip it; here
+// it starts closed and its toggle is local, not the app-wide assistant setting.
+const AIChat = ({ initialQuestion = null, compact = false }) => {
   const {
     messages,
     inputValue,
@@ -77,6 +80,9 @@ const AIChat = ({ initialQuestion = null }) => {
   }, [initialQuestion, isEndpointActive, isRestoringSession, isStreaming, sendMessage]);
 
   const { aiSidebarOpen, toggleAISidebar } = useAIChatSidebar();
+  const [compactSidebarOpen, setCompactSidebarOpen] = useState(false);
+  const sidebarOpen = compact ? compactSidebarOpen : aiSidebarOpen;
+  const toggleSidebar = compact ? () => setCompactSidebarOpen((o) => !o) : toggleAISidebar;
 
   const [providerDialogOpen, setProviderDialogOpen] = useState(false);
   const [providerDialogLoading, setProviderDialogLoading] = useState(false);
@@ -146,8 +152,8 @@ const AIChat = ({ initialQuestion = null }) => {
       onSelectSession={loadSession}
       onDeleteSession={deleteSession}
       onNewSession={clearChat}
-      sidebarCollapsed={!aiSidebarOpen}
-      onToggleSidebar={toggleAISidebar}
+      sidebarCollapsed={!sidebarOpen}
+      onToggleSidebar={toggleSidebar}
       emptyState={{
         title: 'What can I help with?',
         description: llmMissing ? 'The assistant is not set up yet.' : 'Try one of these or type your own question.',
