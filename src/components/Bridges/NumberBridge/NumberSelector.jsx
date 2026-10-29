@@ -147,12 +147,13 @@ export const NumberSelector = ({
                 borderTop: '1px solid',
                 borderColor: 'divider',
                 display: 'flex',
+                flexWrap: 'wrap',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 2
               }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{ minWidth: 0 }}>
                 {t('numberSelector.notFound')}
               </Typography>
               <Button

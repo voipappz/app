@@ -2,11 +2,6 @@
   "action": {
     "close": "סגירה"
   },
-  "topBar": {
-    "close": "סגירת הטלפון",
-    "status": "טלפון — {{status}}",
-    "notSignedIn": "לא מחובר"
-  },
   "header": {
     "guest": "אורח",
     "networkOffline": "אין חיבור לרשת",
@@ -115,5 +110,13 @@
       "codeLength": "הזינו את הקוד בן 6 הספרות",
       "codeInvalid": "הקוד שגוי או פג תוקף. נסו שוב."
     }
+  },
+  "dock": {
+    "inCall": "שיחה פעילה",
+    "mute": "השתקה",
+    "unmute": "ביטול השתקה",
+    "onHold": "בהמתנה",
+    "openPhone": "פתיחת הטלפון",
+    "ringing": "שיחה נכנסת — פתיחת הטלפון"
   }
 }

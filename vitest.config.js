@@ -12,9 +12,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.js'],
-    // Vitest's default is 5s per test. Screens that render many rows or simulate
-    // typing take 5-10s on a slow machine (they pass in CI), so allow 15s.
-    testTimeout: 15000,
+    // Vitest's default is 5s per test. Screens that render many rows, open
+    // full-screen editors or simulate typing take 10-16s on a slow, memory-
+    // starved machine running the whole suite (they pass in CI), and at 15s a
+    // different one timed out on each run. 30s ends that; a stuck test still fails.
+    testTimeout: 30000,
     include: [
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'packages/*/src/**/*.{test,spec}.{js,jsx}'
