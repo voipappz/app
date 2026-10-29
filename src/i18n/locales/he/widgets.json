@@ -37,7 +37,8 @@
       "trends": "גרפים",
       "tables": "טבלאות",
       "explore": "חקירה",
-      "identities": "פעילות"
+      "identities": "היסטוריה",
+      "liveNow": "עכשיו"
     }
   },
   "templates": {
@@ -66,11 +67,16 @@
     "cdrTopCallees": "הנמענים המובילים",
     "cdrByHour": "שיחות לפי שעה ביום",
     "metricExplorer": "סייר מדדים",
-    "idActivity": "הפעילות היום",
+    "idActivity": "פעילות, 24 השעות האחרונות",
     "idByType": "פעילות לפי סוג",
     "idOverTime": "פעילות לאורך זמן",
     "idTopEvents": "האירועים הנפוצים",
-    "idByHour": "השעות העמוסות"
+    "idByHour": "השעות העמוסות",
+    "liveSummary": "סיכום סטטוסים",
+    "liveTiles": "במבט מהיר",
+    "liveCallCounts": "שיחות לפי כיוון",
+    "liveCallsInProgress": "שיחות פעילות",
+    "liveAgents": "נציגים"
   },
   "units": {
     "calls": "שיחות"
@@ -116,7 +122,8 @@
     "openCall": "פתיחת שיחה {{id}}",
     "callDetails": "פרטי השיחה",
     "close": "סגירה",
-    "kindIdentity": "פעילות"
+    "kindIdentity": "פעילות",
+    "kindLive": "חי"
   },
   "editor": {
     "titleEdit": "עריכת ווידג׳ט",
@@ -391,5 +398,14 @@
     "identity": "ישות",
     "hour": "שעה ביום",
     "weekday": "יום בשבוע"
+  },
+  "liveEditor": {
+    "title": "עריכת ווידג׳ט",
+    "range": "טווח",
+    "ranges": {
+      "1440": "24 השעות האחרונות",
+      "10080": "7 הימים האחרונים",
+      "43200": "30 הימים האחרונים"
+    }
   }
 }

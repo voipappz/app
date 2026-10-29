@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { useLiveEnvironment } from './useLiveEnvironment';
+import { renderHook } from '@testing-library/react';
+import { useLiveEnvironments } from './useLiveEnvironment';
 
 let portalUser = null;
 let env = {};
@@ -11,44 +11,33 @@ const sales = { uuid: 'env-1', name: 'Sales' };
 const support = { uuid: 'env-2', name: 'Support' };
 
 beforeEach(() => {
-  localStorage.clear();
   portalUser = null;
-  env = {
-    selectedCustomer: { uuid: 'cust-1' },
-    selectedEnvironments: [support],
-    fetchAllEnvironments: vi.fn(async () => [sales, support]),
-  };
+  env = { selectedCustomer: { uuid: 'cust-1' }, selectedEnvironments: [sales, support] };
 });
 
-describe('the environment Live monitors', () => {
-  it("is a portal user's own environment, with nothing to pick", () => {
+// Live has no picker: the signed-in identity says which environments it shows.
+describe('the environments Live shows', () => {
+  it("is a portal user's one environment", () => {
     portalUser = { environment: { uuid: 'env-9', name: 'Mine' } };
-    const { result } = renderHook(() => useLiveEnvironment());
-    expect(result.current).toMatchObject({ uuid: 'env-9', name: 'Mine', pickable: false });
+    const { result } = renderHook(() => useLiveEnvironments());
+    expect(result.current).toMatchObject({ uuids: ['env-9'], environments: [{ uuid: 'env-9', name: 'Mine' }], own: true });
   });
 
-  it("starts, for an account, on the first environment selected in the top bar", async () => {
-    const { result } = renderHook(() => useLiveEnvironment());
-    expect(result.current).toMatchObject({ uuid: 'env-2', name: 'Support', pickable: true });
-    await waitFor(() => expect(result.current.options).toEqual([sales, support]));
-    expect(env.fetchAllEnvironments).toHaveBeenCalledWith('cust-1');
+  it("is every environment an account selected in the top bar", () => {
+    const { result } = renderHook(() => useLiveEnvironments());
+    expect(result.current).toMatchObject({ uuids: ['env-1', 'env-2'], environments: [sales, support], own: false });
   });
 
-  it('follows what the account picks on the Live screen, and remembers it', async () => {
-    const { result, unmount } = renderHook(() => useLiveEnvironment());
-    await waitFor(() => expect(result.current.options).toHaveLength(2));
-    act(() => result.current.pick('env-1'));
-    expect(result.current).toMatchObject({ uuid: 'env-1', name: 'Sales' });
-    unmount();
-
-    const again = renderHook(() => useLiveEnvironment());
-    await waitFor(() => expect(again.result.current.uuid).toBe('env-1'));
-  });
-
-  it('is empty when the account has nothing selected and nothing picked', () => {
+  it('is none when the account has nothing selected', () => {
     env.selectedEnvironments = [];
-    env.fetchAllEnvironments = vi.fn(async () => []);
-    const { result } = renderHook(() => useLiveEnvironment());
-    expect(result.current.uuid).toBe('');
+    const { result } = renderHook(() => useLiveEnvironments());
+    expect(result.current.uuids).toEqual([]);
+  });
+
+  it('keeps the same list between renders, so the live subscriptions stay put', () => {
+    const { result, rerender } = renderHook(() => useLiveEnvironments());
+    const first = result.current.uuids;
+    rerender();
+    expect(result.current.uuids).toBe(first);
   });
 });

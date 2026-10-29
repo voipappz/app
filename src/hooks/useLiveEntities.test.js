@@ -227,4 +227,45 @@ describe('useLiveEntities', () => {
     deliver({ scope: 'user' }); // no id
     expect(result.current.rows).toHaveLength(0);
   });
+
+  // An account watches every environment selected in the top bar: one
+  // LiveChannel subscription each (the channel is per environment), one list.
+  describe('several environments', () => {
+    const subFor = (env) => subscriptions.find((sub) => sub.identifier.environment_uuid === env);
+    const deliverTo = (env, f) => {
+      act(() => { subFor(env).callbacks.received(f); });
+      act(() => { vi.advanceTimersByTime(300); });
+    };
+
+    it('subscribes once per environment and shows their rows together', () => {
+      const { result } = renderHook(() => useLiveEntities(['env-1', 'env-2']));
+      expect(mockConsumer.subscriptions.create).toHaveBeenCalledTimes(2);
+      deliverTo('env-1', frame('user', 'a1', { user_name: 'Noam' }));
+      deliverTo('env-2', frame('user', 'a2', { user_name: 'Dana' }));
+      expect(result.current.byScope('user').map((r) => r.user_name).sort()).toEqual(['Dana', 'Noam']);
+    });
+
+    it('is live only when every environment is', () => {
+      const { result } = renderHook(() => useLiveEntities(['env-1', 'env-2']));
+      act(() => { subFor('env-1').callbacks.connected(); });
+      expect(result.current.connected).toBe(false);
+      act(() => { subFor('env-2').callbacks.connected(); });
+      expect(result.current.connected).toBe(true);
+    });
+
+    it('a reconnect in one environment keeps the other environment\'s rows', () => {
+      const { result } = renderHook(() => useLiveEntities(['env-1', 'env-2']));
+      deliverTo('env-1', frame('user', 'a1', { user_name: 'Noam' }));
+      deliverTo('env-2', frame('user', 'a2', { user_name: 'Dana' }));
+      act(() => { subFor('env-1').callbacks.connected({ reconnected: true }); });
+      act(() => { vi.advanceTimersByTime(300); });
+      expect(result.current.byScope('user').map((r) => r.user_name)).toEqual(['Dana']);
+    });
+
+    it('unsubscribes all of them when the screen goes away', () => {
+      const { unmount } = renderHook(() => useLiveEntities(['env-1', 'env-2']));
+      unmount();
+      expect(subscriptions.every((sub) => sub.unsubscribe.mock.calls.length === 1)).toBe(true);
+    });
+  });
 });

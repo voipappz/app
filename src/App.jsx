@@ -32,7 +32,6 @@ import SignIn from './components/Login/SignIn.jsx';
 // Lazy-load all other route components for code splitting
 const Reports = lazy(() => import('./components/Reports/Reports.jsx'));
 const LiveDashboard = lazy(() => import('./components/LiveDashboard/LiveDashboard.jsx'));
-const AdminDashboard = lazy(() => import('./components/Dashboard/AdminDashboard.jsx'));
 const Calls = lazy(() => import('./components/Calls/Calls.jsx'));
 
 const Notifications = lazy(() => import('./components/Notifications/Notifications.jsx'));
@@ -199,19 +198,8 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-        {/* The live-calls dashboard in the account console (pilot): the same
-            body as the portal's landing screen, scoped to the selected
-            customer/environment. Gated on calls, the data it shows. */}
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute requiredAcl="calls">
-              <Layout>
-                <AdminDashboard />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+        {/* The Dashboard became the Live screen's widget board (2026-10-29). */}
+        <Route path="/admin/dashboard" element={<Navigate to="/live" replace />} />
         <Route
           path="/notifications"
           element={
