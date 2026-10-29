@@ -8,6 +8,8 @@ import WidgetBoard from './WidgetBoard';
 import { useCdrReport } from './useCdrReport';
 import { reportSource } from './reportSources';
 import { useCdrCatalog } from './CdrEditor';
+import { applyTemplate, displayTitle } from './widgetTemplates';
+import i18n from '../../i18n';
 import { setDynamicApiBaseUrl } from '../../config';
 
 vi.mock('../../services/api/monitoringApi', () => ({ monitoringApi: {
@@ -80,6 +82,25 @@ describe('the identities catalog cache', () => {
   });
 });
 
+describe('template titles', () => {
+  it('follow the language until renamed, whichever editor renamed it', async () => {
+    const made = applyTemplate('idOverTime');
+    expect(displayTitle(made)).toBe('Activity over time');
+    await i18n.changeLanguage('he');
+    try { expect(displayTitle(made)).not.toBe('Activity over time'); } finally { await i18n.changeLanguage('en'); }
+    // Monitoring's editors save a new title without a customTitle flag.
+    expect(displayTitle({ ...made, title: 'Queue traffic' })).toBe('Queue traffic');
+  });
+});
+
+describe('the identities catalog with no environments', () => {
+  it('is not asked for at all: no scope must never mean every environment', async () => {
+    renderHook(() => useCdrCatalog('identity', { environmentUuids: [] }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(identitiesApi.getCatalog).not.toHaveBeenCalled();
+  });
+});
+
 describe('CdrEditor on the identities source', () => {
   it('lists the measures the API discovered, runs the identities report and saves an identity widget', async () => {
     const user = userEvent.setup();
@@ -107,22 +128,21 @@ describe('CdrEditor on the identities source', () => {
 });
 
 describe('WidgetBoard modes', () => {
-  it('the dashboard board builds activity reports only', async () => {
+  it('the live board has no builder, only live and history templates', async () => {
     const user = userEvent.setup();
-    render(<WidgetBoard storageScope="dash" mode="dashboard" callsScope={{ customerUuid: 'c-1' }} />);
-    await user.click(screen.getByTestId('build-widget'));
-    expect(screen.getByRole('menuitem', { name: /Activity report/ })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: /Call report/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: /^Metric/ })).not.toBeInTheDocument();
-  });
-
-  it('the dashboard template menu offers the activity templates only', async () => {
-    const user = userEvent.setup();
-    render(<WidgetBoard storageScope="dash" mode="dashboard" callsScope={{ customerUuid: 'c-1' }} />);
+    render(<WidgetBoard storageScope="live-test" mode="live" callsScope={{ environmentUuids: ['e-1'] }} renderLive={() => null} />);
+    expect(screen.queryByTestId('build-widget')).not.toBeInTheDocument();
     await user.click(screen.getByTestId('add-widget'));
-    expect(screen.getByText('Activity')).toBeInTheDocument();
+    expect(screen.getByText('Live now')).toBeInTheDocument();
+    expect(screen.getByText('History')).toBeInTheDocument();
     expect(screen.queryByText('Call reports')).not.toBeInTheDocument();
     expect(screen.queryByTestId('widget-preset-custom')).not.toBeInTheDocument();
+  });
+
+  it('a live board opens empty: no InfluxDB starter widgets', async () => {
+    render(<WidgetBoard storageScope="live-empty" mode="live" renderLive={() => null} />);
+    expect(await screen.findByText('Add a widget to start your dashboard.')).toBeInTheDocument();
+    expect(monitoringApi.runInfluxQuery).not.toHaveBeenCalled();
   });
 
   it('the monitoring board keeps the call report and the metric builder', async () => {

@@ -15,7 +15,7 @@ import { useCdrReport } from './useCdrReport';
 import { reportSource } from './reportSources';
 import { useTranslation } from 'react-i18next';
 import {
-  BUCKETS, CDR_RANGES, CDR_VIEWS, FALLBACK_CATALOG, cdrQueryReady, dimensionLabel, dimensionText, measureOf, scopeParams,
+  BUCKETS, CDR_RANGES, CDR_VIEWS, FALLBACK_CATALOG, cdrQueryReady, hasScope, dimensionLabel, dimensionText, measureOf, scopeParams,
 } from './cdrReport';
 
 // Per API server and scope (picking an environment can switch servers), and
@@ -37,6 +37,8 @@ export function useCdrCatalog(type = 'cdr', scope = {}) {
   const cacheKey = `${config.apiBaseUrl}|${source.type}:${scopeKey}`;
   const [catalog, setCatalog] = useState(() => cachedCatalog(cacheKey) || source.fallback);
   useEffect(() => {
+    // No environments is no scope, never "every environment".
+    if (source.type === 'identity' && !hasScope(scope)) return undefined;
     const hit = cachedCatalog(cacheKey);
     if (hit) { setCatalog(hit); return undefined; }
     let active = true;

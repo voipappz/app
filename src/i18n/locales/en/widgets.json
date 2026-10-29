@@ -37,7 +37,8 @@
       "trends": "Charts",
       "tables": "Tables",
       "explore": "Explore",
-      "identities": "Activity"
+      "identities": "History",
+      "liveNow": "Live now"
     }
   },
   "templates": {
@@ -66,11 +67,16 @@
     "cdrTopCallees": "Top callees",
     "cdrByHour": "Calls by hour of day",
     "metricExplorer": "Metric explorer",
-    "idActivity": "Activity today",
+    "idActivity": "Activity",
     "idByType": "Activity by type",
     "idOverTime": "Activity over time",
     "idTopEvents": "Top events",
-    "idByHour": "Busiest hours"
+    "idByHour": "Busiest hours",
+    "liveSummary": "Status summary",
+    "liveTiles": "At a glance",
+    "liveCallCounts": "Calls by direction",
+    "liveCallsInProgress": "Calls in progress",
+    "liveAgents": "Agents"
   },
   "units": {
     "calls": "calls"
@@ -116,7 +122,8 @@
     "openCall": "Open call {{id}}",
     "callDetails": "Call details",
     "close": "Close",
-    "kindIdentity": "activity"
+    "kindIdentity": "activity",
+    "kindLive": "live"
   },
   "editor": {
     "titleEdit": "Edit widget",
@@ -391,5 +398,14 @@
     "identity": "Identity",
     "hour": "Hour of day",
     "weekday": "Day of week"
+  },
+  "liveEditor": {
+    "title": "Edit widget",
+    "range": "Range",
+    "ranges": {
+      "1440": "Last 24 hours",
+      "10080": "Last 7 days",
+      "43200": "Last 30 days"
+    }
   }
 }

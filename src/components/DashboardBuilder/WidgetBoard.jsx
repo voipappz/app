@@ -8,6 +8,8 @@ import WidgetEditor from './WidgetEditor';
 import WidgetBuilder from './WidgetBuilder';
 import BuilderWidget from './BuilderWidget';
 import CdrEditor from './CdrEditor';
+import LiveWidgetEditor from './LiveWidgetEditor';
+import { displayTitle } from './widgetTemplates';
 import { getWidgets, createWidget, updateWidget, deleteWidget, updateWidgetLayout, setDashboardStorageScope, seedWidgets } from '../../services/api/dashboardWidgetsApi';
 import { monitoringApi } from '../../services/api/monitoringApi';
 import { mapCdrCall } from '../Dashboard/useDashboardSnapshot';
@@ -25,11 +27,16 @@ import { useTheme } from '@mui/material/styles';
 // board IS the page. "Build widget" opens a builder: a call report (CdrEditor,
 // the CDR report for `callsScope`) or a metric from any InfluxDB measurement
 // (WidgetBuilder); editing a widget reopens the builder that made it.
-// `mode`: 'dashboard' builds and offers activity reports over identities only
-// (the Dashboard page); 'monitoring' (the default) is the operator's board —
-// call reports from InfluxDB `cdr` and metrics from any InfluxDB measurement.
-export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true, mode = 'monitoring' }) {
-  const dashboard = mode === 'dashboard';
+// `mode`: 'monitoring' (the default) is the operator's board — call reports
+// from InfluxDB `cdr` and metrics from any InfluxDB measurement, with the
+// builders. 'live' is the Live screen: ready-made widgets only (its sections
+// from the cable, drawn by `renderLive`, and the live data's history from
+// identities), no builder; editing names a widget and sets its range.
+export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true, mode = 'monitoring', renderLive }) {
+  const live = mode === 'live';
+  // Only the operator's board opens with the InfluxDB starter set.
+  const starter = !live;
+  const [liveEditing, setLiveEditing] = useState(null);
   const { t } = useTranslation('widgets');
   const pageDirection = useTheme().direction;
   const [widgets, setWidgets] = useState([]);
@@ -54,14 +61,14 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
   const arranging = cols === GRID_COLS;
   const layout = useMemo(() => layoutFor(widgets), [widgets]);
   const reload = async () => {
-    setDashboardStorageScope(storageScope, { starter: !dashboard });
+    setDashboardStorageScope(storageScope, { starter });
     setWidgets(await getWidgets());
   };
   const seedKey = seed?.key;
   useEffect(() => {
     let active = true;
     (async () => {
-      setDashboardStorageScope(storageScope, { starter: !dashboard });
+      setDashboardStorageScope(storageScope, { starter });
       if (seedKey) await seedWidgets(seedKey, seed.widgets);
       const rows = await getWidgets();
       if (active) setWidgets(rows);
@@ -85,8 +92,8 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
   }, [hasTable, minutes, refreshKey, auto, environmentUuid]);
   const mutate = async (action) => {
     setSaving(true); setError(null);
-    setDashboardStorageScope(storageScope, { starter: !dashboard });
-    try { await action(); await reload(); setDraft(null); setBuilding(null); setEditingCdr(null); }
+    setDashboardStorageScope(storageScope, { starter });
+    try { await action(); await reload(); setDraft(null); setBuilding(null); setEditingCdr(null); setLiveEditing(null); }
     catch (err) { setError(err.message || t('board.saveError')); }
     finally { setSaving(false); }
   };
@@ -94,7 +101,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
     if (cols !== GRID_COLS) return;
     const changes = layoutChanges(widgets, next);
     if (!changes.length) return;
-    setDashboardStorageScope(storageScope, { starter: !dashboard });
+    setDashboardStorageScope(storageScope, { starter });
     changes.forEach((change) => { updateWidgetLayout(change.uuid, change.layout); });
     setWidgets((current) => current.map((widget) => {
       const change = changes.find((entry) => entry.uuid === widget.uuid);
@@ -102,12 +109,13 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
     }));
   };
   const editWidget = (item) => {
-    if (item.type === 'query') setBuilding(item);
+    if (live) setLiveEditing(item);
+    else if (item.type === 'query') setBuilding(item);
     else if (item.type === 'cdr' || item.type === 'identity') setEditingCdr(item);
     else setDraft(item);
   };
   // A report template goes straight onto the board; the builder tunes it later.
-  const pickTemplate = (item) => (item.type === 'cdr' || item.type === 'identity' ? mutate(() => createWidget(item)) : setDraft(item));
+  const pickTemplate = (item) => (live || item.type === 'cdr' || item.type === 'identity' ? mutate(() => createWidget(item)) : setDraft(item));
   return <Box sx={{ mt: heading ? 3 : 0, width: '100%' }}>
     {heading && <>
       <Typography variant="h6">{t('board.title')}</Typography>
@@ -117,21 +125,16 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
       </Typography>
     </>}
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
-      <AddWidgetMenu onPick={pickTemplate} disabled={saving} categories={dashboard ? ['identities'] : null} custom={!dashboard} />
+      <AddWidgetMenu onPick={pickTemplate} disabled={saving} categories={live ? ['liveNow', 'identities'] : null} custom={!live} />
+      {!live && <>
       <Button variant="outlined" size="small" onClick={(event) => setBuildMenu(event.currentTarget)} disabled={saving} data-testid="build-widget" sx={{ textTransform: 'none' }}>{t('board.build')}</Button>
       <Menu anchorEl={buildMenu} open={Boolean(buildMenu)} onClose={() => setBuildMenu(null)}>
-        {dashboard ? (
-          <MenuItem onClick={() => { setBuildMenu(null); setEditingCdr({ type: 'identity' }); }}>
-            <ListItemText primary={t('board.buildIdentityReport')} secondary={t('board.buildIdentityReportHint')} />
-          </MenuItem>
-        ) : [
-          <MenuItem key="cdr" onClick={() => { setBuildMenu(null); setEditingCdr({ type: 'cdr' }); }}>
-            <ListItemText primary={t('board.buildCallReport')} secondary={t('board.buildCallReportHint')} />
-          </MenuItem>,
-          <MenuItem key="metric" onClick={() => { setBuildMenu(null); setBuilding({}); }}>
-            <ListItemText primary={t('board.buildMetric')} secondary={t('board.buildMetricHint')} />
-          </MenuItem>,
-        ]}
+        <MenuItem onClick={() => { setBuildMenu(null); setEditingCdr({ type: 'cdr' }); }}>
+          <ListItemText primary={t('board.buildCallReport')} secondary={t('board.buildCallReportHint')} />
+        </MenuItem>
+        <MenuItem onClick={() => { setBuildMenu(null); setBuilding({}); }}>
+          <ListItemText primary={t('board.buildMetric')} secondary={t('board.buildMetricHint')} />
+        </MenuItem>
       </Menu>
       <TextField select size="small" label={t('board.timeRange')} value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} sx={{ minWidth: 190, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
         <MenuItem value={0}>{t('board.eachWidget')}</MenuItem>
@@ -141,6 +144,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
       </TextField>
       <FormControlLabel control={<Switch checked={auto} onChange={(_, checked) => setAuto(checked)} />} label={t('board.autoRefresh')} />
       <Button onClick={() => setRefreshKey((key) => key + 1)}>{t('board.refresh')}</Button>
+      </>}
     </Box>
     {error && <Alert severity="error">{error}</Alert>}
     {callsError && <Alert severity="error">{callsError}</Alert>}
@@ -159,16 +163,20 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
       >
         {widgets.map((widget) => (
           <div key={widget.uuid} dir={pageDirection}>
-            <BuilderWidget widget={widget} snapshot={{ recent_calls: calls }} saving={saving} callsScope={callsScope}
+            <BuilderWidget widget={widget} snapshot={{ recent_calls: calls }} saving={saving} callsScope={callsScope} renderLive={renderLive}
               queryOptions={{ minutes: minutes || undefined, refreshKey, refreshInterval: auto ? 30000 : 0, environmentUuid }}
               onEdit={editWidget} onDelete={(item) => mutate(() => deleteWidget(item.uuid))}
-              onDuplicate={(item) => mutate(() => { const { uuid: _uuid, layout: _layout, ...copy } = item; return createWidget({ ...copy, title: t('board.copyTitle', { title: copy.title }) }); })} />
+              onDuplicate={(item) => mutate(() => { const { uuid: _uuid, layout: _layout, ...copy } = item; return createWidget({ ...copy, title: t('board.copyTitle', { title: displayTitle(copy) }), customTitle: true }); })} />
           </div>
         ))}
       </ReactGridLayout>
     </LtrIsland>
     {/* Mounted only while open: the builder asks the API for its catalog, and
         a board that nobody is building on (Live) must not call the API. */}
+    {live ? (
+      <LiveWidgetEditor widget={liveEditing} saving={saving} onClose={() => setLiveEditing(null)}
+        onSave={(item) => mutate(() => updateWidget(item.uuid, item))} />
+    ) : <>
     {editingCdr && (
       <CdrEditor open source={editingCdr.type || 'cdr'} scope={callsScope} editing={editingCdr.uuid ? editingCdr : null} saving={saving}
         onClose={() => setEditingCdr(null)}
@@ -179,5 +187,6 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
       onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
     <WidgetEditor open={Boolean(draft)} widget={draft?.uuid ? draft : null} initialDraft={draft} saving={saving} onClose={() => setDraft(null)}
       onSave={(item) => mutate(() => item.uuid ? updateWidget(item.uuid, item) : createWidget(item))} />
+    </>}
   </Box>;
 }

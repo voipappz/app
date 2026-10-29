@@ -45,7 +45,7 @@ export default function AddWidgetMenu({ onPick, disabled, categories = null, cus
         transformOrigin={{ vertical: 'top', horizontal: endSide }}
         slotProps={{ paper: { sx: { minWidth: 260, maxHeight: 460 } } }}
       >
-        {Object.entries(TEMPLATE_CATEGORIES).filter(([category]) => (categories ? categories.includes(category) : category !== 'identities')).map(([category, keys]) => [
+        {Object.entries(TEMPLATE_CATEGORIES).filter(([category]) => (categories ? categories.includes(category) : category !== 'identities' && category !== 'liveNow')).map(([category, keys]) => [
           <MenuItem key={`${category}-label`} disabled sx={{ opacity: '1 !important' }}>
             <Typography variant="overline" color="text.secondary">{t(`menu.category.${category}`, { defaultValue: category })}</Typography>
           </MenuItem>,

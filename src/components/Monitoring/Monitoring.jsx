@@ -1,5 +1,4 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
 import {
   Box, Typography, Chip, IconButton, Tooltip, Switch, FormControlLabel,
   Paper, Select, MenuItem, FormControl,
@@ -121,7 +120,6 @@ const IntegrationsPanel = ({ minutes, bucket, host, alertConfig }) => {
 };
 
 const Monitoring = () => {
-  const navigate = useNavigate();
   const {
     timeRange, setTimeRange, TIME_RANGES,
     hosts, selectedHost, setSelectedHost,
@@ -257,7 +255,7 @@ const Monitoring = () => {
                   yDomain={m.unit === '%' ? [0, 100] : undefined}
                   threshold={thresholds(m.key).crit}
                   loading={loading}
-                  onEditQuery={() => navigate('/admin/dashboard')}
+                  onEditQuery={() => setView('metrics')}
                 />
               ))}
             </Box>

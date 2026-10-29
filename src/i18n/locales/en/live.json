@@ -1,8 +1,7 @@
 {
   "title": "Live Dashboard",
   "environment": {
-    "label": "Environment",
-    "pick": "Pick an environment to monitor"
+    "none": "Pick an environment in the top bar"
   },
   "summary": {
     "available": "{{n}} Available",
@@ -194,5 +193,6 @@
       "created": "Created",
       "accountcode": "Account"
     }
-  }
+  },
+  "callsNotAllowed": "Your access does not include calls."
 }

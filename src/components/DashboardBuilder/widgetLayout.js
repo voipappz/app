@@ -6,7 +6,12 @@ export const ROW_HEIGHT = 120;
 
 const WIDE_TYPES = new Set(['trend', 'line', 'bar', 'pie', 'table']);
 
-export function defaultSize(type) {
+// A Live section's size: the agents table is wide and tall, the counters a row.
+const LIVE_SIZES = { summary: { w: GRID_COLS, h: 1 }, tiles: { w: GRID_COLS, h: 2 }, callCounts: { w: 2, h: 2 },
+  callsInProgress: { w: 2, h: 3 }, agents: { w: GRID_COLS, h: 4 } };
+
+export function defaultSize(type, section) {
+  if (type === 'live') return LIVE_SIZES[section] || { w: 2, h: 2 };
   if (type === 'explorer' || type === 'calls_chart') return { w: GRID_COLS, h: 3 };
   if (type === 'calls_outcome' || type === 'query' || type === 'cdr') return { w: 2, h: 3 };
   if (type === 'live_calls') return { w: 2, h: 2 };
@@ -29,7 +34,7 @@ export function layoutFor(widgets) {
   let cursorY = placed.reduce((bottom, item) => Math.max(bottom, item.y + item.h), 0);
   let rowH = 0;
   const flowed = ordered.filter((widget) => !saved(widget)).map((widget) => {
-    const { w, h } = defaultSize(widget.type);
+    const { w, h } = defaultSize(widget.type, widget.section);
     if (cursorX + w > GRID_COLS) { cursorX = 0; cursorY += rowH; rowH = 0; }
     const item = { i: widget.uuid, x: cursorX, y: cursorY, w, h };
     cursorX += w;
