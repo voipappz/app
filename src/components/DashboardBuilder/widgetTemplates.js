@@ -199,6 +199,7 @@ export const WIDGET_TEMPLATES = {
   liveCallCounts: { title: 'Calls by direction', type: 'live', section: 'callCounts' },
   liveCallsInProgress: { title: 'Calls in progress', type: 'live', section: 'callsInProgress' },
   liveAgents: { title: 'Agents', type: 'live', section: 'agents' },
+  liveQueues: { title: 'Queues', type: 'live', section: 'queues' },
   idActivity: {
     title: 'Activity', type: 'identity', view: 'number', minutes: 1440,
     measures: ['events', 'identities'], dimensions: []
@@ -254,7 +255,7 @@ export const WIDGET_TEMPLATES = {
 
 /** Template keys grouped for the editor's quick-start chip row. */
 export const TEMPLATE_CATEGORIES = {
-  liveNow: ['liveSummary', 'liveTiles', 'liveCallCounts', 'liveCallsInProgress', 'liveAgents'],
+  liveNow: ['liveSummary', 'liveTiles', 'liveCallCounts', 'liveCallsInProgress', 'liveAgents', 'liveQueues'],
   identities: ['idActivity', 'idByType', 'idOverTime', 'idTopEvents', 'idByHour'],
   reports: ['cdrKpis', 'cdrByEnvironment', 'cdrStatusOverTime', 'cdrTopCallers', 'cdrTopCallees', 'cdrByHour'],
   calls: ['liveCalls', 'callsTotal', 'callsAnswered', 'callsGroups', 'callsBusiest', 'callsByDirection', 'callsOutcome'],

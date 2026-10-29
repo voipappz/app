@@ -144,8 +144,8 @@ const LiveDashboard = () => {
   const { can } = usePermissions();
   const canCalls = can('calls');
   const seed = useMemo(() => liveSeed(canCalls), [canCalls]);
-  // The agent whose history is open: its key, so the panel follows the row
-  // the cable keeps replacing.
+  // The agent or queue whose history is open: its key, so the panel follows
+  // the row the cable keeps replacing.
   const [historyOf, setHistoryOf] = useState(null);
 
   useEffect(() => {
@@ -171,6 +171,10 @@ const LiveDashboard = () => {
   // Rows are the documents, as they arrive. Nothing is merged in: an agent the
   // node has not identified yet shows blank name and extension until it does.
   const agentRows = live.byScope('user');
+  const queueRows = live.byScope('queue');
+  // A queue's document has no name; an agent's names the queue it is in.
+  const queueNames = useMemo(() => Object.fromEntries(agentRows
+    .filter((a) => a.queue_uuid && a.queue_name).map((a) => [a.queue_uuid, a.queue_name])), [agentRows]);
   const envDocs = live.byScope('environment');
   const callCounts = CALL_LISTS.map(({ key, labelKey }) => ({
     key,
@@ -279,9 +283,24 @@ const LiveDashboard = () => {
               priority: CARD_PRIORITY[c.key] || 'meta',
             }))}
             rows={agentRows}
-            onRowClick={(row) => setHistoryOf({ id: row.id, environment_uuid: row.environment_uuid })}
+            onRowClick={(row) => setHistoryOf({ scope: 'user', id: row.id, environment_uuid: row.environment_uuid })}
             getRowId={(row) => `${row.environment_uuid || ''}:${row.id}`}
             emptyMessage={live.connected ? t('agents.none') : notLive}
+          />
+        );
+      case 'queues':
+        return (
+          <ResponsiveTable
+            columns={[
+              { id: 'name', label: t('queues.queue'), priority: 'primary', render: (row) => queueNames[row.id] || row.queue_name || row.id },
+              ...['call_count', 'answer_count', 'abandoned_count', 'no_answer_count', 'timeout_count'].map((key) => ({
+                id: key, label: t(`queues.${key}`), priority: 'meta', render: (row) => renderCount(row[key]),
+              })),
+            ]}
+            rows={queueRows}
+            onRowClick={(row) => setHistoryOf({ scope: 'queue', id: row.id, environment_uuid: row.environment_uuid })}
+            getRowId={(row) => `${row.environment_uuid || ''}:${row.id}`}
+            emptyMessage={live.connected ? t('queues.none') : notLive}
           />
         );
       default:
@@ -317,7 +336,10 @@ const LiveDashboard = () => {
 
       {historyOf && (
         <EntityHistory
-          entity={agentRows.find((r) => r.id === historyOf.id && r.environment_uuid === historyOf.environment_uuid) || { scope: 'user', ...historyOf }}
+          entity={(() => {
+            const doc = live.byScope(historyOf.scope).find((r) => r.id === historyOf.id && r.environment_uuid === historyOf.environment_uuid) || historyOf;
+            return historyOf.scope === 'queue' ? { ...doc, name: queueNames[doc.id] || doc.queue_name || doc.id } : doc;
+          })()}
           onClose={() => setHistoryOf(null)}
         />
       )}

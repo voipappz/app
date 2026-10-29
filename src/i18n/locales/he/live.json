@@ -203,5 +203,14 @@
     "countersHint": "שינוי בכל פרק זמן, לא הסכום הנוכחי.",
     "noCounters": "עדיין לא נרשמו מונים.",
     "countersUnavailable": "המונים אינם זמינים כרגע."
+  },
+  "queues": {
+    "queue": "תור",
+    "call_count": "שיחות",
+    "answer_count": "נענו",
+    "abandoned_count": "ננטשו",
+    "no_answer_count": "ללא מענה",
+    "timeout_count": "פג זמן",
+    "none": "אין תורים בסביבה זו"
   }
 }
