@@ -992,7 +992,7 @@ const Bots = () => {
         }}
       >
         <Suspense fallback={<Box sx={{ flex: 1 }} />}>
-          <AIChat />
+          <AIChat compact />
         </Suspense>
       </Box>
       </Box>
