@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { monitoringApi } from '../../services/api/monitoringApi';
+import { reportSource } from './reportSources';
 import { cdrQueryReady, hasScope, scopeParams } from './cdrReport';
 import i18n from '../../i18n';
 
 /** What to say when this server's API has no call reports yet. */
-export const reportUnavailable = () => i18n.t('widgets:errors.reportUnavailable');
+export const reportUnavailable = (type = 'cdr') => i18n.t(type === 'identity' ? 'widgets:errors.identityUnavailable' : 'widgets:errors.reportUnavailable');
 
 // What to tell people when a report fails: a 404 is an API without the report
 // endpoint, a 422 carries the API's own reason (e.g. a range too long).
-export function reportError(err) {
-  if (err?.status === 404) return reportUnavailable();
+export function reportError(err, type = 'cdr') {
+  if (err?.status === 404) return reportUnavailable(type);
   const message = String(err?.message || '');
   const reason = message.match(/"(?:error|message)"\s*:\s*"([^"]+)"/)?.[1];
   if (reason) return reason;
@@ -25,8 +25,9 @@ export function useCdrReport(query, { scope = {}, runKey = 0, refreshInterval = 
   // The API answered 404: it predates /monitoring/cdr/report. Asking again
   // every 30 seconds changes nothing, so the poll stops until the query does.
   const missing = useRef(false);
+  const source = reportSource(query?.type);
   const key = JSON.stringify({
-    measures: query?.measures, dimensions: query?.dimensions, bucket: query?.bucket, where: query?.where,
+    type: source.type, measures: query?.measures, dimensions: query?.dimensions, bucket: query?.bucket, where: query?.where,
     order: query?.order, limit: query?.limit, minutes: override || query?.minutes, scope: scopeParams(scope),
   });
   const ready = enabled && cdrQueryReady(query) && hasScope(scope);
@@ -37,7 +38,7 @@ export function useCdrReport(query, { scope = {}, runKey = 0, refreshInterval = 
     const q = JSON.parse(key);
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const res = await monitoringApi.runCdrReport({
+      const res = await reportSource(q.type).run({
         measures: q.measures, dimensions: q.dimensions || [], bucket: q.bucket || '', minutes: q.minutes || 1440,
         where: q.where || {}, order: q.order || '', limit: q.limit || 100, ...q.scope,
       });
@@ -49,7 +50,7 @@ export function useCdrReport(query, { scope = {}, runKey = 0, refreshInterval = 
     } catch (err) {
       if (mine !== seq.current) return;
       if (err?.status === 404) missing.current = key;
-      setState((s) => ({ ...s, rows: [], loading: false, error: reportError(err) }));
+      setState((s) => ({ ...s, rows: [], loading: false, error: reportError(err, q.type) }));
     }
   }, [ready, key]);
   useEffect(() => {

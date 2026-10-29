@@ -18,6 +18,7 @@ export default function MobileRecordCard({ row, columns, selected, onClick }) {
     <Card
       variant="outlined"
       onClick={onClick}
+      {...(onClick ? { tabIndex: 0, onKeyDown: (event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onClick(); } } } : {})}
       data-testid="mobile-record-card"
       sx={{ mb: 1, cursor: onClick ? 'pointer' : 'default', borderColor: selected ? 'primary.main' : undefined }}
     >

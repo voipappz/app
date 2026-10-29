@@ -19,7 +19,9 @@
     "callsError": "Could not load call records. Try refreshing.",
     "saveError": "Could not save widgets",
     "empty": "Add a widget to start your dashboard.",
-    "copyTitle": "{{title}} copy"
+    "copyTitle": "{{title}} copy",
+    "buildIdentityReport": "Activity report",
+    "buildIdentityReportHint": "Events and identities over time, by type, event or any live field"
   },
   "menu": {
     "add": "Add widget",
@@ -34,7 +36,9 @@
       "gauges": "Gauges",
       "trends": "Charts",
       "tables": "Tables",
-      "explore": "Explore"
+      "explore": "Explore",
+      "identities": "History",
+      "liveNow": "Live now"
     }
   },
   "templates": {
@@ -62,7 +66,17 @@
     "cdrTopCallers": "Top callers",
     "cdrTopCallees": "Top callees",
     "cdrByHour": "Calls by hour of day",
-    "metricExplorer": "Metric explorer"
+    "metricExplorer": "Metric explorer",
+    "idActivity": "Activity",
+    "idByType": "Activity by type",
+    "idOverTime": "Activity over time",
+    "idTopEvents": "Top events",
+    "idByHour": "Busiest hours",
+    "liveSummary": "Status summary",
+    "liveTiles": "At a glance",
+    "liveCallCounts": "Calls by direction",
+    "liveCallsInProgress": "Calls in progress",
+    "liveAgents": "Agents"
   },
   "units": {
     "calls": "calls"
@@ -107,7 +121,9 @@
     "noRows": "No rows yet",
     "openCall": "Open call {{id}}",
     "callDetails": "Call details",
-    "close": "Close"
+    "close": "Close",
+    "kindIdentity": "activity",
+    "kindLive": "live"
   },
   "editor": {
     "titleEdit": "Edit widget",
@@ -364,6 +380,32 @@
     "queryFailed": "The query failed.",
     "queryFailedShort": "Query failed",
     "reportUnavailable": "Call reports aren’t available on this server yet — its API needs the update that adds call reports.",
-    "reportFailed": "The report failed. Try again."
+    "reportFailed": "The report failed. Try again.",
+    "identityUnavailable": "Activity reports aren’t available on this server yet — its API needs the update that adds identities."
+  },
+  "identity": {
+    "titleBuild": "Build an activity report",
+    "all": "Everything"
+  },
+  "identityMeasures": {
+    "events": "Events",
+    "identities": "Identities"
+  },
+  "identityDimensions": {
+    "type": "Type",
+    "event": "Event",
+    "environment": "Environment",
+    "identity": "Identity",
+    "hour": "Hour of day",
+    "weekday": "Day of week"
+  },
+  "liveEditor": {
+    "title": "Edit widget",
+    "range": "Range",
+    "ranges": {
+      "1440": "Last 24 hours",
+      "10080": "Last 7 days",
+      "43200": "Last 30 days"
+    }
   }
 }

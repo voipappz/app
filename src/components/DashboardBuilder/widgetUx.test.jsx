@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { monitoringApi } from '../../services/api/monitoringApi';
-import { useWidgetValue } from './useWidgetValue';
+import { useWidgetValue } from '../Monitoring/Metrics/useWidgetValue';
 import { formatWidgetValue } from './widgetPresentation';
-import MetricChart from './MetricChart';
-import WidgetEditor from './WidgetEditor';
+import MetricChart from '../Monitoring/Metrics/MetricChart';
+import WidgetEditor from '../Monitoring/Metrics/WidgetEditor';
 import WidgetBoard from './WidgetBoard';
 
 vi.mock('../../services/api/monitoringApi', () => ({ monitoringApi: {
@@ -158,6 +158,18 @@ describe('dashboard widget UX', () => {
     expect(screen.getByText(/Settings changed/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Save', exact: true }));
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ title: 'Call count updated' }));
+  });
+});
+
+describe('the InfluxDB widget editor and identity widgets', () => {
+  it('offers no identity template or type: those run on /api/identities, not Influx', async () => {
+    const user = userEvent.setup();
+    render(<WidgetEditor open initialDraft={widget} onSave={vi.fn()} onClose={vi.fn()} />);
+    await screen.findByRole('button', { name: 'Run preview' });
+    expect(screen.queryByRole('button', { name: 'Activity today' })).not.toBeInTheDocument();
+    await user.click(screen.getByLabelText('Type'));
+    expect(screen.queryByRole('option', { name: 'Identity' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'counter' })).toBeInTheDocument();
   });
 });
 

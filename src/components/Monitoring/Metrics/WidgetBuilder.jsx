@@ -9,7 +9,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import { monitoringApi } from '../../services/api/monitoringApi';
+import { monitoringApi } from '../../../services/api/monitoringApi';
 import MetricResult from './MetricResult';
 import { AGGREGATIONS, RANGES, VIEWS, queryReady } from './metricQuery';
 import { useMetricQuery } from './useMetricQuery';

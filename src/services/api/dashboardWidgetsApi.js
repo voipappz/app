@@ -25,8 +25,12 @@ let currentScope = 'global';
  * setDynamicApiBaseUrl pattern); defaults to a single 'global' bucket
  * until then.
  */
-export function setDashboardStorageScope(scope) {
+// `starter: false` opens a never-stored board empty instead of with the
+// InfluxDB starter set (the Dashboard's identities board brings its own seed).
+let currentStarter = true;
+export function setDashboardStorageScope(scope, { starter = true } = {}) {
   currentScope = scope || 'global';
+  currentStarter = starter;
 }
 
 const storageKey = () => `${STORAGE_PREFIX}:${currentScope}`;
@@ -58,7 +62,7 @@ function starterWidgets() {
 
 const emptyStore = () => ({
   dashboards: [{ uuid: 'default', name: 'Default' }],
-  widgets: { default: starterWidgets() }
+  widgets: { default: currentStarter ? starterWidgets() : [] }
 });
 
 function readStore() {
