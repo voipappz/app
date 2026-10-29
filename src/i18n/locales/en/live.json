@@ -194,5 +194,13 @@
       "accountcode": "Account"
     }
   },
-  "callsNotAllowed": "Your access does not include calls."
+  "callsNotAllowed": "Your access does not include calls.",
+  "history": {
+    "title": "{{name}}: now and history",
+    "overTime": "Activity over time",
+    "topEvents": "Top events",
+    "counters": "Counters",
+    "countersHint": "Change per interval, not the current total.",
+    "noCounters": "No counters recorded yet."
+  }
 }
