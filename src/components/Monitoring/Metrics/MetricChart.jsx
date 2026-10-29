@@ -1,8 +1,8 @@
 import { Typography } from '@mui/material';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { useTranslation } from 'react-i18next';
-import LtrIsland from '../../i18n/LtrIsland';
-import { formatDayMonth, formatTime } from '../../utils/dateUtils';
+import LtrIsland from '../../../i18n/LtrIsland';
+import { formatDayMonth, formatTime } from '../../../utils/dateUtils';
 
 // An axis label for a point in time ("29 Jun 14:05"); other names as they are.
 const tickLabel = (value) => {

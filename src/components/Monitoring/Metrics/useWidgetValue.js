@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { monitoringApi } from '../../services/api/monitoringApi';
-import i18n from '../../i18n';
+import { monitoringApi } from '../../../services/api/monitoringApi';
+import i18n from '../../../i18n';
 
 // A request belongs to one effect, so old responses cannot replace a new metric.
 export function useWidgetValue(widget, { refreshInterval = 30_000, refreshKey = 0, minutes: windowMinutes, environmentUuid = '' } = {}) {

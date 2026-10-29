@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { monitoringApi } from '../../services/api/monitoringApi';
-import { useWidgetValue } from './useWidgetValue';
+import { useWidgetValue } from '../Monitoring/Metrics/useWidgetValue';
 import { formatWidgetValue } from './widgetPresentation';
-import MetricChart from './MetricChart';
-import WidgetEditor from './WidgetEditor';
+import MetricChart from '../Monitoring/Metrics/MetricChart';
+import WidgetEditor from '../Monitoring/Metrics/WidgetEditor';
 import WidgetBoard from './WidgetBoard';
 
 vi.mock('../../services/api/monitoringApi', () => ({ monitoringApi: {
