@@ -8,7 +8,9 @@ import { useCdrCatalog } from '../DashboardBuilder/CdrEditor';
 import { LIVE_RANGES } from '../DashboardBuilder/LiveWidgetEditor';
 
 // Fields of the live document that are bookkeeping, not something to read.
-const HIDDEN = new Set(['scope', 'id', 'environment_uuid']);
+const HIDDEN = new Set(['scope', 'id', 'environment_uuid', 'status_name']);
+const KNOWN_STATUSES = new Set(['available', 'on_break', 'logged_out']);
+const KNOWN_STATES = new Set(['waiting', 'receiving', 'ringing', 'answer', 'in_a_queue_call']);
 
 function HistoryView({ title, hint, query, scope, catalog }) {
   const result = useCdrReport(query, { scope });
@@ -42,6 +44,12 @@ export default function EntityHistory({ entity, onClose }) {
   const counters = (catalog.measures || []).filter((m) => String(m.key).startsWith('incr:'));
   const picked = counters.find((m) => m.key === counter) || counters[0];
   const name = entity.user_name || entity.name || entity.id;
+  // The tenant's own status name first, then the words the agents table uses.
+  const word = (k, v) => {
+    if (k === 'status') return entity.status_name || (KNOWN_STATUSES.has(v) ? t(`status.${v}`) : v);
+    if (k === 'state') return KNOWN_STATES.has(v) ? t(`state.${v}`) : v;
+    return v;
+  };
   const fields = Object.entries(entity).filter(([k, v]) => !HIDDEN.has(k) && v !== '' && v !== null && v !== undefined && typeof v !== 'object');
 
   return (
@@ -53,7 +61,7 @@ export default function EntityHistory({ entity, onClose }) {
             {fields.map(([k, v]) => (
               <Box key={k} sx={{ minWidth: 0 }}>
                 <Typography component="dt" variant="caption" color="text.secondary" noWrap>{t(`columns.${k}`, { defaultValue: k.replace(/_/g, ' ') })}</Typography>
-                <Typography component="dd" variant="body2" sx={{ m: 0, overflowWrap: 'anywhere' }}>{String(v)}</Typography>
+                <Typography component="dd" variant="body2" sx={{ m: 0, overflowWrap: 'anywhere' }}>{String(word(k, v))}</Typography>
               </Box>
             ))}
           </Box>
@@ -70,7 +78,9 @@ export default function EntityHistory({ entity, onClose }) {
           <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('history.counters')}</Typography>
             {!counters.length ? (
-              <Typography variant="body2" color="text.secondary">{t('history.noCounters')}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {catalog.failed ? t('history.countersUnavailable') : catalog.loaded ? t('history.noCounters') : '…'}
+              </Typography>
             ) : (
               <>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', my: 1 }}>

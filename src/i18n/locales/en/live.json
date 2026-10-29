@@ -201,6 +201,7 @@
     "topEvents": "Top events",
     "counters": "Counters",
     "countersHint": "Change per interval, not the current total.",
-    "noCounters": "No counters recorded yet."
+    "noCounters": "No counters recorded yet.",
+    "countersUnavailable": "Counters are not available right now."
   }
 }

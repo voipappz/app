@@ -144,7 +144,8 @@ const LiveDashboard = () => {
   const { can } = usePermissions();
   const canCalls = can('calls');
   const seed = useMemo(() => liveSeed(canCalls), [canCalls]);
-  // The agent whose history is open (a row of the agents widget).
+  // The agent whose history is open: its key, so the panel follows the row
+  // the cable keeps replacing.
   const [historyOf, setHistoryOf] = useState(null);
 
   useEffect(() => {
@@ -278,7 +279,7 @@ const LiveDashboard = () => {
               priority: CARD_PRIORITY[c.key] || 'meta',
             }))}
             rows={agentRows}
-            onRowClick={(row) => setHistoryOf(row)}
+            onRowClick={(row) => setHistoryOf({ id: row.id, environment_uuid: row.environment_uuid })}
             getRowId={(row) => `${row.environment_uuid || ''}:${row.id}`}
             emptyMessage={live.connected ? t('agents.none') : notLive}
           />
@@ -314,7 +315,12 @@ const LiveDashboard = () => {
           callsScope={{ environmentUuids: uuids }} seed={seed} renderLive={renderLive} />
       )}
 
-      {historyOf && <EntityHistory entity={historyOf} onClose={() => setHistoryOf(null)} />}
+      {historyOf && (
+        <EntityHistory
+          entity={agentRows.find((r) => r.id === historyOf.id && r.environment_uuid === historyOf.environment_uuid) || { scope: 'user', ...historyOf }}
+          onClose={() => setHistoryOf(null)}
+        />
+      )}
 
       <Typography variant="caption" color="text.secondary">
         {t('footer')}

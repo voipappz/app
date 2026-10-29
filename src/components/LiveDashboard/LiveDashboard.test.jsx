@@ -390,11 +390,59 @@ describe('an agent\'s history, from its live row', () => {
     expect(within(panel).getByText(/change per interval/i)).toBeInTheDocument();
   });
 
+  it('keeps the panel\'s "now" live as the cable updates the agent', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<LiveDashboard />);
+    liveRows = [agent({ environment_uuid: 'env-906' }), environment()];
+    rerender(<LiveDashboard />);
+    await user.click(await screen.findByText('20 Noam'));
+    const panel = await screen.findByRole('dialog', { name: /20 Noam/ });
+    expect(within(panel).getByText('Available')).toBeInTheDocument();
+    liveRows = [agent({ environment_uuid: 'env-906', status: 'on_break', status_name: 'Lunch' }), environment()];
+    rerender(<LiveDashboard />);
+    expect(await within(screen.getByRole('dialog', { name: /20 Noam/ })).findByText('Lunch')).toBeInTheDocument();
+  });
+
+  it('opens from the keyboard too', async () => {
+    const user = userEvent.setup();
+    liveRows = [agent({ environment_uuid: 'env-906' }), environment()];
+    render(<LiveDashboard />);
+    const row = (await screen.findByText('20 Noam')).closest('[tabindex="0"]');
+    row.focus();
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('dialog', { name: /20 Noam/ })).toBeInTheDocument();
+  });
+
+  it('does not claim "no counters" when the catalog could not be read', async () => {
+    mockCatalog.mockRejectedValue(new Error('down'));
+    const user = userEvent.setup();
+    const panel = await openNoam(user, 'env-down');
+    expect(await within(panel).findByText('Counters are not available right now.')).toBeInTheDocument();
+    expect(within(panel).queryByText('No counters recorded yet.')).not.toBeInTheDocument();
+  });
+
   it('says so when no counters were recorded yet', async () => {
     mockCatalog.mockResolvedValue({ dimensions: [{ key: 'type', label: 'Type' }], measures: [{ key: 'events', label: 'Events' }] });
     const user = userEvent.setup();
     const panel = await openNoam(user, 'env-quiet');
     expect(await within(panel).findByText('No counters recorded yet.')).toBeInTheDocument();
+  });
+});
+
+describe('an agent\'s history in Hebrew', () => {
+  it('translates the status and state values, as the agents table does', async () => {
+    localStorage.clear(); liveStatus = 'confirmed'; selectedEnvironments = [];
+    mockReport.mockResolvedValue({ rows: [], labels: {} });
+    liveRows = [agent({ environment_uuid: 'env-he', status: 'logged_out', status_name: undefined, state: 'waiting' }), environment()];
+    await i18n.changeLanguage('he');
+    try {
+      const user = userEvent.setup();
+      render(<LiveDashboard />);
+      await user.click(await screen.findByText('20 Noam'));
+      const panel = await screen.findByRole('dialog', { name: /20 Noam/ });
+      expect(within(panel).getByText('מנותק')).toBeInTheDocument();
+      expect(within(panel).queryByText('logged_out')).not.toBeInTheDocument();
+    } finally { await i18n.changeLanguage('en'); }
   });
 });
 
