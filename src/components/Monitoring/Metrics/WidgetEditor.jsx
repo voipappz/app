@@ -5,11 +5,11 @@ import {
 } from '@mui/material';
 import FieldSelect from './FieldSelect';
 import WidgetPreview from './WidgetPreview';
-import { ICON_NAMES } from './widgetPresentation';
-import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, WIDGET_TYPES, templateTitle, withDefaults } from './widgetTemplates';
-import { CALLS_METRICS, CDR_GROUPS, isCallsType } from './callsWidgets';
+import { ICON_NAMES } from '../../DashboardBuilder/widgetPresentation';
+import { applyTemplate, TEMPLATE_CATEGORIES, WIDGET_TEMPLATES, WIDGET_TYPES, templateTitle, withDefaults } from '../../DashboardBuilder/widgetTemplates';
+import { CALLS_METRICS, CDR_GROUPS, isCallsType } from '../../DashboardBuilder/callsWidgets';
 import { useTranslation } from 'react-i18next';
-import { ResponsiveDialog as Dialog } from '../ui';
+import { ResponsiveDialog as Dialog } from '../../ui';
 
 // Filtered against WIDGET_TEMPLATES: a category listing a key that no longer
 // has a template used to throw on `.title` inside the map below and take the

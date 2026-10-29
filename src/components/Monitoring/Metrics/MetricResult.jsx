@@ -5,9 +5,9 @@ import {
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { pivot, summarize } from './metricQuery';
-import LtrIsland from '../../i18n/LtrIsland';
-import { formatDate, formatTime } from '../../utils/dateUtils';
-import { formatNumber } from '../../utils/numberUtils';
+import LtrIsland from '../../../i18n/LtrIsland';
+import { formatDate, formatTime } from '../../../utils/dateUtils';
+import { formatNumber } from '../../../utils/numberUtils';
 
 const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
 const tick = (value) => formatTime(value) || String(value);
