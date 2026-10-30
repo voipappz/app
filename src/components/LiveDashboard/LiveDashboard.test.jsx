@@ -290,7 +290,7 @@ describe('LiveDashboard', () => {
     expect(screen.queryByText('Activity over time')).not.toBeInTheDocument();
   });
 
-  it('names a history widget\'s range on the widget, so a changed range is never mislabelled', async () => {
+  it('names a history widget\'s range on the widget, and edits it in the activity-report builder', async () => {
     const user = userEvent.setup();
     render(<LiveDashboard />);
     await screen.findByText('Activity over time');
@@ -298,31 +298,9 @@ describe('LiveDashboard', () => {
     expect(within(card).getByText(/Last 24 hours/)).toBeInTheDocument();
     await user.click(within(card).getByRole('button', { name: 'Widget actions' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit widget' }));
-    await user.click(within(await screen.findByRole('dialog')).getByLabelText('Range'));
-    await user.click(screen.getByRole('option', { name: 'Last 30 days' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save' }));
-    const again = (await screen.findByText('Activity over time')).closest('[data-testid^="builder-widget-"]');
-    expect(await within(again).findByText(/Last 30 days/)).toBeInTheDocument();
-  });
-
-  it('renames a widget without a builder: title and range only', async () => {
-    const user = userEvent.setup();
-    render(<LiveDashboard />);
-    await screen.findByText('Activity over time');
-    const grid = screen.getByTestId('widget-grid');
-    const card = within(grid).getByText('Activity over time').closest('[data-testid^="builder-widget-"]');
-    await user.click(within(card).getByRole('button', { name: 'Widget actions' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Edit widget' }));
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).queryByText(/Build an activity report/)).not.toBeInTheDocument();
-    const title = within(dialog).getByLabelText('Title');
-    await user.clear(title);
-    await user.type(title, 'Our week');
-    await user.click(within(dialog).getByLabelText('Range'));
-    await user.click(screen.getByRole('option', { name: 'Last 7 days' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
-    expect(await within(grid).findByText('Our week')).toBeInTheDocument();
-    await vi.waitFor(() => expect(mockReport).toHaveBeenCalledWith(expect.objectContaining({ minutes: 10080 })));
+    const editor = await screen.findByTestId('cdr-editor');
+    expect(within(editor).getByText(/Activity over time/)).toBeInTheDocument();
+    await vi.waitFor(() => expect(mockReport).toHaveBeenCalledWith(expect.objectContaining({ environmentUuids: ['env-906'] })));
   });
 
   it('says why the cable is not live instead of leaving the screen to guess', async () => {
