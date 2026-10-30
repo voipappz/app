@@ -239,12 +239,12 @@ describe('LiveDashboard', () => {
     expect(screen.getByTestId('add-widget')).toBeInTheDocument();
   });
 
-  it('offers live and history widgets from a menu, and no builder', async () => {
+  it('offers live and history widgets from a menu, and a history builder', async () => {
     const user = userEvent.setup();
     render(<LiveDashboard />);
     await screen.findByTestId('widget-grid');
 
-    expect(screen.queryByTestId('build-widget')).not.toBeInTheDocument();
+    expect(screen.getByTestId('build-widget')).toBeInTheDocument();
     await user.click(screen.getByTestId('add-widget'));
     expect(screen.getByTestId('widget-preset-liveAgents')).toBeInTheDocument();
     expect(screen.getByTestId('widget-preset-idTopEvents')).toBeInTheDocument();

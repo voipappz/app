@@ -29,9 +29,9 @@ import { useTheme } from '@mui/material/styles';
 // (WidgetBuilder); editing a widget reopens the builder that made it.
 // `mode`: 'monitoring' (the default) is the operator's board — call reports
 // from InfluxDB `cdr` and metrics from any InfluxDB measurement, with the
-// builders. 'live' is the Live screen: ready-made widgets only (its sections
-// from the cable, drawn by `renderLive`, and the live data's history from
-// identities), no builder; editing names a widget and sets its range.
+// builders. 'live' is the Live screen: its sections from the cable (drawn by
+// `renderLive`; editing names one and sets its range) and the live data's
+// history from identities, built and edited in the activity-report builder.
 export default function WidgetBoard({ storageScope = 'admin-metrics', environmentUuid = '', callsScope = {}, seed = null, heading = true, mode = 'monitoring', renderLive }) {
   const live = mode === 'live';
   // Only the operator's board opens with the InfluxDB starter set.
@@ -109,7 +109,7 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
     }));
   };
   const editWidget = (item) => {
-    if (live) setLiveEditing(item);
+    if (live && item.type !== 'identity') setLiveEditing(item);
     else if (item.type === 'query') setBuilding(item);
     else if (item.type === 'cdr' || item.type === 'identity') setEditingCdr(item);
     else setDraft(item);
@@ -126,6 +126,9 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
     </>}
     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
       <AddWidgetMenu onPick={pickTemplate} disabled={saving} categories={live ? ['liveNow', 'identities'] : null} custom={!live} />
+      {live && (
+        <Button variant="outlined" size="small" onClick={() => setEditingCdr({ type: 'identity' })} disabled={saving} data-testid="build-widget" sx={{ textTransform: 'none' }}>{t('board.build')}</Button>
+      )}
       {!live && <>
       <Button variant="outlined" size="small" onClick={(event) => setBuildMenu(event.currentTarget)} disabled={saving} data-testid="build-widget" sx={{ textTransform: 'none' }}>{t('board.build')}</Button>
       <Menu anchorEl={buildMenu} open={Boolean(buildMenu)} onClose={() => setBuildMenu(null)}>
@@ -173,15 +176,15 @@ export default function WidgetBoard({ storageScope = 'admin-metrics', environmen
     </LtrIsland>
     {/* Mounted only while open: the builder asks the API for its catalog, and
         a board that nobody is building on (Live) must not call the API. */}
-    {live ? (
-      <LiveWidgetEditor widget={liveEditing} saving={saving} onClose={() => setLiveEditing(null)}
-        onSave={(item) => mutate(() => updateWidget(item.uuid, item))} />
-    ) : <>
     {editingCdr && (
       <CdrEditor open source={editingCdr.type || 'cdr'} scope={callsScope} editing={editingCdr.uuid ? editingCdr : null} saving={saving}
         onClose={() => setEditingCdr(null)}
         onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
     )}
+    {live ? (
+      <LiveWidgetEditor widget={liveEditing} saving={saving} onClose={() => setLiveEditing(null)}
+        onSave={(item) => mutate(() => updateWidget(item.uuid, item))} />
+    ) : <>
     <WidgetBuilder open={Boolean(building)} widget={building?.uuid ? building : null} saving={saving} environmentUuid={environmentUuid}
       onClose={() => setBuilding(null)}
       onSave={(item) => mutate(() => (item.uuid ? updateWidget(item.uuid, item) : createWidget(item)))} />
