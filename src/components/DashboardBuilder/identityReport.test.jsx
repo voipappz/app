@@ -128,10 +128,14 @@ describe('CdrEditor on the identities source', () => {
 });
 
 describe('WidgetBoard modes', () => {
-  it('the live board has no builder, only live and history templates', async () => {
+  it('the live board builds history from identities, with live and history templates', async () => {
     const user = userEvent.setup();
     render(<WidgetBoard storageScope="live-test" mode="live" callsScope={{ environmentUuids: ['e-1'] }} renderLive={() => null} />);
-    expect(screen.queryByTestId('build-widget')).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('build-widget'));
+    expect(await screen.findByText('Build an activity report')).toBeInTheDocument();
+    await waitFor(() => expect(identitiesApi.runReport).toHaveBeenCalledWith(expect.objectContaining({ environmentUuids: ['e-1'] })));
+    expect(screen.queryByRole('menuitem', { name: /Call report/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(screen.getByTestId('add-widget'));
     expect(screen.getByText('Live now')).toBeInTheDocument();
     expect(screen.getByText('History')).toBeInTheDocument();
