@@ -28,6 +28,8 @@ import { ChatView } from '@voipappz/chat-ui';
   onDeleteSession={remove}
   onNewSession={reset}
   emptyState={{ title: 'What should we build?', suggestions: [{ label, prompt }] }}
+  headerActions={<TakeOverButton />}   // optional, end of the header
+  footer={<ApprovalPrompt />}          // optional, between messages and composer
 />
 ```
 
@@ -50,7 +52,7 @@ Published to GitHub Packages. In the consuming repo's `.npmrc`:
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
-Then `npm install @voipappz/chat-ui@0.1.0`. The package ships JSX source, so the
+Then `npm install @voipappz/chat-ui@0.2.0`. The package ships JSX source, so the
 host must compile it; Vite does this for dependencies by default.
 
 ## Releasing

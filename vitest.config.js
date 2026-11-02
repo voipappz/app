@@ -30,7 +30,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      '@voipappz/chat-ui': resolve(__dirname, 'packages/chat-ui/src/index.js')
+      '@voipappz/chat-ui': resolve(__dirname, 'packages/chat-ui/src/index.js'),
+      '@voipappz/conversations-ui': resolve(__dirname, 'packages/conversations-ui/src/index.js')
     }
   }
 });
