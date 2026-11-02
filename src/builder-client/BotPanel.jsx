@@ -36,6 +36,9 @@ function statusChip(status, restarting) {
 }
 
 export default function BotPanel({ bot, secret }) {
+  // A product (Connectix) has no audio to talk to yet: status, restart and log.
+  const isProduct = bot.kind === 'product';
+  const noun = isProduct ? 'product' : 'bot';
   const [status, refreshStatus] = useBotStatus(bot, secret);
   const [restarting, setRestarting] = useState(false);
   const [log, setLog] = useState('');
@@ -150,10 +153,20 @@ export default function BotPanel({ bot, secret }) {
         )}
         <Box sx={{ flex: 1 }} />
         <Button size="small" variant="outlined" startIcon={<RestartAltIcon />} onClick={restart} disabled={restarting}>
-          Restart bot
+          Restart {noun}
         </Button>
       </Box>
 
+      {isProduct ? (
+        <>
+          {status?.up && !status?.ready && (
+            <Typography sx={{ fontSize: '0.8rem', color: 'var(--color-danger)' }}>
+              The product is running but not ready; its log says why.
+            </Typography>
+          )}
+          {note && <Typography sx={{ fontSize: '0.8rem', color: 'var(--color-danger)' }}>{note}</Typography>}
+        </>
+      ) : (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, py: 3, border: '1px solid var(--theme-border)', borderRadius: 2 }}>
         <Button
           variant="contained"
@@ -180,9 +193,10 @@ export default function BotPanel({ bot, secret }) {
         )}
         {note && <Typography sx={{ fontSize: '0.8rem', color: 'var(--color-danger)' }}>{note}</Typography>}
       </Box>
+      )}
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--theme-text-primary)' }}>Bot log</Typography>
+        <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--theme-text-primary)' }}>{isProduct ? 'Product log' : 'Bot log'}</Typography>
         <Button size="small" startIcon={<RefreshIcon />} onClick={loadLog}>Refresh</Button>
       </Box>
       <Box
