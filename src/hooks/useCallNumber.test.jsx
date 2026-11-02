@@ -27,11 +27,12 @@ describe('useCallNumber', () => {
     expect(open).not.toHaveBeenCalled();
   });
 
-  it('does not open the account phone for a user session', () => {
+  // A user's phone is their own extension: the number goes in its dialpad.
+  it('opens the user\'s own phone with the number ready to dial', () => {
     userSession = true;
     const { result } = renderHook(() => useCallNumber());
     result.current('+972 3 555 1234');
-    expect(open).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledWith('phone', { tab: 'dialpad', number: '+97235551234' });
   });
 });
 
@@ -41,5 +42,14 @@ describe('useOpenPhoneAs', () => {
     const device = { uuid: 'dev-1', username: '201' };
     result.current(device);
     expect(open).toHaveBeenCalledWith('phone', { tab: 'dialpad', device });
+  });
+
+  // A user cannot sign the phone in as another device: their own extension
+  // is already registered, so the button opens that phone.
+  it('opens the user\'s own phone, not the device', () => {
+    userSession = true;
+    const { result } = renderHook(() => useOpenPhoneAs());
+    result.current({ uuid: 'dev-1', username: '201' });
+    expect(open).toHaveBeenCalledWith('phone', { tab: 'dialpad' });
   });
 });
