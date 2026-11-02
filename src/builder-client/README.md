@@ -27,19 +27,19 @@ imports anything from here.
 - The previews run on `admin.localhost` and `user.localhost`, so the two
   logins (kept in `localStorage` per origin) stay apart.
 
-## Tidewave: the dev server's MCP server
+## The VoipAppz dev MCP: the dev server's MCP server
 
-The dev server Builder runs also serves
-[Tidewave](https://github.com/tidewave-ai/tidewave_js) (the `tidewave` npm
-package, Apache-2.0, pinned in `devDependencies`), an MCP server for the
-running app. Its endpoint is on the dev server's own port:
+The dev server Builder runs also serves the VoipAppz dev MCP, an MCP server
+for the running app, on the dev server's own port:
 
-    http://localhost:<PORT>/tidewave/mcp      # make dev: PORT=3000
+    http://localhost:<PORT>/voipappz/mcp      # make dev: PORT=3000
 
-It speaks MCP over streamable HTTP (POST only, JSON responses). Connect with
-`?include_browser_tools=false` on the end: without it Tidewave also lists
-`browser_eval` and `create_design_canvas`, which need its toolbar in a browser
-tab, and the toolbar is off here (below). The four tools left:
+It is built on the `tidewave` npm package (Apache-2.0, pinned in
+`devDependencies`); `vite.config.js` rewrites `/voipappz/mcp` onto the
+package's own fixed path. It speaks MCP over streamable HTTP (POST only, JSON
+responses). Connect with `?include_browser_tools=false` on the end: without it
+the server also lists `browser_eval` and `create_design_canvas`, which need a
+browser toolbar that is off here (below). The four tools left:
 
 | Tool | What the agent gets |
 |---|---|
@@ -51,30 +51,32 @@ tab, and the toolbar is off here (below). The four tools left:
 Connecting:
 
 - **Builder**: adds it to the agent's MCP servers like the API's, as
-  `{"type": "http", "name": "tidewave", "url": "http://127.0.0.1:<PORT>/tidewave/mcp?include_browser_tools=false", "headers": []}`,
+  `{"type": "http", "name": "voipappz-app", "url": "http://127.0.0.1:<PORT>/voipappz/mcp?include_browser_tools=false", "headers": []}`,
   with `<PORT>` the port it started `npm run dev` on.
 - **Claude Code**, by hand next to `make dev`:
-  `claude mcp add --transport http tidewave "http://localhost:3000/tidewave/mcp?include_browser_tools=false"`.
+  `claude mcp add --transport http voipappz-app "http://localhost:3000/voipappz/mcp?include_browser_tools=false"`.
 
 How it sits next to Builder (`vite.config.js`):
 
 - **`vite serve` only.** The plugin is imported lazily when the command is
   `serve`, so `vite build` and `vite preview` never load it and the production
-  bundle has none of it. `VITE_TIDEWAVE=off npm run dev` leaves it out.
+  bundle has none of it. `VITE_DEV_MCP=off npm run dev` leaves it out.
 - **Localhost only.** The dev server listens on all interfaces (`host: true`,
-  for Docker), but Tidewave answers only requests from 127.0.0.1 / ::1 and
+  for Docker), but the dev MCP answers only requests from 127.0.0.1 / ::1 and
   refuses any request that carries an `Origin` header, so neither another
   machine nor a page in a browser (including the previews) can reach it. Under
   `make dev DOCKER=1` requests arrive from the Docker bridge, so it refuses
   them there.
-- **Same port, no new listener.** `/tidewave/*` is on the dev server, so there
-  is no port to clash with Builder's `9832` or the API's, and it collides with
-  none of the proxied prefixes.
-- **No toolbar.** `toolbar: false`: Tidewave would otherwise inject a script
-  from tidewave.ai into `index.html`, which Builder's page policy and the
-  previews do not need. `main.jsx` and the previews load exactly as before.
-- **Logs are kept** in `$TMPDIR/<hash of the app folder>.tidewave.ndjson`,
-  appended across runs and never trimmed; delete it to start empty.
+- **Same port, no new listener.** `/voipappz/mcp` is on the dev server, so
+  there is no port to clash with Builder's `9832` or the API's, and it collides
+  with none of the proxied prefixes.
+- **No toolbar.** `toolbar: false`: the package would otherwise inject a
+  script from its vendor's site into `index.html`, which Builder's page policy
+  and the previews do not need. `main.jsx` and the previews load exactly as
+  before.
+- **Logs are kept** in `$TMPDIR/<hash of the app folder>.tidewave.ndjson` (the
+  package's file name), appended across runs and never trimmed; delete it to
+  start empty.
 
 ## Working on it
 
