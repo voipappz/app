@@ -197,6 +197,16 @@ jobs:
         # of the top-right tools. Small, and written against switch.
         run: make test SPEC=topbar
 
+      - name: Run Playwright (Live identities)
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          VA_TEST_OTP: ${{ secrets.VA_TEST_OTP }}
+        # Live's history: what identities the API holds, and Live's builder.
+        run: make test SPEC=live-identities
+
       - name: Upload the report
         if: always() && steps.creds.outputs.ready == 'true'
         uses: actions/upload-artifact@v7
