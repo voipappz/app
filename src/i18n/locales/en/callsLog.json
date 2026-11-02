@@ -1,0 +1,49 @@
+{
+  "title": "Calls Log ({{total}} records)",
+  "sidebar": {
+    "show": "Show Filters",
+    "hide": "Hide Filters"
+  },
+  "filters": {
+    "title": "Filters",
+    "search": "Search",
+    "searchPlaceholder": "Search logs...",
+    "application": "Application",
+    "allApps": "All Apps",
+    "logLevel": "Log Level",
+    "timePeriod": "Time Period",
+    "activeTags": "Active Tags",
+    "apply": "Apply",
+    "clear": "Clear"
+  },
+  "level": {
+    "fatal": "Fatal",
+    "error": "Error",
+    "warn": "Warn",
+    "info": "Info",
+    "debug": "Debug",
+    "trace": "Trace"
+  },
+  "period": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "week": "This Week",
+    "month": "This Month",
+    "year": "This Year",
+    "all": "All Time"
+  },
+  "table": {
+    "level": "Level",
+    "time": "Time",
+    "app": "App",
+    "message": "Message",
+    "author": "Author",
+    "tags": "Tags",
+    "refresh": "Refresh",
+    "loading": "Loading logs...",
+    "empty": "No logs found",
+    "notAvailable": "N/A",
+    "rowsPerPage": "Rows per page:",
+    "displayedRows": "{{from}}–{{to}} of {{total}}"
+  }
+}

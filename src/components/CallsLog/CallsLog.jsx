@@ -4,6 +4,7 @@ import {
   Menu as MenuIcon,
   MenuOpen as MenuOpenIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useCallsLog } from './CallsLog.js';
 import CallsLogSidebar from './CallsLogSidebar.jsx';
 import CallsLogTable from './CallsLogTable.jsx';
@@ -15,6 +16,7 @@ import './CallsLog.css';
  * Uses syslog API for call-related logging
  */
 const CallsLog = () => {
+  const { t } = useTranslation('callsLog');
   const {
     logs,
     apps,
@@ -62,13 +64,13 @@ const CallsLog = () => {
       <Box
         sx={{
           position: 'absolute',
-          left: sidebarOpen ? 280 : 0,
+          insetInlineStart: sidebarOpen ? 280 : 0,
           top: 8,
           zIndex: 1100,
-          transition: 'left 0.3s ease',
+          transition: 'inset-inline-start 0.3s ease',
         }}
       >
-        <Tooltip title={sidebarOpen ? 'Hide Filters' : 'Show Filters'}>
+        <Tooltip title={sidebarOpen ? t('sidebar.hide') : t('sidebar.show')}>
           <IconButton
             onClick={() => setSidebarOpen(!sidebarOpen)}
             sx={{

@@ -1099,7 +1099,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
         {/* Hierarchy header: these applications belong to the selected customer */}
         <Box sx={{ px: 1.5, pt: 1, pb: 0.25, display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
           <Typography variant="caption" sx={{ fontWeight: 700, color: 'var(--theme-text-secondary)', textTransform: 'uppercase', fontSize: '0.62rem', letterSpacing: 0.5, flexShrink: 0 }}>
-            Applications
+            {t('envPicker.title')}
           </Typography>
           {selectedCustomer?.name && (
             <>
@@ -1110,7 +1110,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
             </>
           )}
           <Box sx={{ flex: 1 }} />
-          <Tooltip title="Application live charts">
+          <Tooltip title={t('envPicker.liveCharts')}>
             <IconButton size="small" onClick={() => setEnvChartsOpen(true)} sx={{ p: 0.25, flexShrink: 0 }}>
               <ShowChartIcon sx={{ fontSize: 15, color: '#8b5cf6' }} />
             </IconButton>
@@ -1122,7 +1122,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           <TextField
             value={environmentSearchValue}
             onChange={(e) => setEnvironmentSearchValue(e.target.value)}
-            placeholder="Search applications..."
+            placeholder={t('envPicker.searchPlaceholder')}
             variant="outlined"
             size="small"
             fullWidth
@@ -1139,7 +1139,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               ) : null
             }}
           />
-          <Tooltip title="Add application">
+          <Tooltip title={t('envPicker.add')}>
             <IconButton
               size="small"
               onClick={(e) => setAddEnvMenuAnchor(e.currentTarget)}
@@ -1178,7 +1178,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
               Selected ({uncommittedEnvironments.length})
             </Typography>
             <DndContext sensors={envDragSensors} collisionDetection={closestCenter} onDragEnd={handleEnvDragEnd}>
-              <Box sx={{ display: 'flex', gap: 0.5, minWidth: 0, overflowX: 'auto', py: 0.15, pr: 0.25, '&::-webkit-scrollbar': { height: 4 } }}>
+              <Box sx={{ display: 'flex', gap: 0.5, minWidth: 0, overflowX: 'auto', py: 0.15, pe: 0.25, '&::-webkit-scrollbar': { height: 4 } }}>
                 <SortableContext items={uncommittedEnvironments.map((e) => e.uuid)} strategy={horizontalListSortingStrategy}>
                   {uncommittedEnvironments.map((env) => (
                     <SortableEnvChip
@@ -1219,12 +1219,12 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
 
         {/* Inline sortable column headers (like the list screens) — sorting
             re-queries the SERVER with order_by/order_type. */}
-        <Box sx={{ pl: '44px', pr: '38px', py: 0.25, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid var(--border-light)' }}>
+        <Box sx={{ ps: '44px', pe: '38px', py: 0.25, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid var(--border-light)' }}>
           {[
-            { field: 'name',       label: 'Name',    sx: { flex: 1 } },
-            { field: 'enabled',    label: 'Active',  sx: { width: 52 } },
-            { field: 'created_at', label: 'Created', sx: { width: 64 } },
-            { field: 'updated_at', label: 'Updated', sx: { width: 64 } },
+            { field: 'name',       label: t('envPicker.column.name'), sx: { flex: 1 } },
+            { field: 'enabled',    label: t('envPicker.column.active'), sx: { width: 52 } },
+            { field: 'created_at', label: t('envPicker.column.created'), sx: { width: 64 } },
+            { field: 'updated_at', label: t('envPicker.column.updated'), sx: { width: 64 } },
           ].map(({ field, label, sx }) => (
             <Box key={field} sx={sx}>
               <TableSortLabel
@@ -1254,7 +1254,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
           ) : (
             <Box sx={{ p: 2.5, textAlign: 'center' }}>
               <Typography variant="body2" sx={{ color: 'var(--theme-text-secondary)', fontSize: '0.82rem' }}>
-                {allEnvsLoading ? 'Loading...' : environmentSearchValue ? 'No applications found' : 'No applications'}
+                {allEnvsLoading ? t('envPicker.loading') : environmentSearchValue ? t('envPicker.noMatches') : t('envPicker.empty')}
               </Typography>
             </Box>
           )}
@@ -1262,7 +1262,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
 
         {isProductionSelected && (
           <Box sx={{ px: 1.5, py: 0.5, backgroundColor: '#fff3e0', borderTop: '1px solid #ffcc80' }}>
-            <Chip label="PRODUCTION SELECTED" size="small" color="error" sx={{ fontWeight: 'bold', fontSize: '0.65rem', height: 20 }} />
+            <Chip label={t('envPicker.productionSelected')} size="small" color="error" sx={{ fontWeight: 'bold', fontSize: '0.65rem', height: 20 }} />
           </Box>
         )}
 
@@ -1276,7 +1276,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
                 disabled={searchFilteredEnvironments.length === 0 || uncommittedEnvironments.length === searchFilteredEnvironments.length}
                 sx={{ fontSize: '0.72rem', textTransform: 'none', color: 'var(--theme-text-secondary)' }}
               >
-                Select all
+                {t('envPicker.selectAll')}
               </Button>
               <Button
                 size="small"
@@ -1284,14 +1284,14 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
                 disabled={uncommittedEnvironments.length === 0}
                 sx={{ fontSize: '0.72rem', textTransform: 'none', color: 'var(--theme-text-secondary)' }}
               >
-                Clear
+                {t('envPicker.clear')}
               </Button>
             </>
           )}
           <Box sx={{ flex: 1 }} />
           {!hasUncommittedChanges ? (
             <Typography data-testid="env-picker-applied" sx={{ fontSize: '0.72rem', color: 'var(--theme-text-secondary)', py: 0.5 }}>
-              {selectedEnvironments.length > 0 ? 'Applied' : 'Nothing selected'}
+              {selectedEnvironments.length > 0 ? t('envPicker.applied') : t('envPicker.nothingSelected')}
             </Typography>
           ) : (
           <Button
@@ -1308,7 +1308,7 @@ const TopBar = ({ sidebarCollapsed, menuOpen = false, onToggleSidebar }) => {
             sx={{ fontSize: '0.78rem', textTransform: 'none', fontWeight: 600 }}
             startIcon={applyingEnvironments ? <CircularProgress size={12} color="inherit" /> : null}
           >
-            {applyingEnvironments ? 'Applying...' : `Apply (${uncommittedEnvironments.length})`}
+            {applyingEnvironments ? t('envPicker.applying') : t('envPicker.apply', { count: uncommittedEnvironments.length })}
           </Button>
           )}
         </Box>

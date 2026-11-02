@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Table,
@@ -17,14 +18,17 @@ import {
 import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import Bdi from '../../i18n/Bdi.jsx';
+import { formatDate } from '../../utils/dateUtils';
+import { formatNumber } from '../../utils/numberUtils';
 
 const LOG_LEVEL_STYLES = {
-  fatal: { color: '#F08080', label: 'Fatal' },
-  error: { color: '#FFA07A', label: 'Error' },
-  warn: { color: '#F0E68C', label: 'Warn' },
-  info: { color: '#00FA9A', label: 'Info' },
-  debug: { color: '#ADD8E6', label: 'Debug' },
-  trace: { color: '#D3D3D3', label: 'Trace' },
+  fatal: { color: '#F08080' },
+  error: { color: '#FFA07A' },
+  warn: { color: '#F0E68C' },
+  info: { color: '#00FA9A' },
+  debug: { color: '#ADD8E6' },
+  trace: { color: '#D3D3D3' },
 };
 
 // Generate a consistent color from a string (for session coloring)
@@ -49,18 +53,7 @@ const CallsLogTable = ({
   onTagClick,
   onLevelClick,
 }) => {
-  // Format timestamp
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
+  const { t } = useTranslation('callsLog');
 
   // Get row background color based on session
   const getRowStyle = (session) => {
@@ -94,9 +87,9 @@ const CallsLogTable = ({
         }}
       >
         <Typography variant="h6">
-          Calls Log ({totalCount.toLocaleString()} records)
+          {t('title', { total: formatNumber(totalCount) })}
         </Typography>
-        <Tooltip title="Refresh">
+        <Tooltip title={t('table.refresh')}>
           <IconButton onClick={onRefresh} disabled={loading}>
             {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
           </IconButton>
@@ -108,12 +101,12 @@ const CallsLogTable = ({
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontWeight: 600, width: 80 }}>Level</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: 150 }}>Time</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: 100 }}>App</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Message</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: 120 }}>Author</TableCell>
-              <TableCell sx={{ fontWeight: 600, width: 200 }}>Tags</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: 80 }}>{t('table.level')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: 150 }}>{t('table.time')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: 100 }}>{t('table.app')}</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>{t('table.message')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: 120 }}>{t('table.author')}</TableCell>
+              <TableCell sx={{ fontWeight: 600, width: 200 }}>{t('table.tags')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -122,7 +115,7 @@ const CallsLogTable = ({
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <CircularProgress size={32} />
                   <Typography variant="body2" sx={{ mt: 1 }}>
-                    Loading logs...
+                    {t('table.loading')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -130,7 +123,7 @@ const CallsLogTable = ({
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
-                    No logs found
+                    {t('table.empty')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -148,7 +141,7 @@ const CallsLogTable = ({
                   {/* Level */}
                   <TableCell>
                     <Chip
-                      label={LOG_LEVEL_STYLES[log.action]?.label || log.action}
+                      label={LOG_LEVEL_STYLES[log.action] ? t(`level.${log.action}`) : log.action}
                       size="small"
                       onClick={() => onLevelClick && onLevelClick(log.action)}
                       sx={{
@@ -164,7 +157,7 @@ const CallsLogTable = ({
                   {/* Time */}
                   <TableCell>
                     <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                      {formatDate(log.time)}
+                      <Bdi>{log.time ? formatDate(log.time) : t('table.notAvailable')}</Bdi>
                     </Typography>
                   </TableCell>
 
@@ -195,7 +188,7 @@ const CallsLogTable = ({
                   {/* Author */}
                   <TableCell>
                     <Typography variant="body2">
-                      {log.author?.name || 'N/A'}
+                      {log.author?.name || t('table.notAvailable')}
                     </Typography>
                   </TableCell>
 
@@ -235,6 +228,8 @@ const CallsLogTable = ({
         rowsPerPage={pagination.limit}
         onRowsPerPageChange={(e) => onRowsPerPageChange(parseInt(e.target.value, 10))}
         rowsPerPageOptions={[25, 50, 100, 200]}
+        labelRowsPerPage={t('table.rowsPerPage')}
+        labelDisplayedRows={({ from, to, count }) => t('table.displayedRows', { from: formatNumber(from), to: formatNumber(to), total: formatNumber(count) })}
         sx={{ borderTop: '1px solid', borderColor: 'divider' }}
       />
     </Box>

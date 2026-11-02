@@ -1,0 +1,49 @@
+{
+  "title": "יומן שיחות ({{total}} רשומות)",
+  "sidebar": {
+    "show": "הצגת מסננים",
+    "hide": "הסתרת מסננים"
+  },
+  "filters": {
+    "title": "מסננים",
+    "search": "חיפוש",
+    "searchPlaceholder": "חיפוש ביומנים...",
+    "application": "אפליקציה",
+    "allApps": "כל האפליקציות",
+    "logLevel": "רמת יומן",
+    "timePeriod": "תקופת זמן",
+    "activeTags": "תגיות פעילות",
+    "apply": "החלה",
+    "clear": "ניקוי"
+  },
+  "level": {
+    "fatal": "קריטי",
+    "error": "שגיאה",
+    "warn": "אזהרה",
+    "info": "מידע",
+    "debug": "דיבאג",
+    "trace": "מעקב"
+  },
+  "period": {
+    "today": "היום",
+    "yesterday": "אתמול",
+    "week": "השבוע",
+    "month": "החודש",
+    "year": "השנה",
+    "all": "כל הזמן"
+  },
+  "table": {
+    "level": "רמה",
+    "time": "זמן",
+    "app": "אפליקציה",
+    "message": "הודעה",
+    "author": "מחבר",
+    "tags": "תגיות",
+    "refresh": "רענון",
+    "loading": "טוען יומנים...",
+    "empty": "לא נמצאו יומנים",
+    "notAvailable": "לא זמין",
+    "rowsPerPage": "שורות בעמוד:",
+    "displayedRows": "{{from}}–{{to}} מתוך {{total}}"
+  }
+}

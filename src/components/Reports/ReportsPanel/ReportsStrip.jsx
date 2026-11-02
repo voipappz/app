@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box, Paper, Typography, CircularProgress, IconButton, Tooltip, Select, MenuItem,
   ToggleButtonGroup, ToggleButton,
@@ -13,9 +14,9 @@ import ReportsPanel, { ReportChart, isChartable, formatRange } from './ReportsPa
 import { reportsApi } from '../../../services/api/reportsApi';
 
 const PERIODS = [
-  { key: 'today', label: 'Today', seconds: 24 * 3600 },
-  { key: '7d', label: '7d', seconds: 7 * 24 * 3600 },
-  { key: '30d', label: '30d', seconds: 30 * 24 * 3600 },
+  { key: 'today', labelKey: 'strip.period.today', seconds: 24 * 3600 },
+  { key: '7d', labelKey: 'strip.period.days7', seconds: 7 * 24 * 3600 },
+  { key: '30d', labelKey: 'strip.period.days30', seconds: 30 * 24 * 3600 },
 ];
 
 /**
@@ -26,6 +27,7 @@ const PERIODS = [
  * the category has no reports. Same pattern on every screen that has reports.
  */
 const ReportsStrip = ({ category, title, height = 140, sx }) => {
+  const { t } = useTranslation('reports');
   const collapseKey = `reportsStrip:${category}:collapsed`;
   const [period, setPeriod] = useState('today');
   const [loading, setLoading] = useState(false);
@@ -115,21 +117,21 @@ const ReportsStrip = ({ category, title, height = 140, sx }) => {
           size="small"
           sx={{ '& .MuiToggleButton-root': { py: 0.1, px: 1, fontSize: '0.7rem', textTransform: 'none', height: 24 } }}
         >
-          {PERIODS.map((p) => <ToggleButton key={p.key} value={p.key}>{p.label}</ToggleButton>)}
+          {PERIODS.map((p) => <ToggleButton key={p.key} value={p.key}>{t(p.labelKey)}</ToggleButton>)}
         </ToggleButtonGroup>
-        <Tooltip title="Refresh">
+        <Tooltip title={t('panel.refresh')}>
           <span>
             <IconButton size="small" onClick={fetchReports} disabled={loading} sx={{ color: 'var(--mui-palette-text-secondary)', p: 0.25 }}>
               <RefreshIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title="Open full reports">
+        <Tooltip title={t('strip.openFull')}>
           <IconButton size="small" onClick={() => setDrawerOpen(true)} sx={{ color: 'var(--mui-palette-text-secondary)', p: 0.25 }}>
             <OpenInFullIcon sx={{ fontSize: 15 }} />
           </IconButton>
         </Tooltip>
-        <Tooltip title={collapsed ? 'Show chart' : 'Hide chart'}>
+        <Tooltip title={collapsed ? t('strip.showChart') : t('strip.hideChart')}>
           <IconButton size="small" onClick={toggleCollapsed} sx={{ color: 'var(--mui-palette-text-secondary)', p: 0.25 }}>
             {collapsed ? <ExpandMoreIcon sx={{ fontSize: 17 }} /> : <ExpandLessIcon sx={{ fontSize: 17 }} />}
           </IconButton>
@@ -145,7 +147,7 @@ const ReportsStrip = ({ category, title, height = 140, sx }) => {
           <ReportChart chart={active.chart} columns={active.columns} rows={active.rows} height={height} />
         ) : (
           <Typography variant="caption" sx={{ color: 'var(--mui-palette-text-secondary)', display: 'block', textAlign: 'center', py: 2 }}>
-            No report data in this period.
+            {t('strip.noData')}
           </Typography>
         )
       )}
@@ -154,7 +156,7 @@ const ReportsStrip = ({ category, title, height = 140, sx }) => {
       <LiveDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={title || 'Reports'}
+        title={title || t('title')}
         icon={<AssessmentIcon sx={{ color: '#0e9488' }} />}
         count={reports.length}
       >

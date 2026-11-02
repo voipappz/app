@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { plansApi } from '../../../services/api/plansApi';
 
 /**
@@ -6,6 +7,7 @@ import { plansApi } from '../../../services/api/plansApi';
  * Provides state management for plan creation/editing with items
  */
 export const usePlanBridge = (open, plan = null, mode = 'create') => {
+  const { t } = useTranslation('bridges');
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -106,29 +108,29 @@ export const usePlanBridge = (open, plan = null, mode = 'create') => {
     const errors = {};
 
     if (!formData.name?.trim()) {
-      errors.name = 'Name is required';
+      errors.name = t('plan.errors.nameRequired');
     }
 
     if (!formData.period) {
-      errors.period = 'Period is required';
+      errors.period = t('plan.errors.periodRequired');
     }
 
     if (!formData.interval || formData.interval < 1) {
-      errors.interval = 'Interval must be at least 1';
+      errors.interval = t('plan.errors.intervalMin');
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData]);
+  }, [formData, t]);
 
   // Add item (inline) - API requires name, val
   const handleAddItem = useCallback(() => {
     if (!newItem.name?.trim()) {
-      setError('Item name is required');
+      setError(t('plan.errors.itemNameRequired'));
       return;
     }
     if (!newItem.val?.trim()) {
-      setError('Value is required');
+      setError(t('plan.errors.valueRequired'));
       return;
     }
 
@@ -142,7 +144,7 @@ export const usePlanBridge = (open, plan = null, mode = 'create') => {
     setItems(prev => [...prev, item]);
     setNewItem({ name: '', val: '' });
     setError(null);
-  }, [newItem]);
+  }, [newItem, t]);
 
   // Update item (inline)
   const handleUpdateItem = useCallback((itemId, updates) => {
@@ -164,7 +166,7 @@ export const usePlanBridge = (open, plan = null, mode = 'create') => {
   // Import items from CSV - API requires name, val
   const handleImportItems = useCallback((csvData) => {
     if (!csvData || !Array.isArray(csvData) || csvData.length === 0) {
-      setError('No valid data found in CSV');
+      setError(t('plan.errors.noCsvData'));
       return;
     }
 
@@ -178,14 +180,14 @@ export const usePlanBridge = (open, plan = null, mode = 'create') => {
       }));
 
     if (importedItems.length === 0) {
-      setError('No valid items found in CSV. Expected columns: name, val');
+      setError(t('plan.errors.noValidItems'));
       return;
     }
 
     setItems(prev => [...prev, ...importedItems]);
     setError(null);
     return importedItems.length;
-  }, []);
+  }, [t]);
 
   // Clear all items
   const handleClearItems = useCallback(() => {
@@ -229,12 +231,12 @@ export const usePlanBridge = (open, plan = null, mode = 'create') => {
       return createdPlan;
     } catch (err) {
       console.error('Error creating plan:', err);
-      setError(err.message || 'Failed to create plan');
+      setError(err.message || t('plan.errors.createFailed'));
       return null;
     } finally {
       setLoading(false);
     }
-  }, [formData, items, validateForm]);
+  }, [formData, items, validateForm, t]);
 
   // Update plan with items
   const updatePlan = useCallback(async (planId) => {
@@ -271,12 +273,12 @@ export const usePlanBridge = (open, plan = null, mode = 'create') => {
       return updatedPlan;
     } catch (err) {
       console.error('Error updating plan:', err);
-      setError(err.message || 'Failed to update plan');
+      setError(err.message || t('plan.errors.updateFailed'));
       return null;
     } finally {
       setLoading(false);
     }
-  }, [formData, items, validateForm]);
+  }, [formData, items, validateForm, t]);
 
   return {
     // Form state

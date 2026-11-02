@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Paper,
@@ -23,21 +24,21 @@ import {
 } from '@mui/icons-material';
 
 const LOG_LEVELS = [
-  { key: 'fatal', label: 'Fatal', color: '#F08080' },
-  { key: 'error', label: 'Error', color: '#FFA07A' },
-  { key: 'warn', label: 'Warn', color: '#F0E68C' },
-  { key: 'info', label: 'Info', color: '#00FA9A' },
-  { key: 'debug', label: 'Debug', color: '#ADD8E6' },
-  { key: 'trace', label: 'Trace', color: '#D3D3D3' },
+  { key: 'fatal', color: '#F08080' },
+  { key: 'error', color: '#FFA07A' },
+  { key: 'warn', color: '#F0E68C' },
+  { key: 'info', color: '#00FA9A' },
+  { key: 'debug', color: '#ADD8E6' },
+  { key: 'trace', color: '#D3D3D3' },
 ];
 
 const TIME_PERIODS = [
-  { value: 'today', label: 'Today' },
-  { value: 'yesterday', label: 'Yesterday' },
-  { value: 'week', label: 'This Week' },
-  { value: 'month', label: 'This Month' },
-  { value: 'year', label: 'This Year' },
-  { value: 'all', label: 'All Time' },
+  { value: 'today' },
+  { value: 'yesterday' },
+  { value: 'week' },
+  { value: 'month' },
+  { value: 'year' },
+  { value: 'all' },
 ];
 
 const CallsLogSidebar = ({
@@ -55,6 +56,7 @@ const CallsLogSidebar = ({
   onApply,
   onClear,
 }) => {
+  const { t } = useTranslation('callsLog');
   return (
     <Paper
       className="calls-log-sidebar"
@@ -64,7 +66,7 @@ const CallsLogSidebar = ({
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 0,
-        borderRight: '1px solid',
+        borderInlineEnd: '1px solid',
         borderColor: 'divider',
       }}
     >
@@ -72,7 +74,7 @@ const CallsLogSidebar = ({
       <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <FilterIcon fontSize="small" />
-          Filters
+          {t('filters.title')}
         </Typography>
       </Box>
 
@@ -81,12 +83,12 @@ const CallsLogSidebar = ({
         {/* Search */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            Search
+            {t('filters.search')}
           </Typography>
           <TextField
             size="small"
             fullWidth
-            placeholder="Search logs..."
+            placeholder={t('filters.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             InputProps={{
@@ -111,7 +113,7 @@ const CallsLogSidebar = ({
         {/* Application Filter */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            Application
+            {t('filters.application')}
           </Typography>
           <FormControl component="fieldset" size="small">
             <RadioGroup
@@ -121,7 +123,7 @@ const CallsLogSidebar = ({
               <FormControlLabel
                 value=""
                 control={<Radio size="small" />}
-                label="All Apps"
+                label={t('filters.allApps')}
               />
               {apps.map((app) => (
                 <FormControlLabel
@@ -140,7 +142,7 @@ const CallsLogSidebar = ({
         {/* Log Level Filter */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            Log Level
+            {t('filters.logLevel')}
           </Typography>
           <FormGroup>
             {LOG_LEVELS.map((level) => (
@@ -159,7 +161,7 @@ const CallsLogSidebar = ({
                 }
                 label={
                   <Chip
-                    label={level.label}
+                    label={t(`level.${level.key}`)}
                     size="small"
                     sx={{
                       backgroundColor: level.color,
@@ -178,7 +180,7 @@ const CallsLogSidebar = ({
         {/* Time Period Filter */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            Time Period
+            {t('filters.timePeriod')}
           </Typography>
           <FormControl component="fieldset" size="small">
             <RadioGroup
@@ -190,7 +192,7 @@ const CallsLogSidebar = ({
                   key={period.value}
                   value={period.value}
                   control={<Radio size="small" />}
-                  label={period.label}
+                  label={t(`period.${period.value}`)}
                 />
               ))}
             </RadioGroup>
@@ -203,7 +205,7 @@ const CallsLogSidebar = ({
             <Divider sx={{ mb: 2 }} />
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Active Tags
+                {t('filters.activeTags')}
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {tagFilters.map((tag, index) => (
@@ -237,7 +239,7 @@ const CallsLogSidebar = ({
           fullWidth
           onClick={onApply}
         >
-          Apply
+          {t('filters.apply')}
         </Button>
         <Button
           variant="outlined"
@@ -245,7 +247,7 @@ const CallsLogSidebar = ({
           fullWidth
           onClick={onClear}
         >
-          Clear
+          {t('filters.clear')}
         </Button>
       </Box>
     </Paper>

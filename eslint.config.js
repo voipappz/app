@@ -58,6 +58,9 @@ const CONVERTED = [
   'src/components/Bridges/VMLBridge/**',
   'src/components/Bridges/ExtensionBridge/**',
   'src/components/Bridges/shared/**',
+  'src/components/Bridges/TariffBridge/**',
+  'src/components/Bridges/PlanBridge/**',
+  'src/components/CallsLog/**',
   'src/components/common/DynamicProfileEditor/**',
   'src/components/common/AudioPreview/**',
   // The phone drawer
