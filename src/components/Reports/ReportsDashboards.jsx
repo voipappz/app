@@ -17,6 +17,7 @@ const CATEGORY_ICONS = {
 };
 import ReportsPanel from './ReportsPanel/ReportsPanel.jsx';
 import { reportsApi } from '../../services/api/reportsApi';
+import { categoryName } from './reportWords';
 
 /**
  * ReportsDashboards — the Blazer-style VISUAL view of the Reports screen.
@@ -84,7 +85,7 @@ const ReportsDashboards = () => {
             value={d.category}
             icon={CATEGORY_ICONS[d.category] || <AssessmentIcon />}
             iconPosition="start"
-            label={t('dashboards.tab', { name: d.category, n: d.count })}
+            label={t('dashboards.tab', { name: categoryName(t, d.category), n: d.count })}
           />
         ))}
       </SectionTabs>

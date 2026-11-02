@@ -472,5 +472,96 @@
       "noOptions": "כדאי להוסיף לפחות אפשרות אחת, אחרת המתקשרים יכולים רק להמתין.",
       "tooManyOptions": "קשה לזכור יותר מ-5 אפשרויות. כדאי להעביר את השאר לתפריט נוסף."
     }
+  },
+  "tariff": {
+    "titleCreate": "יצירת תעריף",
+    "titleEdit": "עריכת תעריף",
+    "name": "שם",
+    "namePlaceholder": "הזינו שם תעריף",
+    "scheme": "סכמה",
+    "notes": "הערות",
+    "notesPlaceholder": "הערות (אופציונלי)",
+    "enabled": "פעיל",
+    "loading": "טוען...",
+    "noSchemes": "אין סכמות",
+    "ratesTitle": "תעריפים",
+    "importCsv": "ייבוא CSV",
+    "importHint": "ייבוא תעריפים מקובץ CSV (עמודות: name, price, val)",
+    "clearHint": "ניקוי כל התעריפים",
+    "clear": "ניקוי",
+    "imported": "יובאו בהצלחה {{count}} תעריפים מקובץ CSV",
+    "columns": {
+      "name": "שם",
+      "price": "מחיר",
+      "value": "ערך",
+      "actions": "פעולות"
+    },
+    "rateNamePlaceholder": "שם התעריף",
+    "valuePlaceholder": "ערך",
+    "noRates": "עדיין לא נוספו תעריפים. הוסיפו תעריפים בטופס שלמעלה.",
+    "cancel": "ביטול",
+    "creating": "יוצר...",
+    "updating": "מעדכן...",
+    "create": "יצירת תעריף",
+    "update": "עדכון תעריף",
+    "errors": {
+      "nameRequired": "יש להזין שם",
+      "schemeRequired": "יש לבחור סכמה",
+      "rateNameRequired": "יש להזין שם לתעריף",
+      "noCsvData": "לא נמצאו נתונים תקינים בקובץ ה-CSV",
+      "noValidRates": "לא נמצאו תעריפים תקינים בקובץ ה-CSV. העמודות הנדרשות: name, price, val",
+      "csvParse": "שגיאה בקריאת קובץ ה-CSV: {{message}}",
+      "createFailed": "יצירת התעריף נכשלה",
+      "updateFailed": "עדכון התעריף נכשל"
+    }
+  },
+  "plan": {
+    "titleCreate": "יצירת תוכנית",
+    "titleEdit": "עריכת תוכנית",
+    "name": "שם",
+    "namePlaceholder": "הזינו שם תוכנית",
+    "period": "תקופה",
+    "periods": {
+      "hour": "שעה",
+      "day": "יום",
+      "week": "שבוע",
+      "month": "חודש",
+      "year": "שנה"
+    },
+    "interval": "תדירות",
+    "intervalHint": "לדוגמה, 1 = כל תקופה",
+    "notes": "הערות",
+    "notesPlaceholder": "הערות (אופציונלי)",
+    "enabled": "פעיל",
+    "itemsTitle": "פריטי התוכנית",
+    "importCsv": "ייבוא CSV",
+    "importHint": "ייבוא פריטים מקובץ CSV (עמודות: name, val)",
+    "clearHint": "ניקוי כל הפריטים",
+    "clear": "ניקוי",
+    "imported": "יובאו בהצלחה {{count}} פריטים מקובץ CSV",
+    "columns": {
+      "name": "שם",
+      "value": "ערך",
+      "actions": "פעולות"
+    },
+    "addTariff": "+ הוספת תעריף",
+    "noItems": "עדיין לא נוספו פריטים. הוסיפו פריטים בטופס שלמעלה.",
+    "cancel": "ביטול",
+    "creating": "יוצר...",
+    "updating": "מעדכן...",
+    "create": "יצירת תוכנית",
+    "update": "עדכון תוכנית",
+    "errors": {
+      "nameRequired": "יש להזין שם",
+      "periodRequired": "יש לבחור תקופה",
+      "intervalMin": "התדירות חייבת להיות לפחות 1",
+      "itemNameRequired": "יש להזין שם לפריט",
+      "valueRequired": "יש להזין ערך",
+      "noCsvData": "לא נמצאו נתונים תקינים בקובץ ה-CSV",
+      "noValidItems": "לא נמצאו פריטים תקינים בקובץ ה-CSV. העמודות הנדרשות: name, val",
+      "csvParse": "שגיאה בקריאת קובץ ה-CSV: {{message}}",
+      "createFailed": "יצירת התוכנית נכשלה",
+      "updateFailed": "עדכון התוכנית נכשל"
+    }
   }
 }

@@ -148,6 +148,10 @@ export default defineConfig(async ({ command, mode, isPreview }) => {
       chunkSizeWarningLimit: 10000
     },
     optimizeDeps: {
+      // Bundle these at startup. If Vite discovers react-i18next mid-session it
+      // re-bundles deps, the open tab mixes two React copies, and hooks crash
+      // with "dispatcher is null".
+      include: ['react', 'react-dom', 'react-i18next', 'i18next'],
       esbuildOptions: {
         target: 'es2022'
       }

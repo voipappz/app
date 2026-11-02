@@ -472,5 +472,96 @@
       "noOptions": "Add at least one option, or callers can only wait.",
       "tooManyOptions": "More than 5 options are hard to remember. Consider another menu for the rest."
     }
+  },
+  "tariff": {
+    "titleCreate": "Create Tariff",
+    "titleEdit": "Edit Tariff",
+    "name": "Name",
+    "namePlaceholder": "Enter tariff name",
+    "scheme": "Scheme",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes",
+    "enabled": "Enabled",
+    "loading": "Loading...",
+    "noSchemes": "No schemes",
+    "ratesTitle": "Tariff Rates",
+    "importCsv": "Import CSV",
+    "importHint": "Import rates from CSV (columns: name, price, val)",
+    "clearHint": "Clear all rates",
+    "clear": "Clear",
+    "imported": "Successfully imported {{count}} rates from CSV",
+    "columns": {
+      "name": "Name",
+      "price": "Price",
+      "value": "Value",
+      "actions": "Actions"
+    },
+    "rateNamePlaceholder": "Rate name",
+    "valuePlaceholder": "Value",
+    "noRates": "No rates added yet. Add rates using the form above.",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "updating": "Updating...",
+    "create": "Create Tariff",
+    "update": "Update Tariff",
+    "errors": {
+      "nameRequired": "Name is required",
+      "schemeRequired": "Scheme is required",
+      "rateNameRequired": "Rate name is required",
+      "noCsvData": "No valid data found in CSV",
+      "noValidRates": "No valid rates found in CSV. Expected columns: name, price, val",
+      "csvParse": "CSV parse error: {{message}}",
+      "createFailed": "Failed to create tariff",
+      "updateFailed": "Failed to update tariff"
+    }
+  },
+  "plan": {
+    "titleCreate": "Create Plan",
+    "titleEdit": "Edit Plan",
+    "name": "Name",
+    "namePlaceholder": "Enter plan name",
+    "period": "Period",
+    "periods": {
+      "hour": "Hour",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "year": "Year"
+    },
+    "interval": "Interval",
+    "intervalHint": "e.g., 1 = every period",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes",
+    "enabled": "Enabled",
+    "itemsTitle": "Plan Items",
+    "importCsv": "Import CSV",
+    "importHint": "Import items from CSV (columns: name, val)",
+    "clearHint": "Clear all items",
+    "clear": "Clear",
+    "imported": "Successfully imported {{count}} items from CSV",
+    "columns": {
+      "name": "Name",
+      "value": "Value",
+      "actions": "Actions"
+    },
+    "addTariff": "+ Add tariff",
+    "noItems": "No items added yet. Add items using the form above.",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "updating": "Updating...",
+    "create": "Create Plan",
+    "update": "Update Plan",
+    "errors": {
+      "nameRequired": "Name is required",
+      "periodRequired": "Period is required",
+      "intervalMin": "Interval must be at least 1",
+      "itemNameRequired": "Item name is required",
+      "valueRequired": "Value is required",
+      "noCsvData": "No valid data found in CSV",
+      "noValidItems": "No valid items found in CSV. Expected columns: name, val",
+      "csvParse": "CSV parse error: {{message}}",
+      "createFailed": "Failed to create plan",
+      "updateFailed": "Failed to update plan"
+    }
   }
 }

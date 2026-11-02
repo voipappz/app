@@ -8,8 +8,8 @@
 }
 
 .calls-log-sidebar .MuiFormControlLabel-root {
-  margin-left: 0;
-  margin-right: 0;
+  margin-inline-start: 0;
+  margin-inline-end: 0;
 }
 
 .calls-log-sidebar .MuiFormControlLabel-label {

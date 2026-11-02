@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useUserAuth } from '../../context/UserAuthContext';
 import { endOfDay, startOfDay } from 'date-fns';
 import { reportsApi } from '../../services/api/reportsApi';
 import { detectCustomVariables as detectVariables, BUILTIN_VARS } from '../../utils/reportVariables';
@@ -10,7 +11,12 @@ import { detectCustomVariables as detectVariables, BUILTIN_VARS } from '../../ut
  * Every report executes read-only SQL against the application's PostgreSQL DB.
  */
 const useReports = () => {
-  const { access } = useAuth();
+  // Whichever session is signed in (only one ever is): an account's JWT, or a
+  // user's. With the account token alone, a user's requests went out with no
+  // Authorization and every one came back 401.
+  const { access: accountToken } = useAuth();
+  const { token: userToken } = useUserAuth();
+  const access = accountToken || userToken;
   const [reports, setReports] = useState([]);
   const [selectedReportData, setSelectedReportData] = useState(null);
   const [allRows, setAllRows] = useState([]);
