@@ -1,0 +1,36 @@
+{
+  "name": "@voipappz/conversations-ui",
+  "version": "0.1.0",
+  "description": "Presentational screens for bot conversations (list, thread, approvals, questions, TODOs, take-over). Props mirror Connectix's chat JSON; no data fetching, sessions or auth.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./story": "./src/ConversationsStory.jsx",
+    "./fixtures": "./src/fixtures.js"
+  },
+  "files": [
+    "LICENSE",
+    "src",
+    "!src/**/*.test.*",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^7.3.0",
+    "@mui/material": "^7.3.0",
+    "@voipappz/chat-ui": "^0.2.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voipappz/app.git",
+    "directory": "packages/conversations-ui"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "license": "MIT"
+}
