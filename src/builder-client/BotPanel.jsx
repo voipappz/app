@@ -36,9 +36,15 @@ function statusChip(status, restarting) {
 }
 
 export default function BotPanel({ bot, secret }) {
+  // A product (Connectix) has no audio to talk to yet: status, restart and log.
+  const isProduct = bot.kind === 'product';
+  const noun = isProduct ? 'product' : 'bot';
   const [status, refreshStatus] = useBotStatus(bot, secret);
   const [restarting, setRestarting] = useState(false);
   const [log, setLog] = useState('');
+  // The folder's own targets (tests, a deploy), from its builder.toml.
+  const [acting, setActing] = useState(null);
+  const [actionResult, setActionResult] = useState(null);
   const [talking, setTalking] = useState(false);
   const [note, setNote] = useState('');
   // The open call, the one being set up, which setup is current (a restart
@@ -90,6 +96,25 @@ export default function BotPanel({ bot, secret }) {
 
   // One call at a time: presses while it connects share the same setup, and
   // a setup that finishes after a restart or unmount is closed, not kept.
+  const runAction = async (action) => {
+    if (action.confirm && !window.confirm(`${action.label}: run "make ${action.make}" in ${bot.name}?`)) return;
+    setActing(action.id);
+    setActionResult(null);
+    try {
+      const res = await fetch(`${bot.actionsPath}/${encodeURIComponent(action.id)}`, {
+        method: 'POST',
+        headers: { 'x-builder-secret': secret, 'content-type': 'application/json' },
+        body: JSON.stringify({ confirmed: action.confirm })
+      });
+      const body = await res.json().catch(() => ({}));
+      setActionResult({ label: action.label, ok: res.ok, text: res.ok ? body.output : body.error || `HTTP ${res.status}` });
+    } catch (error) {
+      setActionResult({ label: action.label, ok: false, text: String(error) });
+    } finally {
+      setActing(null);
+    }
+  };
+
   const ensureCall = () => {
     if (call.current?.open) return Promise.resolve(call.current);
     if (pending.current) return pending.current;
@@ -150,10 +175,40 @@ export default function BotPanel({ bot, secret }) {
         )}
         <Box sx={{ flex: 1 }} />
         <Button size="small" variant="outlined" startIcon={<RestartAltIcon />} onClick={restart} disabled={restarting}>
-          Restart bot
+          Restart {noun}
         </Button>
       </Box>
 
+      {bot.actions?.length > 0 && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {bot.actions.map((action) => (
+              <Button key={action.id} size="small" variant={action.confirm ? 'contained' : 'outlined'}
+                color={action.confirm ? 'warning' : 'primary'} disabled={acting !== null} onClick={() => runAction(action)}>
+                {acting === action.id ? `${action.label}…` : action.label}
+              </Button>
+            ))}
+          </Box>
+          {actionResult && (
+            <Box component="pre" data-testid="action-result" sx={{ m: 0, p: 1, maxHeight: 200, overflow: 'auto', fontSize: '0.75rem',
+              whiteSpace: 'pre-wrap', borderRadius: 1, border: '1px solid var(--theme-border)',
+              color: actionResult.ok ? 'var(--theme-text-secondary)' : 'var(--color-danger)' }}>
+              {`${actionResult.label}: ${actionResult.ok ? 'done' : 'failed'}\n${actionResult.text || ''}`}
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {isProduct ? (
+        <>
+          {status?.up && !status?.ready && (
+            <Typography sx={{ fontSize: '0.8rem', color: 'var(--color-danger)' }}>
+              The product is running but not ready; its log says why.
+            </Typography>
+          )}
+          {note && <Typography sx={{ fontSize: '0.8rem', color: 'var(--color-danger)' }}>{note}</Typography>}
+        </>
+      ) : (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, py: 3, border: '1px solid var(--theme-border)', borderRadius: 2 }}>
         <Button
           variant="contained"
@@ -180,9 +235,10 @@ export default function BotPanel({ bot, secret }) {
         )}
         {note && <Typography sx={{ fontSize: '0.8rem', color: 'var(--color-danger)' }}>{note}</Typography>}
       </Box>
+      )}
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--theme-text-primary)' }}>Bot log</Typography>
+        <Typography sx={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--theme-text-primary)' }}>{isProduct ? 'Product log' : 'Bot log'}</Typography>
         <Button size="small" startIcon={<RefreshIcon />} onClick={loadLog}>Refresh</Button>
       </Box>
       <Box

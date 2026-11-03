@@ -46,17 +46,22 @@ function PermissionBar({ permission, onAnswer }) {
   );
 }
 
+// With a product (Connectix), its own page is the Product tab, first; the
+// Bot tab then holds its status, restart and log.
 function Previews({ previews, bot, secret }) {
-  const [role, setRole] = useState(bot ? 'bot' : 'admin');
+  const productUrl = bot?.kind === 'product' ? bot.pageUrl : null;
+  const frames = productUrl ? { product: productUrl, ...previews } : previews;
+  const [role, setRole] = useState(productUrl ? 'product' : bot ? 'bot' : 'admin');
   const [reloadKey, setReloadKey] = useState(0);
-  const url = previews[role];
+  const url = frames[role];
   const isBot = role === 'bot';
 
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, borderLeft: '1px solid var(--theme-border)' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', px: 1, borderBottom: '1px solid var(--theme-border)', backgroundColor: 'var(--theme-bg-secondary)' }}>
         <Tabs value={role} onChange={(_, value) => setRole(value)} sx={{ minHeight: 40, '& .MuiTab-root': { minHeight: 40 } }}>
-          {bot && <Tab value="bot" label="Bot" />}
+          {productUrl && <Tab value="product" label={bot.name} />}
+          {bot && <Tab value="bot" label={productUrl ? 'Status' : 'Bot'} />}
           <Tab value="admin" label="Admin" />
           <Tab value="user" label="User" />
         </Tabs>
@@ -80,13 +85,13 @@ function Previews({ previews, bot, secret }) {
           <BotPanel bot={bot} secret={secret} />
         </Box>
       )}
-      {/* Both stay mounted so each keeps its own login while switching tabs. */}
-      {['admin', 'user'].map((name) => (
+      {/* All stay mounted so each keeps its own login while switching tabs. */}
+      {Object.keys(frames).map((name) => (
         <Box
           key={`${name}-${reloadKey}`}
           component="iframe"
           title={`${name} preview`}
-          src={previews[name]}
+          src={frames[name]}
           sx={{ flex: 1, border: 0, display: role === name ? 'block' : 'none', backgroundColor: '#fff' }}
         />
       ))}
