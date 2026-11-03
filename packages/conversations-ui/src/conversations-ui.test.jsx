@@ -111,12 +111,22 @@ describe('ApprovalPanel', () => {
     expect(onDecide).toHaveBeenCalledWith(['approve', 'reject']);
   });
 
-  it('approves or rejects all at once', () => {
+  it('approves or rejects all at once, and sends one batch per prompt', () => {
     const onDecide = vi.fn();
     render(<ApprovalPanel tools={fx.approval.tools} onDecide={onDecide} />);
     fireEvent.click(screen.getByText('Approve all'));
     fireEvent.click(screen.getByText('Reject all'));
-    expect(onDecide.mock.calls).toEqual([[['approve', 'approve']], [['reject', 'reject']]]);
+    expect(onDecide.mock.calls).toEqual([[['approve', 'approve']]]);
+    expect(screen.getByText('Reject all').closest('button')).toBeDisabled();
+  });
+
+  it('a new prompt with the same tools but other arguments starts undecided', () => {
+    const onDecide = vi.fn();
+    const tool = (id) => [{ name: 'refund', arguments: { order: id } }];
+    const { rerender } = render(<ApprovalPanel tools={tool(1042)} onDecide={onDecide} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    rerender(<ApprovalPanel tools={tool(1043)} onDecide={onDecide} />);
+    expect(screen.getByRole('button', { name: 'Send decisions' })).toBeDisabled();
   });
 });
 

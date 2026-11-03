@@ -12,14 +12,19 @@ const argsText = (args) => (args && Object.keys(args).length > 0 ? JSON.stringif
  */
 const ApprovalPanel = ({ tools = [], onDecide, labels = {} }) => {
   const [decisions, setDecisions] = useState(() => tools.map(() => null));
-  const key = tools.map((t) => t.name).join('|');
+  const [sent, setSent] = useState(false);
+  // The arguments are part of the prompt: refund(1043) after refund(1042) is
+  // a new prompt, and must not inherit the earlier decisions.
+  const key = JSON.stringify(tools.map((t) => [t.name, t.arguments ?? null]));
 
-  // A new prompt starts undecided.
-  useEffect(() => { setDecisions(tools.map(() => null)); }, [key]);
+  // A new prompt starts undecided and unsent.
+  useEffect(() => { setDecisions(tools.map(() => null)); setSent(false); }, [key]);
 
   const decide = (idx, value) => setDecisions((d) => d.map((v, i) => (i === idx ? value : v)));
   const complete = decisions.length === tools.length && decisions.every(Boolean);
-  const all = (value) => onDecide?.(tools.map(() => value));
+  // One batch per prompt: the buttons stay off until the next prompt arrives.
+  const send = (batch) => { if (sent) return; setSent(true); onDecide?.(batch); };
+  const all = (value) => send(tools.map(() => value));
 
   return (
     <Box data-testid="approval-panel" sx={panelSx}>
@@ -51,11 +56,11 @@ const ApprovalPanel = ({ tools = [], onDecide, labels = {} }) => {
       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 1 }}>
         {tools.length > 1 && (
           <>
-            <Button size="small" onClick={() => all('reject')}>{labels.rejectAll || 'Reject all'}</Button>
-            <Button size="small" onClick={() => all('approve')}>{labels.approveAll || 'Approve all'}</Button>
+            <Button size="small" disabled={sent} onClick={() => all('reject')}>{labels.rejectAll || 'Reject all'}</Button>
+            <Button size="small" disabled={sent} onClick={() => all('approve')}>{labels.approveAll || 'Approve all'}</Button>
           </>
         )}
-        <Button size="small" variant="contained" disabled={!complete} onClick={() => onDecide?.(decisions)}>
+        <Button size="small" variant="contained" disabled={!complete || sent} onClick={() => send(decisions)}>
           {labels.submitDecisions || 'Send decisions'}
         </Button>
       </Box>

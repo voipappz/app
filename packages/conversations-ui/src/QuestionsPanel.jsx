@@ -21,9 +21,12 @@ const answered = ({ selected, other }) => selected.length > 0 || other.trim().le
  */
 const QuestionsPanel = ({ questions = [], onAnswer, labels = {} }) => {
   const [state, setState] = useState(() => empty(questions));
-  const key = questions.map((q) => q.question).join('|');
+  const [sent, setSent] = useState(false);
+  // The options are part of the prompt, not only the wording.
+  const key = JSON.stringify(questions.map((q) => [q.question, q.options ?? null, q.multiple ?? false]));
 
-  useEffect(() => { setState(empty(questions)); }, [key]);
+  useEffect(() => { setState(empty(questions)); setSent(false); }, [key]);
+  const send = (responses) => { if (sent) return; setSent(true); onAnswer?.(responses); };
 
   const update = (idx, change) => setState((s) => s.map((v, i) => (i === idx ? { ...v, ...change } : v)));
 
@@ -63,7 +66,7 @@ const QuestionsPanel = ({ questions = [], onAnswer, labels = {} }) => {
                     <Box>
                       <Typography component="span" sx={{ fontSize: '0.85rem' }}>{opt.label}</Typography>
                       {opt.description && (
-                        <Typography component="span" sx={{ fontSize: '0.7rem', color: 'var(--theme-text-tertiary)', ms: 1 }}>
+                        <Typography component="span" sx={{ fontSize: '0.7rem', color: 'var(--theme-text-tertiary)', ml: 1 }}>
                           {opt.description}
                         </Typography>
                       )}
@@ -87,10 +90,10 @@ const QuestionsPanel = ({ questions = [], onAnswer, labels = {} }) => {
         );
       })}
       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-        <Button size="small" onClick={() => onAnswer?.(questions.map(() => ({ type: 'cancel' })))}>
+        <Button size="small" disabled={sent} onClick={() => send(questions.map(() => ({ type: 'cancel' })))}>
           {labels.skip || 'Skip'}
         </Button>
-        <Button size="small" variant="contained" disabled={!complete} onClick={() => onAnswer?.(state.map(toResponse))}>
+        <Button size="small" variant="contained" disabled={!complete || sent} onClick={() => send(state.map(toResponse))}>
           {labels.submitAnswers || 'Answer'}
         </Button>
       </Box>
