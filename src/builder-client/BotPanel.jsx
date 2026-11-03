@@ -96,6 +96,32 @@ export default function BotPanel({ bot, secret }) {
 
   // One call at a time: presses while it connects share the same setup, and
   // a setup that finishes after a restart or unmount is closed, not kept.
+  const labelOf = useCallback((id) => bot.actions?.find((a) => a.id === id)?.label || id, [bot.actions]);
+
+  // Builder runs an action in a task of its own (a reload or a closed tab
+  // never cuts a deploy in half) and answers 202; the page follows it here.
+  const followAction = useCallback(async () => {
+    for (;;) {
+      let run = null;
+      try {
+        const res = await fetch(bot.actionsPath, { headers: { 'x-builder-secret': secret } });
+        run = res.ok ? await res.json() : null;
+      } catch { run = null; }
+      if (!run) { setActing(null); return; }
+      if (run.running) {
+        setActing(run.id);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        continue;
+      }
+      setActing(null);
+      setActionResult({ label: labelOf(run.id), ok: run.ok, text: run.output });
+      return;
+    }
+  }, [bot.actionsPath, secret, labelOf]);
+
+  // After a reload, pick up an action that is still running.
+  useEffect(() => { if (bot.actions?.length) followAction(); }, [bot.actions, followAction]);
+
   const runAction = async (action) => {
     if (action.confirm && !window.confirm(`${action.label}: run "make ${action.make}" in ${bot.name}?`)) return;
     setActing(action.id);
@@ -107,10 +133,15 @@ export default function BotPanel({ bot, secret }) {
         body: JSON.stringify({ confirmed: action.confirm })
       });
       const body = await res.json().catch(() => ({}));
+      if (res.status === 202) {
+        await followAction();
+        return;
+      }
+      // An older Builder answers with the result at once.
       setActionResult({ label: action.label, ok: res.ok, text: res.ok ? body.output : body.error || `HTTP ${res.status}` });
+      setActing(null);
     } catch (error) {
       setActionResult({ label: action.label, ok: false, text: String(error) });
-    } finally {
       setActing(null);
     }
   };
