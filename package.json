@@ -9,6 +9,7 @@
     "tenant": "node bin/onboard.mjs && node bin/tenant.mjs",
     "dev": "vite --port 3000",
     "build": "vite build",
+    "build:builder": "vite build --config vite.builder.config.js",
     "lint": "eslint .",
     "i18n:check": "vitest run src/i18n/translations.test.js",
     "preview": "vite preview",

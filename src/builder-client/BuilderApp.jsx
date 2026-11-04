@@ -6,6 +6,7 @@ import AddCommentIcon from '@mui/icons-material/AddComment';
 import { ChatView } from '@voipappz/chat-ui';
 import { useBuilderChat } from './useBuilderChat';
 import BotPanel from './BotPanel';
+import logo from '../../public/images/VA_logo_blue.png';
 
 const SUGGESTIONS = [
   { label: 'Find the call history screen', prompt: 'Find the component that renders the call history list and tell me its file and line.' },
@@ -18,6 +19,13 @@ const BOT_SUGGESTIONS = [
   { label: 'Explain this bot', prompt: 'Explain how this voice bot works: its pipeline, where the prompt and greeting live, and how to run its tests.' },
   { label: 'Change the greeting', prompt: 'Change the greeting to a short, friendly English greeting, run make test, and tell me when to restart the bot.' },
   { label: 'Run the tests', prompt: 'Run make test for this bot and summarize the result.' }
+];
+
+// With a product (a Connectix appz), the agent changes its Elixir code.
+const PRODUCT_SUGGESTIONS = [
+  { label: 'Explain this appz', prompt: 'Explain how this appz works: where conversations are handled, which tools the agent has, and how to run its tests.' },
+  { label: 'Add a tool', prompt: 'Add a tool the bot can call that looks up a contact by phone number through the VoipAppz API, with a test, then run make test.' },
+  { label: 'Run the tests', prompt: 'Run make test and summarize the result.' }
 ];
 
 const STATUS_COLOR = { ok: 'var(--color-success)', error: 'var(--color-danger)', neutral: 'var(--theme-text-tertiary)' };
@@ -47,10 +55,11 @@ function PermissionBar({ permission, onAnswer }) {
 }
 
 // With a product (Connectix), its own page is the Product tab, first; the
-// Bot tab then holds its status, restart and log.
+// Bot tab then holds its status, restart and log. The Admin and User
+// previews show only when Builder runs the app locally (`previews` set).
 function Previews({ previews, bot, secret }) {
   const productUrl = bot?.kind === 'product' ? bot.pageUrl : null;
-  const frames = productUrl ? { product: productUrl, ...previews } : previews;
+  const frames = { ...(productUrl ? { product: productUrl } : {}), ...(previews || {}) };
   const [role, setRole] = useState(productUrl ? 'product' : bot ? 'bot' : 'admin');
   const [reloadKey, setReloadKey] = useState(0);
   const url = frames[role];
@@ -62,8 +71,8 @@ function Previews({ previews, bot, secret }) {
         <Tabs value={role} onChange={(_, value) => setRole(value)} sx={{ minHeight: 40, '& .MuiTab-root': { minHeight: 40 } }}>
           {productUrl && <Tab value="product" label={bot.name} />}
           {bot && <Tab value="bot" label={productUrl ? 'Status' : 'Bot'} />}
-          <Tab value="admin" label="Admin" />
-          <Tab value="user" label="User" />
+          {frames.admin && <Tab value="admin" label="Admin" />}
+          {frames.user && <Tab value="user" label="User" />}
         </Tabs>
         <Typography sx={{ flex: 1, ml: 2, fontSize: '0.75rem', color: 'var(--theme-text-tertiary)', fontFamily: 'monospace' }} noWrap>
           {isBot ? bot.name : url}
@@ -112,11 +121,16 @@ export default function BuilderApp({ info }) {
     <Box sx={{ display: 'flex', height: '100vh', backgroundColor: 'var(--theme-bg-primary)' }}>
       <Box sx={{ width: '42%', minWidth: 380, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1, borderBottom: '1px solid var(--theme-border)' }}>
-          <Box component="img" src={`${info.clientUrl}/images/VA_logo_blue.png`} alt="VoipAppz" sx={{ height: 22 }} />
+          <Box component="img" src={logo} alt="VoipAppz" sx={{ height: 22 }} />
           <Typography sx={{ fontWeight: 600, color: 'var(--theme-text-primary)' }}>Builder</Typography>
           <Typography sx={{ flex: 1, fontSize: '0.75rem', color: 'var(--theme-text-tertiary)', fontFamily: 'monospace' }} noWrap title={info.workspace}>
             {info.workspaceName}
           </Typography>
+          {info.portalUrl && (
+            <Tooltip title="Open the VoipAppz portal in your browser">
+              <IconButton size="small" component="a" href={info.portalUrl} target="_blank" rel="noreferrer"><OpenInNewIcon fontSize="small" /></IconButton>
+            </Tooltip>
+          )}
           {chat.modes.available.length > 0 && (
             <Tooltip title={chat.modes.available.find((m) => m.id === chat.modes.current)?.description || 'How the agent asks before acting'}>
               <Select
@@ -156,10 +170,12 @@ export default function BuilderApp({ info }) {
             onStop={chat.stop}
             emptyState={{
               title: 'What should we build?',
-              description: info.bot
-                ? `The agent works on the ${info.bot.name} bot in ${info.workspaceName}. Talk to it in the Bot tab.`
-                : `The agent works in ${info.workspaceName}. Changes show in the previews.`,
-              suggestions: info.bot ? BOT_SUGGESTIONS : SUGGESTIONS,
+              description: info.bot?.kind === 'product'
+                ? `The agent works on ${info.bot.name} in ${info.workspaceName}. See it in the ${info.bot.name} tab; tests and deploy are in Status.`
+                : info.bot
+                  ? `The agent works on the ${info.bot.name} bot in ${info.workspaceName}. Talk to it in the Bot tab.`
+                  : `The agent works in ${info.workspaceName}. Changes show in the previews.`,
+              suggestions: info.bot?.kind === 'product' ? PRODUCT_SUGGESTIONS : info.bot ? BOT_SUGGESTIONS : SUGGESTIONS,
               onSuggestion: send
             }}
           />
