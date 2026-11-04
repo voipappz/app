@@ -2,15 +2,40 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import PortalSidebar from './PortalSidebar.jsx';
+import { Z } from '../../utils/zIndex';
 
 let sidebar = { view: null, params: null, close: vi.fn() };
 vi.mock('../../context/PortalSidebarContext', () => ({ usePortalSidebar: () => sidebar }));
-vi.mock('../Phone/PhoneScreen.jsx', () => ({
-  default: ({ initialNumber, device }) => <div data-testid="phone-screen" data-number={initialNumber || ''} data-device={device?.uuid || ''} />,
-}));
+// The phone, and (when asked) a menu it opens, like its presence picker.
+let phoneOpensMenu = false;
+vi.mock('../Phone/PhoneScreen.jsx', async () => {
+  const { Menu, MenuItem } = await vi.importActual('@mui/material');
+  return {
+    default: ({ initialNumber, device }) => (
+      <>
+        <div data-testid="phone-screen" data-number={initialNumber || ''} data-device={device?.uuid || ''} />
+        {phoneOpensMenu && <Menu open anchorEl={document.body} data-testid="phone-menu"><MenuItem>Available</MenuItem></Menu>}
+      </>
+    ),
+  };
+});
 vi.mock('../Calls/CallDetailPanel/CallDetailPanel.jsx', () => ({ default: ({ call }) => <div data-testid="call-detail">{call?.uuid}</div> }));
 
 describe('the portal sidebar', () => {
+  // The phone opens mid-edit, above any dialog, and its own menus open above
+  // it rather than behind it.
+  it('opens above every dialog, with its menus above it', () => {
+    sidebar = { view: 'phone', params: null, close: vi.fn() };
+    phoneOpensMenu = true;
+    try {
+      render(<PortalSidebar />);
+      expect(Number(getComputedStyle(screen.getByTestId('portal-sidebar')).zIndex)).toBe(Z.PHONE);
+      expect(Number(getComputedStyle(screen.getByTestId('phone-menu')).zIndex)).toBe(Z.PHONE_POPUP);
+    } finally {
+      phoneOpensMenu = false;
+    }
+  });
+
   it('shows the phone', () => {
     sidebar = { view: 'phone', params: { tab: 'dialpad' }, close: vi.fn() };
     render(<PortalSidebar />);

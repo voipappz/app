@@ -287,6 +287,13 @@ The API's own skills — `use-voipappz-api` for integration work, and its MCP
 server at `{API}/tasks/mcp` — are served from the API host, so an agent can read
 the live contract rather than a copy that has drifted.
 
+`make dev` also serves a second MCP server, for the running app itself: the
+VoipAppz dev MCP at `http://localhost:3000/voipappz/mcp` (the port follows
+`PORT`). It gives an agent the dev server's logs, source locations, docs pinned
+to the installed package versions, and code evaluation in the Vite process.
+Development only, localhost only; [src/builder-client/README.md](src/builder-client/README.md#the-voipappz-dev-mcp-the-dev-servers-mcp-server)
+has how Builder and Claude Code connect.
+
 ---
 
 ## Deployment

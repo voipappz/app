@@ -22,6 +22,7 @@ secrets/
 node_modules/
 dist/
 dist-ssr/
+dist-builder/
 build/
 .vite/
 *.local

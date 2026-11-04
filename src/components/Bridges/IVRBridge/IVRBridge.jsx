@@ -44,6 +44,15 @@ import { CallConditionBridge } from '../CallConditionBridge/CallConditionBridge.
 import { BotBridge } from '../BotBridge/BotBridge.jsx';
 import { useIsUserSession } from '../../../hooks/useIsUserSession';
 
+// An IVR entry: key, name, type, destination and actions in one row from `sm`
+// up; on a phone key, name and actions share the first line and the two
+// selects take a line each.
+const ENTRY_GRID = {
+  display: 'grid', gap: 1, alignItems: 'center', mb: 1,
+  gridTemplateColumns: { xs: '40px minmax(0, 1fr) auto', sm: '60px 1fr 1fr 1fr 80px' },
+  gridTemplateAreas: { xs: '"key name actions" "type type type" "bridge bridge bridge"', sm: '"key name type bridge actions"' },
+};
+
 /**
  * IVRBridge Component
  * Dialog for creating/editing IVRs from DID edit dialog
@@ -1037,7 +1046,8 @@ export const IVRBridge = ({
       </Box>
 
       {/* Timeout - Row with 3 fields + Edit button */}
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+      {/* One line while all fit; on a narrow screen the selects wrap to lines of their own. */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
         <TextField
           label={t('ivr.timeout')}
           type="number"
@@ -1046,9 +1056,9 @@ export const IVRBridge = ({
           size="small"
           disabled={loading}
           inputProps={{ min: 1, max: 60 }}
-          sx={{ width: '160px' }}
+          sx={{ flex: '1 1 160px', maxWidth: { sm: 160 } }}
         />
-        <FormControl required size="small" error={!!formErrors.timeout_bridge_type} disabled={loading} sx={{ flex: 1 }}>
+        <FormControl required size="small" error={!!formErrors.timeout_bridge_type} disabled={loading} sx={{ flex: '1 1 10rem', minWidth: 0 }}>
           <InputLabel>{t('ivr.pleaseSelect')}</InputLabel>
           <Select
             value={formData.timeout_bridge_type}
@@ -1060,7 +1070,7 @@ export const IVRBridge = ({
             ))}
           </Select>
         </FormControl>
-        <FormControl required size="small" error={!!formErrors.timeout_bridge_uuid} disabled={loading || timeoutBridgeLoading || !formData.timeout_bridge_type} sx={{ flex: 1 }}>
+        <FormControl required size="small" error={!!formErrors.timeout_bridge_uuid} disabled={loading || timeoutBridgeLoading || !formData.timeout_bridge_type} sx={{ flex: '1 1 10rem', minWidth: 0 }}>
           <InputLabel>{t('ivr.pleaseSelect')}</InputLabel>
           <Select
             value={formData.timeout_bridge_uuid}
@@ -1100,7 +1110,7 @@ export const IVRBridge = ({
             color="primary"
             onClick={() => handleEditBridge(formData.timeout_bridge_type, formData.timeout_bridge_uuid, 'timeout')}
             disabled={loading}
-            sx={{ mt: 0.5 }}
+            sx={{ mt: 0.5, flexShrink: 0 }}
           >
             <EditIcon fontSize="small" />
           </IconButton>
@@ -1108,7 +1118,8 @@ export const IVRBridge = ({
       </Box>
 
       {/* Invalid Attempts - Row with 3 fields + Edit button */}
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+      {/* One line while all fit; on a narrow screen the selects wrap to lines of their own. */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
         <TextField
           label={t('ivr.invalidAttempts')}
           type="number"
@@ -1118,9 +1129,9 @@ export const IVRBridge = ({
           required
           disabled={loading}
           inputProps={{ min: 1, max: 10 }}
-          sx={{ width: '160px' }}
+          sx={{ flex: '1 1 160px', maxWidth: { sm: 160 } }}
         />
-        <FormControl required size="small" error={!!formErrors.invalid_bridge_type} disabled={loading} sx={{ flex: 1 }}>
+        <FormControl required size="small" error={!!formErrors.invalid_bridge_type} disabled={loading} sx={{ flex: '1 1 10rem', minWidth: 0 }}>
           <InputLabel>{t('ivr.pleaseSelect')}</InputLabel>
           <Select
             value={formData.invalid_bridge_type}
@@ -1132,7 +1143,7 @@ export const IVRBridge = ({
             ))}
           </Select>
         </FormControl>
-        <FormControl required size="small" error={!!formErrors.invalid_bridge_uuid} disabled={loading || invalidBridgeLoading || !formData.invalid_bridge_type} sx={{ flex: 1 }}>
+        <FormControl required size="small" error={!!formErrors.invalid_bridge_uuid} disabled={loading || invalidBridgeLoading || !formData.invalid_bridge_type} sx={{ flex: '1 1 10rem', minWidth: 0 }}>
           <InputLabel>{t('ivr.pleaseSelect')}</InputLabel>
           <Select
             value={formData.invalid_bridge_uuid}
@@ -1172,7 +1183,7 @@ export const IVRBridge = ({
             color="primary"
             onClick={() => handleEditBridge(formData.invalid_bridge_type, formData.invalid_bridge_uuid, 'invalid')}
             disabled={loading}
-            sx={{ mt: 0.5 }}
+            sx={{ mt: 0.5, flexShrink: 0 }}
           >
             <EditIcon fontSize="small" />
           </IconButton>
@@ -1210,7 +1221,8 @@ export const IVRBridge = ({
             <Typography variant="caption" fontWeight="bold" sx={{ display: 'block', mb: 1 }}>
               {t('ivr.entries.profile')}
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 80px', gap: 1, alignItems: 'center', mb: 1 }}>
+            {/* Column names from `sm` up; on a phone each entry is a small card (ENTRY_GRID). */}
+            <Box sx={{ ...ENTRY_GRID, display: { xs: 'none', sm: 'grid' } }}>
               <Typography variant="caption" fontWeight="bold">{t('ivr.entries.key')}</Typography>
               <Typography variant="caption" fontWeight="bold">{t('ivr.entries.name')}</Typography>
               <Typography variant="caption" fontWeight="bold">{t('ivr.entries.bridgeType')}</Typography>
@@ -1218,16 +1230,18 @@ export const IVRBridge = ({
               <Typography variant="caption" fontWeight="bold">{t('ivr.entries.actions')}</Typography>
             </Box>
             {Object.entries(formData.entries).map(([key, entry]) => (
-              <Box key={key} sx={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 80px', gap: 1, alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2">{key}</Typography>
+              <Box key={key} sx={{ ...ENTRY_GRID, pb: { xs: 1, sm: 0 }, borderBottom: { xs: 1, sm: 0 }, borderColor: 'divider' }}>
+                <Typography variant="body2" sx={{ gridArea: 'key' }}>{key}</Typography>
                 <TextField
                   size="small"
+                  sx={{ gridArea: 'name' }}
                   value={entry.name || ''}
                   onChange={(e) => handleUpdateEntry(key, 'name', e.target.value)}
                   placeholder={t('ivr.entries.namePlaceholder')}
                 />
-                <FormControl size="small" fullWidth error={!!formErrors[`entry_${key}_bridge_type`]}>
+                <FormControl size="small" fullWidth error={!!formErrors[`entry_${key}_bridge_type`]} sx={{ gridArea: 'type' }}>
                   <Select
+                    inputProps={{ 'aria-label': t('ivr.entries.bridgeType') }}
                     value={entry.bridge_type || ''}
                     onChange={(e) => handleUpdateEntry(key, 'bridge_type', e.target.value)}
                     displayEmpty
@@ -1238,8 +1252,9 @@ export const IVRBridge = ({
                     ))}
                   </Select>
                 </FormControl>
-                <FormControl size="small" fullWidth disabled={!entry.bridge_type} error={!!formErrors[`entry_${key}_bridge_uuid`]}>
+                <FormControl size="small" fullWidth disabled={!entry.bridge_type} error={!!formErrors[`entry_${key}_bridge_uuid`]} sx={{ gridArea: 'bridge' }}>
                   <Select
+                    inputProps={{ 'aria-label': t('ivr.entries.bridge') }}
                     value={entry.bridge_uuid || ''}
                     onChange={(e) => handleUpdateEntry(key, 'bridge_uuid', e.target.value)}
                     displayEmpty
@@ -1266,7 +1281,7 @@ export const IVRBridge = ({
                     ))}
                   </Select>
                 </FormControl>
-                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                <Box sx={{ gridArea: 'actions', display: 'flex', gap: 0.5 }}>
                   {/* Edit Bridge Button */}
                   {entry.bridge_uuid && supportsInlineCreate(entry.bridge_type) && (
                     <IconButton

@@ -209,5 +209,27 @@
   "chart": {
     "noData": "אין נתונים לטווח הזמן שנבחר",
     "threshold": "סף: {{value}}"
+  },
+  "envPicker": {
+    "title": "אפליקציות",
+    "liveCharts": "גרפים חיים של האפליקציה",
+    "searchPlaceholder": "חיפוש אפליקציות...",
+    "add": "הוספת אפליקציה",
+    "column": {
+      "name": "שם",
+      "active": "פעיל",
+      "created": "נוצר",
+      "updated": "עודכן"
+    },
+    "loading": "טוען...",
+    "noMatches": "לא נמצאו אפליקציות",
+    "empty": "אין אפליקציות",
+    "productionSelected": "נבחרה סביבת ייצור",
+    "selectAll": "בחירת הכול",
+    "clear": "ניקוי",
+    "applied": "הוחל",
+    "nothingSelected": "לא נבחר דבר",
+    "applying": "מחיל...",
+    "apply": "החלה ({{count}})"
   }
 }

@@ -44,14 +44,17 @@
   white-space: nowrap;
 }
 
-/* ───── Two-column row (Name + Number) ───── */
+/* ───── Two-column row (Name + Number) ─────
+   Side by side while each gets 12rem; one above the other when not. */
 .did-form-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
 }
 
 .did-form-row > * {
-  flex: 1;
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 
 /* ───── Routing card container — subtle background ───── */
@@ -101,6 +104,12 @@
   .did-form-actions .MuiButton-root {
     flex: 1;
     min-height: 44px;
+  }
+
+  /* Cancel and Save side by side on a narrow phone too. */
+  .did-form-save-btn,
+  .did-form-cancel-btn {
+    padding-inline: 12px !important;
   }
 }
 

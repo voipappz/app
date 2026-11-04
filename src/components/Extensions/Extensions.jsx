@@ -544,9 +544,9 @@ const Extensions = () => {
                 return (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                     {callUuid && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                         <Typography variant="caption" sx={{ minWidth: 90, color: 'text.secondary', fontWeight: 600 }}>{t('clickToCall.callUuid')}</Typography>
-                        <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all', flex: 1 }}>{callUuid}</Typography>
+                        <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all', flex: '1 1 10rem', minWidth: 0 }}>{callUuid}</Typography>
                         <Tooltip title={t('clickToCall.copy')}>
                           <IconButton size="small" onClick={() => { navigator.clipboard?.writeText(callUuid); showSuccess(t('clickToCall.copied')); }} sx={{ p: 0.25 }}>
                             <CopyIcon sx={{ fontSize: 14 }} />
@@ -555,9 +555,9 @@ const Extensions = () => {
                       </Box>
                     )}
                     {recUrl && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
                         <Typography variant="caption" sx={{ minWidth: 90, color: 'text.secondary', fontWeight: 600 }}>{t('clickToCall.recording')}</Typography>
-                        <a href={recUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', fontFamily: 'monospace', wordBreak: 'break-all', flex: 1 }}>{recUrl}</a>
+                        <a href={recUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', fontFamily: 'monospace', wordBreak: 'break-all', flex: '1 1 10rem', minWidth: 0 }}>{recUrl}</a>
                         <Tooltip title={t('clickToCall.copy')}>
                           <IconButton size="small" onClick={() => { navigator.clipboard?.writeText(recUrl); showSuccess(t('clickToCall.copied')); }} sx={{ p: 0.25 }}>
                             <CopyIcon sx={{ fontSize: 14 }} />

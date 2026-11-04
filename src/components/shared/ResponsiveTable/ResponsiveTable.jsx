@@ -22,6 +22,12 @@ import { denseTableSx } from './density';
 // Between a phone and the cards' cut-off the cards sit two to a row.
 const CELL_ALIGN = { start: 'left', center: 'center', end: 'right' };
 
+// A clickable row opens from the keyboard too: focusable, Enter or Space.
+export const keyboardOpen = (open) => ({
+  tabIndex: 0,
+  onKeyDown: (event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); open(); } },
+});
+
 export default function ResponsiveTable({
   columns,
   rows,
@@ -132,6 +138,7 @@ export default function ResponsiveTable({
                 selected={selectedRowId === getRowId(row)}
                 sx={{ ...stripedTableRowSx, cursor: onRowClick ? 'pointer' : undefined, ...rowSx }}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
+                {...(onRowClick ? keyboardOpen(() => onRowClick(row)) : {})}
               >
                 {tableColumns.map((column) => (
                   <TableCell key={column.id} align={CELL_ALIGN[column.align]}>{cell(column, row)}</TableCell>

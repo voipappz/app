@@ -16,6 +16,7 @@
 }
 .scs-trigger:hover{ border-color:var(--scs-line); }
 .scs-trigger:focus-visible{ outline:none;border-color:var(--scs-accent); }
+.scs-trigger--static,.scs-trigger--static:hover{ cursor:default;border-color:transparent; }
 .scs-trigger.open{ border-color:var(--scs-accent);box-shadow:0 0 0 3px var(--scs-accent-soft); }
 
 /* Open sidebar: the tile becomes a row - avatar, customer name, and under it

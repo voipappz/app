@@ -13,3 +13,7 @@ export const displayTypeName = (t, type) => t(`display.${type}`, { defaultValue:
 export const chartKindName = (t, type) => (CHART_KINDS.has(type)
   ? t(`chartKind.${type}`)
   : t('chartKind.other', { type: tidy(type) }));
+
+/** A dashboard tab's name. The server sends the category key (queries.yml);
+ * one the app has no name for yet shows its key, as before. */
+export const categoryName = (t, category) => t(`category.${category}`, { defaultValue: String(category) });

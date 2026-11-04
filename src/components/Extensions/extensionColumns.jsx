@@ -111,7 +111,7 @@ function RegistrationStatus({ t, extension, registeredUsers }) {
 // The row's buttons. Clicks stay here: they must not also select the row.
 function ExtensionRowActions({ t, extension, canWrite, loading, actions }) {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }} onClick={(event) => event.stopPropagation()}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.5 }} onClick={(event) => event.stopPropagation()}>
       <Tooltip title={t('action.openPhone')}>
         <IconButton data-testid="phone-extension-button" size="small" onClick={() => actions.onOpenPhone(extension)} disabled={loading} color="primary">
           <PhoneIcon fontSize="small" />

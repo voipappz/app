@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -41,6 +42,8 @@ import {
 import Papa from 'papaparse';
 import { usePlanBridge } from './PlanBridge.js';
 import { Z } from '../../../utils/zIndex.js';
+import Bdi from '../../../i18n/Bdi.jsx';
+import { formatNumber } from '../../../utils/numberUtils.js';
 
 /**
  * PlanBridge Component
@@ -54,6 +57,7 @@ export const PlanBridge = ({
   plan = null,
   mode = 'create'
 }) => {
+  const { t } = useTranslation('bridges');
   const {
     formData,
     formErrors,
@@ -102,7 +106,7 @@ export const PlanBridge = ({
         }
       },
       error: (err) => {
-        setError(`CSV parse error: ${err.message}`);
+        setError(t('plan.errors.csvParse', { message: err.message }));
       }
     });
 
@@ -141,7 +145,7 @@ export const PlanBridge = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PlanIcon />
             <Typography variant="h6">
-              {mode === 'edit' ? 'Edit Plan' : 'Create Plan'}
+              {mode === 'edit' ? t('plan.titleEdit') : t('plan.titleCreate')}
             </Typography>
           </Box>
           <Button onClick={onClose} size="small" sx={{ minWidth: 'auto' }}>
@@ -156,7 +160,7 @@ export const PlanBridge = ({
           <Grid container spacing={2}>
             <Grid size={12}>
               <TextField
-                label="Name"
+                label={t('plan.name')}
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
                 required
@@ -164,7 +168,7 @@ export const PlanBridge = ({
                 size="small"
                 error={!!formErrors.name}
                 helperText={formErrors.name}
-                placeholder="Enter plan name"
+                placeholder={t('plan.namePlaceholder')}
                 disabled={loading}
               />
             </Grid>
@@ -176,16 +180,16 @@ export const PlanBridge = ({
                 error={!!formErrors.period}
                 disabled={loading}
               >
-                <InputLabel>Period</InputLabel>
+                <InputLabel>{t('plan.period')}</InputLabel>
                 <Select
                   value={formData.period}
-                  label="Period"
+                  label={t('plan.period')}
                   onChange={(e) => handleChange('period', e.target.value)}
                   MenuProps={{ style: { zIndex: Z.L3.MENU }, PaperProps: { sx: { zIndex: Z.L3.MENU } } }}
                 >
                   {PERIODS.map(period => (
                     <MenuItem key={period} value={period}>
-                      {period.charAt(0).toUpperCase() + period.slice(1)}
+                      {t(`plan.periods.${period}`)}
                     </MenuItem>
                   ))}
                 </Select>
@@ -193,7 +197,7 @@ export const PlanBridge = ({
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
-                label="Interval"
+                label={t('plan.interval')}
                 type="number"
                 value={formData.interval}
                 onChange={(e) => handleChange('interval', parseInt(e.target.value) || 1)}
@@ -201,7 +205,7 @@ export const PlanBridge = ({
                 fullWidth
                 size="small"
                 error={!!formErrors.interval}
-                helperText={formErrors.interval || 'e.g., 1 = every period'}
+                helperText={formErrors.interval || t('plan.intervalHint')}
                 placeholder="1"
                 disabled={loading}
                 inputProps={{ min: 1 }}
@@ -209,14 +213,14 @@ export const PlanBridge = ({
             </Grid>
             <Grid size={12}>
               <TextField
-                label="Notes"
+                label={t('plan.notes')}
                 value={formData.notes}
                 onChange={(e) => handleChange('notes', e.target.value)}
                 fullWidth
                 size="small"
                 multiline
                 rows={2}
-                placeholder="Optional notes"
+                placeholder={t('plan.notesPlaceholder')}
                 disabled={loading}
               />
             </Grid>
@@ -229,7 +233,7 @@ export const PlanBridge = ({
                     disabled={loading}
                   />
                 }
-                label="Enabled"
+                label={t('plan.enabled')}
               />
             </Grid>
           </Grid>
@@ -238,7 +242,7 @@ export const PlanBridge = ({
           <Box sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                Plan Items {items.length > 0 && `(${items.length})`}
+                {t('plan.itemsTitle')} {items.length > 0 && `(${formatNumber(items.length)})`}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <input
@@ -248,7 +252,7 @@ export const PlanBridge = ({
                   onChange={handleFileUpload}
                   style={{ display: 'none' }}
                 />
-                <Tooltip title="Import items from CSV (columns: name, val)">
+                <Tooltip title={t('plan.importHint')}>
                   <Button
                     size="small"
                     variant="outlined"
@@ -256,11 +260,11 @@ export const PlanBridge = ({
                     onClick={() => fileInputRef.current?.click()}
                     disabled={loading}
                   >
-                    Import CSV
+                    {t('plan.importCsv')}
                   </Button>
                 </Tooltip>
                 {items.length > 0 && (
-                  <Tooltip title="Clear all items">
+                  <Tooltip title={t('plan.clearHint')}>
                     <Button
                       size="small"
                       variant="outlined"
@@ -269,7 +273,7 @@ export const PlanBridge = ({
                       onClick={handleClearItems}
                       disabled={loading}
                     >
-                      Clear
+                      {t('plan.clear')}
                     </Button>
                   </Tooltip>
                 )}
@@ -277,7 +281,7 @@ export const PlanBridge = ({
             </Box>
             {importCount > 0 && (
               <Alert severity="success" sx={{ mb: 1 }}>
-                Successfully imported {importCount} items from CSV
+                {t('plan.imported', { count: formatNumber(importCount) })}
               </Alert>
             )}
 
@@ -285,9 +289,9 @@ export const PlanBridge = ({
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Value</TableCell>
-                    <TableCell width={100}>Actions</TableCell>
+                    <TableCell>{t('plan.columns.name')}</TableCell>
+                    <TableCell>{t('plan.columns.value')}</TableCell>
+                    <TableCell width={100}>{t('plan.columns.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -296,7 +300,7 @@ export const PlanBridge = ({
                     <TableCell colSpan={3}>
                       <Autocomplete
                         size="small"
-                        options={tariffs.filter((t) => !items.some((i) => i.val === t.uuid))}
+                        options={tariffs.filter((tariff) => !items.some((i) => i.val === tariff.uuid))}
                         getOptionLabel={(o) => o?.name || ''}
                         isOptionEqualToValue={(o, v) => o?.uuid === v?.uuid}
                         value={null}
@@ -311,7 +315,7 @@ export const PlanBridge = ({
                           ]);
                         }}
                         renderInput={(params) => (
-                          <TextField {...params} placeholder="+ Add tariff" />
+                          <TextField {...params} placeholder={t('plan.addTariff')} />
                         )}
                       />
                     </TableCell>
@@ -330,7 +334,7 @@ export const PlanBridge = ({
                   {!itemsLoading && items.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={3} align="center" sx={{ color: 'text.secondary', py: 3 }}>
-                        No items added yet. Add items using the form above.
+                        {t('plan.noItems')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -362,7 +366,7 @@ export const PlanBridge = ({
                               fullWidth
                             />
                           ) : (
-                            item.tariff?.name || item.val || '-'
+                            item.tariff?.name || (item.val ? <Bdi>{item.val}</Bdi> : '-')
                           )}
                         </TableCell>
                         <TableCell>
@@ -413,7 +417,7 @@ export const PlanBridge = ({
 
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>
-          Cancel
+          {t('plan.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -422,8 +426,8 @@ export const PlanBridge = ({
           startIcon={loading ? <CircularProgress size={20} /> : <PlanIcon />}
         >
           {loading
-            ? `${mode === 'edit' ? 'Updating' : 'Creating'}...`
-            : mode === 'edit' ? 'Update Plan' : 'Create Plan'}
+            ? (mode === 'edit' ? t('plan.updating') : t('plan.creating'))
+            : mode === 'edit' ? t('plan.update') : t('plan.create')}
         </Button>
       </DialogActions>
     </Dialog>

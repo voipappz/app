@@ -157,20 +157,28 @@ export default function DestinationPicker({
       <ButtonBase
         onClick={openPicker}
         data-testid={testId}
+        // Label and destination share the line while both fit; when they
+        // don't, the destination (with its arrow) wraps to a line of its own,
+        // still at the end, and a name too long even for that ends in "…".
+        // The label asks for 8rem before the destination must move: its hint
+        // wraps under it rather than pushing the destination down.
         sx={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 1.5, textAlign: 'start',
+          width: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+          columnGap: 1.5, rowGap: 0.5, textAlign: 'start',
           p: 1.5, borderRadius: 2, border: 1, borderColor: error ? 'error.main' : 'divider',
           '&:hover': { bgcolor: 'action.hover' },
         }}
       >
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography fontWeight={600}>{label}</Typography>
-          {hint && <Typography variant="caption" color="text.secondary">{hint}</Typography>}
+        <Box sx={{ flex: '1 1 8rem', minWidth: 0 }}>
+          <Typography fontWeight={600} sx={{ overflowWrap: 'anywhere' }}>{label}</Typography>
+          {hint && <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{hint}</Typography>}
         </Box>
-        <Typography color={chosen ? 'text.primary' : 'primary'} sx={{ minWidth: 0, textAlign: 'end' }} noWrap>
-          {chosen || t('targets.choose')}
-        </Typography>
-        <OpenIcon color="action" sx={{ transform: theme.direction === 'rtl' ? 'scaleX(-1)' : undefined }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, maxWidth: '100%', ms: 'auto' }}>
+          <Typography color={chosen ? 'text.primary' : 'primary'} noWrap sx={{ minWidth: 0 }}>
+            {chosen || t('targets.choose')}
+          </Typography>
+          <OpenIcon color="action" sx={{ flexShrink: 0, transform: theme.direction === 'rtl' ? 'scaleX(-1)' : undefined }} />
+        </Box>
       </ButtonBase>
       {error && <FormHelperText error sx={{ mx: 1.5 }}>{t(error)}</FormHelperText>}
 

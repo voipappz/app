@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Autocomplete, Box, Button, FormControl, InputLabel, MenuItem, Select, TextField, Typography } from '@mui/material';
-import { monitoringApi } from '../../services/api/monitoringApi';
+import { monitoringApi } from '../../../services/api/monitoringApi';
 import { useTranslation } from 'react-i18next';
 
 const AGGREGATIONS = ['mean', 'sum', 'max', 'min', 'last', 'first', 'count'];

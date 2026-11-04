@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { tariffsApi } from '../../../services/api/tariffsApi';
 
 /**
@@ -6,6 +7,7 @@ import { tariffsApi } from '../../../services/api/tariffsApi';
  * Provides state management for tariff creation/editing with rates
  */
 export const useTariffBridge = (open, tariff = null, mode = 'create') => {
+  const { t } = useTranslation('bridges');
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -124,21 +126,21 @@ export const useTariffBridge = (open, tariff = null, mode = 'create') => {
     const errors = {};
 
     if (!formData.name?.trim()) {
-      errors.name = 'Name is required';
+      errors.name = t('tariff.errors.nameRequired');
     }
 
     if (!formData.scheme) {
-      errors.scheme = 'Scheme is required';
+      errors.scheme = t('tariff.errors.schemeRequired');
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData]);
+  }, [formData, t]);
 
   // Add rate (inline)
   const handleAddRate = useCallback(() => {
     if (!newRate.name?.trim()) {
-      setError('Rate name is required');
+      setError(t('tariff.errors.rateNameRequired'));
       return;
     }
 
@@ -153,7 +155,7 @@ export const useTariffBridge = (open, tariff = null, mode = 'create') => {
     setRates(prev => [...prev, rate]);
     setNewRate({ name: '', price: '', val: '' });
     setError(null);
-  }, [newRate]);
+  }, [newRate, t]);
 
   // Update rate (inline)
   const handleUpdateRate = useCallback((rateId, updates) => {
@@ -175,7 +177,7 @@ export const useTariffBridge = (open, tariff = null, mode = 'create') => {
   // Import rates from CSV
   const handleImportRates = useCallback((csvData) => {
     if (!csvData || !Array.isArray(csvData) || csvData.length === 0) {
-      setError('No valid data found in CSV');
+      setError(t('tariff.errors.noCsvData'));
       return;
     }
 
@@ -190,14 +192,14 @@ export const useTariffBridge = (open, tariff = null, mode = 'create') => {
       }));
 
     if (importedRates.length === 0) {
-      setError('No valid rates found in CSV. Expected columns: name, price, val');
+      setError(t('tariff.errors.noValidRates'));
       return;
     }
 
     setRates(prev => [...prev, ...importedRates]);
     setError(null);
     return importedRates.length;
-  }, []);
+  }, [t]);
 
   // Clear all rates
   const handleClearRates = useCallback(() => {
@@ -244,12 +246,12 @@ export const useTariffBridge = (open, tariff = null, mode = 'create') => {
       return createdTariff;
     } catch (err) {
       console.error('Error creating tariff:', err);
-      setError(err.message || 'Failed to create tariff');
+      setError(err.message || t('tariff.errors.createFailed'));
       return null;
     } finally {
       setLoading(false);
     }
-  }, [formData, rates, validateForm]);
+  }, [formData, rates, validateForm, t]);
 
   // Update tariff with rates
   const updateTariff = useCallback(async (tariffId) => {
@@ -302,12 +304,12 @@ export const useTariffBridge = (open, tariff = null, mode = 'create') => {
       return updatedTariff;
     } catch (err) {
       console.error('Error updating tariff:', err);
-      setError(err.message || 'Failed to update tariff');
+      setError(err.message || t('tariff.errors.updateFailed'));
       return null;
     } finally {
       setLoading(false);
     }
-  }, [formData, rates, validateForm]);
+  }, [formData, rates, validateForm, t]);
 
   return {
     // Form state

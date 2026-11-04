@@ -54,7 +54,7 @@ import { TEMPLATE_TYPES } from '../../Templates/Templates.js';
 import { templatesApi } from '../../../services/api/templatesApi';
 import { snippetCategories, scriptTemplates } from './luaFreeSwitchCompletions.js';
 import { Z, menuProps } from '../../../utils/zIndex.js';
-import { useConfirm } from '../../ui';
+import { ResponsiveDialog, useConfirm } from '../../ui';
 import { useIsUserSession } from '../../../hooks/useIsUserSession';
 
 /**
@@ -735,26 +735,26 @@ export const VMLBridge = ({
         </Alert>
       )}
 
-      {/* AI Chat Dialog — full chat interface with sessions */}
-      <Dialog
+      {/* AI Chat Dialog — full chat interface with sessions; full screen on a phone */}
+      <ResponsiveDialog
         open={aiDialogOpen}
         onClose={() => setAiDialogOpen(false)}
         maxWidth="md"
         fullWidth
-        sx={{ '& .MuiDialog-paper': { zIndex: Z.L3.DIALOG, height: '85vh', maxHeight: '85vh' } }}
+        sx={{ '& .MuiDialog-paper': { zIndex: Z.L3.DIALOG, height: { xs: '100%', sm: '85vh' }, maxHeight: { xs: '100%', sm: '85vh' } } }}
         style={{ zIndex: Z.L3.DIALOG }}
       >
-        {/* Header */}
+        {/* Header: the buttons move under the title when both do not fit */}
         <DialogTitle sx={{ py: 1, px: 2, bgcolor: '#111113', borderBottom: '1px solid #27272a' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <AIIcon sx={{ color: '#C586C0' }} />
-              <Typography variant="h6" sx={{ color: '#fafafa', fontSize: '1rem' }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+              <AIIcon sx={{ color: '#C586C0', flexShrink: 0 }} />
+              <Typography variant="h6" noWrap sx={{ color: '#fafafa', fontSize: '1rem', minWidth: 0 }}>
                 {t('vml.chat.title')}
               </Typography>
               {vmlChat.isStreaming && <CircularProgress size={16} sx={{ color: '#C586C0' }} />}
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ms: 'auto' }}>
               {vmlChat.getLastAgentCode() && !vmlChat.isStreaming && (
                 <Button
                   size="small"
@@ -782,12 +782,13 @@ export const VMLBridge = ({
         </DialogTitle>
 
         <DialogContent sx={{ display: 'flex', p: 0, overflow: 'hidden', bgcolor: '#18181b' }}>
-          {/* Sessions sidebar */}
+          {/* Sessions sidebar — beside the chat from `sm` up; a phone gives
+              the chat the whole width ("New chat" stays in the header) */}
           <Box sx={{
             width: 200,
             borderInlineEnd: '1px solid #27272a',
             bgcolor: '#111113',
-            display: 'flex',
+            display: { xs: 'none', sm: 'flex' },
             flexDirection: 'column',
             overflow: 'hidden',
             flexShrink: 0
@@ -1016,7 +1017,7 @@ export const VMLBridge = ({
             </Box>
           </Box>
         </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </Box>
   );
 

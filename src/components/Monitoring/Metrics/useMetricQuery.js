@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { monitoringApi } from '../../services/api/monitoringApi';
+import { monitoringApi } from '../../../services/api/monitoringApi';
 import { queryReady } from './metricQuery';
-import i18n from '../../i18n';
+import i18n from '../../../i18n';
 
 // Runs a builder query through the API. `runKey` re-runs on demand; a
 // refreshInterval > 0 polls. Only the newest request may land.

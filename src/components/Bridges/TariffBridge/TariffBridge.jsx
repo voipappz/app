@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogTitle,
@@ -40,6 +41,8 @@ import {
 import Papa from 'papaparse';
 import { useTariffBridge } from './TariffBridge.js';
 import { Z } from '../../../utils/zIndex.js';
+import Bdi from '../../../i18n/Bdi.jsx';
+import { formatNumber } from '../../../utils/numberUtils.js';
 
 /**
  * TariffBridge Component
@@ -54,6 +57,7 @@ export const TariffBridge = ({
   mode = 'create',
   zIndex = Z.L3.DIALOG
 }) => {
+  const { t } = useTranslation('bridges');
   const {
     formData,
     formErrors,
@@ -96,7 +100,7 @@ export const TariffBridge = ({
         }
       },
       error: (err) => {
-        setError(`CSV parse error: ${err.message}`);
+        setError(t('tariff.errors.csvParse', { message: err.message }));
       }
     });
 
@@ -139,7 +143,7 @@ export const TariffBridge = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <TariffIcon />
             <Typography variant="h6">
-              {mode === 'edit' ? 'Edit Tariff' : 'Create Tariff'}
+              {mode === 'edit' ? t('tariff.titleEdit') : t('tariff.titleCreate')}
             </Typography>
           </Box>
           <Button onClick={onClose} size="small" sx={{ minWidth: 'auto' }}>
@@ -156,7 +160,7 @@ export const TariffBridge = ({
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 8 }}>
               <TextField
-                label="Name"
+                label={t('tariff.name')}
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
                 required
@@ -164,7 +168,7 @@ export const TariffBridge = ({
                 size="small"
                 error={!!formErrors.name}
                 helperText={formErrors.name}
-                placeholder="Enter tariff name"
+                placeholder={t('tariff.namePlaceholder')}
                 disabled={loading}
               />
             </Grid>
@@ -176,17 +180,17 @@ export const TariffBridge = ({
                 error={!!formErrors.scheme}
                 disabled={loading || schemesLoading}
               >
-                <InputLabel>Scheme</InputLabel>
+                <InputLabel>{t('tariff.scheme')}</InputLabel>
                 <Select
                   value={formData.scheme}
-                  label="Scheme"
+                  label={t('tariff.scheme')}
                   onChange={(e) => handleChange('scheme', e.target.value)}
                   MenuProps={{ style: { zIndex: Z.L3.MENU }, PaperProps: { sx: { zIndex: Z.L3.MENU } } }}
                 >
                   {schemesLoading ? (
-                    <MenuItem disabled>Loading...</MenuItem>
+                    <MenuItem disabled>{t('tariff.loading')}</MenuItem>
                   ) : schemes.length === 0 ? (
-                    <MenuItem disabled>No schemes</MenuItem>
+                    <MenuItem disabled>{t('tariff.noSchemes')}</MenuItem>
                   ) : (
                     schemes.map(scheme => {
                       // Handle both string and object formats from API
@@ -204,14 +208,14 @@ export const TariffBridge = ({
             </Grid>
             <Grid size={12}>
               <TextField
-                label="Notes"
+                label={t('tariff.notes')}
                 value={formData.notes}
                 onChange={(e) => handleChange('notes', e.target.value)}
                 fullWidth
                 size="small"
                 multiline
                 rows={2}
-                placeholder="Optional notes"
+                placeholder={t('tariff.notesPlaceholder')}
                 disabled={loading}
               />
             </Grid>
@@ -224,7 +228,7 @@ export const TariffBridge = ({
                     disabled={loading}
                   />
                 }
-                label="Enabled"
+                label={t('tariff.enabled')}
               />
             </Grid>
           </Grid>
@@ -233,7 +237,7 @@ export const TariffBridge = ({
           <Box sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                Tariff Rates {rates.length > 0 && `(${rates.length})`}
+                {t('tariff.ratesTitle')} {rates.length > 0 && `(${formatNumber(rates.length)})`}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <input
@@ -243,7 +247,7 @@ export const TariffBridge = ({
                   onChange={handleFileUpload}
                   style={{ display: 'none' }}
                 />
-                <Tooltip title="Import rates from CSV (columns: name, price, val)">
+                <Tooltip title={t('tariff.importHint')}>
                   <Button
                     size="small"
                     variant="outlined"
@@ -251,11 +255,11 @@ export const TariffBridge = ({
                     onClick={() => fileInputRef.current?.click()}
                     disabled={loading}
                   >
-                    Import CSV
+                    {t('tariff.importCsv')}
                   </Button>
                 </Tooltip>
                 {rates.length > 0 && (
-                  <Tooltip title="Clear all rates">
+                  <Tooltip title={t('tariff.clearHint')}>
                     <Button
                       size="small"
                       variant="outlined"
@@ -264,7 +268,7 @@ export const TariffBridge = ({
                       onClick={handleClearRates}
                       disabled={loading}
                     >
-                      Clear
+                      {t('tariff.clear')}
                     </Button>
                   </Tooltip>
                 )}
@@ -272,7 +276,7 @@ export const TariffBridge = ({
             </Box>
             {importCount > 0 && (
               <Alert severity="success" sx={{ mb: 1 }}>
-                Successfully imported {importCount} rates from CSV
+                {t('tariff.imported', { count: formatNumber(importCount) })}
               </Alert>
             )}
 
@@ -280,10 +284,10 @@ export const TariffBridge = ({
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Price</TableCell>
-                    <TableCell>Value</TableCell>
-                    <TableCell width={100}>Actions</TableCell>
+                    <TableCell>{t('tariff.columns.name')}</TableCell>
+                    <TableCell>{t('tariff.columns.price')}</TableCell>
+                    <TableCell>{t('tariff.columns.value')}</TableCell>
+                    <TableCell width={100}>{t('tariff.columns.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -292,7 +296,7 @@ export const TariffBridge = ({
                     <TableCell>
                       <TextField
                         size="small"
-                        placeholder="Rate name"
+                        placeholder={t('tariff.rateNamePlaceholder')}
                         value={newRate.name}
                         onChange={(e) => setNewRate(prev => ({ ...prev, name: e.target.value }))}
                         fullWidth
@@ -314,7 +318,7 @@ export const TariffBridge = ({
                     <TableCell>
                       <TextField
                         size="small"
-                        placeholder="Value"
+                        placeholder={t('tariff.valuePlaceholder')}
                         value={newRate.val}
                         onChange={(e) => setNewRate(prev => ({ ...prev, val: e.target.value }))}
                         fullWidth
@@ -346,7 +350,7 @@ export const TariffBridge = ({
                   {!ratesLoading && rates.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={4} align="center" sx={{ color: 'text.secondary', py: 3 }}>
-                        No rates added yet. Add rates using the form above.
+                        {t('tariff.noRates')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -384,7 +388,7 @@ export const TariffBridge = ({
                               inputProps={{ step: '0.01' }}
                             />
                           ) : (
-                            rate.price
+                            <Bdi>{rate.price}</Bdi>
                           )}
                         </TableCell>
                         <TableCell>
@@ -398,7 +402,7 @@ export const TariffBridge = ({
                               fullWidth
                             />
                           ) : (
-                            rate.val || '-'
+                            rate.val ? <Bdi>{rate.val}</Bdi> : '-'
                           )}
                         </TableCell>
                         <TableCell>
@@ -449,7 +453,7 @@ export const TariffBridge = ({
 
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>
-          Cancel
+          {t('tariff.cancel')}
         </Button>
         <Button
           onClick={handleSubmit}
@@ -458,8 +462,8 @@ export const TariffBridge = ({
           startIcon={loading ? <CircularProgress size={20} /> : <TariffIcon />}
         >
           {loading
-            ? `${mode === 'edit' ? 'Updating' : 'Creating'}...`
-            : mode === 'edit' ? 'Update Tariff' : 'Create Tariff'}
+            ? (mode === 'edit' ? t('tariff.updating') : t('tariff.creating'))
+            : mode === 'edit' ? t('tariff.update') : t('tariff.create')}
         </Button>
       </DialogActions>
     </Dialog>

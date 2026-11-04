@@ -200,5 +200,27 @@
     "discardTitle": "Discard changes",
     "discard": "Discard",
     "discardMessage": "Discard your unsaved changes to this report?"
+  },
+  "strip": {
+    "period": {
+      "today": "Today",
+      "days7": "7d",
+      "days30": "30d"
+    },
+    "openFull": "Open full reports",
+    "showChart": "Show chart",
+    "hideChart": "Hide chart",
+    "noData": "No report data in this period."
+  },
+  "category": {
+    "billing": "billing",
+    "business": "business",
+    "callcenter": "callcenter",
+    "calls": "calls",
+    "extensions": "extensions",
+    "general": "general",
+    "providers": "providers",
+    "queue": "queue",
+    "table": "table"
   }
 }

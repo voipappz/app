@@ -766,7 +766,7 @@ const CentralizedSearch = ({
                 fontSize: '0.8rem',
               }}
             >
-              Clear
+              {t('search.clear')}
             </Button>
             <Button
               size="small"
@@ -782,7 +782,7 @@ const CentralizedSearch = ({
                 fontSize: '0.8rem',
               }}
             >
-              Search
+              {t('search.text')}
             </Button>
           </Box>
         </Box>

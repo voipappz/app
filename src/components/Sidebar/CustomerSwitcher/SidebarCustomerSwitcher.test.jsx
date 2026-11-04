@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import SidebarCustomerSwitcher from './SidebarCustomerSwitcher.jsx';
+import SidebarCustomerSwitcher, { SidebarUserCustomer } from './SidebarCustomerSwitcher.jsx';
 
 const selectCustomer = vi.fn();
 let ctx;
@@ -89,5 +89,25 @@ describe('the sidebar customer switcher', () => {
     expect(settings).toHaveBeenCalledTimes(1);
     expect(selectCustomer).not.toHaveBeenCalled();
     window.removeEventListener('openSettingsTool', settings);
+  });
+});
+
+describe('SidebarUserCustomer: a user sees its customer, read-only', () => {
+  const user = { customer: { uuid: 'c-1', name: 'SOMOTEX GHANA LTD' }, environment: { name: 'MTN Business Unicom' } };
+
+  it('open: names the customer and, under it, the application', () => {
+    render(<SidebarUserCustomer user={user} expanded />);
+    expect(screen.getByTestId('sidebar-customer-name')).toHaveTextContent('SOMOTEX GHANA LTD');
+    expect(screen.getByText('MTN Business Unicom')).toBeInTheDocument();
+  });
+
+  it('is not a button: nothing to switch to or manage', () => {
+    render(<SidebarUserCustomer user={user} expanded />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('a session from before the payload named the customer shows the application', () => {
+    render(<SidebarUserCustomer user={{ environment: { name: 'MTN Business Unicom' } }} expanded />);
+    expect(screen.getByTestId('sidebar-customer-name')).toHaveTextContent('MTN Business Unicom');
   });
 });

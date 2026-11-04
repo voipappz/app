@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { bridgeApi } from '../../../services/api/bridgeApi';
 import { createCallCondition, getCallCondition, updateCallCondition } from '../../../services/api/callConditionsApi';
-import { createSegment } from '../../../services/api/segmentsApi';
+import { createSegment, deleteSegment } from '../../../services/api/segmentsApi';
 import { conditionToForm, emptyForm, formToRules, RULE_TARGET_TYPES, savedSegmentIndex, segmentKey } from './callConditionSchedule';
 
 const unwrap = (response) => (response?.data?.uuid ? response.data : response);
@@ -46,10 +46,22 @@ export function useCallConditionForm({ open, mode, callCondition }) {
 /**
  * Saves the form. Segments are created only now, on Save -- never while
  * typing -- and a condition that is unchanged is sent back by its saved uuid.
- * The API deletes the segments no rule uses any more; this page never
- * deletes one. Returns the condition as the API holds it after saving.
+ * The API deletes the segments no rule uses any more. The one thing this page
+ * deletes is what this save created, when the save then fails: no rule names
+ * those segments, and the API never will. Returns the condition as the API
+ * holds it after saving.
  */
 export async function saveCallCondition({ form, saved, environmentUuid }) {
+  const created = [];
+  try {
+    return await saveRules({ form, saved, environmentUuid, created });
+  } catch (err) {
+    await Promise.all(created.map((uuid) => deleteSegment(uuid).catch(() => {})));
+    throw err;
+  }
+}
+
+async function saveRules({ form, saved, environmentUuid, created }) {
   const known = savedSegmentIndex(saved);
   const resources = [];
   for (const rule of formToRules(form)) {
@@ -59,8 +71,9 @@ export async function saveCallCondition({ form, saved, environmentUuid }) {
       for (const segment of rule.segments) {
         const key = segmentKey(segment);
         if (!known.has(key)) {
-          const created = unwrap(await createSegment({ name: `${form.name}_${rule.name}`, ...segment }));
-          known.set(key, created.uuid);
+          const segmentRow = unwrap(await createSegment({ name: `${form.name}_${rule.name}`, ...segment }));
+          created.push(segmentRow.uuid);
+          known.set(key, segmentRow.uuid);
         }
         segmentUuids.push(known.get(key));
       }

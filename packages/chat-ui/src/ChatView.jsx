@@ -12,6 +12,10 @@ import ChatEmptyState from './ChatEmptyState';
  * Fully controlled. The host owns messages, sessions, input text and busy
  * state, and receives every user action through a callback. This component
  * does no fetching, streaming, storage or auth.
+ *
+ * headerActions: nodes at the end of the header (for example a take-over
+ * toggle). footer: nodes between the messages and the composer (for example
+ * an approval prompt the user must answer before typing).
  */
 const ChatView = ({
   title = 'Assistant',
@@ -36,6 +40,8 @@ const ChatView = ({
   emptyState = {},
   composer = {},
   labels = {},
+  headerActions,
+  footer,
   children
 }) => {
   const endRef = useRef(null);
@@ -92,6 +98,11 @@ const ChatView = ({
               </Box>
             </Box>
           </Box>
+          {headerActions && (
+            <Box data-testid="chat-header-actions" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {headerActions}
+            </Box>
+          )}
         </Box>
 
         <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
@@ -111,6 +122,8 @@ const ChatView = ({
             </Box>
           )}
         </Box>
+
+        {footer && <Box data-testid="chat-footer">{footer}</Box>}
 
         <ChatComposer
           ref={inputRef}

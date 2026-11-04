@@ -53,3 +53,39 @@ describe('CallMobileView', () => {
     expect(second).toHaveAttribute('aria-expanded', 'false');
   });
 });
+
+// An empty list is not "no calls" until the server says so.
+describe('CallMobileView with no calls to show', () => {
+  it('says the calls are loading, not that there are none', () => {
+    render(<CallMobileView rows={[]} loading />);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading calls…');
+    expect(screen.queryByText('No call data available.')).toBeNull();
+  });
+
+  it('says there are no calls once the answer came back empty', () => {
+    render(<CallMobileView rows={[]} loading={false} />);
+    expect(screen.getByText('No call data available.')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('says the calls could not load, and tries again', () => {
+    const onRetry = vi.fn();
+    render(<CallMobileView rows={[]} error="HTTP error! status: 500" onRetry={onRetry} />);
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load the calls.");
+    expect(screen.queryByText('No call data available.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(onRetry).toHaveBeenCalled();
+  });
+
+  it('keeps showing the calls it has while more load', () => {
+    render(<CallMobileView rows={[call('c1', at(0, 9))]} loading />);
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getAllByTestId('calls-mobile-day')).toHaveLength(1);
+  });
+
+  it('says it is loading in Hebrew', async () => {
+    await i18n.changeLanguage('he');
+    render(<CallMobileView rows={[]} loading />);
+    expect(screen.getByRole('status')).toHaveTextContent('טוען שיחות…');
+  });
+});

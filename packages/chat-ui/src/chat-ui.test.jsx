@@ -38,6 +38,18 @@ describe('ChatView', () => {
     expect(screen.queryByTestId('chat-sidebar')).not.toBeInTheDocument();
   });
 
+  it('renders header actions and a footer above the composer', () => {
+    render(<ChatView {...baseProps} headerActions={<button>Take over</button>} footer={<div>Approve?</div>} />);
+    expect(screen.getByTestId('chat-header-actions')).toHaveTextContent('Take over');
+    expect(screen.getByTestId('chat-footer')).toHaveTextContent('Approve?');
+  });
+
+  it('renders no header actions or footer by default', () => {
+    render(<ChatView {...baseProps} />);
+    expect(screen.queryByTestId('chat-header-actions')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('chat-footer')).not.toBeInTheDocument();
+  });
+
   it('renders host children such as dialogs', () => {
     render(<ChatView {...baseProps}><div data-testid="host-dialog" /></ChatView>);
     expect(screen.getByTestId('host-dialog')).toBeInTheDocument();

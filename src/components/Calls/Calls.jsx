@@ -116,6 +116,19 @@ const TOOLBAR_GROUP_SX = {
 };
 const TOOLBAR_PICKER_SX = { width: 170, '& .MuiOutlinedInput-root': { height: 36, minHeight: 36, borderRadius: '8px' } };
 
+// A panel's open/closed choice, remembered in this browser under `key`
+// (false, open, until someone closes it). Storage may be unavailable.
+function useRememberedFlag(key) {
+  const [on, setOn] = useState(() => {
+    try { return localStorage.getItem(key) === '1'; } catch { return false; }
+  });
+  const toggle = () => setOn((current) => {
+    try { localStorage.setItem(key, current ? '0' : '1'); } catch { /* storage unavailable */ }
+    return !current;
+  });
+  return [on, toggle];
+}
+
 const Calls = () => {
   const { t } = useTranslation('calls');
   const [quickSearchText, setQuickSearchText] = React.useState('');
@@ -162,7 +175,7 @@ const Calls = () => {
     currentPage,
     totalPages,
     totalRecords,
-    loadingCalls,
+    waitingForCalls,
     loadingMore,
     errorCalls,
     fetchCalls,
@@ -198,14 +211,16 @@ const Calls = () => {
     [segments, t],
   );
 
-  // Crossing the phone breakpoint swaps the range: a phone reaches back to the
-  // first call (no period picker there), a desktop starts at today again.
+  // Crossing the phone breakpoint swaps the range: a phone starts at All (back
+  // to the first call), a desktop at today again.
   // URL sync refetches whenever the range changes.
+  const [period, setPeriod] = useState(isMobile ? 'all' : 'today');
   const wasMobile = useRef(isMobile);
   useEffect(() => {
     if (wasMobile.current === isMobile) return;
     wasMobile.current = isMobile;
     setDateRange(isMobile ? allTimeRange() : todayRange());
+    setPeriod(isMobile ? 'all' : 'today');
   }, [isMobile, setDateRange]);
 
   // URL synchronization
@@ -603,13 +618,9 @@ const Calls = () => {
     return list.length ? list : staticOptions;
   }, [shownSegments, t]);
   const [aggGrouping, setAggGrouping] = useState(null);   // null=auto | 'hour' | 'day' | 'week'
-  const [stripCollapsed, setStripCollapsed] = useState(() => {
-    try { return localStorage.getItem('reportsStrip:calls:collapsed') === '1'; } catch { return false; }
-  });
-  const toggleStripCollapsed = () => setStripCollapsed((c) => {
-    try { localStorage.setItem('reportsStrip:calls:collapsed', c ? '0' : '1'); } catch { /* storage unavailable */ }
-    return !c;
-  });
+  const [stripCollapsed, toggleStripCollapsed] = useRememberedFlag('reportsStrip:calls:collapsed');
+  // The phone's statistics boxes: open until folded away, and remembered.
+  const [statsCollapsed, toggleStatsCollapsed] = useRememberedFlag('calls:mobileStats:collapsed');
   // Legend names in plain words; an unknown key is shown humanised.
   const seriesLabel = useCallback((key) => {
     const known = {
@@ -629,12 +640,14 @@ const Calls = () => {
   const chartTotalText = useCallback((count) => t('chart.total', { n: formatNumber(count) }), [t]);
 
   // Quick periods, like the Logs screen. A picked from/to makes it 'custom'.
-  const [period, setPeriod] = useState('today');
+  // 'all' is the phone's: it starts there (back to the first call).
   const handlePeriod = useCallback((key) => {
     const now = new Date();
     let start;
     let end = now;
-    if (key === 'today') {
+    if (key === 'all') {
+      [start, end] = allTimeRange();
+    } else if (key === 'today') {
       start = new Date(now); start.setHours(0, 0, 0, 0);
       end = new Date(now); end.setHours(23, 59, 59, 999);
     } else {
@@ -644,6 +657,48 @@ const Calls = () => {
     setPeriod(key);
     handleDateRangeChange([start, end]);
   }, [handleDateRangeChange]);
+
+  // The period, and the counters that filter: one each, for the desktop
+  // toolbar and the phone's rows above the list.
+  const periodButtons = (
+    <ButtonGroup size="small" variant="outlined" aria-label={t('period.label', { defaultValue: 'Period' })} sx={TOOLBAR_GROUP_SX}>
+      {[
+        ...(isMobile ? [{ key: 'all', label: t('period.all', { defaultValue: 'All' }) }] : []),
+        { key: 'today', label: t('period.today', { defaultValue: 'Today' }) },
+        { key: '24h', label: '24h' },
+        { key: '7d', label: '7d' },
+        { key: '30d', label: '30d' },
+      ].map((p) => (
+        <Button
+          key={p.key}
+          onClick={() => handlePeriod(p.key)}
+          variant={period === p.key ? 'contained' : 'outlined'}
+          sx={{ minWidth: isMobile ? 0 : 48, px: 1, textTransform: 'none', flex: isMobile ? 1 : undefined }}
+        >
+          {p.label}
+        </Button>
+      ))}
+    </ButtonGroup>
+  );
+  const counterItems = [
+    { key: 'total', label: t('stats.total'), hint: t('stats.totalHint'), value: summaryCounts.total, icon: <PhoneIcon />, colorVar: '--counter-total', filterKey: null },
+    {
+      key: 'answered',
+      label: summaryCounts.answerRate == null ? t('stats.answered') : `${t('stats.answered')} · ${formatPercent(summaryCounts.answerRate)}`,
+      hint: t('stats.answeredHint'), value: summaryCounts.answered, icon: <PhoneInTalkIcon />, colorVar: '--counter-answered', filterKey: 'answered',
+    },
+    { key: 'noAnswer', label: t('stats.noAnswer'), hint: t('stats.noAnswerHint'), value: summaryCounts.noAnswer, icon: <PhoneMissedIcon />, colorVar: '--counter-no-answer', filterKey: 'noAnswer' },
+    { key: 'outgoing', label: t('stats.outgoing'), hint: t('stats.outgoingHint'), value: summaryCounts.outgoing, icon: <CallMadeIcon />, colorVar: '--counter-outgoing', filterKey: 'outgoing' },
+    { key: 'incoming', label: t('stats.incoming'), hint: t('stats.incomingHint'), value: summaryCounts.incoming, icon: <CallReceivedIcon />, colorVar: '--counter-incoming', filterKey: 'incoming' },
+  ].map(({ filterKey, value, ...item }) => ({
+    ...item,
+    // null is "unknown", never a confident 0.
+    value: value == null ? '—' : value,
+    active: filterKey === null ? !anyQuickActive : isQuickActive(filterKey),
+    onClick: () => (filterKey === null ? clearQuickFilters() : handleQuickFilterToggle(filterKey)),
+  })).concat([
+    { key: 'avgDuration', label: t('stats.avgDuration'), hint: t('stats.avgDurationHint'), value: formatClock(summaryCounts.avgDuration), icon: <TimerOutlinedIcon /> },
+  ]);
 
   const histogramData = useMemo(
     () => convertAggregateToHistogramFormat(aggregate[groupBy] || []),
@@ -738,6 +793,34 @@ const Calls = () => {
           />
         </Box>
       )}
+      {/* The phone's period and counters, the desktop's own pieces: the
+          period buttons stretch to the width, the counters (which filter, as
+          on the desktop) wrap under them. No chart: it does not fit. */}
+      {isMobile && (
+        <Box data-testid="calls-mobile-summary" sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 0.75 }}>
+          <Box sx={{ display: 'flex', '& > .MuiButtonGroup-root': { flex: 1 } }}>{periodButtons}</Box>
+          {/* The statistics, and the arrow that folds them at their top-end
+              corner, in the same place open or folded. Folded, the first box
+              (Total) stays, with any box whose filter is on, so a filter in
+              use is never out of sight; the list gets the rest of the room. */}
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
+            <StatChips
+              items={statsCollapsed ? counterItems.filter((item, index) => index === 0 || item.active) : counterItems}
+              sx={{ flex: 1, minWidth: 0 }}
+            />
+            <Tooltip title={statsCollapsed ? t('mobile.showStats') : t('mobile.hideStats')}>
+              <IconButton
+                size="small" onClick={toggleStatsCollapsed} data-testid="calls-stats-toggle"
+                aria-label={statsCollapsed ? t('mobile.showStats') : t('mobile.hideStats')}
+                aria-expanded={!statsCollapsed}
+                sx={{ flexShrink: 0, mt: 0.25, color: 'var(--theme-text-secondary)' }}
+              >
+                {statsCollapsed ? <ExpandMoreIcon /> : <ExpandLessIcon />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+      )}
       {/* THE chart of the screen. One toolbar row above it, every control
           36px: the period (quick ranges, then from / to), the table actions,
           then what the chart is split by, the bucket, and the collapse
@@ -754,23 +837,7 @@ const Calls = () => {
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', minHeight: 40 }}>
 
-            <ButtonGroup size="small" variant="outlined" aria-label={t('period.label', { defaultValue: 'Period' })} sx={TOOLBAR_GROUP_SX}>
-              {[
-                { key: 'today', label: t('period.today', { defaultValue: 'Today' }) },
-                { key: '24h', label: '24h' },
-                { key: '7d', label: '7d' },
-                { key: '30d', label: '30d' },
-              ].map((p) => (
-                <Button
-                  key={p.key}
-                  onClick={() => handlePeriod(p.key)}
-                  variant={period === p.key ? 'contained' : 'outlined'}
-                  sx={{ minWidth: 48, px: 1, textTransform: 'none' }}
-                >
-                  {p.label}
-                </Button>
-              ))}
-            </ButtonGroup>
+            {periodButtons}
 
             <DateLocalizationProvider>
               <Box data-testid="calls-chart-date-range" sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -897,27 +964,7 @@ const Calls = () => {
           vanishing is not. A null value renders "—", never a confident 0. */}
       {!isMobile && (
         <Box data-testid="calls-counters" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 1.25 }}>
-          <StatChips
-            items={[
-              { key: 'total', label: t('stats.total'), hint: t('stats.totalHint'), value: summaryCounts.total, icon: <PhoneIcon />, colorVar: '--counter-total', filterKey: null },
-              {
-                key: 'answered',
-                label: summaryCounts.answerRate == null ? t('stats.answered') : `${t('stats.answered')} · ${formatPercent(summaryCounts.answerRate)}`,
-                hint: t('stats.answeredHint'), value: summaryCounts.answered, icon: <PhoneInTalkIcon />, colorVar: '--counter-answered', filterKey: 'answered',
-              },
-              { key: 'noAnswer', label: t('stats.noAnswer'), hint: t('stats.noAnswerHint'), value: summaryCounts.noAnswer, icon: <PhoneMissedIcon />, colorVar: '--counter-no-answer', filterKey: 'noAnswer' },
-              { key: 'outgoing', label: t('stats.outgoing'), hint: t('stats.outgoingHint'), value: summaryCounts.outgoing, icon: <CallMadeIcon />, colorVar: '--counter-outgoing', filterKey: 'outgoing' },
-              { key: 'incoming', label: t('stats.incoming'), hint: t('stats.incomingHint'), value: summaryCounts.incoming, icon: <CallReceivedIcon />, colorVar: '--counter-incoming', filterKey: 'incoming' },
-            ].map(({ filterKey, value, ...item }) => ({
-              ...item,
-              // null is "unknown", never a confident 0.
-              value: value == null ? '—' : value,
-              active: filterKey === null ? !anyQuickActive : isQuickActive(filterKey),
-              onClick: () => (filterKey === null ? clearQuickFilters() : handleQuickFilterToggle(filterKey)),
-            })).concat([
-              { key: 'avgDuration', label: t('stats.avgDuration'), hint: t('stats.avgDurationHint'), value: formatClock(summaryCounts.avgDuration), icon: <TimerOutlinedIcon /> },
-            ])}
-          />
+          <StatChips items={counterItems} />
           <Divider orientation="vertical" flexItem sx={{ borderColor: 'var(--theme-border)', my: 0.5 }} />
           {/* The four fields people actually filter calls by, as pills. The
               other nine are behind the Filters button. */}
@@ -959,6 +1006,9 @@ const Calls = () => {
         (
           <CallMobileView
             rows={displayRows}
+            loading={waitingForCalls}
+            error={errorCalls}
+            onRetry={handleRefresh}
             hasNextPage={hasNextPage}
             loadingMore={loadingMore}
             onLoadMore={() => loadMoreCalls(dateRange)}
@@ -984,7 +1034,8 @@ const Calls = () => {
             <DataGrid
               rows={displayRows}
               columns={gridColumns}
-              loading={loadingCalls}
+              // Loading until the first answer, not "No rows" before any request.
+              loading={waitingForCalls}
               error={errorCalls}
               onRowsScrollEnd={handleRowsScrollEnd}
               onRowClick={(params) => setSelectedCall(params.row)}

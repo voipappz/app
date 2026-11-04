@@ -1,5 +1,6 @@
-// CallToast — incoming-call toast (green slide-in card with Answer / Reject),
-// non-blocking rather than a modal dialog. Ported from app verbatim.
+// CallToast — the incoming-call card (green slide-in card with Answer / Reject),
+// non-blocking rather than a modal dialog. Where it sits is the call dock's
+// (CallDock.jsx), which keeps it above every page and dialog.
 import { useTranslation } from 'react-i18next';
 import { Box, Slide, Typography, Button, IconButton, useTheme } from '@mui/material';
 import CallIcon from '@mui/icons-material/Call';
@@ -21,7 +22,7 @@ export default function CallToast({ open, title, number, onAnswer, onReject, onC
       <Box
         role="alert"
         sx={{
-          position: 'fixed', top: 76, insetInlineEnd: 16, zIndex: 1400, width: 300, maxWidth: '92vw',
+          position: 'relative', width: '100%',
           bgcolor: GREEN, color: '#fff', borderRadius: '3px', p: 1.25,
           boxShadow: '0 6px 20px rgba(0,0,0,0.3)', pointerEvents: 'all'
         }}
@@ -31,8 +32,8 @@ export default function CallToast({ open, title, number, onAnswer, onReject, onC
           <CloseIcon fontSize="small" />
         </IconButton>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', pe: 3 }}>{title}</Typography>
-        <Typography sx={{ fontSize: '1.1rem', mb: 1.25, mt: 0.25 }}><Bdi>{number}</Bdi></Typography>
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+        <Typography sx={{ fontSize: '1.1rem', mb: 1.25, mt: 0.25, overflowWrap: 'anywhere' }}><Bdi>{number}</Bdi></Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'flex-end' }}>
           <Button size="small" startIcon={<CallEndIcon />} onClick={onReject} sx={PINK_BTN}>{t('toast.reject')}</Button>
           <Button size="small" startIcon={<CallIcon />} onClick={onAnswer} sx={{ ...PINK_BTN, bgcolor: 'rgba(255,255,255,0.15)' }}>{t('toast.answer')}</Button>
         </Box>

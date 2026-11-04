@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import StatChips from '../../shared/StatChips/StatChips.jsx';
 import LiveDrawer from '../../Live/LiveDrawer.jsx';
@@ -14,6 +15,7 @@ import { reportsApi } from '../../../services/api/reportsApi';
  * Renders nothing when the category has no reports defined.
  */
 const ScreenReports = ({ category, title, sx }) => {
+  const { t } = useTranslation('reports');
   const [open, setOpen] = useState(false);
   const [count, setCount] = useState(null);
 
@@ -37,7 +39,7 @@ const ScreenReports = ({ category, title, sx }) => {
         sx={sx}
         items={[{
           key: 'reports',
-          label: 'Reports',
+          label: t('title'),
           value: count,
           icon: <AssessmentIcon />,
           color: '#0e9488',
@@ -48,7 +50,7 @@ const ScreenReports = ({ category, title, sx }) => {
       <LiveDrawer
         open={open}
         onClose={() => setOpen(false)}
-        title={title || 'Reports'}
+        title={title || t('title')}
         icon={<AssessmentIcon sx={{ color: '#0e9488' }} />}
         count={count}
       >

@@ -1,11 +1,11 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { monitoringApi } from '../../services/api/monitoringApi';
+import { monitoringApi } from '../../../services/api/monitoringApi';
 import WidgetBuilder from './WidgetBuilder';
 import { pivot, summarize } from './metricQuery';
 
-vi.mock('../../services/api/monitoringApi', () => ({ monitoringApi: {
+vi.mock('../../../services/api/monitoringApi', () => ({ monitoringApi: {
   getInfluxSchema: vi.fn(), runInfluxQuery: vi.fn(), getInfluxTagValues: vi.fn(),
 } }));
 vi.mock('recharts', () => {

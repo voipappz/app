@@ -2,11 +2,6 @@
   "action": {
     "close": "Close"
   },
-  "topBar": {
-    "close": "Close phone",
-    "status": "Phone — {{status}}",
-    "notSignedIn": "not signed in"
-  },
   "header": {
     "guest": "guest",
     "networkOffline": "Network offline",
@@ -115,5 +110,13 @@
       "codeLength": "Please enter the 6-digit code",
       "codeInvalid": "Invalid or expired code. Please try again."
     }
+  },
+  "dock": {
+    "inCall": "Call in progress",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "onHold": "On hold",
+    "openPhone": "Open phone",
+    "ringing": "Incoming call — open phone"
   }
 }

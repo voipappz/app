@@ -4,7 +4,7 @@ import i18n from '../../../i18n';
 import { CallConditionBridge } from './CallConditionBridge';
 import { bridgeApi } from '../../../services/api/bridgeApi';
 import { createCallCondition, getCallCondition, updateCallCondition } from '../../../services/api/callConditionsApi';
-import { createSegment } from '../../../services/api/segmentsApi';
+import { createSegment, deleteSegment } from '../../../services/api/segmentsApi';
 
 vi.mock('../../../services/api/bridgeApi', () => ({
   bridgeApi: { getBridgeTypes: vi.fn(), getBridgeResources: vi.fn() },
@@ -12,7 +12,7 @@ vi.mock('../../../services/api/bridgeApi', () => ({
 vi.mock('../../../services/api/callConditionsApi', () => ({
   createCallCondition: vi.fn(), getCallCondition: vi.fn(), updateCallCondition: vi.fn(),
 }));
-vi.mock('../../../services/api/segmentsApi', () => ({ createSegment: vi.fn() }));
+vi.mock('../../../services/api/segmentsApi', () => ({ createSegment: vi.fn(), deleteSegment: vi.fn() }));
 vi.mock('../../../context/CustomerEnvironmentContext', () => ({
   useCustomerEnvironment: () => ({ selectedEnvironments: [{ uuid: 'env-1', name: 'Sales' }] }),
 }));
@@ -29,6 +29,7 @@ beforeEach(() => {
   bridgeApi.getBridgeTypes.mockResolvedValue(['queue', 'vml', 'bot', 'user_login']);
   bridgeApi.getBridgeResources.mockImplementation(async (type) => LISTS[type] || []);
   createSegment.mockImplementation(async (segment) => ({ uuid: `seg-${segment.field}` }));
+  deleteSegment.mockResolvedValue({});
   createCallCondition.mockResolvedValue({ uuid: 'cc-1' });
   updateCallCondition.mockResolvedValue({ uuid: 'cc-1' });
 });
@@ -88,6 +89,20 @@ describe('creating a call condition', () => {
       fallback_bridge_uuid: 'v-1',
       resources: [{ name: 'open_1', bridge_type: 'queue', bridge_uuid: 'q-1', segment_uuids: ['seg-time.hour'] }],
     }));
+  }, 30000);
+
+  it('deletes the segments it just created when the save fails', async () => {
+    const { onSave } = renderPage();
+    fireEvent.change(screen.getByRole('textbox', { name: /Name/ }), { target: { value: 'office hours' } });
+    fireEvent.click(screen.getByRole('switch', { name: 'Open on Sun' }));
+    await chooseDestination('target-while-open', 'Queue', 'Support');
+    await chooseDestination('target-otherwise', 'VML script', 'Voicemail');
+
+    createCallCondition.mockRejectedValue(new Error('Internal server error'));
+    fireEvent.click(screen.getByTestId('call-condition-save'));
+
+    await waitFor(() => expect(deleteSegment).toHaveBeenCalledWith('seg-time.hour'));
+    expect(onSave).not.toHaveBeenCalled();
   }, 30000);
 
   it('says what is missing instead of saving', async () => {

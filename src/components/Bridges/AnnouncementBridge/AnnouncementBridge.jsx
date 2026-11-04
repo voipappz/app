@@ -361,7 +361,7 @@ export const AnnouncementBridge = ({
 
           {/* Built-in Tab: MOH / RINGING / SILENCE, played from the API's local files */}
           {mode === 'builtin' && (
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h6" sx={{ mb: 1 }}>{t('announcement.builtin.title')}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {t('announcement.builtin.hint')}
@@ -384,7 +384,7 @@ export const AnnouncementBridge = ({
 
           {/* File Upload Tab */}
           {mode === 'file' && (
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h6" sx={{ mb: 2 }}>{t('announcement.upload.title')}</Typography>
               <FileUploadZone
                 onFileSelect={handleFileSelect}
@@ -401,7 +401,7 @@ export const AnnouncementBridge = ({
 
           {/* TTS Tab */}
           {mode === 'tts' && (
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: { xs: 2, sm: 3 } }}>
               <Typography variant="h6" sx={{ mb: 2 }}>{t('announcement.tts.title')}</Typography>
               <TTSGenerator
                 onGenerate={handleTTSGenerate}
@@ -420,14 +420,16 @@ export const AnnouncementBridge = ({
 
       {/* Audio Player for Edit Mode */}
       {editMode === 'edit' && (
-        <Paper sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <VolumeIcon color="primary" />
-              <Typography variant="h6">{t('announcement.current.title')}</Typography>
+        <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+          {/* Title and Replace share the line while both fit, else Replace wraps under it. */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+              <VolumeIcon color="primary" sx={{ flexShrink: 0 }} />
+              <Typography variant="h6" sx={{ overflowWrap: 'anywhere' }}>{t('announcement.current.title')}</Typography>
             </Box>
             <Button
               size="small"
+              sx={{ ms: 'auto' }}
               startIcon={showReplaceFile ? <ExpandLessIcon /> : <UploadIcon />}
               onClick={() => setShowReplaceFile(!showReplaceFile)}
               disabled={loading}
@@ -522,7 +524,7 @@ export const AnnouncementBridge = ({
       )}
 
       {/* Basic Information */}
-      <Paper sx={{ p: 3 }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <Typography variant="h6" sx={{ mb: 2 }}>{t('announcement.basic')}</Typography>
 
         {/* Enabled Switch */}
@@ -538,8 +540,8 @@ export const AnnouncementBridge = ({
           sx={{ mb: 2 }}
         />
 
-        {/* Name and Environment */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        {/* Name and Environment: side by side while each gets 12rem, else one above the other */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2, '& > *': { flex: '1 1 12rem' } }}>
           <TextField
             label={t('announcement.name')}
             value={formData.name}

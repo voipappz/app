@@ -12,11 +12,10 @@ export const dialable = (number) => String(number ?? '').replace(/[^\d+*#]/g, ''
  */
 export function useCallNumber() {
   const { open } = usePortalSidebar();
-  const userSession = useIsUserSession();
   return useCallback((number) => {
     const n = dialable(number);
-    if (n && !userSession) open('phone', { tab: 'dialpad', number: n });
-  }, [open, userSession]);
+    if (n) open('phone', { tab: 'dialpad', number: n });
+  }, [open]);
 }
 
 /**
@@ -27,6 +26,10 @@ export function useOpenPhoneAs() {
   const { open } = usePortalSidebar();
   const userSession = useIsUserSession();
   return useCallback((device) => {
-    if (device && !userSession) open('phone', { tab: 'dialpad', device });
+    if (!device) return;
+    // A user's own extension is already registered, and they cannot sign the
+    // phone in as another device: the button opens their phone.
+    if (userSession) open('phone', { tab: 'dialpad' });
+    else open('phone', { tab: 'dialpad', device });
   }, [open, userSession]);
 }

@@ -209,5 +209,27 @@
   "chart": {
     "noData": "No data for selected time range",
     "threshold": "Threshold: {{value}}"
+  },
+  "envPicker": {
+    "title": "Applications",
+    "liveCharts": "Application live charts",
+    "searchPlaceholder": "Search applications...",
+    "add": "Add application",
+    "column": {
+      "name": "Name",
+      "active": "Active",
+      "created": "Created",
+      "updated": "Updated"
+    },
+    "loading": "Loading...",
+    "noMatches": "No applications found",
+    "empty": "No applications",
+    "productionSelected": "PRODUCTION SELECTED",
+    "selectAll": "Select all",
+    "clear": "Clear",
+    "applied": "Applied",
+    "nothingSelected": "Nothing selected",
+    "applying": "Applying...",
+    "apply": "Apply ({{count}})"
   }
 }

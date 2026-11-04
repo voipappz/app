@@ -8,30 +8,55 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CodeIcon from '@mui/icons-material/Code';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth } from '../../context/AuthContext';
+import { config } from '../../config';
 import { monitoringApi } from '../../services/api/monitoringApi';
 import CdrResult from './CdrResult';
 import { useCdrReport } from './useCdrReport';
+import { reportSource } from './reportSources';
 import { useTranslation } from 'react-i18next';
 import {
-  BUCKETS, CDR_RANGES, CDR_VIEWS, FALLBACK_CATALOG, NEW_CDR_QUERY, cdrQueryReady, dimensionLabel, dimensionText, measureOf, scopeParams,
+  BUCKETS, CDR_RANGES, CDR_VIEWS, FALLBACK_CATALOG, cdrQueryReady, hasScope, dimensionLabel, dimensionText, measureOf, scopeParams,
 } from './cdrReport';
 
-let catalogCache = null;
-// What this deployment's cdr table can answer; the API's full lists until it says.
-export function useCdrCatalog() {
-  const [catalog, setCatalog] = useState(catalogCache || FALLBACK_CATALOG);
+// Per API server and scope (picking an environment can switch servers), and
+// only as long as the API keeps its own discovery (5 minutes), so a counter a
+// deployment starts publishing shows up without a reload.
+const catalogCache = {};
+const CATALOG_TTL_MS = 5 * 60 * 1000;
+const cachedCatalog = (key) => {
+  const hit = catalogCache[key];
+  return hit && Date.now() - hit.at < CATALOG_TTL_MS ? hit.catalog : null;
+};
+
+// What a source can answer (cdr: this deployment's cdr table; identity: the
+// fixed list plus the keys the API discovered in this scope); its fallback
+// list until the API says.
+export function useCdrCatalog(type = 'cdr', scope = {}) {
+  const source = reportSource(type);
+  const scopeKey = JSON.stringify(source.type === 'identity' ? scopeParams(scope) : {});
+  const cacheKey = `${config.apiBaseUrl}|${source.type}:${scopeKey}`;
+  const [catalog, setCatalog] = useState(() => cachedCatalog(cacheKey) || source.fallback);
   useEffect(() => {
-    if (catalogCache) return;
-    monitoringApi.getCdrCatalog().then((c) => {
-      if (c?.dimensions?.length) { catalogCache = c; setCatalog(c); }
-    }).catch(() => {});
-  }, []);
+    // No environments is no scope, never "every environment".
+    if (source.type === 'identity' && !hasScope(scope)) return undefined;
+    const hit = cachedCatalog(cacheKey);
+    if (hit) { setCatalog(hit); return undefined; }
+    let active = true;
+    source.catalog(JSON.parse(scopeKey)).then((c) => {
+      if (c?.dimensions?.length) {
+        const next = { ...c, source: source.type, loaded: true };
+        catalogCache[cacheKey] = { at: Date.now(), catalog: next };
+        if (active) setCatalog(next);
+      }
+    }).catch(() => { if (active) setCatalog({ ...source.fallback, failed: true }); });
+    return () => { active = false; };
+  }, [cacheKey]);
   return catalog;
 }
 
 // Filter by one dimension: pick it, then a value — suggested from the busiest
 // values in the current scope, or typed.
-function FilterAdder({ catalog, scope, minutes, onAdd }) {
+function FilterAdder({ catalog, scope, minutes, onAdd, source }) {
   const { t } = useTranslation('widgets');
   const [dim, setDim] = useState('');
   const [value, setValue] = useState('');
@@ -41,11 +66,11 @@ function FilterAdder({ catalog, scope, minutes, onAdd }) {
   useEffect(() => {
     if (!dim) { setOptions([]); return undefined; }
     let active = true;
-    monitoringApi.runCdrReport({ measures: ['calls'], dimensions: [dim], minutes, limit: 50, ...JSON.parse(scopeKey) })
+    source.run({ measures: [source.newQuery.measures[0]], dimensions: [dim], minutes, limit: 50, ...JSON.parse(scopeKey) })
       .then((res) => { if (active) { setOptions((res?.rows || []).map((row) => String(row[dim]))); setLabels(res?.labels || {}); } })
       .catch(() => { if (active) setOptions([]); });
     return () => { active = false; };
-  }, [dim, minutes, scopeKey]);
+  }, [dim, minutes, scopeKey, source]);
   const add = () => { if (dim && value.trim()) { onAdd(dim, value.trim(), labels); setValue(''); } };
   return (
     <Stack spacing={1}>
@@ -85,11 +110,14 @@ function RawTable({ rows, columns }) {
  * and run the SQL). "Save as widget" puts the query on the board; editing a
  * report widget reopens it here.
  */
-export default function CdrEditor({ open = true, scope = {}, editing = null, onSave, onClose, saving = false }) {
+export default function CdrEditor({ open = true, scope = {}, editing = null, onSave, onClose, saving = false, source: sourceName = 'cdr' }) {
   const { t } = useTranslation('widgets');
   const { isRoot } = useAuth();
-  const catalog = useCdrCatalog();
-  const [draft, setDraft] = useState(NEW_CDR_QUERY);
+  const source = reportSource(sourceName);
+  const fresh = source.newQuery;
+  const words = source.type === 'identity' ? 'identity' : 'cdr';
+  const catalog = useCdrCatalog(source.type, scope);
+  const [draft, setDraft] = useState(fresh);
   const [filterLabels, setFilterLabels] = useState({});
   const [runKey, setRunKey] = useState(0);
   const [showSql, setShowSql] = useState(false);
@@ -97,10 +125,10 @@ export default function CdrEditor({ open = true, scope = {}, editing = null, onS
   const [sqlResult, setSqlResult] = useState(null);
   useEffect(() => {
     if (!open) return;
-    setDraft(editing ? { ...NEW_CDR_QUERY, ...editing, where: { ...(editing.where || {}) } } : NEW_CDR_QUERY);
+    setDraft(editing ? { ...fresh, ...editing, where: { ...(editing.where || {}) } } : fresh);
     setShowSql(false);
     setSqlResult(null);
-  }, [open, editing]);
+  }, [open, editing, fresh]);
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const result = useCdrReport(draft, { scope, runKey, enabled: open });
   const labels = { ...filterLabels, ...result.labels };
@@ -138,7 +166,7 @@ export default function CdrEditor({ open = true, scope = {}, editing = null, onS
   return (
     <Dialog fullScreen open={open} onClose={onClose} aria-labelledby="cdr-editor-title" PaperProps={{ 'data-testid': 'cdr-editor' }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, px: 2, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
-        <Typography id="cdr-editor-title" variant="subtitle1" sx={{ fontWeight: 750 }}>{editing ? t('cdr.titleEdit', { title: editing.title }) : t('cdr.titleBuild')}</Typography>
+        <Typography id="cdr-editor-title" variant="subtitle1" sx={{ fontWeight: 750 }}>{editing ? t('cdr.titleEdit', { title: editing.title }) : t(`${words}.titleBuild`)}</Typography>
         <TextField select size="small" label={t('cdr.timeRange')} value={draft.minutes} onChange={(e) => set({ minutes: Number(e.target.value) })} sx={{ minWidth: 160 }}>
           {CDR_RANGES.map((minutes) => <MenuItem key={minutes} value={minutes}>{t(`ranges.${minutes}`)}</MenuItem>)}
         </TextField>
@@ -148,7 +176,7 @@ export default function CdrEditor({ open = true, scope = {}, editing = null, onS
         <TextField size="small" label={t('cdr.widgetTitle')} value={draft.title} onChange={(e) => set({ title: e.target.value })} sx={{ width: { xs: '100%', sm: 220 } }} />
         <Button size="small" onClick={onClose}>{t('cdr.cancel')}</Button>
         <Button size="small" variant="outlined" disabled={saving || !cdrQueryReady(draft) || !draft.title.trim()}
-          onClick={() => onSave?.({ ...draft, type: 'cdr', title: draft.title.trim() })}>
+          onClick={() => onSave?.({ ...draft, type: source.type, title: draft.title.trim() })}>
           {editing ? t('cdr.saveWidget') : t('cdr.saveAsWidget')}
         </Button>
         <IconButton size="small" aria-label={t('cdr.close')} onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
@@ -159,7 +187,7 @@ export default function CdrEditor({ open = true, scope = {}, editing = null, onS
           <Box>
             <Typography variant="overline" color="text.secondary">{t('cdr.measures')}</Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr' }} data-testid="cdr-measures">
-              {FALLBACK_CATALOG.measures.filter((m) => available.has(m.key)).map((m) => (
+              {(source.type === 'cdr' ? FALLBACK_CATALOG.measures.filter((m) => available.has(m.key)) : catalog.measures).map((m) => (
                 <FormControlLabel key={m.key} sx={{ m: 0 }} label={<Typography variant="body2">{measureOf(catalog, m.key).label}</Typography>}
                   control={<Checkbox size="small" sx={{ py: 0.25 }} checked={draft.measures.includes(m.key)} onChange={() => toggleMeasure(m.key)} />} />
               ))}
@@ -182,13 +210,13 @@ export default function CdrEditor({ open = true, scope = {}, editing = null, onS
           <Box>
             <Typography variant="overline" color="text.secondary">{t('cdr.filters')}</Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }} data-testid="cdr-filters">
-              {Object.keys(draft.where).length === 0 && <Typography variant="caption" color="text.secondary">{t('cdr.allCalls')}</Typography>}
+              {Object.keys(draft.where).length === 0 && <Typography variant="caption" color="text.secondary">{t(words === 'identity' ? 'identity.all' : 'cdr.allCalls')}</Typography>}
               {Object.entries(draft.where).map(([dim, value]) => (
                 <Chip key={dim} size="small" onDelete={() => dropFilter(dim)}
                   label={t('cdr.filterChip', { field: dimensionLabel(catalog, dim), values: String(value).split(',').map((v) => dimensionText(dim, v, labels)).join(', ') })} />
               ))}
             </Box>
-            <FilterAdder catalog={catalog} scope={scope} minutes={draft.minutes} onAdd={addFilter} />
+            <FilterAdder catalog={catalog} scope={scope} minutes={draft.minutes} onAdd={addFilter} source={source} />
           </Box>
         </Stack>
 
@@ -209,7 +237,7 @@ export default function CdrEditor({ open = true, scope = {}, editing = null, onS
             )}
           <Collapse in={showSql} unmountOnExit>
             <Divider sx={{ mb: 1.5 }} />
-            {isRoot ? (
+            {isRoot && source.sql ? (
               <Stack spacing={1}>
                 <TextField multiline minRows={3} maxRows={12} fullWidth value={sqlText} onChange={(e) => setSqlText(e.target.value)}
                   inputProps={{ 'aria-label': t('cdr.sql'), dir: 'ltr', style: { fontFamily: 'monospace', fontSize: 12 } }} />

@@ -12,6 +12,9 @@ imports anything from here.
 | `useBuilderChat.js` | One chat with the agent: session, messages, busy state, permission requests, modes |
 | `acpConnection.js` | ACP (Agent Client Protocol) as raw JSON-RPC over the server's `acp:` channel |
 | `phoenixSocket.js` | Minimal Phoenix v2 websocket client for that channel |
+| `BotPanel.jsx` | The Bot tab, when Builder runs a voice bot: status, restart, log, hold to talk. For a product (Connectix, `kind: "product"`) the tab is called Status and has no talk button; the product's own page (`pageUrl`) is a tab of its own, first. The folder's actions (`actions`, e.g. tests or a deploy) are buttons; one marked `confirm` asks first |
+| `captureWorklet.js` | Audio-thread microphone capture in 20 ms packets, served from the app's dev server (Builder's page policy allows no `blob:` scripts) |
+| `botCall.js` | One call to the bot through Builder's bridge, in Earshot's native framing (PCM16 16 kHz, 20 ms packets, `speech_started`/`speech_stopped`, `clear`) |
 | `chatState.js` | Maps ACP `session/update` notifications onto the chat-ui message shape (tested in `chatState.test.js`) |
 
 ## Rules
@@ -23,6 +26,57 @@ imports anything from here.
   worktree go through, commands still ask through the permission bar.
 - The previews run on `admin.localhost` and `user.localhost`, so the two
   logins (kept in `localStorage` per origin) stay apart.
+
+## The VoipAppz dev MCP: the dev server's MCP server
+
+The dev server Builder runs also serves the VoipAppz dev MCP, an MCP server
+for the running app, on the dev server's own port:
+
+    http://localhost:<PORT>/voipappz/mcp      # make dev: PORT=3000
+
+It is built on the `tidewave` npm package (Apache-2.0, pinned in
+`devDependencies`); `vite.config.js` rewrites `/voipappz/mcp` onto the
+package's own fixed path. It speaks MCP over streamable HTTP (POST only, JSON
+responses). Connect with `?include_browser_tools=false` on the end: without it
+the server also lists `browser_eval` and `create_design_canvas`, which need a
+browser toolbar that is off here (below). The four tools left:
+
+| Tool | What the agent gets |
+|---|---|
+| `get_logs` | The dev server's console: the same lines `make dev` prints (HMR, compile errors, `http proxy error` from the `/api`... proxy). Filter by `level`, `grep`, `since`, `tail`. Not the browser console |
+| `get_source_location` | The file and line of a module or symbol, e.g. `./src/services/apiService` or `react:useState` |
+| `get_docs` | Docs for a symbol, from the exact package versions installed |
+| `project_eval` | Runs JavaScript in the Vite process (no browser, no logins) |
+
+Connecting:
+
+- **Builder**: adds it to the agent's MCP servers like the API's, as
+  `{"type": "http", "name": "voipappz-app", "url": "http://127.0.0.1:<PORT>/voipappz/mcp?include_browser_tools=false", "headers": []}`,
+  with `<PORT>` the port it started `npm run dev` on.
+- **Claude Code**, by hand next to `make dev`:
+  `claude mcp add --transport http voipappz-app "http://localhost:3000/voipappz/mcp?include_browser_tools=false"`.
+
+How it sits next to Builder (`vite.config.js`):
+
+- **`vite serve` only.** The plugin is imported lazily when the command is
+  `serve`, so `vite build` and `vite preview` never load it and the production
+  bundle has none of it. `VITE_DEV_MCP=off npm run dev` leaves it out.
+- **Localhost only.** The dev server listens on all interfaces (`host: true`,
+  for Docker), but the dev MCP answers only requests from 127.0.0.1 / ::1 and
+  refuses any request that carries an `Origin` header, so neither another
+  machine nor a page in a browser (including the previews) can reach it. Under
+  `make dev DOCKER=1` requests arrive from the Docker bridge, so it refuses
+  them there.
+- **Same port, no new listener.** `/voipappz/mcp` is on the dev server, so
+  there is no port to clash with Builder's `9832` or the API's, and it collides
+  with none of the proxied prefixes.
+- **No toolbar.** `toolbar: false`: the package would otherwise inject a
+  script from its vendor's site into `index.html`, which Builder's page policy
+  and the previews do not need. `main.jsx` and the previews load exactly as
+  before.
+- **Logs are kept** in `$TMPDIR/<hash of the app folder>.tidewave.ndjson` (the
+  package's file name), appended across runs and never trimmed; delete it to
+  start empty.
 
 ## Working on it
 

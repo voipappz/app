@@ -13,9 +13,12 @@ const say = (key, values) => i18n.t(`widgets:${key}`, values);
 // A catalog entry's name as people read it. The catalog (the API's, or the
 // fallback below) names measures and dimensions in English: English shows
 // that name as sent, Hebrew the app's own name for the key when it has one.
-const named = (group, entry) => (i18n.language === 'he' && i18n.exists(`widgets:${group}.${entry.key}`)
-  ? say(`${group}.${entry.key}`)
-  : entry.label);
+// The identities catalog has its own words (identityMeasures/identityDimensions):
+// its `type` is the identity's type, not a call type.
+const named = (group, entry, catalog) => {
+  const g = catalog?.source === 'identity' ? `identity${group[0].toUpperCase()}${group.slice(1)}` : group;
+  return i18n.language === 'he' && i18n.exists(`widgets:${g}.${entry.key}`) ? say(`${g}.${entry.key}`) : entry.label;
+};
 
 // Used until /cdr/catalog answers (and if it cannot): the API's own lists.
 export const FALLBACK_CATALOG = {
@@ -53,10 +56,10 @@ export const NEW_CDR_QUERY = {
 export const measureOf = (catalog, key) => {
   const measure = (catalog?.measures || []).find((m) => m.key === key)
     || FALLBACK_CATALOG.measures.find((m) => m.key === key) || { key, label: key, unit: 'count' };
-  return { ...measure, label: named('measures', measure) };
+  return { ...measure, label: named('measures', measure, catalog) };
 };
 export const dimensionLabel = (catalog, key) => named('dimensions', (catalog?.dimensions || []).find((d) => d.key === key)
-  || FALLBACK_CATALOG.dimensions.find((d) => d.key === key) || { key, label: key });
+  || FALLBACK_CATALOG.dimensions.find((d) => d.key === key) || { key, label: key }, catalog);
 
 // 3725 → "1h 2m", 85 → "1m 25s", 42 → "42s".
 export function formatSeconds(value) {

@@ -220,12 +220,13 @@ export const FileUploadZone = ({
 
           {/* Selected file name */}
           {selectedFileName && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-              <Typography variant="body2" fontWeight="medium">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, maxWidth: '100%', minWidth: 0 }}>
+              {/* A long name (no spaces, as file names go) ends in "…"; hover shows it whole. */}
+              <Typography variant="body2" fontWeight="medium" noWrap title={selectedFileName} sx={{ minWidth: 0 }}>
                 {selectedFileName}
               </Typography>
               {uploadStatus !== 'uploading' && (
-                <IconButton size="small" onClick={handleClear} disabled={disabled}>
+                <IconButton size="small" onClick={handleClear} disabled={disabled} sx={{ flexShrink: 0 }}>
                   <CloseIcon fontSize="small" />
                 </IconButton>
               )}

@@ -200,5 +200,27 @@
     "discardTitle": "ביטול השינויים",
     "discard": "ביטול השינויים",
     "discardMessage": "לבטל את השינויים שלא נשמרו בדוח הזה?"
+  },
+  "strip": {
+    "period": {
+      "today": "היום",
+      "days7": "7 ימים",
+      "days30": "30 יום"
+    },
+    "openFull": "פתיחת הדוחות המלאים",
+    "showChart": "הצגת הגרף",
+    "hideChart": "הסתרת הגרף",
+    "noData": "אין נתוני דוח בתקופה הזו."
+  },
+  "category": {
+    "billing": "חיוב",
+    "business": "עסקי",
+    "callcenter": "מוקד טלפוני",
+    "calls": "שיחות",
+    "extensions": "מכשירים",
+    "general": "כללי",
+    "providers": "ספקים",
+    "queue": "תורים",
+    "table": "טבלאות"
   }
 }

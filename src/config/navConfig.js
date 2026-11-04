@@ -10,7 +10,6 @@ import ArticleIcon from '@mui/icons-material/Article';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import SchemaIcon from '@mui/icons-material/Schema';
 import CallIcon from '@mui/icons-material/Call';
-import HomeIcon from '@mui/icons-material/Home';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import ChatIcon from '@mui/icons-material/Chat';
 import BoltIcon from '@mui/icons-material/Bolt';
@@ -41,10 +40,6 @@ export const NAV_ITEMS = [
   // Providers (the SIP trunks routes dial out through) were reachable only
   // from Routes; a screen people manage on its own gets its own entry.
   { text: 'Providers', labelKey: 'nav:providers',     path: '/providers',      iconComponent: HubIcon,                   aclKey: 'providers',                      group: 'MANAGE'   },
-  // The live-calls dashboard (pilot): the portal's landing screen, in the
-  // console, scoped to the selected customer/environment. Gated on `calls`,
-  // the data it shows.
-  { text: 'Dashboard', labelKey: 'nav:dashboard',     path: '/admin/dashboard', iconComponent: HomeIcon,                 aclKey: 'calls',                          group: 'MONITOR'  },
   // Live answers "what is happening right now"; Calls is the history of the
   // same thing, so Live sits above it. Reachable from both surfaces: LiveRoute
   // in App.jsx checks each session against its own ACL vocabulary.

@@ -1,6 +1,6 @@
 import { Alert, Box, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { useWidgetValue } from './useWidgetValue';
-import { formatWidgetValue } from './widgetPresentation';
+import { formatWidgetValue } from '../../DashboardBuilder/widgetPresentation';
 import MetricChart from './MetricChart';
 import { useTranslation } from 'react-i18next';
 
