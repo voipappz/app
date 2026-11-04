@@ -120,7 +120,7 @@ const CONVERTED = [
 ]
 
 export default [
-  { ignores: ['dist', 'test-results/**', 'playwright-report/**', '.playwright/**', 'src/context/AuthContext.jsx', 'va-voipbox-admin/**', 'old-ionic-portal/**', 'test-api.cjs', 'docs/**'] },
+  { ignores: ['dist', 'dist-builder', 'test-results/**', 'playwright-report/**', '.playwright/**', 'src/context/AuthContext.jsx', 'va-voipbox-admin/**', 'old-ionic-portal/**', 'test-api.cjs', 'docs/**'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
