@@ -17,7 +17,7 @@ Keep Nimbus a presentation and interaction layer over the API-owned public contr
 6. Inject the current admin bearer token, and no other header, only in Swagger API requests.
 7. Keep API DevZone navigation internal to `/devzone` on desktop and mobile, with no feature ACL beyond a signed-in session. Kong owns the `/api*` prefix, so `/api-docs` cannot be the canonical cloud browser route.
 8. Keep AI actions credential-free: share only public Skill, readiness, and contract URLs in the safe prompt.
-9. Run `npm run lint`. Do not run a local build, dev server, or test suite.
+9. Run `make gate` (lint and unit tests). CI is the gate for every push.
 
 ## Ownership boundaries
 
