@@ -8,7 +8,7 @@
   "mcpServers": {
     "voipappz-api": {
       "type": "http",
-      "url": "${VA_API_URL:-https://cloud.voipappz.io}/tasks/mcp"
+      "url": "${VA_API_URL:-https://switch.voipappz.io}/tasks/mcp"
     }
   }
 }

@@ -13,7 +13,8 @@ secrets/
 # commands verbatim — including any API token ever typed into one.
 .claude/settings.local.json
 .claude/state/
-.codex/
+.claude/scheduled_tasks.lock
+.codex
 
 # ---------------------------------------------------------------------------
 # Build output and dependencies

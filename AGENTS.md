@@ -15,8 +15,8 @@
 
 ## Verification
 
-- The only permitted local check is `npm run lint`.
-- Do not run local builds, dev servers, or tests; those run in CI under this repository's policy.
+- Run `make gate` (lint and unit tests) after a change, and `make test SPEC=<name>` when a Playwright spec covers the screen. CI is the gate for every push.
+- Do not start a second dev server when one is already running (VoipAppz Builder runs one with hot reload).
 - Preserve unrelated worktree changes and never embed a production API hostname when `config.apiBaseUrl` or same-origin routing can select the current environment.
 
 ## Project skill
